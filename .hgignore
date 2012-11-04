@@ -1,4 +1,4 @@
 syntax: glob
 
 build/*
-depend/*.dSYM
+lib/*.dSYM
