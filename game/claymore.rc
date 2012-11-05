@@ -1,0 +1,7 @@
+#[link(name = "claymore", 
+       vers = "0.1", 
+       author = "Dzmitry Malyshau",
+       url = "http://code.google.com/p/claymore-game/")];
+#[crate_type = "bin"];
+
+mod main;

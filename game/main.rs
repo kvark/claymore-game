@@ -96,6 +96,20 @@ fn render(s:&Sample) ->bool	{
 	return true;
 }
 
+
+struct Buffer	{
+}
+struct BufferBinding	{
+}
+struct FramebufferBinding	{
+}
+struct Context	{
+	arrayBuffer	: BufferBinding;
+	indexBuffer	: BufferBinding;
+	framebufferTarget	: FramebufferBinding;
+}
+
+
 fn failGLFW( where: &static/str )	{
 	let code = glfw3::get_error();
 	io::println(~"Error: " + glfw3::error_string(code));
