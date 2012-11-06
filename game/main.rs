@@ -1,5 +1,6 @@
 extern mod glfw3;
 extern mod glcore;
+extern mod engine;
 
 
 type handle = u32;
@@ -9,29 +10,6 @@ struct Sample	{
 	buffer	: handle
 }
 
-fn createShader(target:u32, code:&str) -> handle	{
-	let h = glcore::glCreateShader( target );
-	{
-		let length = code.len() as i32;
-		do str::as_c_str(code) |text|	{
-			unsafe {
-				glcore::glShaderSource(	h, 1i32, ptr::addr_of(&text), ptr::addr_of(&length) );
-			}
-		}
-	}
-	glcore::glCompileShader( h );
-	let mut message:~str;
-	unsafe	{
-		let mut length = 0;
-		glcore::glGetShaderiv( h, glcore::GL_INFO_LOG_LENGTH, ptr::addr_of(&length) );
-		let info_bytes = vec::from_elem( length as uint, 0 as libc::c_char );
-		let raw_bytes = vec::raw::to_ptr(info_bytes);
-		glcore::glGetShaderInfoLog( h, length, ptr::addr_of(&length), raw_bytes );
-		message = str::raw::from_c_str( raw_bytes );
-	}
-	io::println( fmt!("Shader: %s",message) );
-	return h;
-}
 fn genBuffer() -> handle	{
 	let mut h = 0u32;
 	unsafe	{
@@ -44,11 +22,11 @@ fn init() -> Sample	{
 	// load shaders
 	let vert_code = "attribute vec2 position; void main()	{ gl_Position = vec4(position,0.0,1.0); }";
 	let frag_code = "void main()	{ gl_FragData[0] = vec4(1.0,0.0,0.0,1.0); }";
-	let vert_handle = createShader( glcore::GL_VERTEX_SHADER, vert_code );
-	let frag_handle = createShader( glcore::GL_FRAGMENT_SHADER, frag_code );
+	let vert_shader = engine::shade::createShader( glcore::GL_VERTEX_SHADER, vert_code );
+	let frag_shader = engine::shade::createShader( glcore::GL_FRAGMENT_SHADER, frag_code );
 	let program = glcore::glCreateProgram();
-	glcore::glAttachShader( program, vert_handle );
-	glcore::glAttachShader( program, frag_handle );
+	glcore::glAttachShader( program, vert_shader.handle );
+	glcore::glAttachShader( program, frag_shader.handle );
 	glcore::glLinkProgram( program );
 	let mut message:~str;
 	unsafe	{
@@ -98,15 +76,18 @@ fn render(s:&Sample) ->bool	{
 
 
 struct Buffer	{
+	a:int
 }
 struct BufferBinding	{
+	a:int
 }
 struct FramebufferBinding	{
+	a:int
 }
 struct Context	{
-	arrayBuffer	: BufferBinding;
-	indexBuffer	: BufferBinding;
-	framebufferTarget	: FramebufferBinding;
+	arrayBuffer			: BufferBinding,
+	indexBuffer			: BufferBinding,
+	framebufferTarget	: FramebufferBinding,
 }
 
 
