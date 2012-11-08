@@ -20,6 +20,29 @@ pub struct Binding	{
 	mut active	: Handle,
 }
 
+impl Binding : context::State	{
+	fn sync_back()->bool	{
+		let query =
+			if self.target == glcore::GL_ARRAY_BUFFER	{
+				glcore::GL_ARRAY_BUFFER_BINDING
+			}else
+			if self.target == glcore::GL_ELEMENT_ARRAY_BUFFER	{
+				glcore::GL_ELEMENT_ARRAY_BUFFER_BINDING
+			}else	{
+				fail( fmt!("Unknown binding to query: %d",self.target as int) );
+			};
+		let h = 0 as glcore::GLint;
+		unsafe	{
+			glcore::glGetIntegerv( query, ptr::addr_of(&h) );
+		}
+		if self.active != h as Handle	{
+			self.active = h as Handle;
+			false
+		}else	{ true }
+	}
+}
+
+
 impl Binding	{
 	priv fn _bind( h : Handle )	{
 		if self.active != h	{

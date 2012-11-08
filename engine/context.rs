@@ -7,7 +7,7 @@ const NULL	:Handle	= 0;
 const MAX_VERTEX_ATTRIBS	:uint	= 8;
 const MAX_TEX_UNITS			:uint	= 16;
 
-trait State	{
+pub trait State	{
 	// query all
 	fn sync_back()->bool;
 }
@@ -81,7 +81,7 @@ impl Context	{
 	}
 }
 
-impl Context:State	{
+impl Context : State	{
 	fn sync_back()->bool	{
 		let mut was_ok = true;
 		let _program = self.get_active_program();
@@ -89,6 +89,8 @@ impl Context:State	{
 			self.program = _program;
 			was_ok = false;
 		}
+		was_ok &= self.buffer_array.sync_back();
+		was_ok &= self.buffer_element.sync_back();
 		self.check(~"sync_back");
 		was_ok
 	}
