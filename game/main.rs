@@ -33,7 +33,7 @@ fn init() -> Sample	{
 	let buf = ct.create_buffer_loaded( vdata );
 	// done
 	ct.check(~"init");
-	io::println( fmt!("init: program %u, buffer %u",program.handle as uint,buf.handle as uint) );
+	io::println( fmt!("init: program %u, buffer %u",*program.handle as uint,*buf.handle as uint) );
 	Sample { ct:ct, program:program, data:engine::shade::create_data(), buffer:buf }
 }
 

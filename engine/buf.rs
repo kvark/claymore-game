@@ -1,6 +1,7 @@
 extern mod glcore;
 
-type Handle	= glcore::GLuint;
+pub enum Handle	= glcore::GLuint;
+pub enum Target = glcore::GLenum;
 
 
 struct Object	{
@@ -9,34 +10,35 @@ struct Object	{
 	drop	{
 		unsafe	{
 			// assert: not bound
-			glcore::glDeleteBuffers( 1, ptr::addr_of(&self.handle) );
+			glcore::glDeleteBuffers( 1, ptr::addr_of(&*self.handle) );
 		}
 	}
 }
 
 
 pub struct Binding	{
-	target		: glcore::GLenum,
+	target		: Target,
 	mut active	: Handle,
 }
 
 impl Binding : context::State	{
 	fn sync_back()->bool	{
 		let query =
-			if self.target == glcore::GL_ARRAY_BUFFER	{
+			if *self.target == glcore::GL_ARRAY_BUFFER	{
 				glcore::GL_ARRAY_BUFFER_BINDING
 			}else
-			if self.target == glcore::GL_ELEMENT_ARRAY_BUFFER	{
+			if *self.target == glcore::GL_ELEMENT_ARRAY_BUFFER	{
 				glcore::GL_ELEMENT_ARRAY_BUFFER_BINDING
 			}else	{
-				fail( fmt!("Unknown binding to query: %d",self.target as int) );
+				fail( fmt!("Unknown binding to query: %d",*self.target as int) );
 			};
-		let h = 0 as glcore::GLint;
+		let hid = 0 as glcore::GLint;
 		unsafe	{
-			glcore::glGetIntegerv( query, ptr::addr_of(&h) );
+			glcore::glGetIntegerv( query, ptr::addr_of(&hid) );
 		}
-		if self.active != h as Handle	{
-			self.active = h as Handle;
+		let h = Handle( hid as glcore::GLuint );
+		if *self.active != *h	{
+			self.active = h;
 			false
 		}else	{ true }
 	}
@@ -45,17 +47,17 @@ impl Binding : context::State	{
 
 impl Binding	{
 	priv fn _bind( h : Handle )	{
-		if self.active != h	{
+		if *self.active != *h	{
 			self.active = h;
-			glcore::glBindBuffer( self.target, h );
+			glcore::glBindBuffer( *self.target, *h );
 		}
 	}
 	fn bind( object : &Object )	{ self._bind(object.handle) }
-	fn unbind()	{ self._bind(0 as Handle) }
+	fn unbind()	{ self._bind(Handle(0)) }
 	
 	fn allocate( size : uint, dynamic : bool )	{
 		let usage = if dynamic {glcore::GL_STATIC_DRAW} else {glcore::GL_DYNAMIC_DRAW};
-		glcore::glBufferData( self.target, size as glcore::GLsizeiptr, ptr::null(), usage );
+		glcore::glBufferData( *self.target, size as glcore::GLsizeiptr, ptr::null(), usage );
 	}
 
 	fn load<T>( data : ~[T], dynamic : bool )	{
@@ -63,7 +65,7 @@ impl Binding	{
 		let size = data.len() * sys::size_of::<T>() as glcore::GLsizeiptr;
 		unsafe	{
 			let raw = vec::raw::to_ptr(data) as *libc::c_void;
-			glcore::glBufferData( self.target, size, raw, usage );
+			glcore::glBufferData( *self.target, size, raw, usage );
 		}
 	}
 }
@@ -71,11 +73,11 @@ impl Binding	{
 
 impl context::Context	{
 	fn create_buffer()->Object	{
-		let mut h = 0 as Handle;
+		let mut hid = 0 as glcore::GLuint;
 		unsafe	{
-			glcore::glGenBuffers( 1, ptr::addr_of(&h) );
+			glcore::glGenBuffers( 1, ptr::addr_of(&hid) );
 		}
-		Object{ handle:h }
+		Object{ handle:Handle(hid) }
 	}
 
 	fn create_buffer_sized( size : uint )->Object	{

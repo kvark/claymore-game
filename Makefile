@@ -4,6 +4,8 @@ game-code: engine-code
 engine-code:
 	rustc engine/engine.rc -L lib --out-dir lib
 
+clean-engine:
+	rm -R lib/libengine*
 
 DIR=claymore-game
 

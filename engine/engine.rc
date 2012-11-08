@@ -7,3 +7,4 @@ pub mod buf;
 pub mod context;
 pub mod frame;
 pub mod shade;
+pub mod texture;
