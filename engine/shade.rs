@@ -2,8 +2,8 @@ extern mod glcore;
 extern mod lmath;
 use send_map::linear::LinearMap;
 
-
-pub type Location = glcore::GLint;
+pub type Handle		= glcore::GLuint;
+pub type Location	= glcore::GLint;
 
 pub trait Uniform	{
 	fn load( loc : Location );
@@ -54,7 +54,7 @@ struct Attribute	{
 }
 
 impl Parameter	{
-	fn read( h : glcore::GLuint )-> bool	{
+	fn read( h : Handle )-> bool	{
 		if self.storage == glcore::GL_FLOAT	{
 			unsafe	{
 				let mut v = 0f32;
@@ -93,7 +93,7 @@ pub type ParaMap	= LinearMap<~str,@Parameter>;
 pub type DataMap	= LinearMap<~str,@Uniform>;
 
 pub struct Shader	{
-	handle	: glcore::GLuint,
+	handle	: Handle,
 	target	: glcore::GLenum,
 	alive	: bool,
 	info	: ~str,
@@ -104,7 +104,7 @@ pub struct Shader	{
 }
 
 pub struct Program	{
-	handle	: glcore::GLuint,
+	handle	: Handle,
 	alive	: bool,
 	info	: ~str,
 	attribs	: AttriMap,
@@ -117,36 +117,7 @@ pub struct Program	{
 }
 
 
-pub fn create_shader( target : glcore::GLenum, code : &str )-> Shader	{
-	let h = glcore::glCreateShader( target );
-	let mut length = code.len() as glcore::GLint;
-	do str::as_c_str(code) |text|	{
-		unsafe {
-			glcore::glShaderSource(	h, 1i32, ptr::addr_of(&text), ptr::addr_of(&length) );
-		}
-	}
-	glcore::glCompileShader( h );
-	// get info message
-	let mut message:~str;
-	let mut status = 0 as glcore::GLint;
-	length = 0;
-	unsafe	{
-		glcore::glGetShaderiv( h, glcore::GL_COMPILE_STATUS, ptr::addr_of(&status) );
-		glcore::glGetShaderiv( h, glcore::GL_INFO_LOG_LENGTH, ptr::addr_of(&length) );
-		let info_bytes = vec::from_elem( length as uint, 0 as libc::c_char );
-		let raw_bytes = vec::raw::to_ptr(info_bytes);
-		glcore::glGetShaderInfoLog( h, length, ptr::addr_of(&length), raw_bytes );
-		message = str::raw::from_c_str( raw_bytes );
-	}
-	let ok = (status != (0 as glcore::GLint));
-	if !ok	{
-		io::println( fmt!("Shader: %s",message) );	//TEMP
-	}
-	Shader{ handle:h, target:target, alive:ok, info:message }
-}
-
-
-fn query_attributes( h: glcore::GLuint )-> AttriMap	{
+fn query_attributes( h : Handle )-> AttriMap	{
 	let mut num		= 0 as glcore::GLint;
 	let mut max_len	= 0 as glcore::GLint;
 	let mut raw_bytes	: *libc::c_char;
@@ -167,7 +138,7 @@ fn query_attributes( h: glcore::GLuint )-> AttriMap	{
 			glcore::glGetActiveAttrib( h, num as glcore::GLuint, max_len,
 				ptr::addr_of(&length), ptr::addr_of(&size),
 				ptr::addr_of(&storage), raw_bytes );
-			name = str::raw::from_c_str( raw_bytes );
+			name = str::raw::from_c_str_len( raw_bytes, length as uint );
 		}
 		let location = glcore::glGetAttribLocation( h, raw_bytes );
 		rez.insert( name, @Attribute{ loc:location, storage:storage, size:size } );
@@ -176,7 +147,7 @@ fn query_attributes( h: glcore::GLuint )-> AttriMap	{
 }
 
 
-fn query_parameters( h : glcore::GLuint )-> ParaMap	{
+fn query_parameters( h : Handle )-> ParaMap	{
 	let mut num		= 0 as glcore::GLint;
 	let mut max_len	= 0 as glcore::GLint;
 	let mut raw_bytes	: *libc::c_char;
@@ -198,76 +169,109 @@ fn query_parameters( h : glcore::GLuint )-> ParaMap	{
 			glcore::glGetActiveUniform( h, num as glcore::GLuint, max_len,
 				ptr::addr_of(&length), ptr::addr_of(&size),
 				ptr::addr_of(&storage), raw_bytes );
-			name = str::raw::from_c_str( raw_bytes );
+			name = str::raw::from_c_str_len( raw_bytes, length as uint );
 		}
 		let location = glcore::glGetUniformLocation( h, raw_bytes );
-		let mut p = @Parameter{ loc:location, storage:storage, size:size, value:init_value };
+		let p = @Parameter{ loc:location, storage:storage, size:size, value:init_value };
 		p.read( h );
-		//io::println(fmt!("Found param %s",name));
 		rez.insert( name, p );
 	}
 	rez
 }
 
 
-pub fn create_program( shaders : ~[Shader] )-> Program	{
-	let h = glcore::glCreateProgram();
-	for shaders.each |s| {
-		glcore::glAttachShader( h, s.handle );
+impl context::Context	{
+	pub fn create_shader( target : glcore::GLenum, code : &str )-> Shader	{
+		let h = glcore::glCreateShader( target );
+		let mut length = code.len() as glcore::GLint;
+		do str::as_c_str(code) |text|	{
+			unsafe {
+				glcore::glShaderSource(	h, 1i32, ptr::addr_of(&text), ptr::addr_of(&length) );
+			}
+		}
+		glcore::glCompileShader( h );
+		// get info message
+		let mut message:~str;
+		let mut status = 0 as glcore::GLint;
+		length = 0;
+		unsafe	{
+			glcore::glGetShaderiv( h, glcore::GL_COMPILE_STATUS, ptr::addr_of(&status) );
+			glcore::glGetShaderiv( h, glcore::GL_INFO_LOG_LENGTH, ptr::addr_of(&length) );
+			let info_bytes = vec::from_elem( length as uint, 0 as libc::c_char );
+			let raw_bytes = vec::raw::to_ptr(info_bytes);
+			glcore::glGetShaderInfoLog( h, length, ptr::addr_of(&length), raw_bytes );
+			message = str::raw::from_c_str( raw_bytes );
+		}
+		let ok = (status != (0 as glcore::GLint));
+		if !ok	{
+			io::println( fmt!("Shader: %s",message) );	//TEMP
+		}
+		Shader{ handle:h, target:target, alive:ok, info:message }
 	}
-	glcore::glLinkProgram( h );
-	// get info message
-	let mut message:~str;
-	let mut status = 0 as glcore::GLint;
-	let mut length = 0 as glcore::GLint;
-	unsafe	{
-		glcore::glGetProgramiv( h, glcore::GL_LINK_STATUS, ptr::addr_of(&status) );
-		glcore::glGetProgramiv( h, glcore::GL_INFO_LOG_LENGTH, ptr::addr_of(&length) );
-		let info_bytes = vec::from_elem( length as uint, 0 as libc::c_char );
-		let raw_bytes = vec::raw::to_ptr(info_bytes);
-		glcore::glGetProgramInfoLog( h, length, ptr::addr_of(&length), raw_bytes );
-		message = str::raw::from_c_str( raw_bytes );
+	
+	pub fn create_program( shaders : ~[Shader] )-> Program	{
+		let h = glcore::glCreateProgram();
+		for shaders.each |s| {
+			glcore::glAttachShader( h, s.handle );
+		}
+		glcore::glLinkProgram( h );
+		// get info message
+		let mut message:~str;
+		let mut status = 0 as glcore::GLint;
+		let mut length = 0 as glcore::GLint;
+		unsafe	{
+			glcore::glGetProgramiv( h, glcore::GL_LINK_STATUS, ptr::addr_of(&status) );
+			glcore::glGetProgramiv( h, glcore::GL_INFO_LOG_LENGTH, ptr::addr_of(&length) );
+			let info_bytes = vec::from_elem( length as uint, 0 as libc::c_char );
+			let raw_bytes = vec::raw::to_ptr(info_bytes);
+			glcore::glGetProgramInfoLog( h, length, ptr::addr_of(&length), raw_bytes );
+			message = str::raw::from_c_str( raw_bytes );
+		}
+		let ok = (status != (0 as glcore::GLint));
+		if (!ok)	{
+			io::println( fmt!("Program: %s",message) );	//TEMP
+		}
+		// done
+		Program{ handle:h, alive:ok, info:message,
+			attribs	:query_attributes(h),
+			params	:query_parameters(h) }
 	}
-	let ok = (status != (0 as glcore::GLint));
-	if (!ok)	{
-		io::println( fmt!("Program: %s",message) );	//TEMP
-	}
-	// done
-	Program{ handle:h, alive:ok, info:message,
-		attribs	:query_attributes(h),
-		params	:query_parameters(h) }
-}
 
-
-pub fn createData()-> ~mut DataMap	{
-	~mut LinearMap::<~str,@Uniform>()
-}
-
-
-impl Program	{
-	fn bind( data : &const DataMap )	{
-		glcore::glUseProgram( self.handle );
+	//FIXME: accept Map trait once HashMap<~str> are supported
+	fn bind_program( p : &Program, data : &const DataMap )	{
+		self.program = p.handle;
+		glcore::glUseProgram( self.program );
 		/* FIXME: each_const
 		for data.each |name,value|	{
 			match self.params.find(name)	{
 				Some(ref par) => {
-					//FIXME:
-					//if par.value != *value {
 						par.value = *value;
 						value.load( par.loc );
-					//}
 				}
 				None => io::println( fmt!("Param not found: %s", *name) )
 			}
 		}*/
-		for self.params.each |name,par|	{
+		for p.params.each |name,par|	{
 			match data.find(name)	{
 				Some(value) =>	{
+					//FIXME: Eq trait
+					//if par.value != *value {
 					par.value = value;
 					value.load( par.loc );
+					//}
 				}
 				None => ()
 			}
 		}
 	}
+
+	fn unbind_program()	{
+		self.program = 0 as Handle;
+		glcore::glUseProgram( self.program );
+	}
+}
+
+
+pub fn create_data()-> DataMap	{
+	LinearMap::<~str,@Uniform>()
 }

@@ -6,8 +6,9 @@ use send_map::linear::LinearMap;
 type handle = u32;
 
 struct Sample	{
-	program	: engine::shade::Program,
-	data	: ~mut engine::shade::DataMap,
+	ct			: engine::context::Context,	
+	program		: engine::shade::Program,
+	mut data	: engine::shade::DataMap,
 	buffer	: handle
 }
 
@@ -20,13 +21,14 @@ fn gen_buffer() -> handle	{
 }
 
 fn init() -> Sample	{
+	let ct = engine::context::create();
 	// load shaders
 	let vert_code = "attribute vec2 position; void main()	{ gl_Position = vec4(position,0.0,1.0); }";
 	let frag_code = "uniform float color; void main()	{ gl_FragData[0] = vec4(color,0.0,0.0,1.0); }";
-	let vert_shader = engine::shade::create_shader( glcore::GL_VERTEX_SHADER, vert_code );
-	let frag_shader = engine::shade::create_shader( glcore::GL_FRAGMENT_SHADER, frag_code );
-	let program = engine::shade::create_program( ~[vert_shader,frag_shader] );
-	{
+	let vert_shader = ct.create_shader( glcore::GL_VERTEX_SHADER, vert_code );
+	let frag_shader = ct.create_shader( glcore::GL_FRAGMENT_SHADER, frag_code );
+	let program = ct.create_program( ~[vert_shader,frag_shader] );
+	if true {
 		let name = ~"color";
 		let uni = program.params.get(&name).value;
 		let mut my_val:float;
@@ -45,7 +47,7 @@ fn init() -> Sample	{
 	}
 	// done
 	io::println( fmt!("Init: program %u, buffer %u",program.handle as uint,buf_handle as uint) );
-	Sample { program:program, data:engine::shade::createData(), buffer:buf_handle }
+	Sample { ct:ct, program:program, data:engine::shade::create_data(), buffer:buf_handle }
 }
 
 
@@ -55,7 +57,10 @@ fn render( s : &Sample ) ->bool	{
 	glcore::glClear( glcore::GL_COLOR_BUFFER_BIT | glcore::GL_DEPTH_BUFFER_BIT );
 	
 	s.data.insert( ~"color", @1f as engine::shade::Uniform );
-	s.program.bind(	s.data );
+	s.ct.bind_program(
+		&s.program,
+		&const s.data
+		);
 	glcore::glBindBuffer( glcore::GL_ARRAY_BUFFER, s.buffer );
 	glcore::glVertexAttribPointer( 0, 2, glcore::GL_FLOAT, glcore::GL_FALSE,
 		sys::size_of::<f32>()*2u as i32, 0 as *libc::c_void );
