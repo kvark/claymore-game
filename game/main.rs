@@ -42,12 +42,12 @@ fn init() -> Sample	{
 	let mut tex : engine::texture::Texture;
 	match stb_image::image::load(~"data/GpuPro3.jpeg")	{
 		Some(image) => {
-			 tex = ct.create_texture( glcore::GL_TEXTURE_2D, image.width, image.height, 1 );
-			 ct.texture.bind( 0u, &tex );
-			 ct.texture.load_2D( &tex, 0, glcore::GL_RGBA as glcore::GLint,
-			 	glcore::GL_RGBA, glcore::GL_UNSIGNED_BYTE, image.data );
-			 ct.texture.wrap( &tex, 0 );
-			 ct.texture.filter( &tex, 2u );
+			tex = ct.create_texture( glcore::GL_TEXTURE_2D, image.width, image.height, 1 );
+			ct.texture.bind( &tex );
+			ct.texture.load_2D( &tex, 0, glcore::GL_RGBA as glcore::GLint,
+				glcore::GL_RGBA, glcore::GL_UNSIGNED_BYTE, image.data );
+			ct.texture.wrap( &tex, 0 );
+			ct.texture.filter( &tex, 2u );
 		}
 		None => { fail(~"Unable to load image"); }
 	}
@@ -65,7 +65,7 @@ fn render( s : &Sample ) ->bool	{
 	glcore::glClearDepth( 1.0f64 );
 	glcore::glClear( glcore::GL_COLOR_BUFFER_BIT | glcore::GL_DEPTH_BUFFER_BIT );
 	
-	s.ct.texture.bind( 0u, &s.texture );
+	s.ct.texture.bind_to( 0u, &s.texture );
 	s.data.insert( ~"color", @1f	as engine::shade::Uniform );
 	s.data.insert( ~"image", @0		as engine::shade::Uniform );
 	s.ct.bind_program( &s.program, &const s.data );

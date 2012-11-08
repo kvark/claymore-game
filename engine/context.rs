@@ -1,9 +1,7 @@
 extern mod glcore;
-extern mod std;
 
 type Target = glcore::GLenum;
 type Handle = glcore::GLuint;
-const NULL	:Handle	= 0;
 const MAX_VERTEX_ATTRIBS	:uint	= 8;
 
 pub trait State	{
@@ -48,16 +46,16 @@ pub fn create()->Context	{
 	glcore::glBindVertexArray( vao_handle );
 	// fill up the context
 	let vdata	= VertexData{ enabled:false };
+	let slots	= send_map::linear::LinearMap::<texture::Slot,texture::Handle>();
 	Context{
 		program				: shade::Handle(0),
 		buffer_array		: buf::Binding{		target:buf::Target(glcore::GL_ARRAY_BUFFER),			active:buf::Handle(0) },
 		buffer_element		: buf::Binding{		target:buf::Target(glcore::GL_ELEMENT_ARRAY_BUFFER),	active:buf::Handle(0) },
-		renderbuffer		: RenderbufferBinding{	target:glcore::GL_RENDERBUFFER,			active:NULL },
-		framebuffer_draw	: FramebufferBinding{	target:glcore::GL_DRAW_FRAMEBUFFER,		active:NULL },
-		framebuffer_read	: FramebufferBinding{	target:glcore::GL_READ_FRAMEBUFFER,		active:NULL },
+		renderbuffer		: RenderbufferBinding{	target:glcore::GL_RENDERBUFFER,			active:0 as glcore::GLuint },
+		framebuffer_draw	: FramebufferBinding{	target:glcore::GL_DRAW_FRAMEBUFFER,		active:0 as glcore::GLuint },
+		framebuffer_read	: FramebufferBinding{	target:glcore::GL_READ_FRAMEBUFFER,		active:0 as glcore::GLuint },
 		vertex_data			: vec::from_elem( MAX_VERTEX_ATTRIBS, vdata ),
-		texture				: texture::Binding{ active_unit:0u,
-			active:send_map::linear::LinearMap::<texture::Slot,texture::Handle>() },
+		texture				: texture::Binding{ active_unit:0u,	active:slots },
 	}
 }
 
@@ -80,6 +78,7 @@ impl Context : State	{
 		}
 		was_ok &= self.buffer_array.sync_back();
 		was_ok &= self.buffer_element.sync_back();
+		was_ok &= self.texture.sync_back();
 		self.check(~"sync_back");
 		was_ok
 	}

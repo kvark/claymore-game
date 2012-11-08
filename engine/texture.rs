@@ -26,11 +26,7 @@ pub struct Slot	{
 	target	: Target
 }
 
-//FIXME: remove when Rust derives that automatically
-impl Handle : cmp::Eq	{
-	pure fn eq( v : &Handle )->bool	{ self == *v }
-	pure fn ne( v : &Handle )->bool	{ !self.eq(v) }
-}
+//FIXME: waiting for Rust to do that automatically
 impl Slot : to_bytes::IterBytes	{
 	pure fn iter_bytes( lsb0 : bool, f : to_bytes::Cb)	{
 		self.unit.iter_bytes( lsb0, f );
@@ -53,21 +49,27 @@ pub struct Binding	{
 
 impl Binding	{
 	priv fn _bind( target : Target, h : Handle )	{
-		//let slot = Slot{ unit:self.active_unit, target:target };
-		//FIXME!
-		//match self.active.swap( slot, h )
+		let slot = Slot{ unit:self.active_unit, target:target };
+		if self.active.contains_key(&slot) && *self.active.get(&slot) == *h	{
+			return;
+		}
+		self.active.insert( slot, h );
 		glcore::glBindTexture( *target, *h );
 	}
-	priv fn _switch( unit : uint )	{
+	
+	fn switch( unit : uint )	{
 		if self.active_unit != unit	{
 			self.active_unit = unit;
 			glcore::glActiveTexture( glcore::GL_TEXTURE0 + (unit as glcore::GLenum) );
 		}
 	}
 
-	fn bind( unit: uint, t : &Texture )	{
-		self._switch( unit );
+	fn bind( t : &Texture )	{
 		self._bind( t.target, t.handle );
+	}
+	fn bind_to( unit: uint, t : &Texture )	{
+		self.switch( unit );
+		self.bind( t );
 	}
 	fn unbind( target : Target )	{
 		self._bind( target, Handle(0) );
@@ -83,7 +85,7 @@ impl Binding	{
 
 	fn find( t : &Texture )-> int	{
 		for self.active.each |slot,handle|	{
-			if *handle == t.handle	{
+			if *(*handle) == *t.handle	{
 				assert *slot.target == *t.target;
 				return slot.unit as int;
 			}
@@ -92,6 +94,7 @@ impl Binding	{
 	}
 
 	fn init_2D( t : &Texture, num_levels : uint, int_format : glcore::GLint, alpha : bool )	{
+		self.bind( t );
 		assert num_levels == 1u;
 		let mut w = t.width, h = t.height;
 		let pix_format = if alpha {glcore::GL_RGBA} else {glcore::GL_RGB};
@@ -108,6 +111,7 @@ impl Binding	{
 
 	fn load_2D<T>(	t : &Texture, level : uint, int_format : glcore::GLint,
 					pix_format : glcore::GLenum, pix_type : glcore::GLenum, data : &[T])	{
+		self.bind( t );
 		assert t.width>0 && t.height>0;
 		let w = (((t.width-1)>>level)+1)	as glcore::GLsizei;
 		let h = (((t.height-1)>>level)+1)	as glcore::GLsizei;
@@ -120,7 +124,7 @@ impl Binding	{
 	}
 
 	fn wrap( t : &Texture, method : int )	{
-		//assert self.get_bound(t.target) == t.handle;
+		assert *self.get_bound(t.target) == *t.handle;
 		let wr =	if method>0	{glcore::GL_REPEAT}
 			else	if method<0 {glcore::GL_MIRRORED_REPEAT}
 			else				{glcore::GL_CLAMP_TO_EDGE}
@@ -131,7 +135,7 @@ impl Binding	{
 	}
 
 	fn filter( t : &Texture, dim : uint )	{
-		//assert self.get_bound(t.target) == t.handle;
+		assert *self.get_bound(t.target) == *t.handle;
 		let min_filter =	if dim==3u	{glcore::GL_LINEAR_MIPMAP_LINEAR}
 			else			if dim==2u	{glcore::GL_LINEAR}
 			else						{glcore::GL_POINT}
@@ -152,5 +156,38 @@ impl context::Context	{
 			glcore::glGenTextures( 1, ptr::addr_of(&hid) );
 		}
 		Texture{ handle:Handle(hid), target:Target(t), width:w, height:h, depth:d, levels:0 }
+	}
+}
+
+impl Binding : context::State	{
+	fn sync_back()->bool	{
+		let mut was_ok = true;
+		let mut id = 0 as glcore::GLint;
+		unsafe	{
+			glcore::glGetIntegerv( glcore::GL_ACTIVE_TEXTURE, ptr::addr_of(&id) );
+		}
+		let cur_unit = id as uint;
+		if self.active_unit != cur_unit	{
+			was_ok = false;
+			self.active_unit = cur_unit;
+		}
+		// Rust wouldn't allow us to mutate while scanning
+		for (copy self.active).each |slot,handle|	{
+			let t = *slot.target;
+			let query =	if t == glcore::GL_TEXTURE_2D	{glcore::GL_TEXTURE_BINDING_2D}
+			else	{
+				fail(fmt!( "Unkown binding %d", *slot.target as int ));
+			};
+			self.switch( slot.unit );
+			unsafe	{
+				glcore::glGetIntegerv( query, ptr::addr_of(&id) );		
+			}
+			if *(*handle) != id as glcore::GLuint	{
+				was_ok = false;
+				self.active.swap( *slot, Handle(id as glcore::GLuint) );
+			}
+		}
+		self.switch( cur_unit );
+		was_ok
 	}
 }
