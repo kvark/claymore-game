@@ -15,7 +15,6 @@ pub impl () : Uniform	{
 }
 pub impl float : Uniform	{
 	fn load( loc : Location )	{
-		//io::println( fmt!("%d: %f",loc as int,self) );
 		glcore::glUniform1f( *loc, self as glcore::GLfloat );
 	}
 }

@@ -40,6 +40,13 @@ pub struct Context	{
 
 
 pub fn create()->Context	{
+	// default VAO
+	let mut vao_handle = 0 as glcore::GLuint;
+	unsafe	{
+		glcore::glGenVertexArrays( 1, ptr::addr_of(&vao_handle) );
+	}
+	glcore::glBindVertexArray( vao_handle );
+	// fill up the context
 	let vdata	= VertexData{ enabled:false };
 	Context{
 		program				: shade::Handle(0),

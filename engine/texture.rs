@@ -53,10 +53,10 @@ pub struct Binding	{
 
 impl Binding	{
 	priv fn _bind( target : Target, h : Handle )	{
-		let slot = Slot{ unit:self.active_unit, target:target };
-		if self.active.swap( slot, h ) != Some(h)	{
-			glcore::glBindTexture( *target, *h );
-		}
+		//let slot = Slot{ unit:self.active_unit, target:target };
+		//FIXME!
+		//match self.active.swap( slot, h )
+		glcore::glBindTexture( *target, *h );
 	}
 	priv fn _switch( unit : uint )	{
 		if self.active_unit != unit	{
@@ -73,6 +73,14 @@ impl Binding	{
 		self._bind( target, Handle(0) );
 	}
 
+	fn get_bound( target : Target )->Handle	{
+		let slot = Slot{ unit:self.active_unit, target:target };
+		match self.active.find( &slot )	{
+			Some(s)	=> s,
+			None	=> Handle(0)
+		}
+	}
+
 	fn find( t : &Texture )-> int	{
 		for self.active.each |slot,handle|	{
 			if *handle == t.handle	{
@@ -83,7 +91,7 @@ impl Binding	{
 		return -1;
 	}
 
-	fn init_2D( t : &Texture, int_format : glcore::GLint, alpha : bool, num_levels : uint )	{
+	fn init_2D( t : &Texture, num_levels : uint, int_format : glcore::GLint, alpha : bool )	{
 		assert num_levels == 1u;
 		let mut w = t.width, h = t.height;
 		let pix_format = if alpha {glcore::GL_RGBA} else {glcore::GL_RGB};
@@ -97,15 +105,52 @@ impl Binding	{
 			h = (h+1)>>1;
 		}
 	}
+
+	fn load_2D<T>(	t : &Texture, level : uint, int_format : glcore::GLint,
+					pix_format : glcore::GLenum, pix_type : glcore::GLenum, data : &[T])	{
+		assert t.width>0 && t.height>0;
+		let w = (((t.width-1)>>level)+1)	as glcore::GLsizei;
+		let h = (((t.height-1)>>level)+1)	as glcore::GLsizei;
+		unsafe	{
+			let raw = vec::raw::to_ptr(data) as *glcore::GLvoid;
+			glcore::glTexImage2D( *t.target, level as glcore::GLint, int_format,
+				w, h, 0 as glcore::GLint, pix_format, pix_type, raw );
+		}
+		if t.levels==0	{ t.levels=1; }
+	}
+
+	fn wrap( t : &Texture, method : int )	{
+		//assert self.get_bound(t.target) == t.handle;
+		let wr =	if method>0	{glcore::GL_REPEAT}
+			else	if method<0 {glcore::GL_MIRRORED_REPEAT}
+			else				{glcore::GL_CLAMP_TO_EDGE}
+			as glcore::GLint;
+		glcore::glTexParameteri( *t.target, glcore::GL_TEXTURE_WRAP_S, wr );
+		glcore::glTexParameteri( *t.target, glcore::GL_TEXTURE_WRAP_T, wr );
+		glcore::glTexParameteri( *t.target, glcore::GL_TEXTURE_WRAP_R, wr );
+	}
+
+	fn filter( t : &Texture, dim : uint )	{
+		//assert self.get_bound(t.target) == t.handle;
+		let min_filter =	if dim==3u	{glcore::GL_LINEAR_MIPMAP_LINEAR}
+			else			if dim==2u	{glcore::GL_LINEAR}
+			else						{glcore::GL_POINT}
+			as glcore::GLint;
+		let mag_filter =	if dim>1u	{glcore::GL_LINEAR}
+			else						{glcore::GL_POINT}
+			as glcore::GLint;
+		glcore::glTexParameteri( *t.target, glcore::GL_TEXTURE_MIN_FILTER, min_filter );
+		glcore::glTexParameteri( *t.target, glcore::GL_TEXTURE_MAG_FILTER, mag_filter );
+	}
 }
 
 
 impl context::Context	{
-	fn create_texture( t:Target, w:uint, h:uint, d:uint )->Texture	{
+	fn create_texture( t:glcore::GLenum, w:uint, h:uint, d:uint )->Texture	{
 		let mut hid = 0 as glcore::GLuint;
 		unsafe	{
 			glcore::glGenTextures( 1, ptr::addr_of(&hid) );
 		}
-		Texture{ handle:Handle(hid), target:t, width:w, height:h, depth:d, levels:0 }
+		Texture{ handle:Handle(hid), target:Target(t), width:w, height:h, depth:d, levels:0 }
 	}
 }

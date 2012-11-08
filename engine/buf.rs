@@ -60,11 +60,11 @@ impl Binding	{
 		glcore::glBufferData( *self.target, size as glcore::GLsizeiptr, ptr::null(), usage );
 	}
 
-	fn load<T>( data : ~[T], dynamic : bool )	{
+	fn load<T>( data : &[T], dynamic : bool )	{
 		let usage = if dynamic {glcore::GL_STATIC_DRAW} else {glcore::GL_DYNAMIC_DRAW};
 		let size = data.len() * sys::size_of::<T>() as glcore::GLsizeiptr;
 		unsafe	{
-			let raw = vec::raw::to_ptr(data) as *libc::c_void;
+			let raw = vec::raw::to_ptr(data) as *glcore::GLvoid;
 			glcore::glBufferData( *self.target, size, raw, usage );
 		}
 	}
