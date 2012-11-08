@@ -6,37 +6,14 @@ pub enum Handle		= glcore::GLuint;
 pub enum Location	= glcore::GLint;
 
 
-pub trait Uniform	{
-	fn load( loc : Location );
-}
-
-pub impl () : Uniform	{
-	fn load( _loc : Location )	{}
-}
-pub impl float : Uniform	{
-	fn load( loc : Location )	{
-		glcore::glUniform1f( *loc, self as glcore::GLfloat );
-	}
-}
-pub impl int : Uniform	{
-	fn load( loc : Location )	{
-		glcore::glUniform1i( *loc, self as glcore::GLint );
-	}
-}
-pub impl lmath::vector::vec4 : Uniform	{
-	fn load( loc : Location )	{
-		glcore::glUniform4fv( *loc, 4, self.to_ptr() );
-	}
-}
-pub impl lmath::vector::ivec4 : Uniform	{
-	fn load( loc : Location )	{
-		glcore::glUniform4iv( *loc, 4, self.to_ptr() );
-	}
-}
-pub impl lmath::quaternion::quat4 : Uniform	{
-	fn load( loc : Location )	{
-		glcore::glUniform4fv( *loc, 4, self.to_ptr() );
-	}
+enum Uniform	{
+	Unitialized,
+	UniFloat(float),
+	UniInt(int),
+	UniFloatVec(lmath::vector::vec4),
+	UniIntVec(lmath::vector::ivec4),
+	UniQuat(lmath::quaternion::quat4),
+	UniTex2D(@texture::Texture),
 }
 
 
@@ -44,7 +21,7 @@ struct Parameter	{
 	loc		: Location,
 	storage	: glcore::GLenum,
 	size	: glcore::GLint,
-	mut value	: @Uniform	//FIXME (wait for Rust)
+	mut value	: Uniform
 }
 
 struct Attribute	{
@@ -60,38 +37,49 @@ impl Parameter	{
 			unsafe	{
 				let mut v = 0f32;
 				glcore::glGetUniformfv( *h, *self.loc, ptr::addr_of(&v) );
-				self.value = (v as float) as @Uniform;
+				self.value = UniFloat(v as float);
 			}
 		}else
 		if self.storage == glcore::GL_INT	{
 			unsafe	{
 				let mut v = 0i32;
 				glcore::glGetUniformiv( *h, *self.loc, ptr::addr_of(&v) );
-				self.value = (v as int) as @Uniform;
+				self.value = UniInt(v as int);
 			}
 		}else
 		if self.storage == glcore::GL_FLOAT_VEC4	{
 			unsafe	{
 				let mut v = lmath::vector::Vec4::new(0f32,0f32,0f32,0f32);
 				glcore::glGetUniformfv( *h, *self.loc, v.to_ptr() );
-				self.value = @v as Uniform;
+				self.value = UniFloatVec(v);
 			}
 		}else
 		if self.storage == glcore::GL_INT_VEC4	{
 			unsafe	{
 				let mut v = lmath::vector::Vec4::new(0i32,0i32,0i32,0i32);
 				glcore::glGetUniformiv( *h, *self.loc, v.to_ptr() );
-				self.value = @v as Uniform;
+				self.value = UniIntVec(v);
 			}
 		}else	{return false;}
 		true
+	}
+
+	fn write()	{
+		match copy self.value	{
+			Unitialized		=> fail(fmt!( "Uninitalized parameter at location %d", *self.loc as int )),
+			UniFloat(v)		=> glcore::glUniform1f( *self.loc, v as glcore::GLfloat ),
+			UniInt(v)		=> glcore::glUniform1i( *self.loc, v as glcore::GLint ),
+			UniFloatVec(v)	=> glcore::glUniform4fv( *self.loc, 4, v.to_ptr() ),
+			UniIntVec(v)	=> glcore::glUniform4iv( *self.loc, 4, v.to_ptr() ),
+			_				=> fail(fmt!( "Unknown parameter at location %d", *self.loc as int )),
+		}
 	}
 }
 
 
 pub type AttriMap	= LinearMap<~str,@Attribute>;
 pub type ParaMap	= LinearMap<~str,@Parameter>;
-pub type DataMap	= LinearMap<~str,@Uniform>;
+pub type DataMap	= LinearMap<~str,Uniform>;
 
 struct Object	{
 	handle	: Handle,
@@ -164,7 +152,6 @@ priv fn query_parameters( h : Handle )-> ParaMap	{
 		raw_bytes	= vec::raw::to_ptr(info_bytes);
 	}
 	let mut rez		= send_map::linear::linear_map_with_capacity::<~str,@Parameter>( num as uint );
-	let init_value	= @() as Uniform;
 	while num>(0 as glcore::GLint)	{
 		num -= 1;
 		let mut length	= 0 as glcore::GLint;
@@ -179,7 +166,7 @@ priv fn query_parameters( h : Handle )-> ParaMap	{
 		}
 		info_bytes[length] = 0;
 		let location = glcore::glGetUniformLocation( *h, raw_bytes );
-		let p = @Parameter{ loc:Location(location), storage:storage, size:size, value:init_value };
+		let p = @Parameter{ loc:Location(location), storage:storage, size:size, value:Unitialized };
 		p.read( h );
 		rez.insert( name, p );
 	}
@@ -252,28 +239,28 @@ impl context::Context	{
 	}
 
 	//FIXME: accept Map trait once HashMap<~str> are supported
-	fn bind_program( p : &Program, data : &const DataMap )	{
+	fn bind_program( p : &Program, data : &DataMap )	{
 		self._bind_program( p.handle );
-		/* FIXME: each_const
+		let mut tex_unit = 0;
 		for data.each |name,value|	{
-			match self.params.find(name)	{
-				Some(ref par) => {
+			match p.params.find(name)	{
+				Some(ref par) =>	{
+					//FIXME: implement Eq
+					//if (par.value != value)	{
 						par.value = *value;
-						value.load( par.loc );
-				}
-				None => io::println( fmt!("Param not found: %s", *name) )
-			}
-		}*/
-		for p.params.each |name,par|	{
-			match data.find(name)	{
-				Some(value) =>	{
-					//FIXME: Eq trait
-					//if par.value != *value {
-					par.value = value;
-					value.load( par.loc );
+						/*match par.value	{
+							UniTex2D(t)	=>	{
+								self.texture.bind_to( tex_unit, t );
+								//FIXME: cache this
+								glcore::glUniform1i( *par.loc, tex_unit as glcore::GLint );
+								tex_unit += 1;
+							}
+							_	=> par.write(),
+						}*/
+						par.write();
 					//}
 				}
-				None => ()
+				None => {}
 			}
 		}
 	}
@@ -293,5 +280,5 @@ impl context::Context	{
 
 
 pub fn create_data()-> DataMap	{
-	LinearMap::<~str,@Uniform>()
+	LinearMap::<~str,Uniform>()
 }

@@ -66,9 +66,10 @@ fn render( s : &Sample ) ->bool	{
 	glcore::glClear( glcore::GL_COLOR_BUFFER_BIT | glcore::GL_DEPTH_BUFFER_BIT );
 	
 	s.ct.texture.bind_to( 0u, &s.texture );
-	s.data.insert( ~"color", @1f	as engine::shade::Uniform );
-	s.data.insert( ~"image", @0		as engine::shade::Uniform );
-	s.ct.bind_program( &s.program, &const s.data );
+	s.data.insert( ~"color", engine::shade::UniFloat(1f) );
+	s.data.insert( ~"image", engine::shade::UniInt(0i) );
+	//FIXME: no copy
+	s.ct.bind_program( &s.program, &copy s.data );
 	s.ct.buffer_array.bind( &s.buffer );
 	glcore::glVertexAttribPointer( 0, 2, glcore::GL_FLOAT, glcore::GL_FALSE,
 		sys::size_of::<f32>()*2u as i32, 0 as *libc::c_void );

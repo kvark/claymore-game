@@ -4,7 +4,7 @@ pub enum Handle	= glcore::GLuint;
 pub enum Target	= glcore::GLenum;
 
 
-struct Texture	{
+pub struct Texture	{
 	handle	: Handle,
 	target	: Target,
 	width		: uint,
