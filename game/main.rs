@@ -20,8 +20,10 @@ fn gen_buffer() -> handle	{
 	h
 }
 
+
 fn init() -> Sample	{
 	let ct = engine::context::create();
+	//assert ct.sync_back();
 	// load shaders
 	let vert_code = "attribute vec2 position; void main()	{ gl_Position = vec4(position,0.0,1.0); }";
 	let frag_code = "uniform float color; void main()	{ gl_FragData[0] = vec4(color,0.0,0.0,1.0); }";
@@ -33,7 +35,7 @@ fn init() -> Sample	{
 		let uni = program.params.get(&name).value;
 		let mut my_val:float;
 		unsafe	{ my_val = cast::transmute(&uni); }
-		io::println( fmt!("Initial val: %f",my_val) );
+		io::println( fmt!("Initial '%s' value: %f",name,my_val) );
 	}
 	// load buffers
 	let vdata = [-1f32,-1f32,0f32,1f32,1f32,-1f32];
@@ -46,7 +48,8 @@ fn init() -> Sample	{
 			glcore::GL_STATIC_DRAW );
 	}
 	// done
-	io::println( fmt!("Init: program %u, buffer %u",program.handle as uint,buf_handle as uint) );
+	ct.check(~"init");
+	io::println( fmt!("init: program %u, buffer %u",program.handle as uint,buf_handle as uint) );
 	Sample { ct:ct, program:program, data:engine::shade::create_data(), buffer:buf_handle }
 }
 
@@ -67,11 +70,7 @@ fn render( s : &Sample ) ->bool	{
 	glcore::glEnableVertexAttribArray( 0 );
 	glcore::glDrawArrays( glcore::GL_TRIANGLES, 0, 3 );
 	
-	let code = glcore::glGetError();
-	if (code != 0)	{
-		io::println( fmt!("GL Error: %d",code as int) );
-		return false;
-	}
+	s.ct.check(~"render");
 	return true;
 }
 

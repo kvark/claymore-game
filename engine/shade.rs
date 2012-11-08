@@ -55,6 +55,7 @@ struct Attribute	{
 
 impl Parameter	{
 	fn read( h : Handle )-> bool	{
+		assert self.loc >= 0;
 		if self.storage == glcore::GL_FLOAT	{
 			unsafe	{
 				let mut v = 0f32;
@@ -118,13 +119,15 @@ pub struct Program	{
 
 
 fn query_attributes( h : Handle )-> AttriMap	{
+	//assert glcore::glGetError() == 0;
 	let mut num		= 0 as glcore::GLint;
 	let mut max_len	= 0 as glcore::GLint;
+	let mut info_bytes	: ~[libc::c_char];
 	let mut raw_bytes	: *libc::c_char;
 	unsafe	{
 		glcore::glGetProgramiv( h, glcore::GL_ACTIVE_ATTRIBUTES, ptr::addr_of(&num) );
 		glcore::glGetProgramiv( h, glcore::GL_ACTIVE_ATTRIBUTE_MAX_LENGTH, ptr::addr_of(&max_len) );
-		let info_bytes = vec::from_elem( max_len as uint, 0 as libc::c_char );
+		info_bytes = vec::from_elem( max_len as uint, 0 as libc::c_char );
 		raw_bytes = vec::raw::to_ptr(info_bytes);
 	}
 	let mut rez		= send_map::linear::linear_map_with_capacity::<~str,@Attribute>( num as uint );
@@ -133,13 +136,14 @@ fn query_attributes( h : Handle )-> AttriMap	{
 		let mut length	= 0 as glcore::GLint;
 		let mut size	= 0 as glcore::GLint;
 		let mut storage	= 0 as glcore::GLenum;
-		let mut name : ~str;
+		let mut name 	: ~str;
 		unsafe	{
 			glcore::glGetActiveAttrib( h, num as glcore::GLuint, max_len,
 				ptr::addr_of(&length), ptr::addr_of(&size),
 				ptr::addr_of(&storage), raw_bytes );
 			name = str::raw::from_c_str_len( raw_bytes, length as uint );
 		}
+		info_bytes[length] = 0;
 		let location = glcore::glGetAttribLocation( h, raw_bytes );
 		rez.insert( name, @Attribute{ loc:location, storage:storage, size:size } );
 	}
@@ -148,14 +152,16 @@ fn query_attributes( h : Handle )-> AttriMap	{
 
 
 fn query_parameters( h : Handle )-> ParaMap	{
+	//assert glcore::glGetError() == 0;
 	let mut num		= 0 as glcore::GLint;
 	let mut max_len	= 0 as glcore::GLint;
+	let mut info_bytes	: ~[libc::c_char];
 	let mut raw_bytes	: *libc::c_char;
 	unsafe	{
 		glcore::glGetProgramiv( h, glcore::GL_ACTIVE_UNIFORMS, ptr::addr_of(&num) );
 		glcore::glGetProgramiv( h, glcore::GL_ACTIVE_UNIFORM_MAX_LENGTH, ptr::addr_of(&max_len) );
-		let info_bytes = vec::from_elem( max_len as uint, 0 as libc::c_char );
-		raw_bytes = vec::raw::to_ptr(info_bytes);
+		info_bytes	= vec::from_elem( max_len as uint, 0 as libc::c_char );
+		raw_bytes	= vec::raw::to_ptr(info_bytes);
 	}
 	let mut rez		= send_map::linear::linear_map_with_capacity::<~str,@Parameter>( num as uint );
 	let init_value	= @() as Uniform;
@@ -164,13 +170,14 @@ fn query_parameters( h : Handle )-> ParaMap	{
 		let mut length	= 0 as glcore::GLint;
 		let mut size	= 0 as glcore::GLint;
 		let mut storage	= 0 as glcore::GLenum;
-		let mut name : ~str;
+		let mut name 	: ~str;
 		unsafe	{
 			glcore::glGetActiveUniform( h, num as glcore::GLuint, max_len,
 				ptr::addr_of(&length), ptr::addr_of(&size),
 				ptr::addr_of(&storage), raw_bytes );
 			name = str::raw::from_c_str_len( raw_bytes, length as uint );
 		}
+		info_bytes[length] = 0;
 		let location = glcore::glGetUniformLocation( h, raw_bytes );
 		let p = @Parameter{ loc:location, storage:storage, size:size, value:init_value };
 		p.read( h );
@@ -228,7 +235,7 @@ impl context::Context	{
 			message = str::raw::from_c_str( raw_bytes );
 		}
 		let ok = (status != (0 as glcore::GLint));
-		if (!ok)	{
+		if !ok	{
 			io::println( fmt!("Program: %s",message) );	//TEMP
 		}
 		// done
@@ -268,6 +275,14 @@ impl context::Context	{
 	fn unbind_program()	{
 		self.program = 0 as Handle;
 		glcore::glUseProgram( self.program );
+	}
+
+	fn get_active_program()->Handle	{
+		let mut h = 0 as glcore::GLint;
+		unsafe	{
+			glcore::glGetIntegerv( glcore::GL_CURRENT_PROGRAM, ptr::addr_of(&h) );
+		}
+		h as Handle
 	}
 }
 
