@@ -93,7 +93,7 @@ pub type AttriMap	= LinearMap<~str,@Attribute>;
 pub type ParaMap	= LinearMap<~str,@Parameter>;
 pub type DataMap	= LinearMap<~str,@Uniform>;
 
-pub struct Shader	{
+struct Object	{
 	handle	: Handle,
 	target	: glcore::GLenum,
 	alive	: bool,
@@ -104,7 +104,7 @@ pub struct Shader	{
 	}
 }
 
-pub struct Program	{
+struct Program	{
 	handle	: Handle,
 	alive	: bool,
 	info	: ~str,
@@ -118,7 +118,7 @@ pub struct Program	{
 }
 
 
-fn query_attributes( h : Handle )-> AttriMap	{
+priv fn query_attributes( h : Handle )-> AttriMap	{
 	//assert glcore::glGetError() == 0;
 	let mut num		= 0 as glcore::GLint;
 	let mut max_len	= 0 as glcore::GLint;
@@ -151,7 +151,7 @@ fn query_attributes( h : Handle )-> AttriMap	{
 }
 
 
-fn query_parameters( h : Handle )-> ParaMap	{
+priv fn query_parameters( h : Handle )-> ParaMap	{
 	//assert glcore::glGetError() == 0;
 	let mut num		= 0 as glcore::GLint;
 	let mut max_len	= 0 as glcore::GLint;
@@ -188,7 +188,7 @@ fn query_parameters( h : Handle )-> ParaMap	{
 
 
 impl context::Context	{
-	pub fn create_shader( target : glcore::GLenum, code : &str )-> Shader	{
+	pub fn create_shader( target : glcore::GLenum, code : &str )-> Object	{
 		let h = glcore::glCreateShader( target );
 		let mut length = code.len() as glcore::GLint;
 		do str::as_c_str(code) |text|	{
@@ -213,10 +213,10 @@ impl context::Context	{
 		if !ok	{
 			io::println( fmt!("Shader: %s",message) );	//TEMP
 		}
-		Shader{ handle:h, target:target, alive:ok, info:message }
+		Object{ handle:h, target:target, alive:ok, info:message }
 	}
 	
-	pub fn create_program( shaders : ~[Shader] )-> Program	{
+	pub fn create_program( shaders : ~[Object] )-> Program	{
 		let h = glcore::glCreateProgram();
 		for shaders.each |s| {
 			glcore::glAttachShader( h, s.handle );
@@ -244,10 +244,16 @@ impl context::Context	{
 			params	:query_parameters(h) }
 	}
 
+	priv fn _bind_program( h : Handle )	{
+		if self.program != h	{
+			self.program = h;
+			glcore::glUseProgram( h );
+		}
+	}
+
 	//FIXME: accept Map trait once HashMap<~str> are supported
 	fn bind_program( p : &Program, data : &const DataMap )	{
-		self.program = p.handle;
-		glcore::glUseProgram( self.program );
+		self._bind_program( p.handle );
 		/* FIXME: each_const
 		for data.each |name,value|	{
 			match self.params.find(name)	{
@@ -273,8 +279,7 @@ impl context::Context	{
 	}
 
 	fn unbind_program()	{
-		self.program = 0 as Handle;
-		glcore::glUseProgram( self.program );
+		self._bind_program( 0 as Handle );
 	}
 
 	fn get_active_program()->Handle	{

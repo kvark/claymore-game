@@ -3,21 +3,12 @@ extern mod glcore;
 extern mod engine;
 use send_map::linear::LinearMap;
 
-type handle = u32;
 
 struct Sample	{
 	ct			: engine::context::Context,	
 	program		: engine::shade::Program,
 	mut data	: engine::shade::DataMap,
-	buffer	: handle
-}
-
-fn gen_buffer() -> handle	{
-	let mut h = 0u32;
-	unsafe	{
-		glcore::glGenBuffers( 1, ptr::addr_of(&h) );
-	}
-	h
+	buffer		: engine::buf::Object,
 }
 
 
@@ -38,19 +29,12 @@ fn init() -> Sample	{
 		io::println( fmt!("Initial '%s' value: %f",name,my_val) );
 	}
 	// load buffers
-	let vdata = [-1f32,-1f32,0f32,1f32,1f32,-1f32];
-	let buf_handle = gen_buffer();
-	glcore::glBindBuffer( glcore::GL_ARRAY_BUFFER, buf_handle );
-	unsafe	{
-		glcore::glBufferData( glcore::GL_ARRAY_BUFFER,
-			sys::size_of::<f32>()*vdata.len() as i64,
-			vec::raw::to_ptr(vdata) as *libc::c_void,
-			glcore::GL_STATIC_DRAW );
-	}
+	let vdata = ~[-1f32,-1f32,0f32,1f32,1f32,-1f32];
+	let buf = ct.create_buffer_loaded( vdata );
 	// done
 	ct.check(~"init");
-	io::println( fmt!("init: program %u, buffer %u",program.handle as uint,buf_handle as uint) );
-	Sample { ct:ct, program:program, data:engine::shade::create_data(), buffer:buf_handle }
+	io::println( fmt!("init: program %u, buffer %u",program.handle as uint,buf.handle as uint) );
+	Sample { ct:ct, program:program, data:engine::shade::create_data(), buffer:buf }
 }
 
 
@@ -60,11 +44,8 @@ fn render( s : &Sample ) ->bool	{
 	glcore::glClear( glcore::GL_COLOR_BUFFER_BIT | glcore::GL_DEPTH_BUFFER_BIT );
 	
 	s.data.insert( ~"color", @1f as engine::shade::Uniform );
-	s.ct.bind_program(
-		&s.program,
-		&const s.data
-		);
-	glcore::glBindBuffer( glcore::GL_ARRAY_BUFFER, s.buffer );
+	s.ct.bind_program( &s.program, &const s.data );
+	s.ct.buffer_array.bind( &s.buffer );
 	glcore::glVertexAttribPointer( 0, 2, glcore::GL_FLOAT, glcore::GL_FALSE,
 		sys::size_of::<f32>()*2u as i32, 0 as *libc::c_void );
 	glcore::glEnableVertexAttribArray( 0 );

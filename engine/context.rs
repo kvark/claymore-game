@@ -13,13 +13,6 @@ trait State	{
 }
 
 
-struct Buffer	{
-	handle : Handle
-}
-struct BufferBinding	{
-	target		: Target,
-	mut active	: Handle
-}
 struct RenderbufferBinding	{
 	target		: Target,
 	mut active	: Handle	
@@ -50,8 +43,8 @@ struct Texture	{
 
 pub struct Context	{
 	mut program			: Handle,
-	buffer_array		: BufferBinding,
-	buffer_element		: BufferBinding,
+	buffer_array		: buf::Binding,
+	buffer_element		: buf::Binding,
 	renderbuffer		: RenderbufferBinding,
 	framebuffer_draw	: FramebufferBinding,
 	framebuffer_read	: FramebufferBinding,
@@ -65,8 +58,8 @@ pub fn create()->Context	{
 	let vdata	= VertexData{ enabled:false };
 	Context{
 		program				: NULL,
-		buffer_array		: BufferBinding{		target:glcore::GL_ARRAY_BUFFER,			active:NULL },
-		buffer_element		: BufferBinding{		target:glcore::GL_ELEMENT_ARRAY_BUFFER,	active:NULL },
+		buffer_array		: buf::Binding{		target:glcore::GL_ARRAY_BUFFER,			active:NULL },
+		buffer_element		: buf::Binding{		target:glcore::GL_ELEMENT_ARRAY_BUFFER,	active:NULL },
 		renderbuffer		: RenderbufferBinding{	target:glcore::GL_RENDERBUFFER,			active:NULL },
 		framebuffer_draw	: FramebufferBinding{	target:glcore::GL_DRAW_FRAMEBUFFER,		active:NULL },
 		framebuffer_read	: FramebufferBinding{	target:glcore::GL_READ_FRAMEBUFFER,		active:NULL },
