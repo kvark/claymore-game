@@ -22,12 +22,17 @@ fn gen_buffer() -> handle	{
 fn init() -> Sample	{
 	// load shaders
 	let vert_code = "attribute vec2 position; void main()	{ gl_Position = vec4(position,0.0,1.0); }";
-	let frag_code = "uniform float color=0.5; void main()	{ gl_FragData[0] = vec4(color,0.0,0.0,1.0); }";
+	let frag_code = "uniform float color; void main()	{ gl_FragData[0] = vec4(color,0.0,0.0,1.0); }";
 	let vert_shader = engine::shade::create_shader( glcore::GL_VERTEX_SHADER, vert_code );
 	let frag_shader = engine::shade::create_shader( glcore::GL_FRAGMENT_SHADER, frag_code );
 	let program = engine::shade::create_program( ~[vert_shader,frag_shader] );
-	//let name = ~"color";
-	//io::println( fmt!("Initial val: %f",program.params.get(name).value as float));
+	{
+		let name = ~"color";
+		let uni = program.params.get(&name).value;
+		let mut my_val:float;
+		unsafe	{ my_val = cast::transmute(&uni); }
+		io::println( fmt!("Initial val: %f",my_val) );
+	}
 	// load buffers
 	let vdata = [-1f32,-1f32,0f32,1f32,1f32,-1f32];
 	let buf_handle = gen_buffer();
@@ -63,22 +68,6 @@ fn render( s : &Sample ) ->bool	{
 		return false;
 	}
 	return true;
-}
-
-
-struct Buffer	{
-	a:int
-}
-struct BufferBinding	{
-	a:int
-}
-struct FramebufferBinding	{
-	a:int
-}
-struct Context	{
-	arrayBuffer			: BufferBinding,
-	indexBuffer			: BufferBinding,
-	framebufferTarget	: FramebufferBinding,
 }
 
 

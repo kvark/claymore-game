@@ -203,6 +203,7 @@ fn query_parameters( h : glcore::GLuint )-> ParaMap	{
 		let location = glcore::glGetUniformLocation( h, raw_bytes );
 		let mut p = @Parameter{ loc:location, storage:storage, size:size, value:init_value };
 		p.read( h );
+		//io::println(fmt!("Found param %s",name));
 		rez.insert( name, p );
 	}
 	rez

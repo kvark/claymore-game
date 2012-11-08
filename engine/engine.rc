@@ -3,5 +3,6 @@
        author = "Dzmitry Malyshau")];
 #[crate_type = "lib"];
 
-pub mod shade;
 pub mod buffer;
+pub mod context;
+pub mod shade;
