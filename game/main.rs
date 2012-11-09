@@ -46,7 +46,7 @@ fn init() -> Sample	{
 	let mut tex : @engine::texture::Texture;
 	match stb_image::image::load(~"data/GpuPro3.jpeg")	{
 		Some(image) => {
-			tex = @ct.create_texture( glcore::GL_TEXTURE_2D, image.width, image.height, 1 );
+			tex = @ct.create_texture( glcore::GL_TEXTURE_2D, image.width, image.height, 1, 0 );
 			ct.texture.bind( tex );
 			ct.texture.load_2D( tex, 0, glcore::GL_RGBA as glcore::GLint,
 				glcore::GL_RGBA, glcore::GL_UNSIGNED_BYTE, image.data );
@@ -58,7 +58,7 @@ fn init() -> Sample	{
 	// init parameters
 	let mut params = engine::shade::create_data();
 	params.insert( ~"color", engine::shade::UniFloat(1f) );
-	params.insert( ~"image", engine::shade::UniTex2D(0u,tex) );
+	params.insert( ~"image", engine::shade::UniTexture(0u,tex) );
 	// done
 	ct.check(~"init");
 	io::println( fmt!("init: program %u, buffer %u, texture %u",

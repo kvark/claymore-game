@@ -18,7 +18,7 @@ enum Uniform	{
 	UniFloatVec(lmath::vector::vec4),
 	UniIntVec(lmath::vector::ivec4),
 	UniQuat(lmath::quaternion::quat4),
-	UniTex2D(uint,@texture::Texture),
+	UniTexture(uint,@texture::Texture),
 }
 
 impl Uniform : cmp::Eq	{
@@ -269,14 +269,27 @@ impl context::Context	{
 			match p.params.find_ref(name)	{
 				Some(ref par) =>	{
 					match *value	{
-						UniTex2D(_,t)	=>	{
-							assert [glcore::GL_TEXTURE_2D].contains( &*t.target );
+						UniTexture(_,t)	=>	{
+							// check sampler type
+							if *t.target == glcore::GL_TEXTURE_1D	{
+								assert [glcore::GL_SAMPLER_1D].contains( &par.storage );
+							}else
+							if *t.target == glcore::GL_TEXTURE_2D	{
+								assert [glcore::GL_SAMPLER_2D].contains( &par.storage );
+							}else
+							if *t.target == glcore::GL_TEXTURE_3D	{
+								assert [glcore::GL_SAMPLER_3D].contains( &par.storage );
+							}else	{
+								fail(fmt!( "Unknown texture target: %x", *t.target as uint ));
+							}
+							// bind
 							self.texture.bind_to( tex_unit, t );
 							match par.value	{
-								UniTex2D(unit,_) if unit==tex_unit	=> {}
+								UniTexture(unit,_) if unit==tex_unit	=> {}
 								_	=> { glcore::glUniform1i( *par.loc, tex_unit as glcore::GLint ); }
 							}
-							par.value = UniTex2D( tex_unit, t );
+							// update
+							par.value = UniTexture( tex_unit, t );
 							tex_unit += 1;
 						},
 						_	=> {
