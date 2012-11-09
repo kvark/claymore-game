@@ -9,19 +9,19 @@ clean-engine:
 
 DIR=claymore-game
 
-extern: lmath glfw3 glcore stb-image
+extern: clean-lib lmath glfw3 glcore stb-image
 
-clean-extern:
+clean-lib:
 	(cd lib && rm -Rf liblmath* libglfw3* libglcore* libstb*)
 
 lmath:
-	(cd ../lmath-rs && make && cp -R lib/* ../${DIR}/lib/)
+	(cd ../lmath-rs && make clean && make && cp -R lib/* ../${DIR}/lib/)
 	
 glfw3:
-	(cd ../glfw3-rs && make && cp -R lib/* ../${DIR}/lib/)
+	(cd ../glfw3-rs && make clean && make && cp -R lib/* ../${DIR}/lib/)
 
 glcore:
-	(cd ../glcore-rs && make osx-lion && cp -R lib/* ../${DIR}/lib/)
+	(cd ../glcore-rs && make clean && make osx-lion && cp -R lib/* ../${DIR}/lib/)
 
 stb-image:
-	(cd ../rust-stb-image && make && cp -R *.dylib* ../${DIR}/lib/)
+	(cd ../rust-stb-image && make clean && make && cp -R *.dylib* ../${DIR}/lib/)

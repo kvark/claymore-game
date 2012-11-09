@@ -21,10 +21,10 @@ impl Uniform : cmp::Eq	{
 		match (&self,v)	{
 			(&UniFloat(f1),&UniFloat(f2))			=> f1==f2,
 			(&UniInt(i1),&UniInt(i2))				=> i1==i2,
-			//(&UniFloatVec(fv1),&UniFloatVec(fv2))	=> fv1==fv2,
+			(&UniFloatVec(fv1),&UniFloatVec(fv2))	=> fv1==fv2,
+			//FIXME: waiting for lmath to cover that
 			//(&UniIntVec(fi1),&UniIntVec(fi2))		=> fi1==fi2,
-			//(&UniQuat(q1),&UniQuat(q2))				=> q1==q2,
-			(&UniTex2D(u1,t1),&UniTex2D(u2,t2))		=> u1==u2 && *t1.handle==*t2.handle,
+			(&UniQuat(q1),&UniQuat(q2))				=> q1==q2,
 			(_,_)									=> false
 		}
 	}
@@ -262,7 +262,7 @@ impl context::Context	{
 		let mut tex_unit = 0;
 		for data.each |name,value|	{
 			match p.params.find(name)	{
-				Some(ref par)	=> if par.value != *value	{
+				Some(ref par) =>	{
 					match *value	{
 						UniTex2D(_,t)	=>	{
 							assert [glcore::GL_TEXTURE_2D].contains( &*t.target );
@@ -275,9 +275,10 @@ impl context::Context	{
 							tex_unit += 1;
 						},
 						_	=> {
-							io::println(fmt!( "Writing param %s", *name ));
-							par.value = *value;
-							par.write();
+							if par.value != *value	{
+								par.value = *value;
+								par.write();
+							}
 						}
 					}
 				},
