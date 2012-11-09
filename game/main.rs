@@ -6,7 +6,6 @@ extern mod stb_image;
 
 struct Sample	{
 	ct			: engine::context::Context,
-	vao			: engine::context::VertexArray,
 	program		: engine::shade::Program,
 	mut data	: engine::shade::DataMap,
 	buffer		: engine::buf::Object,
@@ -19,7 +18,7 @@ fn init() -> Sample	{
 	assert ct.sync_back();
 	// default VAO
 	let vao = ct.create_vertex_array();
-	ct.bind_vertex_array( &vao );
+	ct.bind_vertex_array( vao );
 	// load shaders
 	let vert_code = "#version 150 core
 		in vec2 position;
@@ -64,7 +63,7 @@ fn init() -> Sample	{
 	io::println( fmt!("init: program %u, buffer %u, texture %u",
 		*program.handle as uint,*buf.handle as uint, *tex.handle as uint)
 	);
-	Sample { ct:ct, vao:vao, program:program, data:params, buffer:buf, texture:tex }
+	Sample { ct:ct, program:program, data:params, buffer:buf, texture:tex }
 }
 
 

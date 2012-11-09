@@ -2,7 +2,6 @@ extern mod glcore;
 
 type Target = glcore::GLenum;
 type Handle = glcore::GLuint;
-const MAX_VERTEX_ATTRIBS	:uint	= 8;
 
 pub trait State	{
 	// query all
@@ -19,21 +18,6 @@ struct FramebufferBinding	{
 	mut active	: Handle
 }
 
-struct VertexArray	{
-	handle		: Handle,
-
-	drop	{
-		unsafe	{
-			//FIXME: check current
-			glcore::glDeleteVertexArrays( 1, ptr::addr_of(&self.handle) );
-		}
-	}
-}
-
-type Location	= glcore::GLuint;
-struct VertexData	{
-	enabled	: bool,
-}
 
 
 pub struct Context	{
@@ -43,15 +27,13 @@ pub struct Context	{
 	renderbuffer		: RenderbufferBinding,
 	framebuffer_draw	: FramebufferBinding,
 	framebuffer_read	: FramebufferBinding,
-	mut vertex_array	: Handle,
-	vertex_data			: ~[VertexData],
+	mut vertex_array	: @buf::VertexArray,
 	texture				: texture::Binding,
 }
 
 
 pub fn create()->Context	{
 	// fill up the context
-	let vdata	= VertexData{ enabled:false };
 	let slots	= send_map::linear::LinearMap::<texture::Slot,texture::Handle>();
 	Context{
 		program				: shade::Handle(0),
@@ -60,8 +42,7 @@ pub fn create()->Context	{
 		renderbuffer		: RenderbufferBinding{	target:glcore::GL_RENDERBUFFER,			active:0 as Handle },
 		framebuffer_draw	: FramebufferBinding{	target:glcore::GL_DRAW_FRAMEBUFFER,		active:0 as Handle },
 		framebuffer_read	: FramebufferBinding{	target:glcore::GL_READ_FRAMEBUFFER,		active:0 as Handle },
-		vertex_array		: 0 as Handle,
-		vertex_data			: vec::from_elem( MAX_VERTEX_ATTRIBS, vdata ),
+		vertex_array		: @buf::VertexArray{ handle:buf::Handle(0), data:~[] },
 		texture				: texture::Binding{ active_unit:0u,	active:slots },
 	}
 }
@@ -71,21 +52,6 @@ impl Context	{
 		let code = glcore::glGetError();
 		if code != 0	{
 			fail( fmt!("%s: GL Error: %d",where,code as int) );
-		}
-	}
-
-	fn create_vertex_array()->VertexArray	{
-		let mut hid = 0 as Handle;
-		unsafe	{
-			glcore::glGenVertexArrays( 1, ptr::addr_of(&hid) );
-		}
-		VertexArray{ handle:hid }
-	}
-
-	fn bind_vertex_array( va : &VertexArray )	{
-		if self.vertex_array != va.handle	{
-			self.vertex_array = va.handle;
-			glcore::glBindVertexArray( va.handle );
 		}
 	}
 }

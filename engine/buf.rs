@@ -1,5 +1,6 @@
 extern mod glcore;
 
+const MAX_VERTEX_ATTRIBS	:uint	= 8;
 pub enum Handle	= glcore::GLuint;
 pub enum Target = glcore::GLenum;
 
@@ -71,6 +72,23 @@ impl Binding	{
 }
 
 
+struct VertexData	{
+	enabled	: bool,
+}
+
+pub struct VertexArray	{
+	handle		: Handle,
+	data		: ~[VertexData],
+
+	drop	{
+		unsafe	{
+			//FIXME: check current
+			glcore::glDeleteVertexArrays( 1, ptr::addr_of(&*self.handle) );
+		}
+	}
+}
+
+
 impl context::Context	{
 	fn create_buffer()->Object	{
 		let mut hid = 0 as glcore::GLuint;
@@ -97,4 +115,23 @@ impl context::Context	{
 		slot.unbind();
 		obj
 	}
+
+	
+	fn create_vertex_array()->@VertexArray	{
+		let mut hid = 0 as glcore::GLuint;
+		unsafe	{
+			glcore::glGenVertexArrays( 1, ptr::addr_of(&hid) );
+		}
+		let vd	= VertexData{ enabled:false };
+		let data = vec::from_elem( MAX_VERTEX_ATTRIBS, vd );
+		@VertexArray{ handle:Handle(hid), data:data }
+	}
+
+	fn bind_vertex_array( va : @VertexArray )	{
+		if *self.vertex_array.handle != *va.handle	{
+			self.vertex_array = va;
+			glcore::glBindVertexArray( *va.handle );
+		}
+	}
 }
+
