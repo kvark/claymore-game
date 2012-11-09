@@ -18,6 +18,7 @@ enum Uniform	{
 	UniFloatVec(lmath::vector::vec4),
 	UniIntVec(lmath::vector::ivec4),
 	UniQuat(lmath::quaternion::quat4),
+	UniMatrix(bool,lmath::matrix::mat4),
 	UniTexture(uint,@texture::Texture),
 }
 
@@ -30,6 +31,8 @@ impl Uniform : cmp::Eq	{
 			//FIXME: waiting for lmath to cover that
 			//(&UniIntVec(fi1),&UniIntVec(fi2))		=> fi1==fi2,
 			(&UniQuat(q1),&UniQuat(q2))				=> q1==q2,
+			(&UniMatrix(b1,m1),&UniMatrix(b2,m2))	=> b1==b2 && m1==m2,
+			(&UniTexture(u1,_),&UniTexture(u2,_))	=> u1==u2,
 			(_,_)									=> false
 		}
 	}
@@ -51,37 +54,34 @@ pub struct Attribute	{
 }
 
 impl Parameter	{
-	priv fn read( h : Handle )-> bool	{
+	priv unsafe fn read( h : Handle )-> bool	{
 		let t = self.storage;
 		let loc = *self.loc;
 		assert loc >= 0;
 		if t == glcore::GL_FLOAT	{
-			unsafe	{
-				let mut v = 0f32;
-				glcore::glGetUniformfv( *h, loc, ptr::addr_of(&v) );
-				self.value = UniFloat(v as float);
-			}
+			let mut v = 0f32;
+			glcore::glGetUniformfv( *h, loc, ptr::addr_of(&v) );
+			self.value = UniFloat(v as float);
 		}else
 		if t == glcore::GL_INT	{
-			unsafe	{
-				let mut v = 0i32;
-				glcore::glGetUniformiv( *h, loc, ptr::addr_of(&v) );
-				self.value = UniInt(v as int);
-			}
+			let mut v = 0i32;
+			glcore::glGetUniformiv( *h, loc, ptr::addr_of(&v) );
+			self.value = UniInt(v as int);
 		}else
 		if t == glcore::GL_FLOAT_VEC4	{
-			unsafe	{
-				let mut v = lmath::vector::Vec4::new(0f32,0f32,0f32,0f32);
-				glcore::glGetUniformfv( *h, loc, v.to_ptr() );
-				self.value = UniFloatVec(v);
-			}
+			let mut v = lmath::vector::Vec4::zero::<f32>();
+			glcore::glGetUniformfv( *h, loc, v.to_ptr() );
+			self.value = UniFloatVec(v);
 		}else
 		if t == glcore::GL_INT_VEC4	{
-			unsafe	{
-				let mut v = lmath::vector::Vec4::new(0i32,0i32,0i32,0i32);
-				glcore::glGetUniformiv( *h, loc, v.to_ptr() );
-				self.value = UniIntVec(v);
-			}
+			let mut v = lmath::vector::Vec4::zero::<i32>();
+			glcore::glGetUniformiv( *h, loc, v.to_ptr() );
+			self.value = UniIntVec(v);
+		}else
+		if t == glcore::GL_FLOAT_MAT4	{
+			let mut v = lmath::matrix::Mat4::zero::<f32>();
+			glcore::glGetUniformfv( *h, loc, ptr::addr_of(&v.x.x) );
+			self.value = UniMatrix(false,v);	
 		}else	{return false;}
 		true
 	}
@@ -92,9 +92,11 @@ impl Parameter	{
 			Unitialized		=> fail(fmt!( "Uninitalized parameter at location %d", loc as int )),
 			UniFloat(v)		=> glcore::glUniform1f( loc, v as glcore::GLfloat ),
 			UniInt(v)		=> glcore::glUniform1i( loc, v as glcore::GLint ),
-			UniFloatVec(v)	=> glcore::glUniform4fv( loc, 4, v.to_ptr() ),
-			UniIntVec(v)	=> glcore::glUniform4iv( loc, 4, v.to_ptr() ),
-			_				=> fail(fmt!( "Unknown parameter at location %d", loc as int )),
+			UniFloatVec(v)	=> glcore::glUniform4fv( loc, 1, v.to_ptr() ),
+			UniIntVec(v)	=> glcore::glUniform4iv( loc, 1, v.to_ptr() ),
+			UniQuat(v)		=> glcore::glUniform4fv( loc, 1, v.to_ptr() ),
+			UniMatrix(b,v)	=> glcore::glUniformMatrix4fv( loc, 1, b as glcore::GLboolean, ptr::addr_of(&v.x.x) ),
+			UniTexture(u,_)	=> glcore::glUniform1i( loc, u as glcore::GLint ),
 		}
 	}
 }
@@ -128,6 +130,18 @@ pub struct Program	{
 	}
 }
 
+impl Program	{
+	fn read_parameter( name : ~str )-> Uniform	{
+		match self.params.find_ref(&name)	{
+			Some(ref par) =>	{
+				par.read( self.handle );
+				par.value
+			},
+			None => {Unitialized}
+		}
+	}	
+}
+
 
 priv fn query_attributes( h : Handle )-> AttriMap	{
 	//assert glcore::glGetError() == 0;
@@ -155,8 +169,8 @@ priv fn query_attributes( h : Handle )-> AttriMap	{
 			name = str::raw::from_c_str_len( raw_bytes, length as uint );
 		}
 		info_bytes[length] = 0;
-		let location = glcore::glGetAttribLocation( *h, raw_bytes );
-		rez.insert( name, Attribute{ loc:location as uint, storage:storage, size:size } );
+		let loc = glcore::glGetAttribLocation( *h, raw_bytes );
+		rez.insert( name, Attribute{ loc:loc as uint, storage:storage, size:size } );
 	}
 	rez
 }
@@ -188,12 +202,28 @@ priv fn query_parameters( h : Handle )-> ParaMap	{
 			name = str::raw::from_c_str_len( raw_bytes, length as uint );
 		}
 		info_bytes[length] = 0;
-		let location = glcore::glGetUniformLocation( *h, raw_bytes );
-		let p = Parameter{ loc:Location(location), storage:storage, size:size, value:Unitialized };
-		p.read( h );
+		let loc = glcore::glGetUniformLocation( *h, raw_bytes );
+		io::println(fmt!( "Discovered param '%s' at location %d", name, loc as int ));
+		let p = Parameter{ loc:Location(loc), storage:storage, size:size, value:Unitialized };
+		//p.read( h );	// no need to read them here
 		rez.insert( name, p );
 	}
 	rez
+}
+
+
+priv fn check_sampler( target : glcore::GLenum, storage : glcore::GLenum )	{
+	if target == glcore::GL_TEXTURE_1D	{
+		assert [glcore::GL_SAMPLER_1D].contains( &storage );
+	}else
+	if target == glcore::GL_TEXTURE_2D	{
+		assert [glcore::GL_SAMPLER_2D].contains( &storage );
+	}else
+	if target == glcore::GL_TEXTURE_3D	{
+		assert [glcore::GL_SAMPLER_3D].contains( &storage );
+	}else	{
+		fail(fmt!( "Unknown texture target: %x", target as uint ));
+	}
 }
 
 
@@ -268,36 +298,19 @@ impl context::Context	{
 		for data.each |name,value|	{
 			match p.params.find_ref(name)	{
 				Some(ref par) =>	{
+					let mut val = *value;
 					match *value	{
 						UniTexture(_,t)	=>	{
-							// check sampler type
-							if *t.target == glcore::GL_TEXTURE_1D	{
-								assert [glcore::GL_SAMPLER_1D].contains( &par.storage );
-							}else
-							if *t.target == glcore::GL_TEXTURE_2D	{
-								assert [glcore::GL_SAMPLER_2D].contains( &par.storage );
-							}else
-							if *t.target == glcore::GL_TEXTURE_3D	{
-								assert [glcore::GL_SAMPLER_3D].contains( &par.storage );
-							}else	{
-								fail(fmt!( "Unknown texture target: %x", *t.target as uint ));
-							}
-							// bind
+							check_sampler( *t.target, par.storage );
 							self.texture.bind_to( tex_unit, t );
-							match par.value	{
-								UniTexture(unit,_) if unit==tex_unit	=> {}
-								_	=> { glcore::glUniform1i( *par.loc, tex_unit as glcore::GLint ); }
-							}
-							// update
-							par.value = UniTexture( tex_unit, t );
+							val = UniTexture( tex_unit, t );
 							tex_unit += 1;
 						},
-						_	=> {
-							if par.value != *value	{
-								par.value = *value;
-								par.write();
-							}
-						}
+						_	=> {}
+					}
+					if par.value != val	{
+						par.value = val;
+						par.write();
 					}
 				},
 				None => {}

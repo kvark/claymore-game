@@ -1,7 +1,9 @@
 extern mod glfw3;
 extern mod glcore;
-extern mod engine;
+extern mod lmath;
 extern mod stb_image;
+
+extern mod engine;
 
 
 struct Sample	{
@@ -30,16 +32,16 @@ fn init() -> Sample	{
 	};
 	let program = ct.create_program( ~[vert_shader,frag_shader] );
 	// load buffers and mesh
-	let vdata = ~[-1f32,-1f32,0f32,1f32,1f32,-1f32];
+	let vdata = ~[-1f32,-1f32,0f32,0f32,1f32,0f32,1f32,-1f32,0f32];
 	let buf = @ct.create_buffer_loaded( vdata );
 	let mut mesh = ct.create_mesh( ~"dummy", ~"3", 3, 0 );
-	mesh.attribs.insert( ~"position", engine::mesh::Attribute{
+	mesh.attribs.insert( ~"a_Position", engine::mesh::Attribute{
 		kind			: glcore::GL_FLOAT,
-		count			: 2u,
+		count			: 3u,
 		normalized		: false,
 		interpolated	: true,
 		buffer			: buf,
-		stride			: sys::size_of::<f32>()*2u,
+		stride			: 3u * sys::size_of::<f32>(),
 		offset			: 0,
 	});
 	// load texture
@@ -57,8 +59,11 @@ fn init() -> Sample	{
 	}
 	// init parameters
 	let mut params = engine::shade::create_data();
-	params.insert( ~"color", engine::shade::UniFloat(1f) );
-	params.insert( ~"image", engine::shade::UniTexture(0u,tex) );
+	let mx = lmath::matrix::Mat4::identity::<f32>();
+	params.insert( ~"u_Color",		engine::shade::UniFloat(1f) );
+	params.insert( ~"t_Image",		engine::shade::UniTexture(0u,tex) );
+	params.insert( ~"u_World",		engine::shade::UniMatrix(false,mx) );
+	params.insert( ~"u_ViewProj",	engine::shade::UniMatrix(false,mx) );
 	// done
 	ct.check(~"init");
 	io::println( fmt!("init: program %u, buffer %u, texture %u",
@@ -73,7 +78,7 @@ fn render( s : &Sample ) ->bool	{
 	glcore::glClearDepth( 1.0f64 );
 	glcore::glClear( glcore::GL_COLOR_BUFFER_BIT | glcore::GL_DEPTH_BUFFER_BIT );
 	
-	//FIXME: no copy
+	//FIXME: no copy (each_const required)
 	s.ct.draw_mesh( &s.mesh, &s.program, &copy s.data );
 	
 	s.ct.check(~"render");

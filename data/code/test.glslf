@@ -1,11 +1,12 @@
 #version 150 core
-in vec2 texCoords;
 
-uniform float color=0.5;
-uniform sampler2D image;
+uniform	float u_Color = 0.5;
+uniform	sampler2D t_Image;
 
-out vec4 result;
+in	vec2 texCoords;
+out	vec4 result;
+
 
 void main()	{
-	result = texture(image,texCoords);
+	result = texture( t_Image, texCoords );
 }
