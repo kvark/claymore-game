@@ -12,10 +12,11 @@ struct Sample	{
 	mut data	: engine::shade::DataMap,
 	mesh		: engine::mesh::Mesh,
 	texture		: @engine::texture::Texture,
+	mut frames	: uint,
 }
 
 
-fn init() -> Sample	{
+fn init( aspect : float ) -> Sample	{
 	let ct = engine::context::create();
 	assert ct.sync_back();
 	// default VAO
@@ -59,17 +60,30 @@ fn init() -> Sample	{
 	}
 	// init parameters
 	let mut params = engine::shade::create_data();
-	let mx = lmath::matrix::Mat4::identity::<f32>();
-	params.insert( ~"u_Color",		engine::shade::UniFloat(1f) );
-	params.insert( ~"t_Image",		engine::shade::UniTexture(0u,tex) );
-	params.insert( ~"u_World",		engine::shade::UniMatrix(false,mx) );
-	params.insert( ~"u_ViewProj",	engine::shade::UniMatrix(false,mx) );
+	{
+		// compute matrices
+		let cam_space = engine::space::QuatSpace{
+			position 	: lmath::vector::Vec3::new( 0f32, 0f32, 5f32 ),
+			orientation	: lmath::quaternion::Quat::identity::<f32>(),
+			scale		: 1f32
+		};
+		let cam_node = engine::space::Node{ name:~"cam", space:cam_space, parent:None };
+		let projection = lmath::funs::projection::perspective::<f32>( 45f, aspect, 1f, 10f );
+		let mx = lmath::matrix::Mat4::identity::<f32>();
+		let mvi = cam_node.world_space().inverse().to_matrix();
+		let mvp = projection.mul_m( &mvi );
+		// push to params
+		params.insert( ~"u_Color",		engine::shade::UniFloat(1f) );
+		params.insert( ~"t_Image",		engine::shade::UniTexture(0u,tex) );
+		params.insert( ~"u_World",		engine::shade::UniMatrix(false,mx) );
+		params.insert( ~"u_ViewProj",	engine::shade::UniMatrix(false,mvp) );
+	}
 	// done
 	ct.check(~"init");
 	io::println( fmt!("init: program %u, buffer %u, texture %u",
 		*program.handle as uint,*buf.handle as uint, *tex.handle as uint)
 	);
-	Sample { ct:ct, program:program, data:params, mesh:mesh, texture:tex }
+	Sample { ct:ct, program:program, data:params, mesh:mesh, texture:tex, frames:0 }
 }
 
 
@@ -77,10 +91,24 @@ fn render( s : &Sample ) ->bool	{
 	glcore::glClearColor( 0.5f32, 0.5f32, 1.0f32, 1.0f32 );
 	glcore::glClearDepth( 1.0f64 );
 	glcore::glClear( glcore::GL_COLOR_BUFFER_BIT | glcore::GL_DEPTH_BUFFER_BIT );
-	
+
+	// compute new rotation matrix
+	{
+		let angle = (s.frames as f32) * 0.005f32;
+		let sn = f32::sin(angle), cn = f32::cos(angle);
+		let q = lmath::quaternion::Quat::<f32>{ w:cn, x:0f32, y:sn, z:0f32 };
+		let model_space = engine::space::QuatSpace{
+			position 	: lmath::vector::Vec3::zero::<f32>(),
+			orientation	: q,
+			scale		: 1f32
+		};
+		let mx = model_space.to_matrix();
+		s.data.insert( ~"u_World", engine::shade::UniMatrix(false,mx) );
+	}
 	//FIXME: no copy (each_const required)
 	s.ct.draw_mesh( &s.mesh, &s.program, &copy s.data );
 	
+	s.frames += 1;
 	s.ct.check(~"render");
 	return true;
 }
@@ -106,7 +134,8 @@ fn main()	{
 		glfw3::window_hint( glfw3::OPENGL_PROFILE, glfw3::OPENGL_CORE_PROFILE );
         glfw3::window_hint( glfw3::OPENGL_FORWARD_COMPAT, 1 );
 	
-		let mut window = glfw3::create_window( 800, 600, glfw3::WINDOWED, "Claymore" );
+		let wid = 800, het = 600;
+		let mut window = glfw3::create_window( wid, het, glfw3::WINDOWED, "Claymore" );
 		if (ptr::is_null(window.ptr))	{
 			failGLFW("OpenWindow");
 		}
@@ -114,7 +143,8 @@ fn main()	{
 		window.set_title(~"Claymore");
 		window.make_context_current();
 		
-		let sample = init();
+		let aspect = (wid as float) / (het as float);
+		let sample = init( aspect );
 		
 		loop	{
 			glfw3::poll_events();

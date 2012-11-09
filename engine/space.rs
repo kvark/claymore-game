@@ -3,24 +3,58 @@ pub type Matrix = lmath::matrix::mat4;
 pub type Vector = lmath::vector::vec3;
 
 
+pub trait Pretty	{
+	pure fn to_string()-> ~str;
+}
+
 pub trait Space	{
 	pure fn transform( value : &Vector )-> Vector;
 	pure fn mul( other : &self )-> self;
-	pure fn invert()-> self;
+	pure fn inverse()-> self;
 	pure fn to_matrix()-> Matrix;
 }
 
-//FIXME: waiting for Brendan
-/*impl Matrix : Space	{
-	pure fn mul( other : &Matrix )-> Matrix	{ self.mul_m(other) }
-	pure fn invert()-> Matrix	{
+
+impl Matrix : Space	{
+	pure fn transform( value : &Vector )-> Vector	{
+		let v4 = lmath::vector::Vec4::new( value.x, value.y, value.z, 1f32 );
+		let vt = self.mul_v(&v4);
+		lmath::vector::Vec3::new( vt.x/vt.w, vt.y/vt.w, vt.z/vt.w )
+	}
+	pure fn mul( other : &Matrix )-> Matrix	{
+		self.mul_m(other)
+	}
+	pure fn inverse()-> Matrix	{
 		match self.invert()	{
 			Some(m)	=> m,
-			None => fail("Unable to invert matrix")
+			None => fail(~"Unable to invert matrix")
 		}
 	}
 	pure fn to_matrix()-> Matrix	{self}
-}*/
+}
+
+
+impl Vector : Pretty	{
+	pure fn to_string()-> ~str	{
+		fmt!( "(%f,%f,%f)", self.x as float, self.y as float, self.z as float )
+	}
+}
+impl lmath::vector::vec4 : Pretty	{
+	pure fn to_string()-> ~str	{
+		fmt!( "(%f,%f,%f,%f)", self.x as float, self.y as float, self.z as float, self.w as float )
+	}	
+}
+
+impl Matrix : Pretty	{
+	pure fn to_string()-> ~str	{
+		fmt!("/%s\\\n|%s|\n|%s|\n\\%s/",
+			self.row(0).to_string(),
+			self.row(1).to_string(),
+			self.row(2).to_string(),
+			self.row(3).to_string())
+	}
+}
+
 
 pub struct QuatSpace	{
 	position	: Vector,
@@ -39,7 +73,7 @@ impl QuatSpace : Space	{
 			scale		: self.scale * other.scale
 		}
 	}
-	pure fn invert()-> QuatSpace	{
+	pure fn inverse()-> QuatSpace	{
 		let q = self.orientation.inverse();
 		let s = 1f32 / self.scale;
 		let p = q.mul_v(&self.position).mul_t(-s);
@@ -47,9 +81,9 @@ impl QuatSpace : Space	{
 	}
 	pure fn to_matrix()-> Matrix	{
 		let mut m = self.orientation.to_Mat4();
-		m.x.x *= self.scale;	m.x.w = self.position.x;
-		m.y.y *= self.scale;	m.y.w = self.position.y;
-		m.z.z *= self.scale;	m.z.w = self.position.z;
+		m.x.x *= self.scale;	m.w.x = self.position.x;
+		m.y.y *= self.scale;	m.w.y = self.position.y;
+		m.z.z *= self.scale;	m.w.z = self.position.z;
 		m
 	}
 }
