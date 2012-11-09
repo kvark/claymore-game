@@ -13,7 +13,22 @@ enum Uniform	{
 	UniFloatVec(lmath::vector::vec4),
 	UniIntVec(lmath::vector::ivec4),
 	UniQuat(lmath::quaternion::quat4),
-	UniTex2D(@texture::Texture),
+	UniTex2D(uint,@texture::Texture),
+}
+
+impl Uniform : cmp::Eq	{
+	pure fn eq( v : &Uniform )-> bool	{
+		match (&self,v)	{
+			(&UniFloat(f1),&UniFloat(f2))			=> f1==f2,
+			(&UniInt(i1),&UniInt(i2))				=> i1==i2,
+			//(&UniFloatVec(fv1),&UniFloatVec(fv2))	=> fv1==fv2,
+			//(&UniIntVec(fi1),&UniIntVec(fi2))		=> fi1==fi2,
+			//(&UniQuat(q1),&UniQuat(q2))				=> q1==q2,
+			(&UniTex2D(u1,t1),&UniTex2D(u2,t2))		=> u1==u2 && *t1.handle==*t2.handle,
+			(_,_)									=> false
+		}
+	}
+	pure fn ne( v : &Uniform )-> bool	{ !self.eq(v) }
 }
 
 
@@ -32,32 +47,34 @@ struct Attribute	{
 
 impl Parameter	{
 	fn read( h : Handle )-> bool	{
-		assert *self.loc >= 0;
-		if self.storage == glcore::GL_FLOAT	{
+		let t = self.storage;
+		let loc = *self.loc;
+		assert loc >= 0;
+		if t == glcore::GL_FLOAT	{
 			unsafe	{
 				let mut v = 0f32;
-				glcore::glGetUniformfv( *h, *self.loc, ptr::addr_of(&v) );
+				glcore::glGetUniformfv( *h, loc, ptr::addr_of(&v) );
 				self.value = UniFloat(v as float);
 			}
 		}else
-		if self.storage == glcore::GL_INT	{
+		if t == glcore::GL_INT	{
 			unsafe	{
 				let mut v = 0i32;
-				glcore::glGetUniformiv( *h, *self.loc, ptr::addr_of(&v) );
+				glcore::glGetUniformiv( *h, loc, ptr::addr_of(&v) );
 				self.value = UniInt(v as int);
 			}
 		}else
-		if self.storage == glcore::GL_FLOAT_VEC4	{
+		if t == glcore::GL_FLOAT_VEC4	{
 			unsafe	{
 				let mut v = lmath::vector::Vec4::new(0f32,0f32,0f32,0f32);
-				glcore::glGetUniformfv( *h, *self.loc, v.to_ptr() );
+				glcore::glGetUniformfv( *h, loc, v.to_ptr() );
 				self.value = UniFloatVec(v);
 			}
 		}else
-		if self.storage == glcore::GL_INT_VEC4	{
+		if t == glcore::GL_INT_VEC4	{
 			unsafe	{
 				let mut v = lmath::vector::Vec4::new(0i32,0i32,0i32,0i32);
-				glcore::glGetUniformiv( *h, *self.loc, v.to_ptr() );
+				glcore::glGetUniformiv( *h, loc, v.to_ptr() );
 				self.value = UniIntVec(v);
 			}
 		}else	{return false;}
@@ -65,13 +82,14 @@ impl Parameter	{
 	}
 
 	fn write()	{
+		let loc = *self.loc;
 		match copy self.value	{
-			Unitialized		=> fail(fmt!( "Uninitalized parameter at location %d", *self.loc as int )),
-			UniFloat(v)		=> glcore::glUniform1f( *self.loc, v as glcore::GLfloat ),
-			UniInt(v)		=> glcore::glUniform1i( *self.loc, v as glcore::GLint ),
-			UniFloatVec(v)	=> glcore::glUniform4fv( *self.loc, 4, v.to_ptr() ),
-			UniIntVec(v)	=> glcore::glUniform4iv( *self.loc, 4, v.to_ptr() ),
-			_				=> fail(fmt!( "Unknown parameter at location %d", *self.loc as int )),
+			Unitialized		=> fail(fmt!( "Uninitalized parameter at location %d", loc as int )),
+			UniFloat(v)		=> glcore::glUniform1f( loc, v as glcore::GLfloat ),
+			UniInt(v)		=> glcore::glUniform1i( loc, v as glcore::GLint ),
+			UniFloatVec(v)	=> glcore::glUniform4fv( loc, 4, v.to_ptr() ),
+			UniIntVec(v)	=> glcore::glUniform4iv( loc, 4, v.to_ptr() ),
+			_				=> fail(fmt!( "Unknown parameter at location %d", loc as int )),
 		}
 	}
 }
@@ -244,22 +262,25 @@ impl context::Context	{
 		let mut tex_unit = 0;
 		for data.each |name,value|	{
 			match p.params.find(name)	{
-				Some(ref par) =>	{
-					//FIXME: implement Eq
-					//if (par.value != value)	{
-						par.value = *value;
-						/*match par.value	{
-							UniTex2D(t)	=>	{
-								self.texture.bind_to( tex_unit, t );
-								//FIXME: cache this
-								glcore::glUniform1i( *par.loc, tex_unit as glcore::GLint );
-								tex_unit += 1;
+				Some(ref par)	=> if par.value != *value	{
+					match *value	{
+						UniTex2D(_,t)	=>	{
+							assert [glcore::GL_TEXTURE_2D].contains( &*t.target );
+							self.texture.bind_to( tex_unit, t );
+							match par.value	{
+								UniTex2D(unit,_) if unit==tex_unit	=> {}
+								_	=> { glcore::glUniform1i( *par.loc, tex_unit as glcore::GLint ); }
 							}
-							_	=> par.write(),
-						}*/
-						par.write();
-					//}
-				}
+							par.value = UniTex2D( tex_unit, t );
+							tex_unit += 1;
+						},
+						_	=> {
+							io::println(fmt!( "Writing param %s", *name ));
+							par.value = *value;
+							par.write();
+						}
+					}
+				},
 				None => {}
 			}
 		}

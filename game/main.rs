@@ -9,7 +9,7 @@ struct Sample	{
 	program		: engine::shade::Program,
 	mut data	: engine::shade::DataMap,
 	buffer		: engine::buf::Object,
-	texture		: engine::texture::Texture,
+	texture		: @engine::texture::Texture,
 }
 
 
@@ -39,24 +39,30 @@ fn init() -> Sample	{
 	let vdata = ~[-1f32,-1f32,0f32,1f32,1f32,-1f32];
 	let buf = ct.create_buffer_loaded( vdata );
 	// load texture
-	let mut tex : engine::texture::Texture;
+	let mut tex : @engine::texture::Texture;
 	match stb_image::image::load(~"data/GpuPro3.jpeg")	{
 		Some(image) => {
-			tex = ct.create_texture( glcore::GL_TEXTURE_2D, image.width, image.height, 1 );
-			ct.texture.bind( &tex );
-			ct.texture.load_2D( &tex, 0, glcore::GL_RGBA as glcore::GLint,
+			tex = @ct.create_texture( glcore::GL_TEXTURE_2D, image.width, image.height, 1 );
+			ct.texture.bind( tex );
+			ct.texture.load_2D( tex, 0, glcore::GL_RGBA as glcore::GLint,
 				glcore::GL_RGBA, glcore::GL_UNSIGNED_BYTE, image.data );
-			ct.texture.wrap( &tex, 0 );
-			ct.texture.filter( &tex, 2u );
+			ct.texture.wrap( tex, 0 );
+			ct.texture.filter( tex, 2u );
 		}
 		None => { fail(~"Unable to load image"); }
 	}
+	// init parameters
+	let mut params = engine::shade::create_data();
+	//s.ct.texture.bind_to( 0u, &s.texture );
+	params.insert( ~"color", engine::shade::UniFloat(1f) );
+	//s.data.insert( ~"image", engine::shade::UniInt(0i) );
+	params.insert( ~"image", engine::shade::UniTex2D(0u,tex) );
 	// done
 	ct.check(~"init");
 	io::println( fmt!("init: program %u, buffer %u, texture %u",
 		*program.handle as uint,*buf.handle as uint, *tex.handle as uint)
 	);
-	Sample { ct:ct, program:program, data:engine::shade::create_data(), buffer:buf, texture:tex }
+	Sample { ct:ct, program:program, data:params, buffer:buf, texture:tex }
 }
 
 
@@ -65,9 +71,6 @@ fn render( s : &Sample ) ->bool	{
 	glcore::glClearDepth( 1.0f64 );
 	glcore::glClear( glcore::GL_COLOR_BUFFER_BIT | glcore::GL_DEPTH_BUFFER_BIT );
 	
-	s.ct.texture.bind_to( 0u, &s.texture );
-	s.data.insert( ~"color", engine::shade::UniFloat(1f) );
-	s.data.insert( ~"image", engine::shade::UniInt(0i) );
 	//FIXME: no copy
 	s.ct.bind_program( &s.program, &copy s.data );
 	s.ct.buffer_array.bind( &s.buffer );
