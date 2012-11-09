@@ -14,9 +14,18 @@ pub struct Attribute	{
 }
 
 impl Attribute	{
-	fn compatible( _at : &shade::Attribute )-> bool	{
-		//FIXME
-		true
+	fn compatible( at : &shade::Attribute )-> bool	{
+		let i = self.count - 1u;
+		if self.kind == glcore::GL_FLOAT || self.kind == glcore::GL_HALF_FLOAT	{
+			at.storage == [glcore::GL_FLOAT,glcore::GL_FLOAT_VEC2,glcore::GL_FLOAT_VEC3,glcore::GL_FLOAT_VEC4][i]
+		}else
+		if self.kind == glcore::GL_INT	{
+			at.storage == [glcore::GL_INT,glcore::GL_INT_VEC2,glcore::GL_INT_VEC3,glcore::GL_INT_VEC4][i]
+		}else
+		if self.kind == glcore::GL_UNSIGNED_INT	{
+			at.storage == [glcore::GL_UNSIGNED_INT,glcore::GL_UNSIGNED_INT_VEC2,
+				glcore::GL_UNSIGNED_INT_VEC3,glcore::GL_UNSIGNED_INT_VEC4][i]
+		}else {false}
 	}
 }
 
@@ -45,7 +54,16 @@ impl context::Context	{
 		Mesh{ name:name, attribs:ats, index:None, poly_type:ptype, num_vert:nv, num_ind:ni, black_list:~[] }
 	}
 
-	fn bind_mesh_element( loc : uint, at : &Attribute )	{
+	fn disable_mesh_attribs()	{
+		for self.vertex_array.data.eachi |i,vd|	{
+			if vd.enabled	{
+				glcore::glDisableVertexAttribArray( i as glcore::GLuint );
+				vd.enabled = false;
+			}
+		}
+	}
+
+	fn bind_mesh_attrib( loc : uint, at : &Attribute )	{
 		self.buffer_array.bind( at.buffer );
 		let mut vdata = &self.vertex_array.data[loc];
 		// update vertex info
@@ -85,7 +103,7 @@ impl context::Context	{
 							*name, *prog.handle as int ));
 						return false;
 					}
-					self.bind_mesh_element( pat.loc, &sat );
+					self.bind_mesh_attrib( pat.loc, &sat );
 				},
 				None => {
 					m.black_list.push( prog.handle );
@@ -95,9 +113,16 @@ impl context::Context	{
 				}
 			}
 		}
-		// FIXME: bind elements
-		// issue a draw call
-		glcore::glDrawArrays( m.poly_type, 0, m.num_vert as glcore::GLsizei );
+		// call draw
+		match m.index	{
+			Some(el) =>	{
+				self.buffer_element.bind( el.buffer );
+				glcore::glDrawElements( m.poly_type, m.num_ind as glcore::GLsizei, el.kind, 0 as *glcore::GLvoid );
+			},
+			None =>	{
+				glcore::glDrawArrays( m.poly_type, 0, m.num_vert as glcore::GLsizei );
+			}
+		}
 		true
 	}
 }
