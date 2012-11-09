@@ -5,7 +5,7 @@ pub enum Handle	= glcore::GLuint;
 pub enum Target = glcore::GLenum;
 
 
-struct Object	{
+pub struct Object	{
 	handle : Handle,
 
 	drop	{
@@ -73,8 +73,10 @@ impl Binding	{
 
 
 struct VertexData	{
-	enabled	: bool,
+	mut enabled	: bool,
 }
+
+impl VertexData : Copy	{}
 
 pub struct VertexArray	{
 	handle		: Handle,
@@ -122,8 +124,9 @@ impl context::Context	{
 		unsafe	{
 			glcore::glGenVertexArrays( 1, ptr::addr_of(&hid) );
 		}
-		let vd	= VertexData{ enabled:false };
-		let data = vec::from_elem( MAX_VERTEX_ATTRIBS, vd );
+		let data = do vec::from_fn(MAX_VERTEX_ATTRIBS) |_i|	{
+			VertexData{ enabled:false }
+		};
 		@VertexArray{ handle:Handle(hid), data:data }
 	}
 
@@ -131,6 +134,15 @@ impl context::Context	{
 		if *self.vertex_array.handle != *va.handle	{
 			self.vertex_array = va;
 			glcore::glBindVertexArray( *va.handle );
+		}
+	}
+
+	fn disable_vertex_attribs()	{
+		for self.vertex_array.data.eachi |i,vd|	{
+			if vd.enabled	{
+				glcore::glDisableVertexAttribArray( i as glcore::GLuint );
+				vd.enabled = false;
+			}
 		}
 	}
 }

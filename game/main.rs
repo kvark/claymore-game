@@ -8,7 +8,7 @@ struct Sample	{
 	ct			: engine::context::Context,
 	program		: engine::shade::Program,
 	mut data	: engine::shade::DataMap,
-	buffer		: engine::buf::Object,
+	mesh		: engine::mesh::Mesh,
 	texture		: @engine::texture::Texture,
 }
 
@@ -38,9 +38,19 @@ fn init() -> Sample	{
 	let vert_shader = ct.create_shader( glcore::GL_VERTEX_SHADER, vert_code );
 	let frag_shader = ct.create_shader( glcore::GL_FRAGMENT_SHADER, frag_code );
 	let program = ct.create_program( ~[vert_shader,frag_shader] );
-	// load buffers
+	// load buffers and mesh
 	let vdata = ~[-1f32,-1f32,0f32,1f32,1f32,-1f32];
-	let buf = ct.create_buffer_loaded( vdata );
+	let buf = @ct.create_buffer_loaded( vdata );
+	let mut mesh = ct.create_mesh( ~"dummy", ~"3", 3, 0 );
+	mesh.attribs.insert( ~"position", engine::mesh::Attribute{
+		kind			: glcore::GL_FLOAT,
+		count			: 2u,
+		normalized		: false,
+		interpolated	: true,
+		buffer			: buf,
+		stride			: sys::size_of::<f32>()*2u,
+		offset			: 0,
+	});
 	// load texture
 	let mut tex : @engine::texture::Texture;
 	match stb_image::image::load(~"data/GpuPro3.jpeg")	{
@@ -63,7 +73,7 @@ fn init() -> Sample	{
 	io::println( fmt!("init: program %u, buffer %u, texture %u",
 		*program.handle as uint,*buf.handle as uint, *tex.handle as uint)
 	);
-	Sample { ct:ct, program:program, data:params, buffer:buf, texture:tex }
+	Sample { ct:ct, program:program, data:params, mesh:mesh, texture:tex }
 }
 
 
@@ -73,12 +83,7 @@ fn render( s : &Sample ) ->bool	{
 	glcore::glClear( glcore::GL_COLOR_BUFFER_BIT | glcore::GL_DEPTH_BUFFER_BIT );
 	
 	//FIXME: no copy
-	s.ct.bind_program( &s.program, &copy s.data );
-	s.ct.buffer_array.bind( &s.buffer );
-	glcore::glVertexAttribPointer( 0, 2, glcore::GL_FLOAT, glcore::GL_FALSE,
-		sys::size_of::<f32>()*2u as i32, 0 as *libc::c_void );
-	glcore::glEnableVertexAttribArray( 0 );
-	glcore::glDrawArrays( glcore::GL_TRIANGLES, 0, 3 );
+	s.ct.draw_mesh( &s.mesh, &s.program, &copy s.data );
 	
 	s.ct.check(~"render");
 	return true;

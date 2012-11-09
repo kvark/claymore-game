@@ -5,6 +5,11 @@ use send_map::linear::LinearMap;
 pub enum Handle		= glcore::GLuint;
 pub enum Location	= glcore::GLint;
 
+impl Handle : cmp::Eq	{
+	pure fn eq( h : &Handle )-> bool	{ self == *h }
+	pure fn ne( h : &Handle )-> bool	{ !self.eq(h) }
+}
+
 
 enum Uniform	{
 	Unitialized,
@@ -39,14 +44,14 @@ struct Parameter	{
 	mut value	: Uniform
 }
 
-struct Attribute	{
-	loc		: Location,
+pub struct Attribute	{
+	loc		: uint,
 	storage	: glcore::GLenum,
 	size	: glcore::GLint
 }
 
 impl Parameter	{
-	fn read( h : Handle )-> bool	{
+	priv fn read( h : Handle )-> bool	{
 		let t = self.storage;
 		let loc = *self.loc;
 		assert loc >= 0;
@@ -81,7 +86,7 @@ impl Parameter	{
 		true
 	}
 
-	fn write()	{
+	priv fn write()	{
 		let loc = *self.loc;
 		match copy self.value	{
 			Unitialized		=> fail(fmt!( "Uninitalized parameter at location %d", loc as int )),
@@ -95,8 +100,8 @@ impl Parameter	{
 }
 
 
-pub type AttriMap	= LinearMap<~str,@Attribute>;
-pub type ParaMap	= LinearMap<~str,@Parameter>;
+pub type AttriMap	= LinearMap<~str,Attribute>;
+pub type ParaMap	= LinearMap<~str,Parameter>;
 pub type DataMap	= LinearMap<~str,Uniform>;
 
 struct Object	{
@@ -110,7 +115,7 @@ struct Object	{
 	}
 }
 
-struct Program	{
+pub struct Program	{
 	handle	: Handle,
 	alive	: bool,
 	info	: ~str,
@@ -136,7 +141,7 @@ priv fn query_attributes( h : Handle )-> AttriMap	{
 		info_bytes = vec::from_elem( max_len as uint, 0 as libc::c_char );
 		raw_bytes = vec::raw::to_ptr(info_bytes);
 	}
-	let mut rez		= send_map::linear::linear_map_with_capacity::<~str,@Attribute>( num as uint );
+	let mut rez		= send_map::linear::linear_map_with_capacity::<~str,Attribute>( num as uint );
 	while num>(0 as glcore::GLint)	{
 		num -= 1;
 		let mut length	= 0 as glcore::GLint;
@@ -151,7 +156,7 @@ priv fn query_attributes( h : Handle )-> AttriMap	{
 		}
 		info_bytes[length] = 0;
 		let location = glcore::glGetAttribLocation( *h, raw_bytes );
-		rez.insert( name, @Attribute{ loc:Location(location), storage:storage, size:size } );
+		rez.insert( name, Attribute{ loc:location as uint, storage:storage, size:size } );
 	}
 	rez
 }
@@ -169,7 +174,7 @@ priv fn query_parameters( h : Handle )-> ParaMap	{
 		info_bytes	= vec::from_elem( max_len as uint, 0 as libc::c_char );
 		raw_bytes	= vec::raw::to_ptr(info_bytes);
 	}
-	let mut rez		= send_map::linear::linear_map_with_capacity::<~str,@Parameter>( num as uint );
+	let mut rez		= send_map::linear::linear_map_with_capacity::<~str,Parameter>( num as uint );
 	while num>(0 as glcore::GLint)	{
 		num -= 1;
 		let mut length	= 0 as glcore::GLint;
@@ -184,7 +189,7 @@ priv fn query_parameters( h : Handle )-> ParaMap	{
 		}
 		info_bytes[length] = 0;
 		let location = glcore::glGetUniformLocation( *h, raw_bytes );
-		let p = @Parameter{ loc:Location(location), storage:storage, size:size, value:Unitialized };
+		let p = Parameter{ loc:Location(location), storage:storage, size:size, value:Unitialized };
 		p.read( h );
 		rez.insert( name, p );
 	}
@@ -257,11 +262,11 @@ impl context::Context	{
 	}
 
 	//FIXME: accept Map trait once HashMap<~str> are supported
-	fn bind_program( p : &Program, data : &DataMap )	{
+	fn bind_program( p : &Program, data : &DataMap )->bool	{
 		self._bind_program( p.handle );
 		let mut tex_unit = 0;
 		for data.each |name,value|	{
-			match p.params.find(name)	{
+			match p.params.find_ref(name)	{
 				Some(ref par) =>	{
 					match *value	{
 						UniTex2D(_,t)	=>	{
@@ -285,6 +290,7 @@ impl context::Context	{
 				None => {}
 			}
 		}
+		true
 	}
 
 	fn unbind_program()	{
