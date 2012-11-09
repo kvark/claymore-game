@@ -20,23 +20,14 @@ fn init() -> Sample	{
 	let vao = ct.create_vertex_array();
 	ct.bind_vertex_array( vao );
 	// load shaders
-	let vert_code = "#version 150 core
-		in vec2 position;
-		out vec2 texCoords;
-		void main()	{
-			texCoords = vec2(0.5,-0.5)*position + 0.5;
-			gl_Position = vec4(position,0.0,1.0);
-		}";
-	let frag_code = "#version 150 core
-		uniform float color=0.5;
-		uniform sampler2D image;
-		in vec2 texCoords;
-		out vec4 result;
-		void main()	{
-			result = texture(image,texCoords);
-		}";
-	let vert_shader = ct.create_shader( glcore::GL_VERTEX_SHADER, vert_code );
-	let frag_shader = ct.create_shader( glcore::GL_FRAGMENT_SHADER, frag_code );
+	let vert_shader = match io::read_whole_file_str(&path::Path(~"data/code/test.glslv"))	{
+		Ok(text) => ct.create_shader( glcore::GL_VERTEX_SHADER, text ),
+		Err(msg) => fail(msg)
+	};
+	let frag_shader = match io::read_whole_file_str(&path::Path(~"data/code/test.glslf"))	{
+		Ok(text) => ct.create_shader( glcore::GL_FRAGMENT_SHADER, text ),
+		Err(msg) => fail(msg)
+	};
 	let program = ct.create_program( ~[vert_shader,frag_shader] );
 	// load buffers and mesh
 	let vdata = ~[-1f32,-1f32,0f32,1f32,1f32,-1f32];

@@ -93,7 +93,7 @@ impl context::Context	{
 			return false;
 		}
 		// bind attributes
-		self.disable_vertex_attribs();
+		self.disable_mesh_attribs();
 		for prog.attribs.each |name,pat|	{
 			match m.attribs.find(name)	{
 				Some(sat) => {

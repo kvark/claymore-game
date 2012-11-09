@@ -2,7 +2,6 @@ syntax: glob
 
 .DS_Store
 build/*
-data/*
 project/*
 lib/*.dSYM
 lib/libengine-*

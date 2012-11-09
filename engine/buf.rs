@@ -136,14 +136,5 @@ impl context::Context	{
 			glcore::glBindVertexArray( *va.handle );
 		}
 	}
-
-	fn disable_vertex_attribs()	{
-		for self.vertex_array.data.eachi |i,vd|	{
-			if vd.enabled	{
-				glcore::glDisableVertexAttribArray( i as glcore::GLuint );
-				vd.enabled = false;
-			}
-		}
-	}
 }
 
