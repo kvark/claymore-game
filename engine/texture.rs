@@ -166,7 +166,7 @@ impl Binding : context::State	{
 		unsafe	{
 			glcore::glGetIntegerv( glcore::GL_ACTIVE_TEXTURE, ptr::addr_of(&id) );
 		}
-		let cur_unit = id as uint;
+		let cur_unit = id as uint - (glcore::GL_TEXTURE0 as uint);
 		if self.active_unit != cur_unit	{
 			was_ok = false;
 			self.active_unit = cur_unit;
@@ -183,6 +183,7 @@ impl Binding : context::State	{
 				glcore::glGetIntegerv( query, ptr::addr_of(&id) );		
 			}
 			if *(*handle) != id as glcore::GLuint	{
+				io::println("bad2");
 				was_ok = false;
 				self.active.swap( *slot, Handle(id as glcore::GLuint) );
 			}
