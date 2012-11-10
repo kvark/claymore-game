@@ -71,13 +71,17 @@ fn init( aspect : float ) -> Sample	{
 		let cam_node = engine::space::Node{ name:~"cam", space:cam_space, parent:None };
 		let projection = lmath::funs::projection::perspective::<f32>( 45f, aspect, 1f, 10f );
 		let mx = lmath::matrix::Mat4::identity::<f32>();
-		let mvi = cam_node.world_space().inverse().to_matrix();
-		let mvp = projection.mul_m( &mvi );
+		let cam_world = cam_node.world_space();
+		let mview = cam_world.inverse().to_matrix();
+		let mvp = projection.mul_m( &mview );
+		let cam_pos = cam_world.position;
+		let u_cam_pos = lmath::vector::Vec4::new( cam_pos.x, cam_pos.y, cam_pos.z, 0f32 );
 		// push to params
 		params.insert( ~"u_Color",		engine::shade::UniFloat(1f) );
 		params.insert( ~"t_Image",		engine::shade::UniTexture(0u,tex) );
 		params.insert( ~"u_World",		engine::shade::UniMatrix(false,mx) );
 		params.insert( ~"u_ViewProj",	engine::shade::UniMatrix(false,mvp) );
+		params.insert( ~"u_CamPos",		engine::shade::UniFloatVec(u_cam_pos) );
 	}
 	// done
 	ct.check(~"init");
