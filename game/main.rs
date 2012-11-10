@@ -33,7 +33,8 @@ fn init( aspect : float ) -> Sample	{
 	};
 	let program = ct.create_program( ~[vert_shader,frag_shader] );
 	// load buffers and mesh
-	let vdata = ~[-1f32,-1f32,0f32,0f32,1f32,0f32,1f32,-1f32,0f32];
+	let mesh = engine::load::read_mesh( &engine::load::create_reader(~"data/jazz_dancing.k3mesh"), &ct );
+	/*let vdata = ~[-1f32,-1f32,0f32,0f32,1f32,0f32,1f32,-1f32,0f32];
 	let buf = @ct.create_buffer_loaded( vdata );
 	let mut mesh = ct.create_mesh( ~"dummy", ~"3", 3, 0 );
 	mesh.attribs.insert( ~"a_Position", engine::mesh::Attribute{
@@ -44,10 +45,10 @@ fn init( aspect : float ) -> Sample	{
 		buffer			: buf,
 		stride			: 3u * sys::size_of::<f32>(),
 		offset			: 0,
-	});
+	});*/
 	// load texture
 	let mut tex : @engine::texture::Texture;
-	match stb_image::image::load(~"data/GpuPro3.jpeg")	{
+	match stb_image::image::load(~"data/texture/SexyFem_Texture.tga")	{
 		Some(image) => {
 			tex = @ct.create_texture( glcore::GL_TEXTURE_2D, image.width, image.height, 1, 0 );
 			ct.texture.bind( tex );
@@ -80,8 +81,8 @@ fn init( aspect : float ) -> Sample	{
 	}
 	// done
 	ct.check(~"init");
-	io::println( fmt!("init: program %u, buffer %u, texture %u",
-		*program.handle as uint,*buf.handle as uint, *tex.handle as uint)
+	io::println( fmt!("init: program %u, mesh %s, texture %u",
+		*program.handle as uint, mesh.name, *tex.handle as uint)
 	);
 	Sample { ct:ct, program:program, data:params, mesh:mesh, texture:tex, frames:0 }
 }
@@ -91,16 +92,19 @@ fn render( s : &Sample ) ->bool	{
 	glcore::glClearColor( 0.5f32, 0.5f32, 1.0f32, 1.0f32 );
 	glcore::glClearDepth( 1.0f64 );
 	glcore::glClear( glcore::GL_COLOR_BUFFER_BIT | glcore::GL_DEPTH_BUFFER_BIT );
+	glcore::glEnable( glcore::GL_DEPTH_TEST );
+	glcore::glEnable( glcore::GL_CULL_FACE );
 
-	// compute new rotation matrix
-	{
-		let angle = (s.frames as f32) * 0.005f32;
+	if true {	// compute new rotation matrix
+		let angle = (s.frames as f32) * 0.02f32;
 		let sn = f32::sin(angle), cn = f32::cos(angle);
+		let half_90 = f32::cos(3.141592f32 * 0.25f32);
+		let qbase = lmath::quaternion::Quat::<f32>{ w:half_90, x:half_90, y:0f32, z:0f32 };
 		let q = lmath::quaternion::Quat::<f32>{ w:cn, x:0f32, y:sn, z:0f32 };
 		let model_space = engine::space::QuatSpace{
-			position 	: lmath::vector::Vec3::zero::<f32>(),
-			orientation	: q,
-			scale		: 1f32
+			position 	: lmath::vector::Vec3::<f32>{ x:0f32, y:-1.8f32, z:0f32 },
+			orientation	: qbase.mul_q(&q),
+			scale		: 2f32
 		};
 		let mx = model_space.to_matrix();
 		s.data.insert( ~"u_World", engine::shade::UniMatrix(false,mx) );

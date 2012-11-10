@@ -14,9 +14,11 @@ pub struct Attribute	{
 }
 
 impl Attribute	{
-	fn compatible( at : &shade::Attribute )-> bool	{
+	pure fn compatible( at : &shade::Attribute )-> bool	{
+		//io::println(fmt!( "Checking compatibility: kind=0x%x, count=%u, storage=0x%x",
+		//	self.kind as uint, self.count, at.storage as uint ));
 		let i = self.count - 1u;
-		if self.kind == glcore::GL_FLOAT || self.kind == glcore::GL_HALF_FLOAT	{
+		if self.kind == glcore::GL_FLOAT || self.kind == glcore::GL_HALF_FLOAT || self.normalized	{
 			at.storage == [glcore::GL_FLOAT,glcore::GL_FLOAT_VEC2,glcore::GL_FLOAT_VEC3,glcore::GL_FLOAT_VEC4][i]
 		}else
 		if self.kind == glcore::GL_INT	{
@@ -38,6 +40,39 @@ pub struct Mesh	{
 	num_vert		: uint,
 	num_ind			: uint,
 	mut black_list	: ~[shade::Handle]
+}
+
+impl Mesh	{
+	fn create_attrib( format : ~str, buffer : @buf::Object, stride : uint, offset : uint )-> (Attribute,uint)	{
+		assert (format.len()==3u && ['.','!'].contains(&format.char_at(2))) ||
+			format.len()==2u || (format.len()==4u && str::substr(format,2,2)==~".!");
+		let count = (format[0] - "0"[0]) as uint;
+		let letter = format.char_at(1);
+		let is_fixed_point	= format.len()>2u	&& format.char_at(2)=='.';
+		let can_interpolate	= format.len()<=2u	|| format.char_at(format.len()-1u)!='!';
+		let (el_size,el_type) =
+			if letter=='b'	{(1u,glcore::GL_BYTE)}				else
+			if letter=='B'	{(1u,glcore::GL_UNSIGNED_BYTE)}		else
+			if letter=='h'	{(2u,glcore::GL_SHORT)}				else
+			if letter=='H'	{(2u,glcore::GL_UNSIGNED_SHORT)}	else
+			if letter=='i'	{(4u,glcore::GL_INT)}				else
+			if letter=='I'	{(4u,glcore::GL_UNSIGNED_INT)}		else
+			if letter=='f'	{(4u,glcore::GL_FLOAT)}				else
+			{fail(fmt!("Unknown attribute format: %s", format))};
+		(Attribute{
+			kind			: el_type,
+			count			: count,
+			normalized		: is_fixed_point,
+			interpolated	: can_interpolate,
+			buffer			: buffer,
+			stride			: stride,
+			offset			: offset,
+		}, count * el_size)
+	}
+
+	fn create_index( format : ~str, buffer : @buf::Object )-> (Attribute,uint)	{
+		self.create_attrib( format, buffer, 0u, 0u )
+	}
 }
 
 
@@ -89,7 +124,7 @@ impl context::Context	{
 		// bind program
 		if !self.bind_program( prog, data )	{
 			m.black_list.push( prog.handle );
-			io::println(fmt!( "Unable to activate program '%d'", *prog.handle as int ));
+			io::println(fmt!( "Unable to activate program #%d", *prog.handle as int ));
 			return false;
 		}
 		// bind attributes
@@ -99,7 +134,7 @@ impl context::Context	{
 				Some(sat) => {
 					if !sat.compatible(pat)	{
 						m.black_list.push( prog.handle );
-						io::println(fmt!( "Mesh attibute '%s' is incompatible with program '%d'",
+						io::println(fmt!( "Mesh attibute '%s' is incompatible with program #%d",
 							*name, *prog.handle as int ));
 						return false;
 					}
@@ -107,7 +142,7 @@ impl context::Context	{
 				},
 				None => {
 					m.black_list.push( prog.handle );
-					io::println(fmt!( "Mesh '%s' doesn't contain required attribute '%s', needed for program '%d'",
+					io::println(fmt!( "Mesh '%s' doesn't contain required attribute '%s', needed for program #%d",
 						m.name, *name, *prog.handle as int ));
 					return false;
 				}

@@ -10,7 +10,8 @@ clean:
 clean-engine:
 	rm -R lib/libengine*
 
-DIR=claymore-game
+NAME=claymore
+DIR=${claymore}-game
 
 extern: clean-lib lmath glfw3 glcore stb-image
 
@@ -28,3 +29,8 @@ glcore:
 
 stb-image:
 	(cd ../rust-stb-image && make clean && make && cp -R *.dylib* ../${DIR}/lib/)
+
+demo:
+	cp build/${NAME} .
+	tar -czf demo.tar.gz engine game data ${NAME}
+	rm ${NAME}

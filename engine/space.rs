@@ -80,11 +80,12 @@ impl QuatSpace : Space	{
 		QuatSpace{ position:p, orientation:q, scale:s }
 	}
 	pure fn to_matrix()-> Matrix	{
-		let mut m = self.orientation.to_Mat4();
-		m.x.x *= self.scale;	m.w.x = self.position.x;
-		m.y.y *= self.scale;	m.w.y = self.position.y;
-		m.z.z *= self.scale;	m.w.z = self.position.z;
-		m
+		let m3 = self.orientation.to_Mat3();
+		let mut m4 = m3.mul_t(self.scale).to_Mat4();
+		m4.w.x = self.position.x;
+		m4.w.y = self.position.y;
+		m4.w.z = self.position.z;
+		m4
 	}
 }
 
