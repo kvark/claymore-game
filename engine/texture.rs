@@ -21,6 +21,13 @@ pub struct Texture	{
 	}
 }
 
+impl Texture	{
+	pure fn get_level_size( lev : uint )-> (uint,uint)	{
+		assert self.width>0u && self.height>0u && lev<self.levels;
+		(((self.width-1u)>>lev)+1u,((self.height-1u)>>lev)+1u)
+	}
+}
+
 
 pub struct Slot	{
 	unit	: uint,
@@ -97,9 +104,10 @@ impl Binding	{
 	fn init_2D( t : &Texture, num_levels : uint, int_format : glcore::GLint, alpha_or_fixed_loc : bool )	{
 		self.bind( t );
 		assert t.samples == 0u || num_levels == 1u;
-		let mut w = t.width, h = t.height;
 		t.levels = 0;
-		while num_levels>0	{
+		while t.levels<num_levels	{
+			t.levels += 1;
+			let (w,h) = t.get_level_size( num_levels-1u );
 			if t.samples != 0u	{
 				glcore::glTexImage2DMultisample( *t.target, t.samples as glcore::GLsizei, int_format,
 					w as glcore::GLsizei, h as glcore::GLsizei, alpha_or_fixed_loc as glcore::GLboolean );
@@ -109,9 +117,6 @@ impl Binding	{
 					w as glcore::GLsizei, h as glcore::GLsizei, 0 as glcore::GLint,
 					pix_format, glcore::GL_UNSIGNED_BYTE, ptr::null() );
 			}
-			t.levels += 1;
-			w = (w+1)>>1;
-			h = (h+1)>>1;
 		}
 	}
 
