@@ -10,7 +10,7 @@ pub struct Context	{
 	mut program			: shade::Handle,
 	mut vertex_array	: buf::Handle,
 	array_buffer		: buf::Binding,
-	renderbuffer		: frame::Binding,
+	renderbuffer		: frame::RenBinding,
 	framebuffer_draw	: frame::Binding,
 	framebuffer_read	: frame::Binding,
 	texture				: texture::Binding,
@@ -24,7 +24,7 @@ pub fn create()-> Context	{
 		program				: shade::Handle(0),
 		vertex_array		: buf::Handle(0),
 		array_buffer		: buf::Binding{	target:buf::Target(glcore::GL_ARRAY_BUFFER),active:buf::Handle(0) },
-		renderbuffer		: frame::Binding{	target:glcore::GL_RENDERBUFFER,			active:frame::Handle(0) },
+		renderbuffer		: frame::RenBinding{	target:glcore::GL_RENDERBUFFER,			active:frame::Handle(0) },
 		framebuffer_draw	: frame::Binding{	target:glcore::GL_DRAW_FRAMEBUFFER,		active:frame::Handle(0) },
 		framebuffer_read	: frame::Binding{	target:glcore::GL_READ_FRAMEBUFFER,		active:frame::Handle(0) },
 		texture				: texture::Binding{ active_unit:0u,	active:slots },
@@ -48,6 +48,10 @@ impl Context : State	{
 			self.program = _program;
 			was_ok = false;
 		}
+		was_ok &= self.array_buffer.sync_back();
+		was_ok &= self.renderbuffer.sync_back();
+		was_ok &= self.framebuffer_draw.sync_back();
+		was_ok &= self.framebuffer_read.sync_back();
 		was_ok &= self.texture.sync_back();
 		self.check(~"sync_back");
 		was_ok

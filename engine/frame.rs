@@ -2,9 +2,43 @@ extern mod glcore;
 
 pub enum Handle	= glcore::GLuint;
 
+
+pub struct RenBinding	{
+	target		: glcore::GLenum,
+	mut active	: Handle,
+}
+
 pub struct Binding	{
 	target		: glcore::GLenum,
 	mut active	: Handle,
+}
+
+impl RenBinding : context::State	{
+	fn sync_back()->bool	{
+		let mut hid = 0 as glcore::GLint;
+		unsafe	{
+			glcore::glGetIntegerv( glcore::GL_RENDERBUFFER_BINDING, ptr::addr_of(&hid) );
+		}
+		let hu = hid as glcore::GLuint;
+		if *self.active != hu	{
+			self.active = Handle( hu );
+			false
+		}else {true}
+	}
+}
+
+impl Binding : context::State	{
+	fn sync_back()->bool	{
+		let mut hid = 0 as glcore::GLint;
+		unsafe	{
+			glcore::glGetIntegerv( glcore::GL_FRAMEBUFFER_BINDING, ptr::addr_of(&hid) );
+		}
+		let hu = hid as glcore::GLuint;
+		if *self.active != hu	{
+			self.active = Handle( hu );
+			false
+		}else {true}	
+	}
 }
 
 
@@ -145,18 +179,18 @@ impl context::Context	{
 			width:wid, height:het, samples:sam }
 	}
 
-	fn _bind_render_buffer( binding : &Binding, h : Handle )	{
+	fn _bind_render_buffer( h : Handle )	{
+		let binding = &self.renderbuffer;
 		if *binding.active != *h	{
 			binding.active = h;
 			glcore::glBindRenderbuffer( binding.target, *h );
 		}
 	}
 	fn bind_render_buffer( rb : @Surface )	{
-		assert self.renderbuffer.target == rb.target;
-		self._bind_render_buffer( &self.renderbuffer, rb.handle );
+		self._bind_render_buffer( rb.handle );
 	}
 	fn unbind_render_buffers()	{
-		self._bind_render_buffer( &self.renderbuffer, Handle(0) );
+		self._bind_render_buffer( Handle(0) );
 	}
 
 	fn create_frame_buffer()-> Buffer	{
@@ -224,8 +258,8 @@ impl context::Context	{
 	}
 
 	fn unbind_frame_buffers()	{
-		self._bind_render_buffer( &self.framebuffer_draw, Handle(0) );
-		self._bind_render_buffer( &self.framebuffer_read, Handle(0) );
+		self._bind_frame_buffer( &self.framebuffer_draw, Handle(0) );
+		self._bind_frame_buffer( &self.framebuffer_read, Handle(0) );
 		glcore::glDrawBuffer( glcore::GL_BACK );
 		glcore::glReadBuffer( glcore::GL_NONE );
 	}
