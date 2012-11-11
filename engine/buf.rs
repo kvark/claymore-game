@@ -46,20 +46,6 @@ impl Binding : context::State	{
 }
 
 
-impl Binding	{
-	priv fn _bind( h : Handle )	{
-		if *self.active != *h	{
-			self.active = h;
-			glcore::glBindBuffer( *self.target, *h );
-		}
-	}
-	fn bind( object : &Object )	{ self._bind(object.handle) }
-	fn unbind()	{ self._bind(Handle(0)) }
-	
-	
-}
-
-
 struct VertexData	{
 	mut enabled	: bool,
 	mut attrib	: mesh::Attribute,
@@ -69,7 +55,6 @@ struct VertexData	{
 pub struct VertexArray	{
 	handle		: Handle,
 	data		: ~[VertexData],
-	array		: buf::Binding,
 	element		: buf::Binding,
 
 	drop	{
@@ -96,7 +81,6 @@ impl context::Context	{
 			}}
 		};
 		VertexArray{ handle:Handle(hid), data:data,
-			array	:Binding{	target:Target(glcore::GL_ARRAY_BUFFER),			active:Handle(0) },
 			element	:Binding{	target:Target(glcore::GL_ELEMENT_ARRAY_BUFFER),	active:Handle(0) }
 		}
 	}
@@ -128,46 +112,42 @@ impl context::Context	{
 			glcore::glBindBuffer( *binding.target, *h );
 		}
 	}
-	fn bind_buffer( va : &VertexArray, obj : &Object, attrib : bool  )	{
+	fn bind_element_buffer( va : &VertexArray, obj : &Object  )	{
 		assert *self.vertex_array == *va.handle;
-		let binding = if attrib {&va.array} else {&va.element};
-		self._bind_buffer( binding, obj.handle );
+		self._bind_buffer( &va.element, obj.handle );
 	}
-	fn unbind_buffers( va : &VertexArray )	{
-		assert *self.vertex_array == *va.handle;
-		self._bind_buffer( &va.array,	Handle(0) );
-		self._bind_buffer( &va.element,	Handle(0) );
+	fn bind_buffer( obj : &Object )	{
+		self._bind_buffer( &self.array_buffer, obj.handle );
+	}
+	fn unbind_buffer()	{
+		self._bind_buffer( &self.array_buffer,	Handle(0) );
 	}
 
-	fn allocate_buffer( va : &VertexArray, obj : &Object, size : uint, dynamic : bool )	{
-		assert *self.vertex_array == *va.handle;
-		self.bind_buffer( va, obj, true );
+	fn allocate_buffer( obj : &Object, size : uint, dynamic : bool )	{
+		self.bind_buffer( obj );
 		let usage = if dynamic {glcore::GL_STATIC_DRAW} else {glcore::GL_DYNAMIC_DRAW};
-		glcore::glBufferData( *va.array.target, size as glcore::GLsizeiptr, ptr::null(), usage );
+		glcore::glBufferData( *self.array_buffer.target, size as glcore::GLsizeiptr, ptr::null(), usage );
 	}
 
-	fn load_buffer<T>( va : &VertexArray, obj : &Object, data : &[T], dynamic : bool )	{
-		assert *self.vertex_array == *va.handle;
-		self.bind_buffer( va, obj, true );
+	fn load_buffer<T>( obj : &Object, data : &[T], dynamic : bool )	{
+		self.bind_buffer( obj );
 		let usage = if dynamic {glcore::GL_STATIC_DRAW} else {glcore::GL_DYNAMIC_DRAW};
 		let size = data.len() * sys::size_of::<T>() as glcore::GLsizeiptr;
 		unsafe	{
 			let raw = vec::raw::to_ptr(data) as *glcore::GLvoid;
-			glcore::glBufferData( *va.array.target, size, raw, usage );
+			glcore::glBufferData( *self.array_buffer.target, size, raw, usage );
 		}
 	}
 
-	fn create_buffer_sized( va : &VertexArray, size : uint )-> Object	{
-		assert *self.vertex_array == *va.handle;
+	fn create_buffer_sized( size : uint )-> Object	{
 		let obj = self.create_buffer();
-		self.allocate_buffer( va, &obj, size, true );
+		self.allocate_buffer( &obj, size, true );
 		obj
 	}
 
-	fn create_buffer_loaded<T>( va : &VertexArray, data : ~[T] )-> Object	{
-		assert *self.vertex_array == *va.handle;
+	fn create_buffer_loaded<T>( data : ~[T] )-> Object	{
 		let obj = self.create_buffer();
-		self.load_buffer( va, &obj, data, false );
+		self.load_buffer( &obj, data, false );
 		obj
 	}
 }

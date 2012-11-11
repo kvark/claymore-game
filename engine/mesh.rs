@@ -114,7 +114,7 @@ impl context::Context	{
 
 	fn bind_mesh_attrib( va : &buf::VertexArray, loc : uint, at : &Attribute )	{
 		assert *self.vertex_array == *va.handle;
-		self.bind_buffer( va, at.buffer, true );
+		self.bind_buffer( at.buffer );
 		let mut vdata = &va.data[loc];
 		// update vertex info
 		if vdata.attrib != *at	{
@@ -168,7 +168,7 @@ impl context::Context	{
 		// call draw
 		match m.index	{
 			Some(el) =>	{
-				self.bind_buffer( va, el.buffer, false );
+				self.bind_element_buffer( va, el.buffer );
 				glcore::glDrawElements( m.poly_type, m.num_ind as glcore::GLsizei, el.kind, 0 as *glcore::GLvoid );
 			},
 			None =>	{

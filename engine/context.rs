@@ -9,6 +9,7 @@ pub trait State	{
 pub struct Context	{
 	mut program			: shade::Handle,
 	mut vertex_array	: buf::Handle,
+	array_buffer		: buf::Binding,
 	renderbuffer		: frame::Binding,
 	framebuffer_draw	: frame::Binding,
 	framebuffer_read	: frame::Binding,
@@ -22,6 +23,7 @@ pub fn create()-> Context	{
 	Context{
 		program				: shade::Handle(0),
 		vertex_array		: buf::Handle(0),
+		array_buffer		: buf::Binding{	target:buf::Target(glcore::GL_ARRAY_BUFFER),active:buf::Handle(0) },
 		renderbuffer		: frame::Binding{	target:glcore::GL_RENDERBUFFER,			active:frame::Handle(0) },
 		framebuffer_draw	: frame::Binding{	target:glcore::GL_DRAW_FRAMEBUFFER,		active:frame::Handle(0) },
 		framebuffer_read	: frame::Binding{	target:glcore::GL_READ_FRAMEBUFFER,		active:frame::Handle(0) },

@@ -32,7 +32,7 @@ fn init( aspect : float ) -> Sample	{
 	let program = ct.create_program( ~[vert_shader,frag_shader] );
 	// load buffers and mesh
 	let va = ct.create_vertex_array();
-	let mesh = engine::load::read_mesh( &engine::load::create_reader(~"data/jazz_dancing.k3mesh"), &va, &ct );
+	let mesh = engine::load::read_mesh( &engine::load::create_reader(~"data/jazz_dancing.k3mesh"), &ct );
 	/*let vdata = ~[-1f32,-1f32,0f32,0f32,1f32,0f32,1f32,-1f32,0f32];
 	let buf = @ct.create_buffer_loaded( vdata );
 	let mut mesh = ct.create_mesh( ~"dummy", ~"3", 3, 0 );
