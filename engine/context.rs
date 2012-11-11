@@ -1,48 +1,34 @@
 extern mod glcore;
 
-type Target = glcore::GLenum;
-type Handle = glcore::GLuint;
-
 pub trait State	{
 	// query all
 	fn sync_back()->bool;
 }
 
 
-struct RenderbufferBinding	{
-	target		: Target,
-	mut active	: Handle	
-}
-struct FramebufferBinding	{
-	target		: Target,
-	mut active	: Handle
-}
-
-
-
 pub struct Context	{
 	mut program			: shade::Handle,
+	mut vertex_array	: buf::Handle,
 	buffer_array		: buf::Binding,
 	buffer_element		: buf::Binding,
-	renderbuffer		: RenderbufferBinding,
-	framebuffer_draw	: FramebufferBinding,
-	framebuffer_read	: FramebufferBinding,
-	mut vertex_array	: @buf::VertexArray,
+	renderbuffer		: frame::Binding,
+	framebuffer_draw	: frame::Binding,
+	framebuffer_read	: frame::Binding,
 	texture				: texture::Binding,
 }
 
 
-pub fn create()->Context	{
+pub fn create()-> Context	{
 	// fill up the context
 	let slots	= send_map::linear::LinearMap::<texture::Slot,texture::Handle>();
 	Context{
 		program				: shade::Handle(0),
+		vertex_array		: buf::Handle(0),
 		buffer_array		: buf::Binding{		target:buf::Target(glcore::GL_ARRAY_BUFFER),			active:buf::Handle(0) },
 		buffer_element		: buf::Binding{		target:buf::Target(glcore::GL_ELEMENT_ARRAY_BUFFER),	active:buf::Handle(0) },
-		renderbuffer		: RenderbufferBinding{	target:glcore::GL_RENDERBUFFER,			active:0 as Handle },
-		framebuffer_draw	: FramebufferBinding{	target:glcore::GL_DRAW_FRAMEBUFFER,		active:0 as Handle },
-		framebuffer_read	: FramebufferBinding{	target:glcore::GL_READ_FRAMEBUFFER,		active:0 as Handle },
-		vertex_array		: @buf::VertexArray{ handle:buf::Handle(0), data:~[] },
+		renderbuffer		: frame::Binding{	target:glcore::GL_RENDERBUFFER,			active:frame::Handle(0) },
+		framebuffer_draw	: frame::Binding{	target:glcore::GL_DRAW_FRAMEBUFFER,		active:frame::Handle(0) },
+		framebuffer_read	: frame::Binding{	target:glcore::GL_READ_FRAMEBUFFER,		active:frame::Handle(0) },
 		texture				: texture::Binding{ active_unit:0u,	active:slots },
 	}
 }

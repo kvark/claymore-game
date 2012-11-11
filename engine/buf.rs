@@ -119,7 +119,7 @@ impl context::Context	{
 	}
 
 	
-	fn create_vertex_array()->@VertexArray	{
+	fn create_vertex_array()->VertexArray	{
 		let mut hid = 0 as glcore::GLuint;
 		unsafe	{
 			glcore::glGenVertexArrays( 1, ptr::addr_of(&hid) );
@@ -127,14 +127,19 @@ impl context::Context	{
 		let data = do vec::from_fn(MAX_VERTEX_ATTRIBS) |_i|	{
 			VertexData{ enabled:false }
 		};
-		@VertexArray{ handle:Handle(hid), data:data }
+		VertexArray{ handle:Handle(hid), data:data }
 	}
 
-	fn bind_vertex_array( va : @VertexArray )	{
-		if *self.vertex_array.handle != *va.handle	{
-			self.vertex_array = va;
-			glcore::glBindVertexArray( *va.handle );
+	priv fn _bind_vertex_array( h : Handle )	{
+		if *self.vertex_array != *h	{
+			self.vertex_array = h;
+			glcore::glBindVertexArray( *h );
 		}
 	}
+	fn bind_vertex_array( va : &VertexArray )	{
+		self._bind_vertex_array( va.handle );
+	}
+	fn unbind_vertex_array()	{
+		self._bind_vertex_array( Handle(0) );
+	}
 }
-

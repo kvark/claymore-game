@@ -11,6 +11,7 @@ struct Sample	{
 	program		: engine::shade::Program,
 	mut data	: engine::shade::DataMap,
 	mesh		: engine::mesh::Mesh,
+	va			: engine::buf::VertexArray,
 	texture		: @engine::texture::Texture,
 	mut frames	: uint,
 }
@@ -20,8 +21,8 @@ fn init( aspect : float ) -> Sample	{
 	let ct = engine::context::create();
 	assert ct.sync_back();
 	// default VAO
-	let vao = ct.create_vertex_array();
-	ct.bind_vertex_array( vao );
+	let va = ct.create_vertex_array();
+	ct.bind_vertex_array( &va );
 	// load shaders
 	let vert_shader = match io::read_whole_file_str(&path::Path(~"data/code/test.glslv"))	{
 		Ok(text) => ct.create_shader( glcore::GL_VERTEX_SHADER, text ),
@@ -88,7 +89,7 @@ fn init( aspect : float ) -> Sample	{
 	io::println( fmt!("init: program %u, mesh %s, texture %u",
 		*program.handle as uint, mesh.name, *tex.handle as uint)
 	);
-	Sample { ct:ct, program:program, data:params, mesh:mesh, texture:tex, frames:0 }
+	Sample { ct:ct, program:program, data:params, mesh:mesh, va:va, texture:tex, frames:0 }
 }
 
 
@@ -114,7 +115,7 @@ fn render( s : &Sample ) ->bool	{
 		s.data.insert( ~"u_World", engine::shade::UniMatrix(false,mx) );
 	}
 	//FIXME: no copy (each_const required)
-	s.ct.draw_mesh( &s.mesh, &s.program, &copy s.data );
+	s.ct.draw_mesh( &s.mesh, &s.va, &s.program, &copy s.data );
 	
 	s.frames += 1;
 	s.ct.check(~"render");

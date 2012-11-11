@@ -89,8 +89,9 @@ impl context::Context	{
 		Mesh{ name:name, attribs:ats, index:None, poly_type:ptype, num_vert:nv, num_ind:ni, black_list:~[] }
 	}
 
-	fn disable_mesh_attribs()	{
-		for self.vertex_array.data.eachi |i,vd|	{
+	fn disable_mesh_attribs( va : &buf::VertexArray )	{
+		assert *self.vertex_array == *va.handle;
+		for va.data.eachi |i,vd|	{
 			if vd.enabled	{
 				glcore::glDisableVertexAttribArray( i as glcore::GLuint );
 				vd.enabled = false;
@@ -98,9 +99,10 @@ impl context::Context	{
 		}
 	}
 
-	fn bind_mesh_attrib( loc : uint, at : &Attribute )	{
+	fn bind_mesh_attrib( va : &buf::VertexArray, loc : uint, at : &Attribute )	{
+		assert *self.vertex_array == *va.handle;
 		self.buffer_array.bind( at.buffer );
-		let mut vdata = &self.vertex_array.data[loc];
+		let mut vdata = &va.data[loc];
 		// update vertex info
 		//FIXME: cache this
 		glcore::glVertexAttribPointer(
@@ -115,8 +117,7 @@ impl context::Context	{
 		}
 	}
 
-	fn draw_mesh( m : &Mesh, prog : &shade::Program, data : &shade::DataMap )-> bool	{
-		assert *self.vertex_array.handle != 0;
+	fn draw_mesh( m : &Mesh, va : &buf::VertexArray, prog : &shade::Program, data : &shade::DataMap )-> bool	{
 		// check black list
 		if m.black_list.contains( &prog.handle )	{
 			return false;
@@ -128,7 +129,8 @@ impl context::Context	{
 			return false;
 		}
 		// bind attributes
-		self.disable_mesh_attribs();
+		self.bind_vertex_array( va );
+		self.disable_mesh_attribs( va );
 		for prog.attribs.each |name,pat|	{
 			match m.attribs.find(name)	{
 				Some(sat) => {
@@ -138,7 +140,7 @@ impl context::Context	{
 							*name, *prog.handle as int ));
 						return false;
 					}
-					self.bind_mesh_attrib( pat.loc, &sat );
+					self.bind_mesh_attrib( va, pat.loc, &sat );
 				},
 				None => {
 					m.black_list.push( prog.handle );
