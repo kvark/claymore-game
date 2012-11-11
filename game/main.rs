@@ -20,9 +20,6 @@ struct Sample	{
 fn init( aspect : float ) -> Sample	{
 	let ct = engine::context::create();
 	assert ct.sync_back();
-	// default VAO
-	let va = ct.create_vertex_array();
-	ct.bind_vertex_array( &va );
 	// load shaders
 	let vert_shader = match io::read_whole_file_str(&path::Path(~"data/code/test.glslv"))	{
 		Ok(text) => ct.create_shader( glcore::GL_VERTEX_SHADER, text ),
@@ -34,7 +31,8 @@ fn init( aspect : float ) -> Sample	{
 	};
 	let program = ct.create_program( ~[vert_shader,frag_shader] );
 	// load buffers and mesh
-	let mesh = engine::load::read_mesh( &engine::load::create_reader(~"data/jazz_dancing.k3mesh"), &ct );
+	let va = ct.create_vertex_array();
+	let mesh = engine::load::read_mesh( &engine::load::create_reader(~"data/jazz_dancing.k3mesh"), &va, &ct );
 	/*let vdata = ~[-1f32,-1f32,0f32,0f32,1f32,0f32,1f32,-1f32,0f32];
 	let buf = @ct.create_buffer_loaded( vdata );
 	let mut mesh = ct.create_mesh( ~"dummy", ~"3", 3, 0 );

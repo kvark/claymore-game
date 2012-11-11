@@ -13,6 +13,19 @@ pub struct Attribute	{
 	offset			: uint,
 }
 
+//FIXME: remove once auto-generated
+impl Attribute : cmp::Eq	{
+	pure fn eq( other : &Attribute )-> bool	{
+		self.kind==other.kind && self.count==other.count &&
+		self.normalized==other.normalized && self.interpolated==other.interpolated &&
+		*self.buffer.handle==*other.buffer.handle &&
+		self.stride==other.stride && self.offset==other.offset
+	}
+	pure fn ne( other : &Attribute )-> bool	{
+		!self.eq( other )
+	}
+}
+
 impl Attribute	{
 	pure fn compatible( at : &shade::Attribute )-> bool	{
 		//io::println(fmt!( "Checking compatibility: kind=0x%x, count=%u, storage=0x%x",
@@ -101,15 +114,17 @@ impl context::Context	{
 
 	fn bind_mesh_attrib( va : &buf::VertexArray, loc : uint, at : &Attribute )	{
 		assert *self.vertex_array == *va.handle;
-		self.buffer_array.bind( at.buffer );
+		self.bind_buffer( va, at.buffer, true );
 		let mut vdata = &va.data[loc];
 		// update vertex info
-		//FIXME: cache this
-		glcore::glVertexAttribPointer(
-			loc as glcore::GLuint, at.count as glcore::GLint, at.kind,
-			if at.normalized {glcore::GL_TRUE} else {glcore::GL_FALSE},
-			at.stride as glcore::GLsizei, at.offset as *glcore::GLvoid
-			);
+		if vdata.attrib != *at	{
+			vdata.attrib = *at;
+			glcore::glVertexAttribPointer(
+				loc as glcore::GLuint, at.count as glcore::GLint, at.kind,
+				if at.normalized {glcore::GL_TRUE} else {glcore::GL_FALSE},
+				at.stride as glcore::GLsizei, at.offset as *glcore::GLvoid
+				);
+		}
 		// enable attribute
 		if !vdata.enabled	{
 			glcore::glEnableVertexAttribArray( loc as glcore::GLuint );
@@ -153,7 +168,7 @@ impl context::Context	{
 		// call draw
 		match m.index	{
 			Some(el) =>	{
-				self.buffer_element.bind( el.buffer );
+				self.bind_buffer( va, el.buffer, false );
 				glcore::glDrawElements( m.poly_type, m.num_ind as glcore::GLsizei, el.kind, 0 as *glcore::GLvoid );
 			},
 			None =>	{

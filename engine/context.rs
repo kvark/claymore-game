@@ -9,8 +9,6 @@ pub trait State	{
 pub struct Context	{
 	mut program			: shade::Handle,
 	mut vertex_array	: buf::Handle,
-	buffer_array		: buf::Binding,
-	buffer_element		: buf::Binding,
 	renderbuffer		: frame::Binding,
 	framebuffer_draw	: frame::Binding,
 	framebuffer_read	: frame::Binding,
@@ -24,8 +22,6 @@ pub fn create()-> Context	{
 	Context{
 		program				: shade::Handle(0),
 		vertex_array		: buf::Handle(0),
-		buffer_array		: buf::Binding{		target:buf::Target(glcore::GL_ARRAY_BUFFER),			active:buf::Handle(0) },
-		buffer_element		: buf::Binding{		target:buf::Target(glcore::GL_ELEMENT_ARRAY_BUFFER),	active:buf::Handle(0) },
 		renderbuffer		: frame::Binding{	target:glcore::GL_RENDERBUFFER,			active:frame::Handle(0) },
 		framebuffer_draw	: frame::Binding{	target:glcore::GL_DRAW_FRAMEBUFFER,		active:frame::Handle(0) },
 		framebuffer_read	: frame::Binding{	target:glcore::GL_READ_FRAMEBUFFER,		active:frame::Handle(0) },
@@ -50,8 +46,6 @@ impl Context : State	{
 			self.program = _program;
 			was_ok = false;
 		}
-		was_ok &= self.buffer_array.sync_back();
-		was_ok &= self.buffer_element.sync_back();
 		was_ok &= self.texture.sync_back();
 		self.check(~"sync_back");
 		was_ok

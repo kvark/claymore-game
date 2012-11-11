@@ -51,11 +51,12 @@ pub fn create_reader( path : ~str )->Reader	{
 }
 
 
-pub fn read_mesh( br : &Reader, context : &context::Context )-> mesh::Mesh	{
+pub fn read_mesh( br : &Reader, va : &buf::VertexArray, context : &context::Context )-> mesh::Mesh	{
 	let signature = br.enter();
 	if signature != ~"k3mesh"	{
 		fail(fmt!( "Invalid mesh signature '%s': %s", signature, br.path ));
 	}
+	context.bind_vertex_array( va );
 	let n_vert	= br.get_uint(4u);
 	let n_ind	= br.get_uint(4u);
 	io::println(fmt!( "Loading mesh of %u vertices and %u indices: %s", n_vert, n_ind, br.path ));
@@ -85,15 +86,9 @@ pub fn read_mesh( br : &Reader, context : &context::Context )-> mesh::Mesh	{
 			i += 2;
 		}
 		assert stride==0u || offset == stride;
-		if stride==0u	{
-			let data = br.bin.read_bytes( offset * n_ind );
-			context.buffer_element.bind( buffer );
-			context.buffer_element.load( data, false );
-		}else	{
-			let data = br.bin.read_bytes( stride * n_vert );
-			context.buffer_array.bind( buffer );
-			context.buffer_array.load( data, false );
-		}
+		let size = if stride==0u {offset * n_ind} else {stride * n_vert};
+		let data = br.bin.read_bytes( size );
+		context.load_buffer( va, buffer, data, false );
 		num_buffers -= 1u;
 	}
 	br.leave();

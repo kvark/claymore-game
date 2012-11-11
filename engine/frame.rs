@@ -30,6 +30,7 @@ pub enum Target	{
 	TarTexture(@texture::Texture,uint),
 }
 
+//FIXME: remove once auto-generated
 impl Target : cmp::Eq	{
 	pure fn eq( other : &Target )-> bool	{
 		match (&self,other)	{
@@ -75,10 +76,27 @@ impl Attachment	{
 }
 
 
+pub struct Rect	{
+	x : uint,
+	y : uint,
+	w : uint,
+	h : uint,
+}
+
+impl Rect : cmp::Eq	{
+	pure fn eq( other : &Rect )-> bool	{
+		self.x==other.x && self.y==other.y && self.w==other.w && self.h==other.h
+	}
+	pure fn ne( other : &Rect )-> bool	{
+		!self.eq( other )
+	}
+}
+
+
 pub struct Buffer	{
 	handle			: Handle,
-	//viewport,
-	priv mut mask	: uint,
+	priv mut viewport	: Rect,
+	priv mut mask		: uint,
 	depth_stencil	: Attachment,
 	color0			: Attachment,
 	color1			: Attachment,
@@ -95,7 +113,7 @@ pub struct Buffer	{
 
 
 impl Buffer	{
-	pure fn check()	{
+	pure fn check_size()->(uint,uint,uint)	{
 		let mut wid = 0u, het = 0u, sam = 0u;
 		for [&self.depth_stencil,&self.color0,&self.color1,&self.color2,&self.color3].each |at|	{
 			match copy at.value	{
@@ -111,6 +129,7 @@ impl Buffer	{
 				}
 			}
 		}
+		(wid,het,sam)
 	}
 }
 
@@ -145,7 +164,7 @@ impl context::Context	{
 		unsafe	{
 			glcore::glGenFramebuffers( 1, ptr::addr_of(&hid) );
 		}
-		Buffer{ handle:Handle(hid), mask:0u,
+		Buffer{ handle:Handle(hid), viewport:Rect{x:0u,y:0u,w:0u,h:0u}, mask:0u,
 			depth_stencil	: create_at(glcore::GL_DEPTH_STENCIL_ATTACHMENT),
 			color0			: create_at(glcore::GL_COLOR_ATTACHMENT0),
 			color1			: create_at(glcore::GL_COLOR_ATTACHMENT1),
@@ -162,7 +181,6 @@ impl context::Context	{
 	}
 
 	fn bind_frame_buffer( fb : &Buffer, draw : bool, mask : uint )	{
-		fb.check();
 		// bind FBO
 		let binding = if draw {&self.framebuffer_draw} else {&self.framebuffer_read};
 		self._bind_frame_buffer( binding, fb.handle );
@@ -170,6 +188,16 @@ impl context::Context	{
 		let array = [&fb.depth_stencil,&fb.color0,&fb.color1,&fb.color2,&fb.color3];
 		for array.each |at|	{
 			at.attach( binding.target );
+		}
+		// set viewport
+		let r = {
+			let (wid,het,_sam) = fb.check_size();
+			Rect{ x:0u, y:0u, w:wid, h:het }
+		};
+		if fb.viewport != r	{
+			fb.viewport = r;
+			glcore::glViewport( r.x as glcore::GLint, r.y as glcore::GLint,
+				r.w as glcore::GLsizei, r.h as glcore::GLsizei );
 		}
 		// set new mask
 		if fb.mask != mask	{
