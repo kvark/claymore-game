@@ -28,6 +28,13 @@ impl Texture	{
 	}
 }
 
+impl Texture : context::State	{
+	fn sync_back()->bool	{
+		//FIXME
+		true
+	}
+}
+
 
 pub struct Slot	{
 	unit	: uint,

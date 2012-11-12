@@ -65,6 +65,13 @@ pub struct VertexArray	{
 	}
 }
 
+impl VertexArray : context::State	{
+	fn sync_back()->bool	{
+		//FIXME
+		true
+	}
+}
+
 
 impl context::Context	{
 	fn create_vertex_array()-> VertexArray	{

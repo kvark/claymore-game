@@ -57,6 +57,13 @@ pub struct Surface	{
 	}
 }
 
+impl Surface : context::State	{
+	fn sync_back()->bool	{
+		//FIXME
+		true
+	}
+}
+
 
 pub enum Target	{
 	TarEmpty,
@@ -164,6 +171,13 @@ impl Buffer	{
 			}
 		}
 		(wid,het,sam)
+	}
+}
+
+impl Buffer : context::State	{
+	fn sync_back()->bool	{
+		//FIXME
+		true
 	}
 }
 
