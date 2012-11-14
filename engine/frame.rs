@@ -71,6 +71,9 @@ pub enum Target	{
 	TarTexture(@texture::Texture,uint),
 }
 
+pub type PlaneMap = send_map::linear::LinearMap<~str,Target>;
+impl Target : Copy	{}
+
 //FIXME: remove once auto-generated
 impl Target : cmp::Eq	{
 	pure fn eq( other : &Target )-> bool	{
@@ -86,30 +89,15 @@ impl Target : cmp::Eq	{
 	}
 }
 
-
-struct Attachment	{
-	slot			: glcore::GLenum,
-	mut value		: Target,
-	priv mut cache	: Target,
-}
-
-priv fn create_at( slot : glcore::GLenum )-> Attachment	{
-	Attachment{ slot:slot, value:TarEmpty, cache:TarEmpty }
-}
-
-impl Attachment	{
-	priv fn attach( root : glcore::GLenum )-> bool	{
-		if self.value == self.cache	{
-			return false;
-		}
-		self.value = self.cache;
-		match copy self.value	{
+impl Target	{
+	priv fn attach( root : glcore::GLenum, slot : glcore::GLenum )-> bool	{
+		match self	{
 			TarEmpty			=> {},
 			TarSurface(s)		=> {
-				glcore::glFramebufferRenderbuffer( root, self.slot, s.target, *s.handle );
+				glcore::glFramebufferRenderbuffer( root, slot, s.target, *s.handle );
 			},
 			TarTexture(tex,lev)	=> {
-				glcore::glFramebufferTexture( root, self.slot, *tex.handle, lev as glcore::GLint );
+				glcore::glFramebufferTexture( root, slot, *tex.handle, lev as glcore::GLint );
 			}
 		}
 		true
@@ -137,12 +125,10 @@ impl Rect : cmp::Eq	{
 pub struct Buffer	{
 	handle			: Handle,
 	priv mut viewport	: Rect,
-	priv mut mask		: uint,
-	depth_stencil	: Attachment,
-	color0			: Attachment,
-	color1			: Attachment,
-	color2			: Attachment,
-	color3			: Attachment,
+	priv mut draw_mask	: uint,
+	priv mut read_id	: Option<uint>,
+	depth_stencil	: Target,
+	colors			: ~[Target],
 
 	drop	{
 		let hid = *self.handle as glcore::GLuint;
@@ -156,8 +142,8 @@ pub struct Buffer	{
 impl Buffer	{
 	pure fn check_size()->(uint,uint,uint)	{
 		let mut wid = 0u, het = 0u, sam = 0u;
-		for [&self.depth_stencil,&self.color0,&self.color1,&self.color2,&self.color3].each |at|	{
-			match copy at.value	{
+		for (~[self.depth_stencil] + self.colors).each |target|	{
+			match *target	{
 				TarEmpty => {},
 				TarSurface(sf) => 	{
 					if wid==0u	{ wid=sf.width; het=sf.height; sam=sf.samples; }
@@ -212,12 +198,10 @@ impl context::Context	{
 		unsafe	{
 			glcore::glGenFramebuffers( 1, ptr::addr_of(&hid) );
 		}
-		Buffer{ handle:Handle(hid), viewport:Rect{x:0u,y:0u,w:0u,h:0u}, mask:0u,
-			depth_stencil	: create_at(glcore::GL_DEPTH_STENCIL_ATTACHMENT),
-			color0			: create_at(glcore::GL_COLOR_ATTACHMENT0),
-			color1			: create_at(glcore::GL_COLOR_ATTACHMENT1),
-			color2			: create_at(glcore::GL_COLOR_ATTACHMENT2),
-			color3			: create_at(glcore::GL_COLOR_ATTACHMENT3),
+		Buffer{ handle:Handle(hid), viewport:Rect{x:0u,y:0u,w:0u,h:0u},
+			draw_mask:0u, read_id:None,
+			depth_stencil	: TarEmpty,
+			colors			: vec::from_elem( self.caps.max_color_attachments, TarEmpty ),
 		}
 	}
 
@@ -228,33 +212,21 @@ impl context::Context	{
 		}
 	}
 
-	fn bind_frame_buffer( fb : &Buffer, draw : bool, mask : uint )	{
-		// bind FBO
+	fn bind_frame_buffer( fb : &Buffer, draw : bool )-> glcore::GLenum	{
 		let binding = if draw {&self.framebuffer_draw} else {&self.framebuffer_read};
 		self._bind_frame_buffer( binding, fb.handle );
-		// attach missing attributes
-		let array = [&fb.depth_stencil,&fb.color0,&fb.color1,&fb.color2,&fb.color3];
-		for array.each |at|	{
-			at.attach( binding.target );
-		}
-		// set viewport
-		let r = {
-			let (wid,het,_sam) = fb.check_size();
-			Rect{ x:0u, y:0u, w:wid, h:het }
-		};
-		if fb.viewport != r	{
-			fb.viewport = r;
-			glcore::glViewport( r.x as glcore::GLint, r.y as glcore::GLint,
-				r.w as glcore::GLsizei, r.h as glcore::GLsizei );
-		}
-		// set new mask
-		if fb.mask != mask	{
-			fb.mask = mask;
+		binding.target
+	}
+
+	fn set_draw_buffers( fb : &Buffer, mask : uint )	{
+		assert *self.framebuffer_draw.active == *fb.handle;
+		if fb.draw_mask != mask	{
+			fb.draw_mask = mask;
 			let mut list :~[glcore::GLenum] = ~[];
 			let mut i = 0u;
 			while mask>>i != 0u	{
 				if mask&(1<<i) != 0u	{
-					list.push( array[i+1].slot );
+					list.push( glcore::GL_COLOR_ATTACHMENT0 + (i as glcore::GLenum) );
 				}
 				i += 1;
 			}
@@ -268,6 +240,26 @@ impl context::Context	{
 					glcore::glDrawBuffers( list.len() as glcore::GLsizei, vec::raw::to_ptr(list) )
 				}
 			}
+		}
+		// update the viewport
+		let r = {
+			let (wid,het,_sam) = fb.check_size();
+			Rect{ x:0u, y:0u, w:wid, h:het }
+		};
+		if fb.viewport != r	{
+			fb.viewport = r;
+			glcore::glViewport( r.x as glcore::GLint, r.y as glcore::GLint,
+				r.w as glcore::GLsizei, r.h as glcore::GLsizei );
+		}
+	}
+
+	fn set_read_buffer( fb : &Buffer, index : Option<uint> )	{
+		assert *self.framebuffer_read.active == *fb.handle;
+		if fb.read_id == index	{return;}
+		fb.read_id = index;
+		match index	{
+			Some(id)	=> glcore::glReadBuffer( glcore::GL_COLOR_ATTACHMENT0 + (id as glcore::GLenum) ),
+			None		=> glcore::glReadBuffer( glcore::GL_NONE ),
 		}
 	}
 

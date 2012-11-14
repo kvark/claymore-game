@@ -53,6 +53,7 @@ pub struct Attribute	{
 	size	: glcore::GLint
 }
 
+
 impl Parameter	{
 	priv unsafe fn read( h : Handle )-> bool	{
 		let t = self.storage;
@@ -123,6 +124,7 @@ pub struct Program	{
 	info	: ~str,
 	attribs	: AttriMap,
 	params	: ParaMap,
+	priv mut outputs	: ~[~str],
 
 	drop	{
 		// assert: not current
@@ -139,7 +141,25 @@ impl Program	{
 			},
 			None => {Unitialized}
 		}
-	}	
+	}
+	fn find_output( name : ~str )-> uint	{
+		match self.outputs.position_elem(&name)	{
+			Some(p)	=> p,
+			None	=>	{
+				let mut p = -1 as glcore::GLint;
+				do str::as_c_str(name) |text|	{
+					unsafe {
+						glcore::glGetFragDataLocation( *self.handle, ptr::addr_of(&*text) );
+					}
+				}
+				assert p >= 0;
+				let pu = p as uint;
+				vec::reserve_at_least( &mut self.outputs, pu+1u);
+				self.outputs[pu] = name;
+				pu
+			}
+		}
+	}
 }
 
 
@@ -281,7 +301,8 @@ impl context::Context	{
 		// done
 		Program{ handle:h, alive:ok, info:message,
 			attribs	:query_attributes(h),
-			params	:query_parameters(h) }
+			params	:query_parameters(h),
+			outputs :~[] }
 	}
 
 	priv fn _bind_program( h : Handle )	{

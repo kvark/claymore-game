@@ -5,8 +5,21 @@ pub trait State	{
 	fn sync_back()->bool;
 }
 
+pub struct Capabilities	{
+	max_color_attachments : uint,
+}
+
+priv fn read_cap( what : glcore::GLenum )-> uint	{
+	let mut value = 0 as glcore::GLint;
+	unsafe	{
+		glcore::glGetIntegerv( what, ptr::addr_of(&value) );
+	}
+	value as uint
+}
+
 
 pub struct Context	{
+	caps				: Capabilities,
 	mut program			: shade::Handle,
 	mut vertex_array	: buf::Handle,
 	array_buffer		: buf::Binding,
@@ -18,9 +31,14 @@ pub struct Context	{
 
 
 pub fn create()-> Context	{
+	// read caps
+	let caps = Capabilities{
+		max_color_attachments : read_cap( glcore::GL_MAX_COLOR_ATTACHMENTS ),
+	};
 	// fill up the context
 	let slots	= send_map::linear::LinearMap::<texture::Slot,texture::Handle>();
 	Context{
+		caps				: caps,
 		program				: shade::Handle(0),
 		vertex_array		: buf::Handle(0),
 		array_buffer		: buf::Binding{	target:buf::Target(glcore::GL_ARRAY_BUFFER),active:buf::Handle(0) },
