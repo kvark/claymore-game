@@ -4,6 +4,7 @@
 #[crate_type = "lib"];
 
 pub mod buf;
+pub mod call;
 pub mod context;
 pub mod frame;
 pub mod load;

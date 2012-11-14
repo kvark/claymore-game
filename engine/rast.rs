@@ -1,6 +1,6 @@
 extern mod glcore;
 
-struct Color	{
+pub struct Color	{
 	r:f32, g:f32, b:f32, a:f32,
 }
 
@@ -23,7 +23,7 @@ priv fn ask_state( state : glcore::GLenum )-> bool	{
 }
 
 
-struct Primitive	{
+pub struct Primitive	{
 	poly_mode	: glcore::GLenum,
 	front_cw	: bool,
 	cull		: bool,
@@ -79,7 +79,7 @@ impl Primitive : Stage	{
 }
 
 
-struct Offset	{
+pub struct Offset	{
 	on		: bool,
 	factor	: f32,
 	units	: f32,
@@ -106,7 +106,7 @@ impl Offset : Stage	{
 }
 
 
-struct Scissor	{
+pub struct Scissor	{
 	test	: bool,
 	area	: frame::Rect,
 }
@@ -141,7 +141,7 @@ impl Scissor : Stage	{
 }
 
 
-struct Multisample	{
+pub struct Multisample	{
 	on		: bool,
 	alpha	: bool,
 	cover	: bool,
@@ -185,7 +185,7 @@ impl Multisample : Stage	{
 }
 
 
-struct StencilSide	{
+pub struct StencilSide	{
 	function		: glcore::GLenum,
 	ref_value		: uint,
 	read_mask		: uint,
@@ -233,7 +233,7 @@ priv fn create_stencil()-> StencilSide	{
 }
 
 
-struct Stencil	{
+pub struct Stencil	{
 	test	: bool,
 	front	: StencilSide,
 	back	: StencilSide,
@@ -285,16 +285,16 @@ impl Stencil : Stage	{
 }
 
 
-struct Depth	{
+pub struct Depth	{
 	test	: bool,
 	clear	: Color
 }
 
-struct Blend	{
+pub struct Blend	{
 	on		: bool,
 }
 
-struct Mask	{
+pub struct Mask	{
 	stencil	: bool,
 	depth	: bool,
 	red		: bool,
@@ -304,7 +304,7 @@ struct Mask	{
 }
 
 
-pub struct Rast	{
+pub struct State	{
 	prime	: Primitive,
 	offset	: Offset,
 	scissor	: Scissor,
@@ -316,12 +316,12 @@ pub struct Rast	{
 }
 
 
-impl Rast	{
+impl State	{
 	//fn activate_primitive( cur : &mut Primitive, new : &Primitive)
 }
 
-pub fn create_rast()-> Rast	{
-	Rast{
+pub fn create_rast()-> State	{
+	State{
 		prime : Primitive{
 			poly_mode:glcore::GL_FILL, front_cw:true, cull:false,
 			cull_mode:glcore::GL_NONE, line_width:1f32
@@ -341,6 +341,6 @@ pub fn create_rast()-> Rast	{
 	}
 }
 
-pub fn query_rast()-> Rast	{
+pub fn query_rast()-> State	{
 	create_rast()	//FIXME
 }

@@ -71,7 +71,6 @@ pub enum Target	{
 	TarTexture(@texture::Texture,uint),
 }
 
-pub type PlaneMap = send_map::linear::LinearMap<~str,Target>;
 impl Target : Copy	{}
 
 //FIXME: remove once auto-generated
