@@ -113,7 +113,7 @@ fn render( s : &Sample ) ->bool	{
 		s.data.insert( ~"u_World", engine::shade::UniMatrix(false,mx) );
 	}
 	//FIXME: no copy (each_const required)
-	s.ct.draw_mesh( &s.mesh, &s.va, &s.program, &copy s.data );
+	s.ct.draw_mesh( &s.mesh, &s.mesh.get_range(), &s.va, &s.program, &copy s.data );
 	
 	s.frames += 1;
 	s.ct.check(~"render");

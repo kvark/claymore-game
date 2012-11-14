@@ -6,16 +6,11 @@ pub struct ClearData	{
 	stencil	: Option<uint>,
 }
 
-pub struct Range	{
-	start	: uint,
-	num		: uint,
-}
-
 
 enum Call	{
 	ClearCall( @frame::Buffer, PlaneMap, ClearData, rast::Scissor, rast::Mask ),
 	BlitCall(),			//FIXME
-	DrawCall( @frame::Buffer, PlaneMap, @buf::VertexArray, @mesh::Mesh, Range, @shade::Program, shade::DataMap, rast::State ),
+	DrawCall( @frame::Buffer, PlaneMap, @buf::VertexArray, @mesh::Mesh, mesh::Range, @shade::Program, shade::DataMap, rast::State ),
 	TransfromCall(),	//FIXME
 }
 
@@ -32,9 +27,9 @@ impl Process	{
 
 	fn flush( ct : &context::Context )	{
 		for (copy self.queue).each()	|call|	{
-			match *call	{
-				ClearCall(_fb,_pmap,_data,_scissor,_mask)	=> {},
-				DrawCall(fb,pmap,va,mesh,_range,prog,data,rast)	=> {
+			match call	{
+				&ClearCall(_fb,_pmap,_data,_scissor,_mask)	=> {},
+				&DrawCall(fb,pmap,va,mesh,range,prog,data,rast)	=> {
 					let mut attaches = vec::from_elem( pmap.len(), frame::TarEmpty );
 					for pmap.each() |name,target|	{
 						let loc = prog.find_output( name );
@@ -46,7 +41,7 @@ impl Process	{
 					};
 					ct.bind_frame_buffer( fb, true, depth_stencil, attaches );
 					rast.activate( &mut ct.rast, mesh.get_poly_size() );
-					ct.draw_mesh( mesh, va, prog, &data );
+					ct.draw_mesh( mesh, &range, va, prog, &data );
 				},
 				_	=> fail(~"Unsupported call!")
 			}

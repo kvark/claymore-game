@@ -1,5 +1,9 @@
 extern mod glcore;
 
+pub struct Range	{
+	start	: uint,
+	num		: uint,
+}
 
 pub struct Attribute	{
 	// semantics
@@ -100,6 +104,13 @@ impl Mesh	{
 			fail(fmt!( "Unknown poly type: %d",self.poly_type as int ));
 		}
 	}
+
+	pure fn get_range()-> Range	{
+		match self.index	{
+			Some(_)	=> Range{ start:0u, num:self.num_ind },
+			None	=> Range{ start:0u, num:self.num_vert }
+		}
+	}
 }
 
 
@@ -146,7 +157,7 @@ impl context::Context	{
 		}
 	}
 
-	fn draw_mesh( m : &Mesh, va : &buf::VertexArray, prog : &shade::Program, data : &shade::DataMap )-> bool	{
+	fn draw_mesh( m : &Mesh, range : &Range, va : &buf::VertexArray, prog : &shade::Program, data : &shade::DataMap )-> bool	{
 		// check black list
 		if m.black_list.contains( &prog.handle )	{
 			return false;
@@ -183,10 +194,12 @@ impl context::Context	{
 		match m.index	{
 			Some(el) =>	{
 				self.bind_element_buffer( va, el.buffer );
-				glcore::glDrawElements( m.poly_type, m.num_ind as glcore::GLsizei, el.kind, 0 as *glcore::GLvoid );
+				assert range.start + range.num <= m.num_ind;
+				glcore::glDrawElements( m.poly_type, range.num as glcore::GLsizei, el.kind, range.start as *glcore::GLvoid );
 			},
 			None =>	{
-				glcore::glDrawArrays( m.poly_type, 0, m.num_vert as glcore::GLsizei );
+				assert range.start + range.num <= m.num_vert;
+				glcore::glDrawArrays( m.poly_type, range.start as glcore::GLint, range.num as glcore::GLsizei );
 			}
 		}
 		true
