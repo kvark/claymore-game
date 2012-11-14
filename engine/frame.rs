@@ -3,45 +3,6 @@ extern mod glcore;
 pub enum Handle	= glcore::GLuint;
 
 
-pub struct RenBinding	{
-	target		: glcore::GLenum,
-	mut active	: Handle,
-}
-
-pub struct Binding	{
-	target		: glcore::GLenum,
-	mut active	: Handle,
-}
-
-impl RenBinding : context::State	{
-	fn sync_back()->bool	{
-		let mut hid = 0 as glcore::GLint;
-		unsafe	{
-			glcore::glGetIntegerv( glcore::GL_RENDERBUFFER_BINDING, ptr::addr_of(&hid) );
-		}
-		let hu = hid as glcore::GLuint;
-		if *self.active != hu	{
-			self.active = Handle( hu );
-			false
-		}else {true}
-	}
-}
-
-impl Binding : context::State	{
-	fn sync_back()->bool	{
-		let mut hid = 0 as glcore::GLint;
-		unsafe	{
-			glcore::glGetIntegerv( glcore::GL_FRAMEBUFFER_BINDING, ptr::addr_of(&hid) );
-		}
-		let hu = hid as glcore::GLuint;
-		if *self.active != hu	{
-			self.active = Handle( hu );
-			false
-		}else {true}	
-	}
-}
-
-
 pub struct Surface	{
 	handle	: Handle,
 	target	: glcore::GLenum,
@@ -104,6 +65,54 @@ impl Target	{
 }
 
 
+pub struct RenBinding	{
+	target		: glcore::GLenum,
+	mut active	: Handle,
+}
+
+pub struct Binding	{
+	target		: glcore::GLenum,
+	mut active	: Handle,
+}
+
+impl RenBinding : context::State	{
+	fn sync_back()->bool	{
+		let mut hid = 0 as glcore::GLint;
+		unsafe	{
+			glcore::glGetIntegerv( glcore::GL_RENDERBUFFER_BINDING, ptr::addr_of(&hid) );
+		}
+		let hu = hid as glcore::GLuint;
+		if *self.active != hu	{
+			self.active = Handle( hu );
+			false
+		}else {true}
+	}
+}
+
+impl Binding : context::State	{
+	fn sync_back()->bool	{
+		let mut hid = 0 as glcore::GLint;
+		unsafe	{
+			glcore::glGetIntegerv( glcore::GL_FRAMEBUFFER_BINDING, ptr::addr_of(&hid) );
+		}
+		let hu = hid as glcore::GLuint;
+		if *self.active != hu	{
+			self.active = Handle( hu );
+			false
+		}else {true}	
+	}
+}
+
+impl Binding	{
+	priv fn attach_target( new : Target, old : &mut Target, slot : glcore::GLenum )-> bool	{
+		if *old != new	{
+			*old = new;
+			new.attach( self.target, slot )
+		}else	{true}
+	}
+}
+
+
 pub struct Rect	{
 	x : uint,
 	y : uint,
@@ -122,12 +131,12 @@ impl Rect : cmp::Eq	{
 
 
 pub struct Buffer	{
-	handle			: Handle,
+	handle				: Handle,
 	priv mut viewport	: Rect,
 	priv mut draw_mask	: uint,
 	priv mut read_id	: Option<uint>,
-	depth_stencil	: Target,
-	colors			: ~[Target],
+	mut depth_stencil	: Target,
+	mut colors			: ~[Target],
 
 	drop	{
 		let hid = *self.handle as glcore::GLuint;
@@ -211,14 +220,18 @@ impl context::Context	{
 		}
 	}
 
-	fn bind_frame_buffer( fb : &Buffer, draw : bool )-> glcore::GLenum	{
+	fn bind_frame_buffer( fb : &Buffer, draw : bool, depth_stencil : Target, colors : ~[Target] )	{
 		let binding = if draw {&self.framebuffer_draw} else {&self.framebuffer_read};
 		self._bind_frame_buffer( binding, fb.handle );
-		binding.target
-	}
-
-	fn set_draw_buffers( fb : &Buffer, mask : uint )	{
-		assert *self.framebuffer_draw.active == *fb.handle;
+		// attach planes
+		binding.attach_target( depth_stencil, &mut fb.depth_stencil, glcore::GL_DEPTH_STENCIL_ATTACHMENT );
+		for colors.eachi() |i,target|	{
+			let mut val = fb.colors[i];	//FIXME
+			binding.attach_target( *target, &mut val, glcore::GL_COLOR_ATTACHMENT0 + (i as glcore::GLenum) );
+			fb.colors[i] = val;
+		}
+		let mask = (1u<<colors.len()) - 1u;
+		// set the mask
 		if fb.draw_mask != mask	{
 			fb.draw_mask = mask;
 			let mut list :~[glcore::GLenum] = ~[];
@@ -252,7 +265,7 @@ impl context::Context	{
 		}
 	}
 
-	fn set_read_buffer( fb : &Buffer, index : Option<uint> )	{
+	/*fn set_read_buffer( fb : &Buffer, index : Option<uint> )	{
 		assert *self.framebuffer_read.active == *fb.handle;
 		if fb.read_id == index	{return;}
 		fb.read_id = index;
@@ -260,7 +273,7 @@ impl context::Context	{
 			Some(id)	=> glcore::glReadBuffer( glcore::GL_COLOR_ATTACHMENT0 + (id as glcore::GLenum) ),
 			None		=> glcore::glReadBuffer( glcore::GL_NONE ),
 		}
-	}
+	}*/
 
 	fn unbind_frame_buffers()	{
 		self._bind_frame_buffer( &self.framebuffer_draw, Handle(0) );

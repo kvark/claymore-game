@@ -20,6 +20,7 @@ priv fn read_cap( what : glcore::GLenum )-> uint	{
 
 pub struct Context	{
 	caps				: Capabilities,
+	mut rast			: rast::State,
 	mut program			: shade::Handle,
 	mut vertex_array	: buf::Handle,
 	array_buffer		: buf::Binding,
@@ -39,6 +40,7 @@ pub fn create()-> Context	{
 	let slots	= send_map::linear::LinearMap::<texture::Slot,texture::Handle>();
 	Context{
 		caps				: caps,
+		rast				: rast::create_rast(),
 		program				: shade::Handle(0),
 		vertex_array		: buf::Handle(0),
 		array_buffer		: buf::Binding{	target:buf::Target(glcore::GL_ARRAY_BUFFER),active:buf::Handle(0) },

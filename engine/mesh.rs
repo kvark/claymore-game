@@ -86,6 +86,20 @@ impl Mesh	{
 	fn create_index( format : ~str, buffer : @buf::Object )-> (Attribute,uint)	{
 		self.create_attrib( format, buffer, 0u, 0u )
 	}
+
+	pure fn get_poly_size()-> uint	{
+		if [glcore::GL_POINT].contains(&self.poly_type)	{
+			1u
+		}else
+		if [glcore::GL_LINES,glcore::GL_LINE_STRIP].contains(&self.poly_type)	{
+			2u
+		}else
+		if [glcore::GL_TRIANGLES,glcore::GL_TRIANGLE_STRIP,glcore::GL_TRIANGLE_FAN].contains(&self.poly_type)	{
+			3u
+		}else	{
+			fail(fmt!( "Unknown poly type: %d",self.poly_type as int ));
+		}
+	}
 }
 
 

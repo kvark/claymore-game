@@ -142,12 +142,12 @@ impl Program	{
 			None => {Unitialized}
 		}
 	}
-	fn find_output( name : ~str )-> uint	{
-		match self.outputs.position_elem(&name)	{
+	fn find_output( name : &~str )-> uint	{
+		match self.outputs.position_elem(name)	{
 			Some(p)	=> p,
 			None	=>	{
 				let mut p = -1 as glcore::GLint;
-				do str::as_c_str(name) |text|	{
+				do str::as_c_str(*name) |text|	{
 					unsafe {
 						glcore::glGetFragDataLocation( *self.handle, ptr::addr_of(&*text) );
 					}
@@ -155,7 +155,7 @@ impl Program	{
 				assert p >= 0;
 				let pu = p as uint;
 				vec::reserve_at_least( &mut self.outputs, pu+1u);
-				self.outputs[pu] = name;
+				self.outputs[pu] = copy *name;
 				pu
 			}
 		}

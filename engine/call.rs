@@ -30,11 +30,24 @@ impl Process	{
 	fn draw()	{}
 	fn transform()	{}
 
-	fn flush()	{
-		for self.queue.each()	|call|	{
+	fn flush( ct : &context::Context )	{
+		for (copy self.queue).each()	|call|	{
 			match *call	{
-				ClearCall(_fb,_pm,_data,_scissor,_mask)	=> {},
-				DrawCall(_fb,_pm,_va,_mesh,_range,_prog,_data,_rast)	=> {},
+				ClearCall(_fb,_pmap,_data,_scissor,_mask)	=> {},
+				DrawCall(fb,pmap,va,mesh,_range,prog,data,rast)	=> {
+					let mut attaches = vec::from_elem( pmap.len(), frame::TarEmpty );
+					for pmap.each() |name,target|	{
+						let loc = prog.find_output( name );
+						attaches[loc] = *target;
+					}
+					let depth_stencil = match pmap.find(&~"")	{
+						Some(t)	=> t,
+						None	=> frame::TarEmpty,
+					};
+					ct.bind_frame_buffer( fb, true, depth_stencil, attaches );
+					rast.activate( &mut ct.rast, mesh.get_poly_size() );
+					ct.draw_mesh( mesh, va, prog, &data );
+				},
 				_	=> fail(~"Unsupported call!")
 			}
 		}

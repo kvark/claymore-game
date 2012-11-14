@@ -316,9 +316,12 @@ pub struct State	{
 }
 
 
-impl State	{
-	//fn activate_primitive( cur : &mut Primitive, new : &Primitive)
+impl State : Stage	{
+	//FIXME
+	fn activate( _cache : &mut State, _poly : uint )	{}
+	fn verify()	{}
 }
+
 
 pub fn create_rast()-> State	{
 	State{
