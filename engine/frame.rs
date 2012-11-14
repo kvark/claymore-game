@@ -221,24 +221,45 @@ impl context::Context	{
 	}
 
 	fn bind_frame_buffer( fb : &Buffer, draw : bool, depth_stencil : Target, colors : ~[Target] )	{
+		pure fn get_color( index : uint )->glcore::GLenum	{
+			glcore::GL_COLOR_ATTACHMENT0 + (index as glcore::GLenum)
+		};
 		let binding = if draw {&self.framebuffer_draw} else {&self.framebuffer_read};
 		self._bind_frame_buffer( binding, fb.handle );
 		// attach planes
 		binding.attach_target( depth_stencil, &mut fb.depth_stencil, glcore::GL_DEPTH_STENCIL_ATTACHMENT );
 		for colors.eachi() |i,target|	{
 			let mut val = fb.colors[i];	//FIXME
-			binding.attach_target( *target, &mut val, glcore::GL_COLOR_ATTACHMENT0 + (i as glcore::GLenum) );
+			binding.attach_target( *target, &mut val, get_color(i) );
 			fb.colors[i] = val;
 		}
 		let mask = (1u<<colors.len()) - 1u;
-		// set the mask
+		// set the read mask
+		if !draw	{
+			assert mask&(mask-1u) == 0;
+			let new_id =
+			if mask != 0u	{
+				let mut i=0u;
+				while mask>>i!=1u	{i+=1u;}
+				Some(i)
+			}else	{ None };
+			if fb.read_id != new_id	{
+				fb.read_id = new_id;
+				match new_id	{
+					Some(id)	=> glcore::glReadBuffer( get_color(id) ),
+					None		=> glcore::glReadBuffer( glcore::GL_NONE ),
+				}
+			}
+			return;
+		}
+		// set the draw mask
 		if fb.draw_mask != mask	{
 			fb.draw_mask = mask;
 			let mut list :~[glcore::GLenum] = ~[];
 			let mut i = 0u;
 			while mask>>i != 0u	{
 				if mask&(1<<i) != 0u	{
-					list.push( glcore::GL_COLOR_ATTACHMENT0 + (i as glcore::GLenum) );
+					list.push( get_color(i) );
 				}
 				i += 1;
 			}
@@ -264,16 +285,6 @@ impl context::Context	{
 				r.w as glcore::GLsizei, r.h as glcore::GLsizei );
 		}
 	}
-
-	/*fn set_read_buffer( fb : &Buffer, index : Option<uint> )	{
-		assert *self.framebuffer_read.active == *fb.handle;
-		if fb.read_id == index	{return;}
-		fb.read_id = index;
-		match index	{
-			Some(id)	=> glcore::glReadBuffer( glcore::GL_COLOR_ATTACHMENT0 + (id as glcore::GLenum) ),
-			None		=> glcore::glReadBuffer( glcore::GL_NONE ),
-		}
-	}*/
 
 	fn unbind_frame_buffers()	{
 		self._bind_frame_buffer( &self.framebuffer_draw, Handle(0) );
