@@ -17,8 +17,8 @@ struct Sample	{
 }
 
 
-fn init( aspect : float ) -> Sample	{
-	let ct = engine::context::create();
+fn init( wid : uint, het : uint ) -> Sample	{
+	let ct = engine::context::create( wid, het );
 	assert ct.sync_back();
 	// load shaders
 	let vert_shader = match io::read_whole_file_str(&path::Path(~"data/code/test.glslv"))	{
@@ -62,6 +62,7 @@ fn init( aspect : float ) -> Sample	{
 	let mut params = engine::shade::create_data();
 	{
 		// compute matrices
+		let aspect = (wid as float) / (het as float);
 		let cam_space = engine::space::QuatSpace{
 			position 	: lmath::vector::Vec3::new( 0f32, 0f32, 5f32 ),
 			orientation	: lmath::quaternion::Quat::identity::<f32>(),
@@ -141,17 +142,14 @@ fn main()	{
 		glfw3::window_hint( glfw3::OPENGL_PROFILE, glfw3::OPENGL_CORE_PROFILE );
         glfw3::window_hint( glfw3::OPENGL_FORWARD_COMPAT, 1 );
 	
-		let wid = 800, het = 600;
+		let wid = 800u, het = 600u;
 		let mut window = glfw3::create_window( wid, het, glfw3::WINDOWED, "Claymore" );
 		if (ptr::is_null(window.ptr))	{
 			failGLFW("OpenWindow");
 		}
 	
-		window.set_title(~"Claymore");
 		window.make_context_current();
-		
-		let aspect = (wid as float) / (het as float);
-		let sample = init( aspect );
+		let sample = init( wid, het );
 		
 		loop	{
 			glfw3::poll_events();

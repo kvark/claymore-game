@@ -4,9 +4,9 @@ pub struct Color	{
 	r:f32, g:f32, b:f32, a:f32,
 }
 
-trait Stage	{
-	fn activate( cache : &mut self, poly : uint );
-	fn verify();
+priv trait Stage	{
+	fn activate( &mut self, new : &self, poly : uint );
+	fn verify( &mut self );	//FIXME:waiting for the Copy derivation
 }
 
 
@@ -32,45 +32,45 @@ pub struct Primitive	{
 }
 
 impl Primitive : Stage	{
-	fn activate( cache : &mut Primitive, poly : uint )	{
+	fn activate( &mut self, new : &Primitive, poly : uint )	{
 		if poly == 3u	{
-			if cache.poly_mode != self.poly_mode	{
-				cache.poly_mode = self.poly_mode;
-				glcore::glPolygonMode( glcore::GL_FRONT_AND_BACK, self.poly_mode );
+			if self.poly_mode != new.poly_mode	{
+				self.poly_mode = new.poly_mode;
+				glcore::glPolygonMode( glcore::GL_FRONT_AND_BACK, new.poly_mode );
 			}
-			if cache.front_cw != self.front_cw	{
-				cache.front_cw = self.front_cw;
-				let mode = if self.front_cw {glcore::GL_CW} else {glcore::GL_CCW};
+			if self.front_cw != new.front_cw	{
+				self.front_cw = new.front_cw;
+				let mode = if new.front_cw {glcore::GL_CW} else {glcore::GL_CCW};
 				glcore::glFrontFace( mode );
 			}
-			if cache.cull != self.cull	{
-				cache.cull = self.cull;
-				set_state( glcore::GL_CULL_FACE, self.cull );
+			if self.cull != new.cull	{
+				self.cull = new.cull;
+				set_state( glcore::GL_CULL_FACE, new.cull );
 			}
-			if self.cull && cache.cull_mode != self.cull_mode	{
-				cache.cull_mode = self.cull_mode;
-				glcore::glCullFace( self.cull_mode );
+			if new.cull && self.cull_mode != new.cull_mode	{
+				self.cull_mode = new.cull_mode;
+				glcore::glCullFace( new.cull_mode );
 			}
 		}else
 		if poly == 2u	{
-			if cache.line_width != self.line_width	{
-				cache.line_width = self.line_width;
-				glcore::glLineWidth( self.line_width );
+			if self.line_width != new.line_width	{
+				self.line_width = new.line_width;
+				glcore::glLineWidth( new.line_width );
 			}
 		}
 	}
-	fn verify()	{
-		let mut mode	= 0 as glcore::GLint;
+	fn verify( &mut self )	{
+		//let mut mode	= 0 as glcore::GLint;
 		let mut front	= 0 as glcore::GLint;
 		let mut cmode	= 0 as glcore::GLint;
 		let mut lw		= 0 as glcore::GLfloat;
-		unsafe	{
-			glcore::glGetIntegerv(	glcore::GL_POLYGON_MODE,	ptr::addr_of(&mode) );
+		unsafe	{	//crashes on that... (OSX 10.8)
+			//glcore::glGetIntegerv(	glcore::GL_POLYGON_MODE,	ptr::addr_of(&mode) );
 			glcore::glGetIntegerv(	glcore::GL_FRONT_FACE,		ptr::addr_of(&front) );
 			glcore::glGetIntegerv(	glcore::GL_CULL_FACE_MODE,	ptr::addr_of(&cmode) );
 			glcore::glGetFloatv(	glcore::GL_LINE_WIDTH,		ptr::addr_of(&lw) );
 		}
-		assert self.poly_mode == mode as glcore::GLenum &&
+		assert //self.poly_mode == mode as glcore::GLenum &&
 			self.front_cw == (front==glcore::GL_CW as glcore::GLint) &&
 			self.cull == ask_state( glcore::GL_CULL_FACE ) &&
 			self.cull_mode == cmode as glcore::GLenum && 
@@ -80,28 +80,46 @@ impl Primitive : Stage	{
 
 
 pub struct Offset	{
-	on		: bool,
+	on_fill	: bool,
+	on_line : bool,
+	on_point: bool,
 	factor	: f32,
 	units	: f32,
 }
 
 impl Offset : Stage	{
-	fn activate( cache : &mut Offset, _poly : uint )	{
-		if cache.on != self.on 	{
-			cache.on = self.on;
-			set_state( glcore::GL_POLYGON_OFFSET_FILL, self.on )
+	fn activate( &mut self, new : &Offset, _poly : uint )	{
+		if self.on_fill != new.on_fill 	{
+			self.on_fill = new.on_fill;
+			set_state( glcore::GL_POLYGON_OFFSET_FILL, new.on_fill )
 		}
-		if self.on && (cache.factor!=self.factor || cache.units!=self.units)	{
-			cache.factor = self.factor;
-			cache.units = self.units;
-			glcore::glPolygonOffset( self.factor, self.units );
+		if self.on_line != new.on_line	{
+			self.on_line = new.on_line;
+			set_state( glcore::GL_POLYGON_OFFSET_LINE, new.on_line )
+		}
+		if self.on_point != new.on_point	{
+			self.on_point = new.on_point;
+			set_state( glcore::GL_POLYGON_OFFSET_POINT, new.on_point )
+		}
+		let on = new.on_fill || new.on_line || new.on_point;
+		if on && (self.factor!=new.factor || self.units!=new.units)	{
+			self.factor = new.factor;
+			self.units = new.units;
+			glcore::glPolygonOffset( new.factor, new.units );
 		}
 	}
-	fn verify()	{
+	fn verify( &mut self )	{
 		let mut f = 0 as glcore::GLfloat;
 		let mut u = 0 as glcore::GLfloat;
-		assert self.on == ask_state( glcore::GL_POLYGON_OFFSET_FILL ) &&
-			self.factor == f as f32 && self.units == u as f32;
+		unsafe	{
+			glcore::glGetFloatv( glcore::GL_POLYGON_OFFSET_FACTOR,	ptr::addr_of(&f) );
+			glcore::glGetFloatv( glcore::GL_POLYGON_OFFSET_UNITS,	ptr::addr_of(&u) );
+		}
+		assert
+			self.on_fill	== ask_state( glcore::GL_POLYGON_OFFSET_FILL ) &&
+			self.on_line	== ask_state( glcore::GL_POLYGON_OFFSET_LINE ) &&
+			self.on_point	== ask_state( glcore::GL_POLYGON_OFFSET_POINT ) &&
+			self.factor	== f as f32 && self.units == u as f32;
 	}
 }
 
@@ -112,29 +130,23 @@ pub struct Scissor	{
 }
 
 impl Scissor : Stage	{
-	fn activate( cache : &mut Scissor, _poly : uint )	{
-		if cache.test != self.test	{
-			cache.test = self.test;
-			set_state( glcore::GL_SCISSOR_TEST, self.test);
+	fn activate( &mut self, new : &Scissor, _poly : uint )	{
+		if self.test != new.test	{
+			self.test = new.test;
+			set_state( glcore::GL_SCISSOR_TEST, new.test);
 		}
-		if self.test && cache.area != self.area	{
-			cache.area = self.area;
-			glcore::glScissor( self.area.x as glcore::GLint, self.area.y as glcore::GLint,
-				self.area.w as glcore::GLsizei, self.area.h as glcore::GLsizei );
+		if new.test && self.area != new.area	{
+			self.area = new.area;
+			glcore::glScissor( new.area.x as glcore::GLint, new.area.y as glcore::GLint,
+				new.area.w as glcore::GLsizei, new.area.h as glcore::GLsizei );
 		}
 	}
-	fn verify()	{
-		let mut r = frame::Rect{x:0u,y:0u,w:0u,h:0u};
+	fn verify( &mut self )	{
+		let mut v = vec::from_elem( 4, 0 as glcore::GLint );
 		unsafe	{
-			glcore::glGetIntegerv( glcore::GL_SCISSOR_BOX, ptr::addr_of(&r.x) as *glcore::GLint );
+			glcore::glGetIntegerv( glcore::GL_SCISSOR_BOX, vec::raw::to_ptr(v) );
 		}
-		if r.w==0u	{
-			// When a GL context is first attached to a window,
-			// width and height are set to the dimensions of that window.
-			// We can't track that ATM, so we skip the check
-			r.w = self.area.w;
-			r.h = self.area.h;
-		}
+		let mut r = frame::Rect{ x:v[0] as uint, y:v[1] as uint, w:v[2] as uint, h:v[3] as uint };
 		assert self.test == ask_state( glcore::GL_SCISSOR_TEST ) &&
 			self.area == r;
 	}
@@ -150,27 +162,27 @@ pub struct Multisample	{
 }
 
 impl Multisample : Stage	{
-	fn activate( cache : &mut Multisample, _poly : uint )	{
-		if cache.on != self.on	{
-			cache.on = self.on;
-			set_state( glcore::GL_MULTISAMPLE, self.on );
+	fn activate( &mut self, new : &Multisample, _poly : uint )	{
+		if self.on != new.on	{
+			self.on = new.on;
+			set_state( glcore::GL_MULTISAMPLE, new.on );
 		}
-		if !self.on	{return;}
-		if cache.alpha != self.alpha	{
-			cache.alpha = self.alpha;
-			set_state( glcore::GL_SAMPLE_ALPHA_TO_COVERAGE, self.alpha );
+		if !new.on	{return;}
+		if self.alpha != new.alpha	{
+			self.alpha = new.alpha;
+			set_state( glcore::GL_SAMPLE_ALPHA_TO_COVERAGE, new.alpha );
 		}
-		if cache.cover != self.cover	{
-			cache.cover = self.cover;
-			set_state( glcore::GL_SAMPLE_COVERAGE, self.cover );
+		if self.cover != new.cover	{
+			self.cover = new.cover;
+			set_state( glcore::GL_SAMPLE_COVERAGE, new.cover );
 		}
-		if self.cover && (cache.invert!=self.invert || cache.value!=self.value)	{
-			cache.invert = self.invert;
-			cache.value = self.value;
-			glcore::glSampleCoverage( self.value, self.invert as glcore::GLboolean );
+		if new.cover && (self.invert!=new.invert || self.value!=new.value)	{
+			self.invert = new.invert;
+			self.value = new.value;
+			glcore::glSampleCoverage( new.value, new.invert as glcore::GLboolean );
 		}
 	}
-	fn verify()	{
+	fn verify( &mut self )	{
 		let mut value = 0 as glcore::GLfloat;
 		let mut invert = glcore::GL_FALSE;
 		unsafe	{
@@ -209,18 +221,18 @@ impl StencilSide : cmp::Eq	{
 }
 
 impl StencilSide	{
-	fn activate( cache : &mut StencilSide, side : glcore::GLenum )	{
-		if cache.function!=self.function || cache.ref_value!=self.ref_value || cache.read_mask!=self.read_mask	{
-			cache.function = self.function;
-			cache.ref_value = self.ref_value;
-			cache.read_mask = self.read_mask;
-			glcore::glStencilFuncSeparate( side, self.function, self.ref_value as glcore::GLint, self.read_mask as glcore::GLuint );
+	fn activate( &mut self, new : &StencilSide, side : glcore::GLenum )	{
+		if self.function!=new.function || self.ref_value!=new.ref_value || self.read_mask!=new.read_mask	{
+			self.function = new.function;
+			self.ref_value = new.ref_value;
+			self.read_mask = new.read_mask;
+			glcore::glStencilFuncSeparate( side, new.function, new.ref_value as glcore::GLint, new.read_mask as glcore::GLuint );
 		}
-		if cache.op_fail!=self.op_fail || cache.op_depth_fail!=self.op_depth_fail || cache.op_pass!=self.op_pass	{
-			cache.op_fail = self.op_fail;
-			cache.op_depth_fail = self.op_depth_fail;
-			cache.op_pass = self.op_pass;
-			glcore::glStencilOpSeparate( side, self.op_fail, self.op_depth_fail, self.op_pass );
+		if self.op_fail!=new.op_fail || self.op_depth_fail!=new.op_depth_fail || self.op_pass!=new.op_pass	{
+			self.op_fail = new.op_fail;
+			self.op_depth_fail = new.op_depth_fail;
+			self.op_pass = new.op_pass;
+			glcore::glStencilOpSeparate( side, new.op_fail, new.op_depth_fail, new.op_pass );
 		}
 	}
 }
@@ -240,23 +252,23 @@ pub struct Stencil	{
 }
 
 impl Stencil : Stage	{
-	fn activate( cache : &mut Stencil, _poly : uint )	{
-		if cache.test != self.test	{
-			cache.test = self.test;
-			set_state( glcore::GL_STENCIL_TEST, self.test );
+	fn activate( &mut self, new : &Stencil, _poly : uint )	{
+		if self.test != new.test	{
+			self.test = new.test;
+			set_state( glcore::GL_STENCIL_TEST, new.test );
 		}
-		if !self.test	{return;}
-		if self.front == self.back	{
-			if cache.front != self.front || cache.back != self.back	{
-				cache.front = self.front;
-				self.front.activate( &mut cache.back, glcore::GL_FRONT_AND_BACK );
+		if !new.test	{return;}
+		if new.front == new.back	{
+			if self.front != new.front || self.back != new.back	{
+				self.front = new.front;
+				self.back.activate( &new.back, glcore::GL_FRONT_AND_BACK );
 			}
 		}else	{
-			self.front	.activate( &mut cache.front,	glcore::GL_FRONT );
-			self.back	.activate( &mut cache.back,		glcore::GL_BACK );
+			self.front	.activate( &new.front,	glcore::GL_FRONT );
+			self.back	.activate( &new.back,	glcore::GL_BACK );
 		}
 	}
-	fn verify()	{
+	fn verify( &mut self )	{
 		let mut vals = vec::from_elem( 12, 0 as glcore::GLint );
 		let queries = ~[glcore::GL_STENCIL_FUNC,glcore::GL_STENCIL_REF,glcore::GL_STENCIL_VALUE_MASK,
 			glcore::GL_STENCIL_FAIL,glcore::GL_STENCIL_PASS_DEPTH_FAIL,glcore::GL_STENCIL_PASS_DEPTH_PASS,
@@ -287,8 +299,41 @@ impl Stencil : Stage	{
 
 pub struct Depth	{
 	test	: bool,
-	clear	: Color
+	fun		: glcore::GLenum,
+	r0		: f32,
+	r1		: f32,
 }
+
+impl Depth : Stage	{
+	fn activate( &mut self, new : &Depth, _poly : uint )	{
+		if self.test != new.test	{
+			self.test = new.test;
+			set_state( glcore::GL_DEPTH_TEST, new.test );
+		}
+		if !new.test	{return;}
+		if self.fun != new.fun	{
+			self.fun = new.fun;
+			glcore::glDepthFunc( new.fun );
+		}
+		if self.r0 != new.r0 || self.r1 != new.r1	{
+			self.r0 = new.r0;
+			self.r1 = new.r1;
+			glcore::glDepthRange( new.r0 as glcore::GLdouble, new.r1 as glcore::GLdouble )
+		}
+	}
+	fn verify( &mut self )	{
+		let mut val = 0 as glcore::GLint;
+		let mut r = vec::from_elem( 2, 0 as glcore::GLfloat );
+		unsafe	{
+			glcore::glGetIntegerv(	glcore::GL_DEPTH_FUNC, ptr::addr_of(&val) );
+			glcore::glGetFloatv(	glcore::GL_DEPTH_RANGE, vec::raw::to_ptr(r) );
+		}
+		assert self.test == ask_state( glcore::GL_DEPTH_TEST ) &&
+			self.fun == val as glcore::GLenum &&
+			self.r0 == r[0] as f32 && self.r1 == r[1] as f32;
+	}
+}
+
 
 pub struct Blend	{
 	on		: bool,
@@ -310,7 +355,7 @@ pub struct State	{
 	scissor	: Scissor,
 	multi	: Multisample,
 	stencil	: Stencil,
-	//depth	: Depth,
+	depth	: Depth,
 	//blend	: Blend,
 	//mask	: Mask,
 }
@@ -318,32 +363,46 @@ pub struct State	{
 
 impl State : Stage	{
 	//FIXME
-	fn activate( _cache : &mut State, _poly : uint )	{}
-	fn verify()	{}
-}
-
-
-pub fn create_rast()-> State	{
-	State{
-		prime : Primitive{
-			poly_mode:glcore::GL_FILL, front_cw:true, cull:false,
-			cull_mode:glcore::GL_NONE, line_width:1f32
-		},
-		offset : Offset{
-			on:false, factor:0f32, units:0f32
-		},
-		scissor : Scissor{
-			test:false, area:frame::Rect{x:0u,y:0u,w:0u,h:0u}
-		},
-		multi : Multisample{
-			on:true, alpha:false, cover:false, value:0f32, invert:false
-		},
-		stencil : Stencil{
-			test:true, front:create_stencil(), back:create_stencil()
-		}
+	fn activate( &mut self, new : &State, poly : uint )	{
+		self.prime	.activate( &new.prime,		poly );
+		self.offset	.activate( &new.offset,		poly );
+		self.scissor.activate( &new.scissor,	poly );
+		self.multi	.activate( &new.multi, 		poly );
+		self.stencil.activate( &new.stencil,	poly );
+		self.depth	.activate( &new.depth,		poly );
+	}
+	fn verify( &mut self )	{
+		self.prime	.verify();
+		self.offset	.verify();
+		self.scissor.verify();
+		self.multi	.verify();
+		self.stencil.verify();
+		self.depth	.verify();
 	}
 }
 
-pub fn query_rast()-> State	{
-	create_rast()	//FIXME
+// Creates a default GL context rasterizer state
+// make sure to verify that it matches GL specification
+pub fn create_rast( wid : uint, het : uint )-> State	{
+	State{
+		prime : Primitive{
+			poly_mode:glcore::GL_FILL, front_cw:false, cull:false,
+			cull_mode:glcore::GL_BACK, line_width:1f32
+		},
+		offset : Offset{
+			on_fill:false, on_line:false, on_point:false, factor:0f32, units:0f32
+		},
+		scissor : Scissor{
+			test:false, area:frame::Rect{x:0u,y:0u,w:wid,h:het}
+		},
+		multi : Multisample{
+			on:true, alpha:false, cover:false, value:1f32, invert:false
+		},
+		stencil : Stencil{
+			test:false, front:create_stencil(), back:create_stencil()
+		},
+		depth : Depth{
+			test:false, fun:glcore::GL_LESS, r0:0f32, r1:1f32
+		}
+	}
 }

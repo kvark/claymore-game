@@ -31,7 +31,7 @@ pub struct Context	{
 }
 
 
-pub fn create()-> Context	{
+pub fn create( wid : uint, het : uint )-> Context	{
 	// read caps
 	let caps = Capabilities{
 		max_color_attachments : read_cap( glcore::GL_MAX_COLOR_ATTACHMENTS ),
@@ -40,7 +40,7 @@ pub fn create()-> Context	{
 	let slots	= send_map::linear::LinearMap::<texture::Slot,texture::Handle>();
 	Context{
 		caps				: caps,
-		rast				: rast::create_rast(),
+		rast				: rast::create_rast(wid,het),
 		program				: shade::Handle(0),
 		vertex_array		: buf::Handle(0),
 		array_buffer		: buf::Binding{	target:buf::Target(glcore::GL_ARRAY_BUFFER),active:buf::Handle(0) },
@@ -68,6 +68,7 @@ impl Context : State	{
 			self.program = _program;
 			was_ok = false;
 		}
+		self.rast.verify();
 		was_ok &= self.array_buffer.sync_back();
 		was_ok &= self.renderbuffer.sync_back();
 		was_ok &= self.framebuffer_draw.sync_back();

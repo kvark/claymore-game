@@ -11,7 +11,7 @@ clean-engine:
 	rm -R lib/libengine*
 
 NAME=claymore
-DIR=${claymore}-game
+DIR=${NAME}-game
 
 extern: clean-lib lmath glfw3 glcore stb-image
 
