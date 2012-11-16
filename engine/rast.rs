@@ -357,7 +357,7 @@ pub struct State	{
 	stencil	: Stencil,
 	depth	: Depth,
 	//blend	: Blend,
-	//mask	: Mask,
+	mask	: Mask,
 }
 
 
@@ -403,6 +403,9 @@ pub fn create_rast( wid : uint, het : uint )-> State	{
 		},
 		depth : Depth{
 			test:false, fun:glcore::GL_LESS, r0:0f32, r1:1f32
+		},
+		mask : Mask{
+			stencil:true, depth:true, red:true, green:true, blue:true, alpha:true
 		}
 	}
 }

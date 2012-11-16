@@ -146,15 +146,19 @@ impl Program	{
 		match self.outputs.position_elem(name)	{
 			Some(p)	=> p,
 			None	=>	{
-				let mut p = -1 as glcore::GLint;
+				/*let mut p = -1 as glcore::GLint;
 				do str::as_c_str(*name) |text|	{
 					unsafe {
-						glcore::glGetFragDataLocation( *self.handle, ptr::addr_of(&*text) );
+						//FIXME:doesn't work!
+						glcore::glGetFragDataLocation( *self.handle, text );
 					}
 				}
 				assert p >= 0;
-				let pu = p as uint;
-				vec::reserve_at_least( &mut self.outputs, pu+1u);
+				let pu = p as uint;*/
+				let pu = 0u;
+				if self.outputs.len() <= pu	{
+					do vec::grow_fn( &mut self.outputs, pu+1u-self.outputs.len()) |_i| {~""};
+				}
 				self.outputs[pu] = copy *name;
 				pu
 			}

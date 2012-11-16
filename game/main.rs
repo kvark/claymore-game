@@ -8,11 +8,12 @@ extern mod engine;
 
 struct Sample	{
 	ct			: engine::context::Context,
-	program		: engine::shade::Program,
+	program		: @engine::shade::Program,
 	mut data	: engine::shade::DataMap,
-	mesh		: engine::mesh::Mesh,
-	va			: engine::buf::VertexArray,
+	mesh		: @engine::mesh::Mesh,
+	va			: @engine::buf::VertexArray,
 	texture		: @engine::texture::Texture,
+	fbo			: @engine::frame::Buffer,
 	mut frames	: uint,
 }
 
@@ -29,10 +30,10 @@ fn init( wid : uint, het : uint ) -> Sample	{
 		Ok(text) => ct.create_shader( glcore::GL_FRAGMENT_SHADER, text ),
 		Err(msg) => fail(msg)
 	};
-	let program = ct.create_program( ~[vert_shader,frag_shader] );
+	let program = @ct.create_program( ~[vert_shader,frag_shader] );
 	// load buffers and mesh
-	let va = ct.create_vertex_array();
-	let mesh = engine::load::read_mesh( &engine::load::create_reader(~"data/jazz_dancing.k3mesh"), &ct );
+	let va = @ct.create_vertex_array();
+	let mesh = @engine::load::read_mesh( &engine::load::create_reader(~"data/jazz_dancing.k3mesh"), &ct );
 	/*let vdata = ~[-1f32,-1f32,0f32,0f32,1f32,0f32,1f32,-1f32,0f32];
 	let buf = @ct.create_buffer_loaded( vdata );
 	let mut mesh = ct.create_mesh( ~"dummy", ~"3", 3, 0 );
@@ -83,22 +84,17 @@ fn init( wid : uint, het : uint ) -> Sample	{
 		params.insert( ~"u_ViewProj",	engine::shade::UniMatrix(false,mvp) );
 		params.insert( ~"u_CamPos",		engine::shade::UniFloatVec(u_cam_pos) );
 	}
+	let fbo = @ct.create_frame_buffer_main();
 	// done
 	ct.check(~"init");
 	io::println( fmt!("init: program %u, mesh %s, texture %u",
 		*program.handle as uint, mesh.name, *tex.handle as uint)
 	);
-	Sample { ct:ct, program:program, data:params, mesh:mesh, va:va, texture:tex, frames:0 }
+	Sample { ct:ct, program:program, data:params, mesh:mesh, va:va, texture:tex, frames:0, fbo:fbo }
 }
 
 
 fn render( s : &Sample ) ->bool	{
-	glcore::glClearColor( 0.5f32, 0.5f32, 1.0f32, 1.0f32 );
-	glcore::glClearDepth( 1.0f64 );
-	glcore::glClear( glcore::GL_COLOR_BUFFER_BIT | glcore::GL_DEPTH_BUFFER_BIT );
-	glcore::glEnable( glcore::GL_DEPTH_TEST );
-	glcore::glEnable( glcore::GL_CULL_FACE );
-
 	if true {	// compute new rotation matrix
 		let angle = (s.frames as f32) * 0.02f32;
 		let sn = f32::sin(angle), cn = f32::cos(angle);
@@ -113,12 +109,41 @@ fn render( s : &Sample ) ->bool	{
 		let mx = model_space.to_matrix();
 		s.data.insert( ~"u_World", engine::shade::UniMatrix(false,mx) );
 	}
-	//FIXME: no copy (each_const required)
-	s.ct.draw_mesh( &s.mesh, &s.mesh.get_range(), &s.va, &s.program, &copy s.data );
+
+	if true	{
+		let mut pmap = send_map::linear::LinearMap::<~str,engine::frame::Target>();
+		pmap.insert( ~"", engine::frame::TarEmpty );
+		pmap.insert( ~"o_Color", engine::frame::TarEmpty );
+		let cdata = engine::call::ClearData{
+			color	:Some(engine::rast::Color{ r:0.5f32, g:0.5f32, b:1.0f32, a:1.0f32 }),
+			depth	:Some( 1f32 ),
+			stencil	:None
+		};
+		let mut rast = engine::rast::create_rast(0,0);
+		rast.depth.test = true;
+		rast.prime.cull = true;
+		let c0 = engine::call::CallClear( s.fbo, copy pmap, cdata, rast.scissor, rast.mask );
+		let c1 = engine::call::CallDraw( s.fbo, copy pmap, s.va, s.mesh, s.mesh.get_range(), s.program, copy s.data, rast );
+
+//		glcore::glClearColor( 0.5f32, 0.5f32, 1.0f32, 1.0f32 );
+//		glcore::glClearDepth( 1.0f64 );
+//		glcore::glClear( glcore::GL_COLOR_BUFFER_BIT | glcore::GL_DEPTH_BUFFER_BIT );
+
+		s.ct.flush(~[c0,c1]);
+	}else	{
+		glcore::glClearColor( 0.5f32, 0.5f32, 1.0f32, 1.0f32 );
+		glcore::glClearDepth( 1.0f64 );
+		glcore::glClear( glcore::GL_COLOR_BUFFER_BIT | glcore::GL_DEPTH_BUFFER_BIT );
+		glcore::glEnable( glcore::GL_DEPTH_TEST );
+		glcore::glEnable( glcore::GL_CULL_FACE );
+
+		//FIXME: no copy (each_const required)
+		s.ct.draw_mesh( s.mesh, &s.mesh.get_range(), s.va, s.program, &copy s.data );
+	}
 	
 	s.frames += 1;
 	s.ct.check(~"render");
-	return true;
+	true
 }
 
 

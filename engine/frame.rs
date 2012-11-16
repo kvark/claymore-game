@@ -213,6 +213,18 @@ impl context::Context	{
 		}
 	}
 
+	//FIXME: temporary function
+	fn create_frame_buffer_main()-> Buffer	{
+		Buffer{
+			handle:Handle(0),
+			viewport		:Rect{x:0u,y:0u,w:0u,h:0u},
+			draw_mask		:0u,
+			read_id			:None,
+			depth_stencil	:TarEmpty,
+			colors			:~[TarEmpty],
+		}
+	}
+
 	fn _bind_frame_buffer( binding : &Binding, h : Handle )	{
 		if *binding.active != *h	{
 			binding.active = h;
@@ -221,11 +233,31 @@ impl context::Context	{
 	}
 
 	fn bind_frame_buffer( fb : &Buffer, draw : bool, depth_stencil : Target, colors : ~[Target] )	{
+		let binding = if draw {&self.framebuffer_draw} else {&self.framebuffer_read};
+		self._bind_frame_buffer( binding, fb.handle );
+		// work around main framebuffer
+		if *fb.handle == 0	{
+			let use_color = colors.len()!=0u;
+			let value = if use_color {glcore::GL_BACK} else {glcore::GL_NONE} ;
+			//FIXME: cache this
+			if draw	{
+				let mask = if use_color{1} else {0};
+				if fb.draw_mask != mask	{
+					fb.draw_mask = mask;
+					glcore::glDrawBuffer( value );
+				}
+			}else	{
+				let id = if use_color{Some(0u)} else {None};
+				if fb.read_id != id	{
+					fb.read_id = id;
+					glcore::glReadBuffer( value );
+				}
+			}
+			return;
+		}
 		pure fn get_color( index : uint )->glcore::GLenum	{
 			glcore::GL_COLOR_ATTACHMENT0 + (index as glcore::GLenum)
 		};
-		let binding = if draw {&self.framebuffer_draw} else {&self.framebuffer_read};
-		self._bind_frame_buffer( binding, fb.handle );
 		// attach planes
 		binding.attach_target( depth_stencil, &mut fb.depth_stencil, glcore::GL_DEPTH_STENCIL_ATTACHMENT );
 		for colors.eachi() |i,target|	{
@@ -286,10 +318,10 @@ impl context::Context	{
 		}
 	}
 
-	fn unbind_frame_buffers()	{
+	/*fn unbind_frame_buffers()	{
 		self._bind_frame_buffer( &self.framebuffer_draw, Handle(0) );
 		self._bind_frame_buffer( &self.framebuffer_read, Handle(0) );
 		glcore::glDrawBuffer( glcore::GL_BACK );
 		glcore::glReadBuffer( glcore::GL_NONE );
-	}
+	}*/
 }
