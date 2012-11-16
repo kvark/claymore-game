@@ -12,8 +12,8 @@ impl Handle : cmp::Eq	{
 
 pub struct Binding	{
 	priv mut active_program	: Handle,
-	priv mut pool_objects	: @~[Handle],
-	priv mut pool_programs	: @~[Handle],
+	priv pool_objects		: @mut ~[Handle],
+	priv pool_programs		: @mut ~[Handle],
 }
 
 impl Binding : context::State	{
@@ -31,7 +31,7 @@ impl Binding : context::State	{
 }
 
 pub fn create_binding()-> Binding	{
-	Binding{ active_program:Handle(0), pool_objects:@~[], pool_programs:@~[] }
+	Binding{ active_program:Handle(0), pool_objects:@mut ~[], pool_programs:@mut ~[] }
 }
 
 
@@ -136,9 +136,11 @@ struct Object	{
 	target	: glcore::GLenum,
 	alive	: bool,
 	info	: ~str,
+	priv pool	: @mut ~[Handle],
 
 	drop	{
-		glcore::glDeleteShader( *self.handle );
+		self.pool.push( self.handle );
+		//glcore::glDeleteShader( *self.handle );
 	}
 }
 
@@ -149,10 +151,10 @@ pub struct Program	{
 	attribs	: AttriMap,
 	params	: ParaMap,
 	priv mut outputs	: ~[~str],
+	priv pool			: @mut ~[Handle],
 
 	drop	{
-		// assert: not current
-		glcore::glDeleteProgram( *self.handle );
+		self.pool.push( self.handle );
 	}
 }
 
@@ -301,7 +303,7 @@ impl context::Context	{
 		if !ok	{
 			io::println( fmt!("Shader: %s",message) );	//TEMP
 		}
-		Object{ handle:h, target:target, alive:ok, info:message }
+		Object{ handle:h, target:target, alive:ok, info:message, pool:self.shader.pool_objects }
 	}
 	
 	pub fn create_program( shaders : ~[Object] )-> Program	{
@@ -330,7 +332,7 @@ impl context::Context	{
 		Program{ handle:h, alive:ok, info:message,
 			attribs	:query_attributes(h),
 			params	:query_parameters(h),
-			outputs :~[] }
+			outputs :~[], pool:self.shader.pool_programs }
 	}
 
 	priv fn _bind_program( h : Handle )	{
@@ -373,7 +375,19 @@ impl context::Context	{
 	}
 
 	fn cleanup_shaders()	{
-		//FIXME
+		while self.shader.pool_objects.len()!=0	{
+			let h = self.shader.pool_objects.pop();
+			glcore::glDeleteShader( *h );
+		}
+		while self.shader.pool_programs.len()!=0	{
+			let h = self.shader.pool_programs.pop();
+			if *h != 0	{
+				if h == self.shader.active_program	{
+					self.unbind_program();
+				}
+				glcore::glDeleteProgram( *h );
+			}
+		}
 	}
 }
 

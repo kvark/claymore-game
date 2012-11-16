@@ -59,6 +59,9 @@ impl Context	{
 			fail( fmt!("%s: GL Error: %d",where,code as int) );
 		}
 	}
+	fn cleanup()	{
+		self.cleanup_shaders();
+	}
 }
 
 impl Context : State	{

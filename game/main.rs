@@ -142,6 +142,7 @@ fn render( s : &Sample ) ->bool	{
 	}
 	
 	s.frames += 1;
+	s.ct.cleanup();
 	s.ct.check(~"render");
 	true
 }
