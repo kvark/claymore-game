@@ -6,10 +6,12 @@ pub enum Target = glcore::GLenum;
 
 
 pub struct Object	{
-	handle : Handle,
+	handle		: Handle,
+	//priv pool	: &mut context::Pool,
 
 	drop	{
 		unsafe	{
+			//self.pool.push( *self.handle );
 			// assert: not bound
 			glcore::glDeleteBuffers( 1, ptr::addr_of(&*self.handle) );
 		}
@@ -53,9 +55,9 @@ struct VertexData	{
 
 
 pub struct VertexArray	{
-	handle		: Handle,
-	data		: ~[VertexData],
-	element		: buf::Binding,
+	handle			: Handle,
+	data			: ~[VertexData],
+	element			: buf::Binding,
 
 	drop	{
 		unsafe	{

@@ -183,12 +183,12 @@ impl context::Context	{
 		unsafe	{
 			glcore::glGenRenderbuffers( 1, ptr::addr_of(&hid) );
 		}
-		@Surface{ handle:Handle(hid), target:self.renderbuffer.target,
+		@Surface{ handle:Handle(hid), target:self.render_buffer.target,
 			width:wid, height:het, samples:sam }
 	}
 
 	fn _bind_render_buffer( h : Handle )	{
-		let binding = &self.renderbuffer;
+		let binding = &self.render_buffer;
 		if *binding.active != *h	{
 			binding.active = h;
 			glcore::glBindRenderbuffer( binding.target, *h );
@@ -233,7 +233,7 @@ impl context::Context	{
 	}
 
 	fn bind_frame_buffer( fb : &Buffer, draw : bool, depth_stencil : Target, colors : ~[Target] )	{
-		let binding = if draw {&self.framebuffer_draw} else {&self.framebuffer_read};
+		let binding = if draw {&self.frame_buffer_draw} else {&self.frame_buffer_read};
 		self._bind_frame_buffer( binding, fb.handle );
 		// work around main framebuffer
 		if *fb.handle == 0	{

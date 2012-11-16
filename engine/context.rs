@@ -21,12 +21,13 @@ priv fn read_cap( what : glcore::GLenum )-> uint	{
 pub struct Context	{
 	caps				: Capabilities,
 	mut rast			: rast::State,
-	mut program			: shade::Handle,
+	// objects
+	shader				: shade::Binding,
 	mut vertex_array	: buf::Handle,
 	array_buffer		: buf::Binding,
-	renderbuffer		: frame::RenBinding,
-	framebuffer_draw	: frame::Binding,
-	framebuffer_read	: frame::Binding,
+	render_buffer		: frame::RenBinding,
+	frame_buffer_draw	: frame::Binding,
+	frame_buffer_read	: frame::Binding,
 	texture				: texture::Binding,
 }
 
@@ -41,12 +42,12 @@ pub fn create( wid : uint, het : uint )-> Context	{
 	Context{
 		caps				: caps,
 		rast				: rast::create_rast(wid,het),
-		program				: shade::Handle(0),
+		shader				: shade::create_binding(),
 		vertex_array		: buf::Handle(0),
 		array_buffer		: buf::Binding{	target:buf::Target(glcore::GL_ARRAY_BUFFER),active:buf::Handle(0) },
-		renderbuffer		: frame::RenBinding{	target:glcore::GL_RENDERBUFFER,			active:frame::Handle(0) },
-		framebuffer_draw	: frame::Binding{	target:glcore::GL_DRAW_FRAMEBUFFER,		active:frame::Handle(0) },
-		framebuffer_read	: frame::Binding{	target:glcore::GL_READ_FRAMEBUFFER,		active:frame::Handle(0) },
+		render_buffer		: frame::RenBinding{	target:glcore::GL_RENDERBUFFER,			active:frame::Handle(0) },
+		frame_buffer_draw	: frame::Binding{	target:glcore::GL_DRAW_FRAMEBUFFER,		active:frame::Handle(0) },
+		frame_buffer_read	: frame::Binding{	target:glcore::GL_READ_FRAMEBUFFER,		active:frame::Handle(0) },
 		texture				: texture::Binding{ active_unit:0u,	active:slots },
 	}
 }
@@ -63,16 +64,12 @@ impl Context	{
 impl Context : State	{
 	fn sync_back()->bool	{
 		let mut was_ok = true;
-		let _program = self.get_active_program();
-		if *_program != *self.program	{
-			self.program = _program;
-			was_ok = false;
-		}
 		self.rast.verify();
+		was_ok &= self.shader.sync_back();
 		was_ok &= self.array_buffer.sync_back();
-		was_ok &= self.renderbuffer.sync_back();
-		was_ok &= self.framebuffer_draw.sync_back();
-		was_ok &= self.framebuffer_read.sync_back();
+		was_ok &= self.render_buffer.sync_back();
+		was_ok &= self.frame_buffer_draw.sync_back();
+		was_ok &= self.frame_buffer_read.sync_back();
 		was_ok &= self.texture.sync_back();
 		self.check(~"sync_back");
 		was_ok

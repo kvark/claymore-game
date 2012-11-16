@@ -10,6 +10,30 @@ impl Handle : cmp::Eq	{
 	pure fn ne( h : &Handle )-> bool	{ !self.eq(h) }
 }
 
+pub struct Binding	{
+	priv mut active_program	: Handle,
+	priv mut pool_objects	: @~[Handle],
+	priv mut pool_programs	: @~[Handle],
+}
+
+impl Binding : context::State	{
+	fn sync_back()-> bool	{
+		let mut hid = 0 as glcore::GLint;
+		unsafe	{
+			glcore::glGetIntegerv( glcore::GL_CURRENT_PROGRAM, ptr::addr_of(&hid) );
+		}
+		let program = Handle( hid as glcore::GLuint );
+		if *self.active_program != *program	{
+			self.active_program = program;
+			false
+		}else	{true}
+	}
+}
+
+pub fn create_binding()-> Binding	{
+	Binding{ active_program:Handle(0), pool_objects:@~[], pool_programs:@~[] }
+}
+
 
 enum Uniform	{
 	Unitialized,
@@ -310,8 +334,8 @@ impl context::Context	{
 	}
 
 	priv fn _bind_program( h : Handle )	{
-		if *self.program != *h	{
-			self.program = h;
+		if *self.shader.active_program != *h	{
+			self.shader.active_program = h;
 			glcore::glUseProgram( *h );
 		}
 	}
@@ -348,12 +372,8 @@ impl context::Context	{
 		self._bind_program( Handle(0) );
 	}
 
-	fn get_active_program()->Handle	{
-		let mut hid = 0 as glcore::GLint;
-		unsafe	{
-			glcore::glGetIntegerv( glcore::GL_CURRENT_PROGRAM, ptr::addr_of(&hid) );
-		}
-		Handle(hid as glcore::GLuint)
+	fn cleanup_shaders()	{
+		//FIXME
 	}
 }
 
