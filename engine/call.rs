@@ -1,6 +1,20 @@
 extern mod glcore;
 
-pub type PlaneMap = send_map::linear::LinearMap<~str,frame::Target>;
+
+pub struct PlaneMap	{
+	depth_stencil	: frame::Target,
+	colors			: send_map::linear::LinearMap<~str,frame::Target>,
+}
+
+pub fn create_plane_map( name : ~str, col : frame::Target )-> PlaneMap	{
+	let mut pmap = PlaneMap	{
+		depth_stencil : frame::TarEmpty,
+		colors : send_map::linear::LinearMap::<~str,frame::Target>(),
+	};
+	pmap.colors.insert( name, col );
+	pmap
+}
+
 
 pub struct ClearData	{
 	color	: Option<rast::Color>,
@@ -10,9 +24,9 @@ pub struct ClearData	{
 
 
 pub enum Call	{
-	CallClear( @frame::Buffer, PlaneMap, ClearData, rast::Scissor, rast::Mask ),
+	CallClear( @frame::Buffer, &PlaneMap, ClearData, rast::Scissor, rast::Mask ),
 	CallBlit(),			//FIXME
-	CallDraw( @frame::Buffer, PlaneMap, @buf::VertexArray, @mesh::Mesh, mesh::Range, @shade::Program, shade::DataMap, rast::State ),
+	CallDraw( @frame::Buffer, &PlaneMap, @buf::VertexArray, @mesh::Mesh, mesh::Range, @shade::Program, shade::DataMap, rast::State ),
 	CallTransfrom(),	//FIXME
 }
 
@@ -22,17 +36,11 @@ impl context::Context	{
 		for queue.each()	|call|	{
 			match call	{
 				&CallClear(fb,pmap,data,scissor,_mask)	=> {
-					let mut depth_stencil = frame::TarEmpty;
 					let mut colors : ~[frame::Target] = ~[];
-					for pmap.each() |name,target|	{
-						if *name == ~""	{
-							assert depth_stencil == frame::TarEmpty;
-							depth_stencil = *target;
-						}else	{
-							colors.push( *target );
-						}
+					for pmap.colors.each_value() |target|	{
+						colors.push( *target );
 					}
-					self.bind_frame_buffer( fb, true, depth_stencil, colors );
+					self.bind_frame_buffer( fb, true, pmap.depth_stencil, colors );
 					self.rast.scissor.activate( &scissor, 0 );
 					let mut flags = 0 as glcore::GLenum;
 					//FIXME: cache this
@@ -59,18 +67,12 @@ impl context::Context	{
 					glcore::glClear( flags );
 				},
 				&CallDraw(fb,pmap,va,mesh,range,prog,data,rast)	=> {
-					let mut attaches = vec::from_elem( pmap.len(), frame::TarEmpty );
-					let mut depth_stencil = frame::TarEmpty;
-					for pmap.each() |name,target|	{
-						if *name == ~""	{
-							assert depth_stencil == frame::TarEmpty;
-							depth_stencil = *target;
-						}else	{
-							let loc = prog.find_output( name );
-							attaches[loc] = *target;
-						}
+					let mut attaches = vec::from_elem( pmap.colors.len(), frame::TarEmpty );
+					for pmap.colors.each() |name,target|	{
+						let loc = prog.find_output( name );
+						attaches[loc] = *target;
 					}
-					self.bind_frame_buffer( fb, true, depth_stencil, attaches );
+					self.bind_frame_buffer( fb, true, pmap.depth_stencil, attaches );
 					self.rast.activate( &rast, mesh.get_poly_size() );
 					self.draw_mesh( mesh, &range, va, prog, &data );
 				},

@@ -109,9 +109,7 @@ fn render( s : &Sample ) ->bool	{
 	}
 
 	if true	{
-		let mut pmap = send_map::linear::LinearMap::<~str,engine::frame::Target>();
-		pmap.insert( ~"", engine::frame::TarEmpty );
-		pmap.insert( ~"o_Color", engine::frame::TarEmpty );
+		let pmap = engine::call::create_plane_map( ~"o_Color", engine::frame::TarEmpty );
 		let cdata = engine::call::ClearData{
 			color	:Some(engine::rast::Color{ r:0.5f32, g:0.5f32, b:1.0f32, a:1.0f32 }),
 			depth	:Some( 1f32 ),
@@ -121,9 +119,9 @@ fn render( s : &Sample ) ->bool	{
 		rast.depth.test = true;
 		rast.prime.cull = true;
 		let c0 = engine::call::CallClear(	s.ct.default_frame_buffer,
-			copy pmap, cdata, rast.scissor, rast.mask );
+			&pmap, cdata, rast.scissor, rast.mask );
 		let c1 = engine::call::CallDraw(	s.ct.default_frame_buffer,
-			copy pmap, s.va, s.mesh, s.mesh.get_range(), s.program, copy s.data, rast );
+			&pmap, s.va, s.mesh, s.mesh.get_range(), s.program, copy s.data, rast );
 		s.ct.flush(~[c0,c1]);
 	}else	{
 		glcore::glClearColor( 0.5f32, 0.5f32, 1.0f32, 1.0f32 );
