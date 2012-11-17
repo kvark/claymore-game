@@ -1,5 +1,6 @@
 extern mod glcore;
 
+pub type Mode	= glcore::GLenum;
 pub enum Handle	= glcore::GLuint;
 pub enum Target	= glcore::GLenum;
 
@@ -10,8 +11,10 @@ pub struct Texture	{
 	width		: uint,
 	height		: uint,
 	depth		: uint,
-	mut levels	: uint,
 	samples		: uint,
+	priv mut levels		: uint,
+	priv mut wrap		: (Mode,Mode,Mode),
+	priv mut filter		: (Mode,Mode),
 	priv mut level_base	: uint,
 	priv mut level_max	: uint,
 	priv pool	: @mut ~[Handle],
@@ -24,10 +27,25 @@ pub struct Texture	{
 impl Texture	{
 	pure fn get_level_size( lev : uint )-> (uint,uint)	{
 		assert self.width>0u && self.height>0u && lev<self.levels;
-		(((self.width-1u)>>lev)+1u,((self.height-1u)>>lev)+1u)
+		(uint::max(1u,self.width>>lev),uint::max(1u,self.height>>lev))
 	}
 	pure fn get_level_limits()-> (uint,uint)	{
 		(self.level_base, self.level_max)
+	}
+	pure fn count_levels()-> uint	{
+		let mut i = 0;
+		while self.get_level_size(i) != (1u,1u)	{
+			i += 1;
+		}
+		i
+	}
+	pure fn is_filtering_mapmap()-> bool	{
+		[glcore::GL_LINEAR_MIPMAP_LINEAR,glcore::GL_NEAREST_MIPMAP_NEAREST,
+		glcore::GL_LINEAR_MIPMAP_NEAREST,glcore::GL_NEAREST_MIPMAP_LINEAR].
+		contains(&match self.filter {(m,_)=>m})
+	}
+	pure fn can_sample()-> bool	{
+		self.samples==0u && (!self.is_filtering_mapmap() || self.levels==1u)
 	}
 }
 
@@ -237,8 +255,11 @@ impl context::Context	{
 		unsafe	{
 			glcore::glGenTextures( 1, ptr::addr_of(&hid) );
 		}
+		let wrap = glcore::GL_REPEAT;
 		Texture{ handle:Handle(hid), target:Target(t),
-			width:w, height:h, depth:d, levels:0, samples:s,
+			width:w, height:h, depth:d, samples:s,
+			levels:0, wrap:(wrap,wrap,wrap),
+			filter:(glcore::GL_NEAREST_MIPMAP_LINEAR, glcore::GL_LINEAR),
 			level_base:0u, level_max:1000u,
 			pool:self.texture.pool }
 	}

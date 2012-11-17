@@ -24,9 +24,9 @@ pub struct ClearData	{
 
 
 pub enum Call	{
-	CallClear( @frame::Buffer, &PlaneMap, ClearData, rast::Scissor, rast::Mask ),
+	CallClear( @frame::Buffer, PlaneMap, ClearData, rast::Scissor, rast::Mask ),
 	CallBlit(),			//FIXME
-	CallDraw( @frame::Buffer, &PlaneMap, @buf::VertexArray, @mesh::Mesh, mesh::Range, @shade::Program, shade::DataMap, rast::State ),
+	CallDraw( @frame::Buffer, PlaneMap, @buf::VertexArray, @mesh::Mesh, mesh::Range, @shade::Program, shade::DataMap, rast::State ),
 	CallTransfrom(),	//FIXME
 }
 
@@ -76,6 +76,9 @@ impl context::Context	{
 					}
 					if rast.depth.test || rast.stencil.test	{
 						assert *fb.handle==0 || pmap.depth_stencil!=frame::TarEmpty;
+					}
+					if rast.blend.on	{
+						assert attaches.len()!=0 && (*fb.handle==0 || attaches[0]!=frame::TarEmpty);
 					}
 					self.bind_frame_buffer( fb, true, pmap.depth_stencil, attaches );
 					self.rast.activate( &rast, mesh.get_poly_size() );

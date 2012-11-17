@@ -119,9 +119,9 @@ fn render( s : &Sample ) ->bool	{
 		rast.depth.test = true;
 		rast.prime.cull = true;
 		let c0 = engine::call::CallClear(	s.ct.default_frame_buffer,
-			&pmap, cdata, rast.scissor, rast.mask );
+			copy pmap, cdata, rast.scissor, rast.mask );
 		let c1 = engine::call::CallDraw(	s.ct.default_frame_buffer,
-			&pmap, s.va, s.mesh, s.mesh.get_range(), s.program, copy s.data, rast );
+			copy pmap, s.va, s.mesh, s.mesh.get_range(), s.program, copy s.data, rast );
 		s.ct.flush(~[c0,c1]);
 	}else	{
 		glcore::glClearColor( 0.5f32, 0.5f32, 1.0f32, 1.0f32 );

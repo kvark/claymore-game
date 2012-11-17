@@ -90,7 +90,7 @@ impl QuatSpace : Space	{
 }
 
 
-struct Node	{
+pub struct Node	{
 	name		: ~str,
 	mut space	: QuatSpace,	//FIXME: arbitrary space
 	parent		: Option<@Node>,
