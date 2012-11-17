@@ -351,12 +351,49 @@ pub struct Blend	{
 }
 
 pub struct Mask	{
+	//TODO: different draw buffers
 	stencil	: bool,
 	depth	: bool,
 	red		: bool,
 	green	: bool,
 	blue	: bool,
-	alpha	: bool
+	alpha	: bool,
+}
+
+impl Mask : Stage	{
+	fn activate( &mut self, new : &Mask, _poly : uint )	{
+		if self.stencil != new.stencil	{
+			self.stencil = new.stencil;
+			glcore::glStencilMask( new.stencil as glcore::GLuint );
+		}
+		if self.depth != new.depth	{
+			self.depth = new.depth;
+			glcore::glDepthMask( new.depth as glcore::GLboolean );
+		}
+		if self.red!=new.red || self.green!=new.green || self.blue!=new.blue || self.alpha!=new.alpha	{
+			self.red = new.red;
+			self.green = new.green;
+			self.blue = new.blue;
+			self.alpha = new.alpha;
+			glcore::glColorMask( new.red as glcore::GLboolean, new.green as glcore::GLboolean,
+				new.blue as glcore::GLboolean, new.alpha as glcore::GLboolean );
+		}
+	}
+	fn verify( &mut self )	{
+		let bools = vec::from_elem( 6, false as glcore::GLboolean );
+		unsafe	{
+			glcore::glGetBooleanv( glcore::GL_COLOR_WRITEMASK,	vec::raw::to_ptr(bools) );
+			glcore::glGetBooleanv( glcore::GL_DEPTH_WRITEMASK,	ptr::addr_of(&bools[4]) );
+			glcore::glGetBooleanv( glcore::GL_STENCIL_WRITEMASK,ptr::addr_of(&bools[5]) );
+		}
+		assert
+			self.red	== (bools[0]==glcore::GL_TRUE) &&
+			self.green	== (bools[1]==glcore::GL_TRUE) &&
+			self.blue	== (bools[2]==glcore::GL_TRUE) &&
+			self.alpha	== (bools[3]==glcore::GL_TRUE) &&
+			self.depth	== (bools[4]==glcore::GL_TRUE) &&
+			self.stencil== (bools[5]==glcore::GL_TRUE);
+	}
 }
 
 
