@@ -248,7 +248,7 @@ impl StencilSide	{
 	}
 }
 
-priv fn create_stencil()-> StencilSide	{
+priv pure fn create_stencil()-> StencilSide	{
 	StencilSide{
 		function:glcore::GL_ALWAYS, ref_value:0u, read_mask:!0,
 		op_fail:glcore::GL_KEEP, op_depth_fail:glcore::GL_KEEP, op_pass:glcore::GL_KEEP
@@ -345,10 +345,89 @@ impl Depth : Stage	{
 	}
 }
 
+pub struct BlendChannel	{
+	equation	: glcore::GLenum,
+	source		: glcore::GLenum,
+	destination	: glcore::GLenum,
+}
+
+impl BlendChannel	{
+	fn verify( &mut self, we : glcore::GLenum, ws : glcore::GLenum, wd : glcore::GLenum )	{
+		let mut v = vec::from_elem( 3, 0 as glcore::GLint );
+		unsafe	{
+			glcore::glGetIntegerv( we, ptr::addr_of(&v[0]) );
+			glcore::glGetIntegerv( ws, ptr::addr_of(&v[1]) );
+			glcore::glGetIntegerv( wd, ptr::addr_of(&v[2]) );
+		}
+		assert self.equation	== v[0] as glcore::GLenum &&
+			self.source			== v[1] as glcore::GLenum &&
+			self.destination	== v[2] as glcore::GLenum;
+	}
+}
+
+priv pure fn create_blend()-> BlendChannel	{
+	BlendChannel{ equation:glcore::GL_FUNC_ADD, source:glcore::GL_ONE, destination:glcore::GL_ZERO }
+}
 
 pub struct Blend	{
 	on		: bool,
+	color	: BlendChannel,
+	alpha	: BlendChannel,
+	value	: Color,
 }
+
+impl Blend : Stage	{
+	fn activate( &mut self, new : &Blend, _poly : uint )	{
+		if self.on != new.on	{
+			self.on = new.on;
+			set_state( glcore::GL_BLEND, new.on );
+		}
+		if !new.on	{return;}
+		if self.color.equation!=new.color.equation || self.alpha.equation!=new.alpha.equation	{
+			self.color.equation = new.color.equation;
+			self.alpha.equation = new.alpha.equation;
+			if new.color.equation == new.alpha.equation	{
+				glcore::glBlendEquation( new.color.equation );
+			}else	{
+				glcore::glBlendEquationSeparate( new.color.equation, new.alpha.equation );
+			}
+		}
+		if    self.color.source!=new.color.source || self.color.destination!=new.color.destination ||
+			  self.alpha.source!=new.alpha.source || self.alpha.destination!=new.alpha.destination	{
+			self.color = new.color;
+			self.alpha = new.alpha;
+			if new.color.source==new.alpha.source && new.color.destination==new.alpha.destination	{
+				glcore::glBlendFunc( new.color.source, new.color.destination );
+			}else	{
+				glcore::glBlendFuncSeparate(
+					new.color.source, new.color.destination,
+					new.alpha.source, new.alpha.destination );
+			}
+		}
+		if self.value != new.value	{
+			self.value = new.value;
+			glcore::glBlendColor(
+				new.value.r as glcore::GLfloat, new.value.g as glcore::GLfloat,
+				new.value.b as glcore::GLfloat, new.value.a as glcore::GLfloat );
+		}
+
+	}
+	fn verify( &mut self )	{
+		assert self.on == ask_state( glcore::GL_BLEND );
+		self.color.verify( glcore::GL_BLEND_EQUATION_RGB,	glcore::GL_BLEND_SRC_RGB,	glcore::GL_BLEND_DST_RGB	);
+		self.alpha.verify( glcore::GL_BLEND_EQUATION_ALPHA,	glcore::GL_BLEND_SRC_ALPHA,	glcore::GL_BLEND_DST_ALPHA	);
+		let mut cv = vec::from_elem( 4, 0 as glcore::GLfloat );
+		unsafe	{
+			glcore::glGetFloatv( glcore::GL_BLEND_COLOR, vec::raw::to_ptr(cv) );
+		}
+		assert
+			cv[0] == self.value.r as f32 &&
+			cv[1] == self.value.g as f32 &&
+			cv[2] == self.value.b as f32 &&
+			cv[3] == self.value.a as f32;
+	}
+}
+
 
 pub struct Mask	{
 	//TODO: different draw buffers
@@ -404,7 +483,7 @@ pub struct State	{
 	multi	: Multisample,
 	stencil	: Stencil,
 	depth	: Depth,
-	//blend	: Blend,
+	blend	: Blend,
 	mask	: Mask,
 }
 
@@ -418,6 +497,8 @@ impl State : Stage	{
 		self.multi	.activate( &new.multi, 		poly );
 		self.stencil.activate( &new.stencil,	poly );
 		self.depth	.activate( &new.depth,		poly );
+		self.blend	.activate( &new.blend,		poly );
+		self.mask	.activate( &new.mask,		poly );
 	}
 	fn verify( &mut self )	{
 		self.prime	.verify();
@@ -426,12 +507,14 @@ impl State : Stage	{
 		self.multi	.verify();
 		self.stencil.verify();
 		self.depth	.verify();
+		self.blend	.verify();
+		self.mask	.verify();
 	}
 }
 
 // Creates a default GL context rasterizer state
 // make sure to verify that it matches GL specification
-pub fn create_rast( wid : uint, het : uint )-> State	{
+pub pure fn create_rast( wid : uint, het : uint )-> State	{
 	State{
 		prime : Primitive{
 			poly_mode:glcore::GL_FILL, front_cw:false, cull:false,
@@ -451,6 +534,10 @@ pub fn create_rast( wid : uint, het : uint )-> State	{
 		},
 		depth : Depth{
 			test:false, fun:glcore::GL_LESS, r0:0f32, r1:1f32
+		},
+		blend : Blend{
+			on:false, color:create_blend(), alpha:create_blend(),
+			value:Color{r:0f32,g:0f32,b:0f32,a:0f32}
 		},
 		mask : Mask{
 			stencil:true, depth:true, red:true, green:true, blue:true, alpha:true

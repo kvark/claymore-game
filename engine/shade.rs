@@ -30,7 +30,7 @@ impl Binding : context::State	{
 	}
 }
 
-pub fn create_binding()-> Binding	{
+pub pure fn create_binding()-> Binding	{
 	Binding{ active_program:Handle(0), pool_objects:@mut ~[], pool_programs:@mut ~[] }
 }
 
@@ -261,7 +261,7 @@ priv fn query_parameters( h : Handle )-> ParaMap	{
 }
 
 
-priv fn check_sampler( target : glcore::GLenum, storage : glcore::GLenum )	{
+priv pure fn check_sampler( target : glcore::GLenum, storage : glcore::GLenum )	{
 	if target == glcore::GL_TEXTURE_1D	{
 		assert [glcore::GL_SAMPLER_1D].contains( &storage );
 	}else

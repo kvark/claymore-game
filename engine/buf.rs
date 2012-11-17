@@ -81,20 +81,20 @@ impl VaBinding	{
 }
 
 
-pub fn create_binding( value : glcore::GLenum )-> Binding	{
+pub pure fn create_binding( value : glcore::GLenum )-> Binding	{
 	Binding{
 		target : Target(value), active : Handle(0), pool : @mut~[]
 	}
 }
 
-pub fn create_va_binding()-> VaBinding	{
+pub pure fn create_va_binding()-> VaBinding	{
 	VaBinding{
 		active : Handle(0), pool : @mut~[]
 	}
 }
 
 
-priv fn _create_zero_data()-> ~[VertexData]	{
+priv pure fn _create_zero_data()-> ~[VertexData]	{
 	let default = @Object{ handle:Handle(0), pool:@mut ~[] };
 	do vec::from_fn(MAX_VERTEX_ATTRIBS) |_i|	{
 		VertexData{ enabled: false, attrib: mesh::Attribute{
@@ -105,7 +105,7 @@ priv fn _create_zero_data()-> ~[VertexData]	{
 	}
 }
 
-pub fn default_vertex_array()-> VertexArray	{
+pub pure fn default_vertex_array()-> VertexArray	{
 	VertexArray{ handle : Handle(0), data : _create_zero_data(),
 		element	: create_binding( glcore::GL_ELEMENT_ARRAY_BUFFER ),
 		pool : @mut ~[],
@@ -115,7 +115,7 @@ pub fn default_vertex_array()-> VertexArray	{
 
 
 impl context::Context	{
-	fn create_vertex_array()-> VertexArray	{
+	pure fn create_vertex_array()-> VertexArray	{
 		let mut hid = 0 as glcore::GLuint;
 		unsafe	{
 			glcore::glGenVertexArrays( 1, ptr::addr_of(&hid) );
@@ -139,7 +139,7 @@ impl context::Context	{
 		self._bind_vertex_array( Handle(0) );
 	}
 
-	fn create_buffer()-> Object	{
+	pure fn create_buffer()-> Object	{
 		let mut hid = 0 as glcore::GLuint;
 		unsafe	{
 			glcore::glGenBuffers( 1, ptr::addr_of(&hid) );

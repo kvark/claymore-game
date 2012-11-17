@@ -112,13 +112,13 @@ impl Binding	{
 	}
 }
 
-pub fn create_ren_binding()-> RenBinding	{
+pub pure fn create_ren_binding()-> RenBinding	{
 	RenBinding{
 		target:glcore::GL_RENDERBUFFER,
 		active:Handle(0), pool:@mut ~[],
 	}
 }
-pub fn create_binding( value : glcore::GLenum )-> Binding	{
+pub pure fn create_binding( value : glcore::GLenum )-> Binding	{
 	Binding{
 		target:value, active:Handle(0), pool:@mut ~[],
 	}
@@ -201,7 +201,7 @@ pub fn default_frame_buffer( wid : uint, het : uint )-> Buffer	{
 
 
 impl context::Context	{
-	fn create_render_buffer( wid:uint, het:uint, sam:uint )-> Surface	{
+	pure fn create_render_buffer( wid:uint, het:uint, sam:uint )-> Surface	{
 		let mut hid = 0 as glcore::GLuint;
 		unsafe	{
 			glcore::glGenRenderbuffers( 1, ptr::addr_of(&hid) );

@@ -60,7 +60,7 @@ pub struct Mesh	{
 }
 
 impl Mesh	{
-	fn create_attrib( format : ~str, buffer : @buf::Object, stride : uint, offset : uint )-> (Attribute,uint)	{
+	pure fn create_attrib( format : ~str, buffer : @buf::Object, stride : uint, offset : uint )-> (Attribute,uint)	{
 		assert (format.len()==3u && ['.','!'].contains(&format.char_at(2))) ||
 			format.len()==2u || (format.len()==4u && str::substr(format,2,2)==~".!");
 		let count = (format[0] - "0"[0]) as uint;
@@ -87,7 +87,7 @@ impl Mesh	{
 		}, count * el_size)
 	}
 
-	fn create_index( format : ~str, buffer : @buf::Object )-> (Attribute,uint)	{
+	pure fn create_index( format : ~str, buffer : @buf::Object )-> (Attribute,uint)	{
 		self.create_attrib( format, buffer, 0u, 0u )
 	}
 
