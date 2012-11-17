@@ -112,7 +112,7 @@ fn render( s : &Sample ) ->bool	{
 		let pmap = engine::call::create_plane_map( ~"o_Color", engine::frame::TarEmpty );
 		let cdata = engine::call::ClearData{
 			color	:Some(engine::rast::Color{ r:0.5f32, g:0.5f32, b:1.0f32, a:1.0f32 }),
-			depth	:Some( 1f32 ),
+			depth	:Some( 1f ),
 			stencil	:None
 		};
 		let mut rast = engine::rast::create_rast(0,0);

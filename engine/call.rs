@@ -18,7 +18,7 @@ pub fn create_plane_map( name : ~str, col : frame::Target )-> PlaneMap	{
 
 pub struct ClearData	{
 	color	: Option<rast::Color>,
-	depth	: Option<f32>,
+	depth	: Option<float>,
 	stencil	: Option<uint>,
 }
 
@@ -49,23 +49,21 @@ impl context::Context	{
 						Some(c) =>	{
 							assert has_color;
 							flags |= glcore::GL_COLOR_BUFFER_BIT;
-							glcore::glClearColor(
-								c.r as glcore::GLfloat, c.g as glcore::GLfloat,
-								c.b as glcore::GLfloat, c.a as glcore::GLfloat );
+							self.set_clear_color( &c );
 						},None	=>	{}
 					}
 					match data.depth	{
 						Some(d) => 	{
 							assert *fb.handle==0 || pmap.depth_stencil!=frame::TarEmpty;
 							flags |= glcore::GL_DEPTH_BUFFER_BIT;
-							glcore::glClearDepth( d as glcore::GLdouble );
+							self.set_clear_depth( d );
 						},None	=> 	{}
 					}
 					match data.stencil	{
 						Some(s)	=>	{
 							assert *fb.handle==0 || pmap.depth_stencil!=frame::TarEmpty;
 							flags |= glcore::GL_STENCIL_BUFFER_BIT;
-							glcore::glClearStencil( s as glcore::GLint );
+							self.set_clear_stencil( s );
 						},None	=>	{}
 					}
 					glcore::glClear( flags );

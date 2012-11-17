@@ -1,8 +1,19 @@
 extern mod glcore;
 
+
 pub struct Color	{
 	r:f32, g:f32, b:f32, a:f32,
 }
+
+impl Color : cmp::Eq	{
+	pure fn eq( other : &Color )-> bool	{
+		self.r==other.r && self.g==other.g && self.b==other.b && self.a==other.a
+	}
+	pure fn ne( other : &Color )-> bool	{
+		!self.eq( other )
+	}
+}
+
 
 priv trait Stage	{
 	fn activate( &mut self, new : &self, poly : uint );
