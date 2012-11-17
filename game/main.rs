@@ -124,11 +124,6 @@ fn render( s : &Sample ) ->bool	{
 		rast.prime.cull = true;
 		let c0 = engine::call::CallClear( s.fbo, copy pmap, cdata, rast.scissor, rast.mask );
 		let c1 = engine::call::CallDraw( s.fbo, copy pmap, s.va, s.mesh, s.mesh.get_range(), s.program, copy s.data, rast );
-
-//		glcore::glClearColor( 0.5f32, 0.5f32, 1.0f32, 1.0f32 );
-//		glcore::glClearDepth( 1.0f64 );
-//		glcore::glClear( glcore::GL_COLOR_BUFFER_BIT | glcore::GL_DEPTH_BUFFER_BIT );
-
 		s.ct.flush(~[c0,c1]);
 	}else	{
 		glcore::glClearColor( 0.5f32, 0.5f32, 1.0f32, 1.0f32 );

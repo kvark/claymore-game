@@ -7,21 +7,18 @@ pub enum Target = glcore::GLenum;
 
 pub struct Object	{
 	handle		: Handle,
-	//priv pool	: &mut context::Pool,
+	priv pool	: @mut ~[Handle],
 
 	drop	{
-		unsafe	{
-			//self.pool.push( *self.handle );
-			// assert: not bound
-			glcore::glDeleteBuffers( 1, ptr::addr_of(&*self.handle) );
-		}
+		self.pool.push( self.handle );
 	}
 }
 
 
 pub struct Binding	{
-	target		: Target,
-	mut active	: Handle,
+	target			: Target,
+	priv mut active	: Handle,
+	priv pool		: @mut ~[Handle],
 }
 
 impl Binding : context::State	{
@@ -58,12 +55,10 @@ pub struct VertexArray	{
 	handle			: Handle,
 	data			: ~[VertexData],
 	element			: buf::Binding,
+	priv pool		: @mut ~[Handle],
 
 	drop	{
-		unsafe	{
-			//FIXME: check current
-			glcore::glDeleteVertexArrays( 1, ptr::addr_of(&*self.handle) );
-		}
+		self.pool.push( self.handle );
 	}
 }
 
@@ -74,6 +69,30 @@ impl VertexArray : context::State	{
 	}
 }
 
+pub struct VaBinding	{
+	priv mut active	: Handle,
+	priv pool		: @mut ~[Handle],
+}
+
+impl VaBinding	{
+	pure fn is_active( va : &VertexArray )-> bool	{
+		*self.active == *va.handle
+	}
+}
+
+
+pub fn create_binding( value : glcore::GLenum )-> Binding	{
+	Binding{
+		target : Target(value), active : Handle(0), pool : @mut~[]
+	}
+}
+
+pub fn create_va_binding()-> VaBinding	{
+	VaBinding{
+		active : Handle(0), pool : @mut~[]
+	}
+}
+
 
 impl context::Context	{
 	fn create_vertex_array()-> VertexArray	{
@@ -81,7 +100,7 @@ impl context::Context	{
 		unsafe	{
 			glcore::glGenVertexArrays( 1, ptr::addr_of(&hid) );
 		}
-		let default = @Object{ handle:Handle(0) };
+		let default = @Object{ handle:Handle(0), pool:self.array_buffer.pool };
 		let data = do vec::from_fn(MAX_VERTEX_ATTRIBS) |_i|	{
 			VertexData{ enabled: false, attrib: mesh::Attribute{
 					kind: glcore::GL_NONE, count: 0u,
@@ -90,13 +109,14 @@ impl context::Context	{
 			}}
 		};
 		VertexArray{ handle:Handle(hid), data:data,
-			element	:Binding{	target:Target(glcore::GL_ELEMENT_ARRAY_BUFFER),	active:Handle(0) }
+			element	: create_binding( glcore::GL_ELEMENT_ARRAY_BUFFER ),
+			pool : self.vertex_array.pool,
 		}
 	}
 
 	priv fn _bind_vertex_array( h : Handle )	{
-		if *self.vertex_array != *h	{
-			self.vertex_array = h;
+		if *self.vertex_array.active != *h	{
+			self.vertex_array.active = h;
 			glcore::glBindVertexArray( *h );
 		}
 	}
@@ -112,7 +132,7 @@ impl context::Context	{
 		unsafe	{
 			glcore::glGenBuffers( 1, ptr::addr_of(&hid) );
 		}
-		Object{ handle:Handle(hid) }
+		Object{ handle:Handle(hid), pool:self.array_buffer.pool }
 	}
 
 	priv fn _bind_buffer( binding : &Binding, h : Handle )	{
@@ -122,7 +142,7 @@ impl context::Context	{
 		}
 	}
 	fn bind_element_buffer( va : &VertexArray, obj : &Object  )	{
-		assert *self.vertex_array == *va.handle;
+		assert *self.vertex_array.active == *va.handle;
 		self._bind_buffer( &va.element, obj.handle );
 	}
 	fn bind_buffer( obj : &Object )	{
@@ -158,5 +178,29 @@ impl context::Context	{
 		let obj = self.create_buffer();
 		self.load_buffer( &obj, data, false );
 		obj
+	}
+
+	fn cleanup_buffers()	{
+		while self.vertex_array.pool.len()!=0	{
+			let h = self.vertex_array.pool.pop();
+			if *h != 0	{
+				if *h == *self.vertex_array.active	{
+					self.unbind_vertex_array();
+				}
+				unsafe	{
+					glcore::glDeleteVertexArrays( 1, ptr::addr_of(&*h) );
+				}
+			}
+		}
+		while self.array_buffer.pool.len()!=0	{
+			let h = self.array_buffer.pool.pop();
+			if *h != 0	{
+				//ISSUE: active index buffers are not checked
+				if *h == *self.array_buffer.active	{
+					self.unbind_buffer();
+				}
+				glcore::glDeleteBuffers( 1, ptr::addr_of(&*h) );
+			}
+		}
 	}
 }

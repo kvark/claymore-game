@@ -9,12 +9,10 @@ pub struct Surface	{
 	width	: uint,
 	height	: uint,
 	samples	: uint,
+	priv pool	: @mut ~[Handle],
 
 	drop	{
-		let hid = *self.handle as glcore::GLuint;
-		unsafe	{
-			glcore::glDeleteRenderbuffers( 1, ptr::addr_of(&hid) );	
-		}
+		self.pool.push( self.handle );
 	}
 }
 
@@ -66,13 +64,15 @@ impl Target	{
 
 
 pub struct RenBinding	{
-	target		: glcore::GLenum,
-	mut active	: Handle,
+	target			: glcore::GLenum,
+	priv mut active	: Handle,
+	priv pool		: @mut ~[Handle],
 }
 
 pub struct Binding	{
-	target		: glcore::GLenum,
-	mut active	: Handle,
+	target			: glcore::GLenum,
+	priv mut active	: Handle,
+	priv pool		: @mut ~[Handle],
 }
 
 impl RenBinding : context::State	{
@@ -112,6 +112,19 @@ impl Binding	{
 	}
 }
 
+pub fn create_ren_binding()-> RenBinding	{
+	RenBinding{
+		target:glcore::GL_RENDERBUFFER,
+		active:Handle(0), pool:@mut ~[],
+	}
+}
+pub fn create_binding( value : glcore::GLenum )-> Binding	{
+	Binding{
+		target:value, active:Handle(0), pool:@mut ~[],
+	}
+}
+
+
 
 pub struct Rect	{
 	x : uint,
@@ -137,12 +150,10 @@ pub struct Buffer	{
 	priv mut read_id	: Option<uint>,
 	mut depth_stencil	: Target,
 	mut colors			: ~[Target],
+	priv mut pool		: @mut ~[Handle],
 
 	drop	{
-		let hid = *self.handle as glcore::GLuint;
-		unsafe	{
-			glcore::glDeleteFramebuffers( 1, ptr::addr_of(&hid) );
-		}
+		self.pool.push( self.handle );
 	}
 }
 
@@ -183,8 +194,10 @@ impl context::Context	{
 		unsafe	{
 			glcore::glGenRenderbuffers( 1, ptr::addr_of(&hid) );
 		}
-		@Surface{ handle:Handle(hid), target:self.render_buffer.target,
-			width:wid, height:het, samples:sam }
+		@Surface{ handle:Handle(hid),
+			target:self.render_buffer.target,
+			width:wid, height:het, samples:sam,
+			pool:self.render_buffer.pool }
 	}
 
 	fn _bind_render_buffer( h : Handle )	{
@@ -210,6 +223,7 @@ impl context::Context	{
 			draw_mask:0u, read_id:None,
 			depth_stencil	: TarEmpty,
 			colors			: vec::from_elem( self.caps.max_color_attachments, TarEmpty ),
+			pool			: self.frame_buffer_draw.pool,
 		}
 	}
 
@@ -222,6 +236,7 @@ impl context::Context	{
 			read_id			:None,
 			depth_stencil	:TarEmpty,
 			colors			:~[TarEmpty],
+			pool			:self.frame_buffer_draw.pool,
 		}
 	}
 
@@ -324,4 +339,32 @@ impl context::Context	{
 		glcore::glDrawBuffer( glcore::GL_BACK );
 		glcore::glReadBuffer( glcore::GL_NONE );
 	}*/
+
+	fn cleanup_frames()	{
+		while self.render_buffer.pool.len()!=0	{
+			let h = self.render_buffer.pool.pop();
+			if *h != 0	{
+				if *h == *self.render_buffer.active	{
+					self.unbind_render_buffers();
+				}
+				unsafe	{
+					glcore::glDeleteRenderbuffers( 1, ptr::addr_of(&*h) );	
+				}
+			}
+		}
+		while self.frame_buffer_draw.pool.len()!=0	{
+			let h = self.frame_buffer_draw.pool.pop();
+			if *h != 0	{
+				if *h == *self.frame_buffer_draw.active	{
+					//self.unbind_draw_buffer();
+				}
+				if *h == *self.frame_buffer_read.active	{
+					//self.unbind_read_buffer();
+				}
+				unsafe	{
+					glcore::glDeleteFramebuffers( 1, ptr::addr_of(&*h) );
+				}
+			}
+		}
+	}
 }

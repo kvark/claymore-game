@@ -140,7 +140,6 @@ struct Object	{
 
 	drop	{
 		self.pool.push( self.handle );
-		//glcore::glDeleteShader( *self.handle );
 	}
 }
 

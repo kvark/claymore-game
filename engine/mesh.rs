@@ -128,7 +128,7 @@ impl context::Context	{
 	}
 
 	fn disable_mesh_attribs( va : &buf::VertexArray )	{
-		assert *self.vertex_array == *va.handle;
+		assert self.vertex_array.is_active(va);
 		for va.data.eachi |i,vd|	{
 			if vd.enabled	{
 				glcore::glDisableVertexAttribArray( i as glcore::GLuint );
@@ -138,7 +138,7 @@ impl context::Context	{
 	}
 
 	fn bind_mesh_attrib( va : &buf::VertexArray, loc : uint, at : &Attribute )	{
-		assert *self.vertex_array == *va.handle;
+		assert self.vertex_array.is_active(va);
 		self.bind_buffer( at.buffer );
 		let mut vdata = &va.data[loc];
 		// update vertex info

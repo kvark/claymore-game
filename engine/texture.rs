@@ -12,12 +12,10 @@ pub struct Texture	{
 	depth		: uint,
 	mut levels	: uint,
 	samples		: uint,
+	priv pool	: @mut ~[Handle],
 
 	drop	{
-		unsafe	{
-			// assert: not bound
-			glcore::glDeleteTextures( 1, ptr::addr_of(&*self.handle) );
-		}
+		self.pool.push( self.handle );
 	}
 }
 
@@ -58,7 +56,8 @@ impl Slot : cmp::Eq	{
 
 pub struct Binding	{
 	mut active_unit	: uint,
-	mut active		: send_map::linear::LinearMap<Slot,Handle>
+	mut active		: send_map::linear::LinearMap<Slot,Handle>,
+	priv pool		: @mut ~[Handle],
 }
 
 
@@ -169,16 +168,6 @@ impl Binding	{
 }
 
 
-impl context::Context	{
-	fn create_texture( t:glcore::GLenum, w:uint, h:uint, d:uint, s:uint )->Texture	{
-		let mut hid = 0 as glcore::GLuint;
-		unsafe	{
-			glcore::glGenTextures( 1, ptr::addr_of(&hid) );
-		}
-		Texture{ handle:Handle(hid), target:Target(t), width:w, height:h, depth:d, levels:0, samples:s }
-	}
-}
-
 impl Binding : context::State	{
 	fn sync_back()->bool	{
 		let mut was_ok = true;
@@ -210,5 +199,40 @@ impl Binding : context::State	{
 		}
 		self.switch( cur_unit );
 		was_ok
+	}
+}
+
+
+pub fn create_binding()-> Binding	{
+	let slots	= send_map::linear::LinearMap::<texture::Slot,texture::Handle>();
+	Binding{ active_unit:0u, active:slots, pool:@mut ~[] }
+}
+
+
+impl context::Context	{
+	fn create_texture( t:glcore::GLenum, w:uint, h:uint, d:uint, s:uint )->Texture	{
+		let mut hid = 0 as glcore::GLuint;
+		unsafe	{
+			glcore::glGenTextures( 1, ptr::addr_of(&hid) );
+		}
+		Texture{ handle:Handle(hid), target:Target(t),
+			width:w, height:h, depth:d, levels:0, samples:s,
+			pool:self.texture.pool }
+	}
+	fn cleanup_textures()	{
+		while self.texture.pool.len()!=0	{
+			let han = self.texture.pool.pop();
+			if *han != 0	{
+				for (copy self.texture.active).each() |s,h|	{
+					if *han == **h	{
+						self.texture.switch( s.unit );
+						self.texture.unbind( s.target );
+					}
+				}
+				unsafe	{
+					glcore::glDeleteTextures( 1, ptr::addr_of(&*han) );
+				}
+			}
+		}
 	}
 }

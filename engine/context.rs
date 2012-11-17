@@ -23,7 +23,7 @@ pub struct Context	{
 	mut rast			: rast::State,
 	// objects
 	shader				: shade::Binding,
-	mut vertex_array	: buf::Handle,
+	vertex_array		: buf::VaBinding,
 	array_buffer		: buf::Binding,
 	render_buffer		: frame::RenBinding,
 	frame_buffer_draw	: frame::Binding,
@@ -38,17 +38,16 @@ pub fn create( wid : uint, het : uint )-> Context	{
 		max_color_attachments : read_cap( glcore::GL_MAX_COLOR_ATTACHMENTS ),
 	};
 	// fill up the context
-	let slots	= send_map::linear::LinearMap::<texture::Slot,texture::Handle>();
 	Context{
 		caps				: caps,
 		rast				: rast::create_rast(wid,het),
 		shader				: shade::create_binding(),
-		vertex_array		: buf::Handle(0),
-		array_buffer		: buf::Binding{	target:buf::Target(glcore::GL_ARRAY_BUFFER),active:buf::Handle(0) },
-		render_buffer		: frame::RenBinding{	target:glcore::GL_RENDERBUFFER,			active:frame::Handle(0) },
-		frame_buffer_draw	: frame::Binding{	target:glcore::GL_DRAW_FRAMEBUFFER,		active:frame::Handle(0) },
-		frame_buffer_read	: frame::Binding{	target:glcore::GL_READ_FRAMEBUFFER,		active:frame::Handle(0) },
-		texture				: texture::Binding{ active_unit:0u,	active:slots },
+		vertex_array		: buf::create_va_binding(),
+		array_buffer		: buf::create_binding( glcore::GL_ARRAY_BUFFER ),
+		render_buffer		: frame::create_ren_binding(),
+		frame_buffer_draw	: frame::create_binding( glcore::GL_DRAW_FRAMEBUFFER ),
+		frame_buffer_read	: frame::create_binding( glcore::GL_READ_FRAMEBUFFER ),
+		texture				: texture::create_binding(),
 	}
 }
 
@@ -61,6 +60,8 @@ impl Context	{
 	}
 	fn cleanup()	{
 		self.cleanup_shaders();
+		self.cleanup_buffers();
+		self.cleanup_frames();
 	}
 }
 
