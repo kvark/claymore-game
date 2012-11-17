@@ -40,12 +40,14 @@ impl context::Context	{
 					for pmap.colors.each_value() |target|	{
 						colors.push( *target );
 					}
+					let has_color = colors.len()!=0 && (*fb.handle==0 || colors[0]!=frame::TarEmpty);
 					self.bind_frame_buffer( fb, true, pmap.depth_stencil, colors );
 					self.rast.scissor.activate( &scissor, 0 );
 					let mut flags = 0 as glcore::GLenum;
 					//FIXME: cache this
 					match data.color	{
 						Some(c) =>	{
+							assert has_color;
 							flags |= glcore::GL_COLOR_BUFFER_BIT;
 							glcore::glClearColor(
 								c.r as glcore::GLfloat, c.g as glcore::GLfloat,
@@ -54,12 +56,14 @@ impl context::Context	{
 					}
 					match data.depth	{
 						Some(d) => 	{
+							assert *fb.handle==0 || pmap.depth_stencil!=frame::TarEmpty;
 							flags |= glcore::GL_DEPTH_BUFFER_BIT;
 							glcore::glClearDepth( d as glcore::GLdouble );
 						},None	=> 	{}
 					}
 					match data.stencil	{
 						Some(s)	=>	{
+							assert *fb.handle==0 || pmap.depth_stencil!=frame::TarEmpty;
 							flags |= glcore::GL_STENCIL_BUFFER_BIT;
 							glcore::glClearStencil( s as glcore::GLint );
 						},None	=>	{}
@@ -71,6 +75,9 @@ impl context::Context	{
 					for pmap.colors.each() |name,target|	{
 						let loc = prog.find_output( name );
 						attaches[loc] = *target;
+					}
+					if rast.depth.test || rast.stencil.test	{
+						assert *fb.handle==0 || pmap.depth_stencil!=frame::TarEmpty;
 					}
 					self.bind_frame_buffer( fb, true, pmap.depth_stencil, attaches );
 					self.rast.activate( &rast, mesh.get_poly_size() );

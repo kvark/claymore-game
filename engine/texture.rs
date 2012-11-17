@@ -12,6 +12,8 @@ pub struct Texture	{
 	depth		: uint,
 	mut levels	: uint,
 	samples		: uint,
+	priv mut level_base	: uint,
+	priv mut level_max	: uint,
 	priv pool	: @mut ~[Handle],
 
 	drop	{
@@ -23,6 +25,9 @@ impl Texture	{
 	pure fn get_level_size( lev : uint )-> (uint,uint)	{
 		assert self.width>0u && self.height>0u && lev<self.levels;
 		(((self.width-1u)>>lev)+1u,((self.height-1u)>>lev)+1u)
+	}
+	pure fn get_level_limits()-> (uint,uint)	{
+		(self.level_base, self.level_max)
 	}
 }
 
@@ -89,7 +94,7 @@ impl Binding	{
 		self._bind( target, Handle(0) );
 	}
 
-	fn get_bound( target : Target )->Handle	{
+	pure fn get_bound( target : Target )->Handle	{
 		let slot = Slot{ unit:self.active_unit, target:target };
 		match self.active.find( &slot )	{
 			Some(s)	=> s,
@@ -97,7 +102,11 @@ impl Binding	{
 		}
 	}
 
-	fn find( t : &Texture )-> int	{
+	pure fn is_bound( t : &Texture )-> bool	{
+		*self.get_bound( t.target ) == *t.handle
+	}
+
+	pure fn find( t : &Texture )-> int	{
 		for self.active.each |slot,handle|	{
 			if *(*handle) == *t.handle	{
 				assert *slot.target == *t.target;
@@ -141,7 +150,7 @@ impl Binding	{
 	}
 
 	fn wrap( t : &Texture, method : int )	{
-		assert *self.get_bound(t.target) == *t.handle;
+		assert self.is_bound( t );
 		assert t.samples == 0u;
 		let wr =	if method>0	{glcore::GL_REPEAT}
 			else	if method<0 {glcore::GL_MIRRORED_REPEAT}
@@ -153,7 +162,7 @@ impl Binding	{
 	}
 
 	fn filter( t : &Texture, dim : uint )	{
-		assert *self.get_bound(t.target) == *t.handle;
+		assert self.is_bound( t );
 		assert t.samples == 0u;
 		let min_filter =	if dim==3u	{glcore::GL_LINEAR_MIPMAP_LINEAR}
 			else			if dim==2u	{glcore::GL_LINEAR}
@@ -164,6 +173,19 @@ impl Binding	{
 			as glcore::GLint;
 		glcore::glTexParameteri( *t.target, glcore::GL_TEXTURE_MIN_FILTER, min_filter );
 		glcore::glTexParameteri( *t.target, glcore::GL_TEXTURE_MAG_FILTER, mag_filter );
+	}
+
+	fn limit_levels( t : &Texture, base : uint, max : uint )	{
+		assert self.is_bound( t );
+		assert base <= max;
+		if t.level_base != base	{
+			t.level_base = base;
+			glcore::glTexParameteri( *t.target, glcore::GL_TEXTURE_BASE_LEVEL, base as glcore::GLint );
+		}
+		if t.level_max != max	{
+			t.level_max = max;
+			glcore::glTexParameteri( *t.target, glcore::GL_TEXTURE_MAX_LEVEL, max as glcore::GLint );
+		}
 	}
 }
 
@@ -217,6 +239,7 @@ impl context::Context	{
 		}
 		Texture{ handle:Handle(hid), target:Target(t),
 			width:w, height:h, depth:d, levels:0, samples:s,
+			level_base:0u, level_max:1000u,
 			pool:self.texture.pool }
 	}
 	fn cleanup_textures()	{
