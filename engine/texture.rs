@@ -222,16 +222,15 @@ impl context::Context	{
 	fn cleanup_textures()	{
 		while self.texture.pool.len()!=0	{
 			let han = self.texture.pool.pop();
-			if *han != 0	{
-				for (copy self.texture.active).each() |s,h|	{
-					if *han == **h	{
-						self.texture.switch( s.unit );
-						self.texture.unbind( s.target );
-					}
+			assert *han != 0;
+			for (copy self.texture.active).each() |s,h|	{
+				if *han == **h	{
+					self.texture.switch( s.unit );
+					self.texture.unbind( s.target );
 				}
-				unsafe	{
-					glcore::glDeleteTextures( 1, ptr::addr_of(&*han) );
-				}
+			}
+			unsafe	{
+				glcore::glDeleteTextures( 1, ptr::addr_of(&*han) );
 			}
 		}
 	}

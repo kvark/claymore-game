@@ -21,7 +21,7 @@ priv fn read_cap( what : glcore::GLenum )-> uint	{
 pub struct Context	{
 	caps				: Capabilities,
 	mut rast			: rast::State,
-	// objects
+	// bindings
 	shader				: shade::Binding,
 	vertex_array		: buf::VaBinding,
 	array_buffer		: buf::Binding,
@@ -29,6 +29,9 @@ pub struct Context	{
 	frame_buffer_draw	: frame::Binding,
 	frame_buffer_read	: frame::Binding,
 	texture				: texture::Binding,
+	// defaults
+	default_vertex_array: @buf::VertexArray,
+	default_frame_buffer: @frame::Buffer,
 }
 
 
@@ -48,6 +51,8 @@ pub fn create( wid : uint, het : uint )-> Context	{
 		frame_buffer_draw	: frame::create_binding( glcore::GL_DRAW_FRAMEBUFFER ),
 		frame_buffer_read	: frame::create_binding( glcore::GL_READ_FRAMEBUFFER ),
 		texture				: texture::create_binding(),
+		default_vertex_array: @buf::default_vertex_array(),
+		default_frame_buffer: @frame::default_frame_buffer(wid,het),
 	}
 }
 
@@ -62,6 +67,7 @@ impl Context	{
 		self.cleanup_shaders();
 		self.cleanup_buffers();
 		self.cleanup_frames();
+		self.cleanup_textures();
 	}
 }
 

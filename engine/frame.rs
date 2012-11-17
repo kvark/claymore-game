@@ -187,14 +187,26 @@ impl Buffer : context::State	{
 }
 
 
+pub fn default_frame_buffer( wid : uint, het : uint )-> Buffer	{
+	Buffer{
+		handle:Handle(0),
+		viewport		:Rect{x:0u,y:0u,w:wid,h:het},
+		draw_mask		:0u,
+		read_id			:None,
+		depth_stencil	:TarEmpty,
+		colors			:~[TarEmpty],
+		pool			:@mut ~[],
+	}
+}
+
 
 impl context::Context	{
-	fn create_render_buffer( wid:uint, het:uint, sam:uint )-> @Surface	{
+	fn create_render_buffer( wid:uint, het:uint, sam:uint )-> Surface	{
 		let mut hid = 0 as glcore::GLuint;
 		unsafe	{
 			glcore::glGenRenderbuffers( 1, ptr::addr_of(&hid) );
 		}
-		@Surface{ handle:Handle(hid),
+		Surface{ handle:Handle(hid),
 			target:self.render_buffer.target,
 			width:wid, height:het, samples:sam,
 			pool:self.render_buffer.pool }
@@ -207,7 +219,7 @@ impl context::Context	{
 			glcore::glBindRenderbuffer( binding.target, *h );
 		}
 	}
-	fn bind_render_buffer( rb : @Surface )	{
+	fn bind_render_buffer( rb : &Surface )	{
 		self._bind_render_buffer( rb.handle );
 	}
 	fn unbind_render_buffers()	{
@@ -224,19 +236,6 @@ impl context::Context	{
 			depth_stencil	: TarEmpty,
 			colors			: vec::from_elem( self.caps.max_color_attachments, TarEmpty ),
 			pool			: self.frame_buffer_draw.pool,
-		}
-	}
-
-	//FIXME: temporary function
-	fn create_frame_buffer_main()-> Buffer	{
-		Buffer{
-			handle:Handle(0),
-			viewport		:Rect{x:0u,y:0u,w:0u,h:0u},
-			draw_mask		:0u,
-			read_id			:None,
-			depth_stencil	:TarEmpty,
-			colors			:~[TarEmpty],
-			pool			:self.frame_buffer_draw.pool,
 		}
 	}
 
@@ -343,27 +342,25 @@ impl context::Context	{
 	fn cleanup_frames()	{
 		while self.render_buffer.pool.len()!=0	{
 			let h = self.render_buffer.pool.pop();
-			if *h != 0	{
-				if *h == *self.render_buffer.active	{
-					self.unbind_render_buffers();
-				}
-				unsafe	{
-					glcore::glDeleteRenderbuffers( 1, ptr::addr_of(&*h) );	
-				}
+			assert *h != 0;
+			if *h == *self.render_buffer.active	{
+				self.unbind_render_buffers();
+			}
+			unsafe	{
+				glcore::glDeleteRenderbuffers( 1, ptr::addr_of(&*h) );	
 			}
 		}
 		while self.frame_buffer_draw.pool.len()!=0	{
 			let h = self.frame_buffer_draw.pool.pop();
-			if *h != 0	{
-				if *h == *self.frame_buffer_draw.active	{
-					//self.unbind_draw_buffer();
-				}
-				if *h == *self.frame_buffer_read.active	{
-					//self.unbind_read_buffer();
-				}
-				unsafe	{
-					glcore::glDeleteFramebuffers( 1, ptr::addr_of(&*h) );
-				}
+			assert *h != 0;
+			if *h == *self.frame_buffer_draw.active	{
+				//self.unbind_draw_buffer();
+			}
+			if *h == *self.frame_buffer_read.active	{
+				//self.unbind_read_buffer();
+			}
+			unsafe	{
+				glcore::glDeleteFramebuffers( 1, ptr::addr_of(&*h) );
 			}
 		}
 	}

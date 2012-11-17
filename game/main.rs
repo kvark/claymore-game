@@ -13,7 +13,6 @@ struct Sample	{
 	mesh		: @engine::mesh::Mesh,
 	va			: @engine::buf::VertexArray,
 	texture		: @engine::texture::Texture,
-	fbo			: @engine::frame::Buffer,
 	mut frames	: uint,
 }
 
@@ -84,13 +83,12 @@ fn init( wid : uint, het : uint ) -> Sample	{
 		params.insert( ~"u_ViewProj",	engine::shade::UniMatrix(false,mvp) );
 		params.insert( ~"u_CamPos",		engine::shade::UniFloatVec(u_cam_pos) );
 	}
-	let fbo = @ct.create_frame_buffer_main();
 	// done
 	ct.check(~"init");
 	io::println( fmt!("init: program %u, mesh %s, texture %u",
 		*program.handle as uint, mesh.name, *tex.handle as uint)
 	);
-	Sample { ct:ct, program:program, data:params, mesh:mesh, va:va, texture:tex, frames:0, fbo:fbo }
+	Sample { ct:ct, program:program, data:params, mesh:mesh, va:va, texture:tex, frames:0 }
 }
 
 
@@ -122,8 +120,10 @@ fn render( s : &Sample ) ->bool	{
 		let mut rast = engine::rast::create_rast(0,0);
 		rast.depth.test = true;
 		rast.prime.cull = true;
-		let c0 = engine::call::CallClear( s.fbo, copy pmap, cdata, rast.scissor, rast.mask );
-		let c1 = engine::call::CallDraw( s.fbo, copy pmap, s.va, s.mesh, s.mesh.get_range(), s.program, copy s.data, rast );
+		let c0 = engine::call::CallClear(	s.ct.default_frame_buffer,
+			copy pmap, cdata, rast.scissor, rast.mask );
+		let c1 = engine::call::CallDraw(	s.ct.default_frame_buffer,
+			copy pmap, s.va, s.mesh, s.mesh.get_range(), s.program, copy s.data, rast );
 		s.ct.flush(~[c0,c1]);
 	}else	{
 		glcore::glClearColor( 0.5f32, 0.5f32, 1.0f32, 1.0f32 );

@@ -380,12 +380,11 @@ impl context::Context	{
 		}
 		while self.shader.pool_programs.len()!=0	{
 			let h = self.shader.pool_programs.pop();
-			if *h != 0	{
-				if h == self.shader.active_program	{
-					self.unbind_program();
-				}
-				glcore::glDeleteProgram( *h );
+			assert *h != 0;
+			if h == self.shader.active_program	{
+				self.unbind_program();
 			}
+			glcore::glDeleteProgram( *h );
 		}
 	}
 }

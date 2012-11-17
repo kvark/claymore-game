@@ -94,21 +94,33 @@ pub fn create_va_binding()-> VaBinding	{
 }
 
 
+priv fn _create_zero_data()-> ~[VertexData]	{
+	let default = @Object{ handle:Handle(0), pool:@mut ~[] };
+	do vec::from_fn(MAX_VERTEX_ATTRIBS) |_i|	{
+		VertexData{ enabled: false, attrib: mesh::Attribute{
+				kind: glcore::GL_NONE, count: 0u,
+				normalized: true, interpolated: true,
+				buffer: default, stride: 0u, offset: 0u,
+		}}
+	}
+}
+
+pub fn default_vertex_array()-> VertexArray	{
+	VertexArray{ handle : Handle(0), data : _create_zero_data(),
+		element	: create_binding( glcore::GL_ELEMENT_ARRAY_BUFFER ),
+		pool : @mut ~[],
+	}	
+}
+
+
+
 impl context::Context	{
 	fn create_vertex_array()-> VertexArray	{
 		let mut hid = 0 as glcore::GLuint;
 		unsafe	{
 			glcore::glGenVertexArrays( 1, ptr::addr_of(&hid) );
 		}
-		let default = @Object{ handle:Handle(0), pool:self.array_buffer.pool };
-		let data = do vec::from_fn(MAX_VERTEX_ATTRIBS) |_i|	{
-			VertexData{ enabled: false, attrib: mesh::Attribute{
-					kind: glcore::GL_NONE, count: 0u,
-					normalized: true, interpolated: true,
-					buffer: default, stride: 0u, offset: 0u,
-			}}
-		};
-		VertexArray{ handle:Handle(hid), data:data,
+		VertexArray{ handle : Handle(hid), data : _create_zero_data(),
 			element	: create_binding( glcore::GL_ELEMENT_ARRAY_BUFFER ),
 			pool : self.vertex_array.pool,
 		}
@@ -183,24 +195,22 @@ impl context::Context	{
 	fn cleanup_buffers()	{
 		while self.vertex_array.pool.len()!=0	{
 			let h = self.vertex_array.pool.pop();
-			if *h != 0	{
-				if *h == *self.vertex_array.active	{
-					self.unbind_vertex_array();
-				}
-				unsafe	{
-					glcore::glDeleteVertexArrays( 1, ptr::addr_of(&*h) );
-				}
+			assert *h != 0;
+			if *h == *self.vertex_array.active	{
+				self.unbind_vertex_array();
+			}
+			unsafe	{
+				glcore::glDeleteVertexArrays( 1, ptr::addr_of(&*h) );
 			}
 		}
 		while self.array_buffer.pool.len()!=0	{
 			let h = self.array_buffer.pool.pop();
-			if *h != 0	{
-				//ISSUE: active index buffers are not checked
-				if *h == *self.array_buffer.active	{
-					self.unbind_buffer();
-				}
-				glcore::glDeleteBuffers( 1, ptr::addr_of(&*h) );
+			assert *h != 0;
+			//ISSUE: active index buffers are not checked
+			if *h == *self.array_buffer.active	{
+				self.unbind_buffer();
 			}
+			glcore::glDeleteBuffers( 1, ptr::addr_of(&*h) );
 		}
 	}
 }
