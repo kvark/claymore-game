@@ -22,11 +22,11 @@ fn init( wid : uint, het : uint ) -> Sample	{
 	assert ct.sync_back();
 	// load shaders
 	let vert_shader = match io::read_whole_file_str(&path::Path(~"data/code/test.glslv"))	{
-		Ok(text) => ct.create_shader( glcore::GL_VERTEX_SHADER, text ),
+		Ok(text) => ct.create_shader( 'v', text ),
 		Err(msg) => fail(msg)
 	};
 	let frag_shader = match io::read_whole_file_str(&path::Path(~"data/code/test.glslf"))	{
-		Ok(text) => ct.create_shader( glcore::GL_FRAGMENT_SHADER, text ),
+		Ok(text) => ct.create_shader( 'f', text ),
 		Err(msg) => fail(msg)
 	};
 	let program = @ct.create_program( ~[vert_shader,frag_shader] );

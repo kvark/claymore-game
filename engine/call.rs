@@ -6,6 +6,8 @@ pub struct PlaneMap	{
 	colors			: send_map::linear::LinearMap<~str,frame::Target>,
 }
 
+impl PlaneMap : Copy	{}
+
 pub fn create_plane_map( name : ~str, col : frame::Target )-> PlaneMap	{
 	let mut pmap = PlaneMap	{
 		depth_stencil : frame::TarEmpty,
@@ -24,6 +26,7 @@ pub struct ClearData	{
 
 
 pub enum Call	{
+	CallEmpty,
 	CallClear( @frame::Buffer, PlaneMap, ClearData, rast::Scissor, rast::Mask ),
 	CallBlit(),			//FIXME
 	CallDraw( @frame::Buffer, PlaneMap, @buf::VertexArray, @mesh::Mesh, mesh::Range, @shade::Program, shade::DataMap, rast::State ),
@@ -35,6 +38,7 @@ impl context::Context	{
 	fn flush( queue	: ~[Call] )	{
 		for queue.each()	|call|	{
 			match call	{
+				&CallEmpty => {},
 				&CallClear(fb,pmap,data,scissor,_mask)	=> {
 					let mut colors : ~[frame::Target] = ~[];
 					for pmap.colors.each_value() |target|	{

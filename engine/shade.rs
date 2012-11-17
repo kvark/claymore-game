@@ -261,7 +261,7 @@ priv fn query_parameters( h : Handle )-> ParaMap	{
 }
 
 
-priv pure fn check_sampler( target : glcore::GLenum, storage : glcore::GLenum )	{
+pure fn check_sampler( target : glcore::GLenum, storage : glcore::GLenum )	{
 	if target == glcore::GL_TEXTURE_1D	{
 		assert [glcore::GL_SAMPLER_1D].contains( &storage );
 	}else
@@ -275,9 +275,17 @@ priv pure fn check_sampler( target : glcore::GLenum, storage : glcore::GLenum )	
 	}
 }
 
+pure fn map_shader_type( t : char )-> glcore::GLenum	{
+	if t=='v'	{glcore::GL_VERTEX_SHADER}		else
+	if t=='f'	{glcore::GL_FRAGMENT_SHADER}	else
+	if t=='g'	{glcore::GL_GEOMETRY_SHADER}	else
+	{fail(fmt!( "Unknown shader type: %c", t ))}
+}
+
 
 impl context::Context	{
-	pub fn create_shader( target : glcore::GLenum, code : &str )-> Object	{
+	pub fn create_shader( t : char, code : &str )-> Object	{
+		let target = map_shader_type(t);
 		let h = Handle( glcore::glCreateShader(target) );
 		let mut length = code.len() as glcore::GLint;
 		do str::as_c_str(code) |text|	{
