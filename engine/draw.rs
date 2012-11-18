@@ -123,24 +123,28 @@ impl Technique	{
 		}{ return None; }
 		let s_vert = self.make_vertex( e.material, e.mods );
 		let s_frag = self.make_fragment( e.material );
+		//io::println(s_vert); io::println(s_frag);
 		let shaders = ~[ ct.create_shader('v',s_vert), ct.create_shader('f',s_frag) ];
 		Some( @ct.create_program(shaders) )
 	}
 
-	fn process( e : &Entity, ct : &context::Context )-> call::Call	{
-		let mut data = shade::create_data();
+	fn get_program( e : &Entity, ct : &context::Context )-> Option<@shade::Program>	{
 		let ce = CacheEntry{ mat:e.material, mods:e.mods,
 			tech:~[copy self.code_vertex,copy self.code_fragment]
 		};
-		let prog = match self.cache.find(&ce)	{
+		match self.cache.find(&ce)	{
 			Some(p)	=> p,
 			None =>	{
 				let p = self.link( e, ct );
 				self.cache.insert( ce, p );
 				p
 			}
-		};
-		match prog	{
+		}
+	}
+
+	fn process( e : &Entity, ct : &context::Context, data : shade::DataMap )-> call::Call	{
+		//let mut data = shade::create_data();
+		match self.get_program(e,ct)	{
 			Some(p)	=> call::CallDraw( self.fbo, copy self.pmap,
 				e.vao, e.mesh, e.range, p, data, self.rast ),
 			None => call::CallEmpty
@@ -163,20 +167,22 @@ pub pure fn extract_metas( code : &str )->~[~str]	{
 	vec::from_fn(split.len()-1, |i| copy split[i])
 }
 
+pub fn load_material( path : ~str )-> Material	{
+	let s_vert = load::read_text(path+".glslv");
+	let s_frag = load::read_text(path+".glslf");
+	Material{ name:path, metas:extract_metas(s_frag),
+		code_vertex:s_vert, code_fragment:s_frag,
+	}
+}
+
 pub fn load_technique( path : ~str, fbo : @frame::Buffer, pmap : &call::PlaneMap,
 		rast : &rast::State, cache : @mut Cache )-> Technique	{
-	let s_vert = match io::read_whole_file_str(&path::Path(path+".glslv"))	{
-		Ok(text) => copy text,
-		Err(msg) => fail(msg)
-	};
-	let s_frag = match io::read_whole_file_str(&path::Path(path+".glslf"))	{
-		Ok(text) => copy text,
-		Err(msg) => fail(msg)
-	};
+	let s_vert = load::read_text(path+".glslv");
+	let s_frag = load::read_text(path+".glslf");
 	Technique{
 		name:path, fbo:fbo, pmap:*pmap, rast:*rast,
 		code_vertex:s_vert, code_fragment:s_frag,
-		used_metas:extract_metas( s_frag ),
+		used_metas:extract_metas(s_frag),
 		cache:cache,
 	}
 }

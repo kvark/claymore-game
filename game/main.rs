@@ -7,11 +7,11 @@ extern mod engine;
 
 
 struct Sample	{
-	ct			: engine::context::Context,
+	context		: engine::context::Context,
 	program		: @engine::shade::Program,
 	mut data	: engine::shade::DataMap,
-	mesh		: @engine::mesh::Mesh,
-	va			: @engine::buf::VertexArray,
+	entity		: engine::draw::Entity,
+	technique	: engine::draw::Technique,
 	texture		: @engine::texture::Texture,
 	mut frames	: uint,
 }
@@ -30,9 +30,20 @@ fn init( wid : uint, het : uint ) -> Sample	{
 		Err(msg) => fail(msg)
 	};
 	let program = @ct.create_program( ~[vert_shader,frag_shader] );
-	// load buffers and mesh
-	let va = @ct.create_vertex_array();
-	let mesh = @engine::load::read_mesh( &engine::load::create_reader(~"data/jazz_dancing.k3mesh"), &ct );
+	// create entity
+	let entity = {
+		let mesh = @engine::load::read_mesh( &engine::load::create_reader(~"data/jazz_dancing.k3mesh"), &ct );
+		let material = @engine::draw::load_material(~"data/code/mat/phong");
+		let node = @engine::space::Node{ name:~"girl", space:engine::space::identity(), parent:None };
+		engine::draw::Entity{
+			node	: node,
+			vao		: @ct.create_vertex_array(),
+			mesh	: mesh,
+			range	: mesh.get_range(),
+			mods	: ~[],
+			material: material,
+		}
+	};
 	/*let vdata = ~[-1f32,-1f32,0f32,0f32,1f32,0f32,1f32,-1f32,0f32];
 	let buf = @ct.create_buffer_loaded( vdata );
 	let mut mesh = ct.create_mesh( ~"dummy", ~"3", 3, 0 );
@@ -45,6 +56,15 @@ fn init( wid : uint, het : uint ) -> Sample	{
 		stride			: 3u * sys::size_of::<f32>(),
 		offset			: 0,
 	});*/
+	// create technique
+	let tech = {
+		let pmap = engine::call::create_plane_map( ~"o_Color", engine::frame::TarEmpty );
+		let mut rast = engine::rast::create_rast(0,0);
+		rast.depth.test = true;
+		rast.prime.cull = true;
+		let cache = @mut engine::draw::create_cache();
+		engine::draw::load_technique( ~"data/code/tech/main", ct.default_frame_buffer, &pmap, &rast, cache)
+	};
 	// load texture
 	let mut tex : @engine::texture::Texture;
 	match stb_image::image::load(~"data/texture/SexyFem_Texture.tga")	{
@@ -75,20 +95,22 @@ fn init( wid : uint, het : uint ) -> Sample	{
 		let mview = cam_world.inverse().to_matrix();
 		let mvp = projection.mul_m( &mview );
 		let cam_pos = cam_world.position;
-		let u_cam_pos = lmath::vector::Vec4::new( cam_pos.x, cam_pos.y, cam_pos.z, 0f32 );
+		let u_cam_pos	= lmath::vector::Vec4::new( cam_pos.x, cam_pos.y, cam_pos.z, 0f32 );
+		let u_light_pos	= lmath::vector::Vec4::new( 3f32, 3f32, 3f32, 0f32 );
 		// push to params
 		params.insert( ~"u_Color",		engine::shade::UniFloat(1f) );
-		params.insert( ~"t_Image",		engine::shade::UniTexture(0u,tex) );
+		params.insert( ~"t_Main",		engine::shade::UniTexture(0u,tex) );
 		params.insert( ~"u_World",		engine::shade::UniMatrix(false,mx) );
 		params.insert( ~"u_ViewProj",	engine::shade::UniMatrix(false,mvp) );
-		params.insert( ~"u_CamPos",		engine::shade::UniFloatVec(u_cam_pos) );
+		params.insert( ~"u_CameraPos",	engine::shade::UniFloatVec(u_cam_pos) );
+		params.insert( ~"u_LightPos",	engine::shade::UniFloatVec(u_light_pos) );
 	}
 	// done
 	ct.check(~"init");
 	io::println( fmt!("init: program %u, mesh %s, texture %u",
-		*program.handle as uint, mesh.name, *tex.handle as uint)
+		*program.handle as uint, entity.mesh.name, *tex.handle as uint)
 	);
-	Sample { ct:ct, program:program, data:params, mesh:mesh, va:va, texture:tex, frames:0 }
+	Sample { context:ct, program:program, data:params, entity:entity, technique:tech, texture:tex, frames:0 }
 }
 
 
@@ -109,20 +131,29 @@ fn render( s : &Sample ) ->bool	{
 	}
 
 	if true	{
-		let pmap = engine::call::create_plane_map( ~"o_Color", engine::frame::TarEmpty );
 		let cdata = engine::call::ClearData{
 			color	:Some(engine::rast::Color{ r:0.5f32, g:0.5f32, b:1.0f32, a:1.0f32 }),
 			depth	:Some( 1f ),
 			stencil	:None
 		};
-		let mut rast = engine::rast::create_rast(0,0);
-		rast.depth.test = true;
-		rast.prime.cull = true;
-		let c0 = engine::call::CallClear(	s.ct.default_frame_buffer,
-			copy pmap, cdata, rast.scissor, rast.mask );
-		let c1 = engine::call::CallDraw(	s.ct.default_frame_buffer,
-			copy pmap, s.va, s.mesh, s.mesh.get_range(), s.program, copy s.data, rast );
-		s.ct.flush(~[c0,c1]);
+		let t = &s.technique;
+		let c0 = engine::call::CallClear( t.fbo, copy t.pmap,
+			cdata, t.rast.scissor, t.rast.mask );
+		let c1 = t.process( &s.entity, &s.context, copy s.data );
+		s.context.flush(~[c0,c1]);
+	}else
+	if true	{
+		let cdata = engine::call::ClearData{
+			color	:Some(engine::rast::Color{ r:0.5f32, g:0.5f32, b:1.0f32, a:1.0f32 }),
+			depth	:Some( 1f ),
+			stencil	:None
+		};
+		let t = &s.technique;
+		let c0 = engine::call::CallClear( t.fbo, copy t.pmap,
+			cdata, t.rast.scissor, t.rast.mask );
+		let c1 = engine::call::CallDraw( t.fbo, copy t.pmap,
+				s.entity.vao, s.entity.mesh, s.entity.range, s.program, copy s.data, t.rast );
+		s.context.flush(~[c0,c1]);
 	}else	{
 		glcore::glClearColor( 0.5f32, 0.5f32, 1.0f32, 1.0f32 );
 		glcore::glClearDepth( 1.0f64 );
@@ -131,12 +162,12 @@ fn render( s : &Sample ) ->bool	{
 		glcore::glEnable( glcore::GL_CULL_FACE );
 
 		//FIXME: no copy (each_const required)
-		s.ct.draw_mesh( s.mesh, &s.mesh.get_range(), s.va, s.program, &copy s.data );
+		s.context.draw_mesh( s.entity.mesh, &s.entity.range, s.entity.vao, s.program, &copy s.data );
 	}
 	
 	s.frames += 1;
-	s.ct.cleanup();
-	s.ct.check(~"render");
+	s.context.cleanup();
+	s.context.check(~"render");
 	true
 }
 

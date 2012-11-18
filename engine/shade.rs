@@ -117,7 +117,7 @@ impl Parameter	{
 			Unitialized		=> fail(fmt!( "Uninitalized parameter at location %d", loc as int )),
 			UniFloat(v)		=> glcore::glUniform1f( loc, v as glcore::GLfloat ),
 			UniInt(v)		=> glcore::glUniform1i( loc, v as glcore::GLint ),
-			UniFloatVec(v)	=> glcore::glUniform4fv( loc, 1, v.to_ptr() ),
+			UniFloatVec(v)	=> glcore::glUniform4fv( loc, 1, ptr::addr_of(&v.x) ),
 			UniIntVec(v)	=> glcore::glUniform4iv( loc, 1, v.to_ptr() ),
 			UniQuat(v)		=> glcore::glUniform4fv( loc, 1, v.to_ptr() ),
 			UniMatrix(b,v)	=> glcore::glUniformMatrix4fv( loc, 1, b as glcore::GLboolean, ptr::addr_of(&v.x.x) ),

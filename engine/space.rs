@@ -89,6 +89,14 @@ impl QuatSpace : Space	{
 	}
 }
 
+pub pure fn identity()-> QuatSpace	{
+	QuatSpace{
+		position	: lmath::vector::Vec3::new(0f32,0f32,0f32),
+		orientation	: lmath::quaternion::Quat::new(1f32,0f32,0f32,0f32),
+		scale		: 1f32,
+	}
+}
+
 
 pub struct Node	{
 	name		: ~str,

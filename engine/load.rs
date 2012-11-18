@@ -51,6 +51,14 @@ pub fn create_reader( path : ~str )->Reader	{
 }
 
 
+pub fn read_text( path:~str )-> ~str	{
+	match io::read_whole_file_str(&path::Path(path))	{
+		Ok(text) => copy text,
+		Err(msg) => fail(msg)
+	}
+}
+
+
 pub fn read_mesh( br : &Reader, context : &context::Context )-> mesh::Mesh	{
 	let signature = br.enter();
 	if signature != ~"k3mesh"	{
