@@ -33,7 +33,7 @@ fn init( wid : uint, het : uint ) -> Sample	{
 	// create entity
 	let entity = {
 		let mesh = @engine::load::read_mesh( &engine::load::create_reader(~"data/jazz_dancing.k3mesh"), &ct );
-		let material = @engine::draw::load_material(~"data/code/mat/phong");
+		let material = @engine::draw::load_material(~"data/code/mat/fresnel");
 		let node = @engine::space::Node{ name:~"girl", space:engine::space::identity(), parent:None };
 		engine::draw::Entity{
 			node	: node,
@@ -101,6 +101,7 @@ fn init( wid : uint, het : uint ) -> Sample	{
 		params.insert( ~"u_Color",		engine::shade::UniFloat(1f) );
 		params.insert( ~"t_Main",		engine::shade::UniTexture(0u,tex) );
 		params.insert( ~"u_World",		engine::shade::UniMatrix(false,mx) );
+		params.insert( ~"u_WorldQuat",	engine::shade::UniQuat( lmath::quaternion::Quat::identity::<f32>() ));
 		params.insert( ~"u_ViewProj",	engine::shade::UniMatrix(false,mvp) );
 		params.insert( ~"u_CameraPos",	engine::shade::UniFloatVec(u_cam_pos) );
 		params.insert( ~"u_LightPos",	engine::shade::UniFloatVec(u_light_pos) );
@@ -127,7 +128,8 @@ fn render( s : &Sample ) ->bool	{
 			scale		: 2f32
 		};
 		let mx = model_space.to_matrix();
-		s.data.insert( ~"u_World", engine::shade::UniMatrix(false,mx) );
+		s.data.insert( ~"u_World",		engine::shade::UniMatrix(false,mx) );
+		s.data.insert( ~"u_WorldQuat",	engine::shade::UniQuat( model_space.orientation ) );
 	}
 
 	if true	{

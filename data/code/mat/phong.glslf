@@ -15,11 +15,11 @@ const vec3	colorSpecular	= vec3(0.3);
 
 //%meta getAlpha getFinalColor
 
-lowp float getAlpha()	{
+float getAlpha()	{
 	return texture(t_Main,v_Tex).a;
 }
 
-lowp vec4 getFinalColor(vec3 normal)	{
+vec4 getFinalColor(vec3 normal)	{
 	float kdiff = dot( normal, normalize(v_Light) );
 	float kspec = dot( normal, normalize(v_Half) );
 	float xd = max(0.0,kdiff) + ambient;

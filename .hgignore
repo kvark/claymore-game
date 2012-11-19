@@ -7,3 +7,5 @@ data/*.k3*
 project/*
 lib/*.dSYM
 lib/libengine-*
+misc/data/*
+__pycache__
