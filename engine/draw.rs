@@ -6,7 +6,8 @@ pub trait Mod	{
 
 pub struct Material	{
 	name			: ~str,
-	metas			: ~[~str],
+	meta_vertex		: ~[~str],
+	meta_fragment	: ~[~str],
 	code_vertex		: ~str,
 	code_fragment	: ~str,
 }
@@ -62,38 +63,40 @@ pub struct Technique	{
 	fbo		: @frame::Buffer,
 	pmap	: call::PlaneMap,
 	rast	: rast::State,
+	meta_vertex		: ~[~str],
+	meta_fragment	: ~[~str],
 	code_vertex		: ~str,
 	code_fragment	: ~str,
-	used_metas		: ~[~str],
 	priv cache	: @mut Cache,
 }
 
 
 impl Technique	{
+	pure fn get_header()-> ~str	{~"#version 150 core"}
+	
 	fn make_vertex( mat : @Material, mods : &[@Mod] )-> ~str	{
 		let S_MOD = ~"modify";
 		let mut buf : ~[~str] = ~[];
-		buf.push(fmt!( "//--- Material: %s ---//", mat.name ));
-		buf.push( copy mat.code_vertex );
+		buf.push( self.get_header() );
 		// add modifier bases
 		for mods.each() |m|	{
 			let target = fmt!( "%s%s", S_MOD, m.get_name() );
 			buf.push(fmt!( "//--- Modifier: %s} ---//", m.get_name() ));
 			buf.push( str::replace( m.get_code(), S_MOD, target ) );
 		}
-		// add technique
-		buf.push(fmt!( "//--- Technique: %s ---//", self.name ));
-		let mod_start = match str::find_str( self.code_vertex, ~"//%"+S_MOD )	{
+		// add material
+		buf.push(fmt!( "//--- Material: %s ---//", mat.name ));
+		let mod_start = match str::find_str( mat.code_vertex, ~"//%"+S_MOD )	{
 			Some(p)	=> p,
 			None	=> fail(~"Unable to find modifier start marker")
 		};
-		buf.push( self.code_vertex.substr(0,mod_start) );
-		let mod_end = match str::find_str_from( self.code_vertex, "\n", mod_start )	{
+		buf.push( mat.code_vertex.substr(0,mod_start) );
+		let mod_end = match str::find_str_from( mat.code_vertex, "\n", mod_start )	{
 			Some(p)	=> p,
 			None	=> fail(~"Unable to find modifier end marker")
 		};
 		// extract position and vector names
-		let split = self.code_vertex.substr(mod_start,mod_end-mod_start).split_char(' ');
+		let split = mat.code_vertex.substr(mod_start,mod_end-mod_start).split_char(' ');
 		// add modifier calls
 		for mods.each() |m|	{
 			for split.eachi() |i,s|	{
@@ -103,13 +106,15 @@ impl Technique	{
 				}
 			}
 		}
+		buf.push( mat.code_vertex.substr( mod_end, mat.code_vertex.len()-mod_end ) );
 		// finish
-		buf.push( self.code_vertex.substr( mod_end, self.code_vertex.len()-mod_end ) );
+		buf.push(fmt!( "//--- Technique: %s ---//", self.name ));
+		buf.push( copy self.code_vertex );
 		str::connect( buf, "\n" )
 	}
 	
 	fn make_fragment( mat : @Material )-> ~str	{
-		str::connect([
+		str::connect([ self.get_header(),
 			fmt!("//--- Material: %s ---//",mat.name),
 			copy mat.code_fragment,
 			fmt!("//--- Technique: %s ---//",self.name),
@@ -118,9 +123,14 @@ impl Technique	{
 	}
 	
 	fn link( e : &Entity, ct : &context::Context )-> Option<@shade::Program>	{
-		if !do vec::all(self.used_metas)	|m|	{
-			e.material.metas.contains(m)
-		}{ return None; }
+		if !do vec::all(self.meta_vertex)	|m|	{
+			e.material.meta_vertex.contains(m)
+		}||!do vec::all(self.meta_fragment)	|m|	{
+			e.material.meta_fragment.contains(m)
+		}{
+			io::println(fmt!( "Material '%s' rejected by '%s'", e.material.name, self.name ));
+			return None;
+		}
 		let s_vert = self.make_vertex( e.material, e.mods );
 		let s_frag = self.make_fragment( e.material );
 		//io::println(s_vert); io::println(s_frag);
@@ -170,8 +180,11 @@ pub pure fn extract_metas( code : &str )->~[~str]	{
 pub fn load_material( path : ~str )-> Material	{
 	let s_vert = load::read_text(path+".glslv");
 	let s_frag = load::read_text(path+".glslf");
-	Material{ name:path, metas:extract_metas(s_frag),
-		code_vertex:s_vert, code_fragment:s_frag,
+	Material{ name:path,
+		meta_vertex		:extract_metas(s_vert),
+		meta_fragment	:extract_metas(s_frag),
+		code_vertex		:s_vert,
+		code_fragment	:s_frag,
 	}
 }
 
@@ -179,10 +192,12 @@ pub fn load_technique( path : ~str, fbo : @frame::Buffer, pmap : &call::PlaneMap
 		rast : &rast::State, cache : @mut Cache )-> Technique	{
 	let s_vert = load::read_text(path+".glslv");
 	let s_frag = load::read_text(path+".glslf");
-	Technique{
-		name:path, fbo:fbo, pmap:*pmap, rast:*rast,
-		code_vertex:s_vert, code_fragment:s_frag,
-		used_metas:extract_metas(s_frag),
+	Technique{ name:path,
+		fbo:fbo, pmap:*pmap, rast:*rast,
+		meta_vertex		:extract_metas(s_vert),
+		meta_fragment	:extract_metas(s_frag),
+		code_vertex		:s_vert,
+		code_fragment	:s_frag,
 		cache:cache,
 	}
 }

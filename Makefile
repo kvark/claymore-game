@@ -4,6 +4,10 @@ game-code: engine-code
 engine-code:
 	rustc engine/engine.rc -L lib --out-dir lib
 
+brick:
+	rustc game/brick.rs -L lib --out-dir build	
+
+
 clean:
 	rm -Rf lib/* build/*
 

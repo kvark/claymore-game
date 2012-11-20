@@ -1,15 +1,24 @@
-#version 150 core
+//%meta initMaterial cookVector 
 
-uniform vec4 u_CameraPos, u_LightPos;
+uniform mat4 u_World;
+uniform vec4 u_CameraPos;
 
+in	vec3 a_Position;
+in	vec4 a_Normal;
 in	vec2 a_Tex0;
 
+out vec3 v_Normal, v_Eye;
 out vec2 v_Tex;
-out vec3 v_Light, v_Eye;
 
+vec3 cookVector(vec3 v)	{
+	return v;
+}
 
-void initMaterial(vec3 position)	{
+vec3 initMaterial()	{
+	vec3 pos = a_Position;
+	//%modify pos
+	v_Normal = mat3(u_World) * a_Normal.xyz;
+	v_Eye = cookVector( u_CameraPos.xyz - pos );
 	v_Tex = vec2( a_Tex0.x, 1.0-a_Tex0.y );
-	v_Light	= u_LightPos.xyz - position;
-	v_Eye	= u_CameraPos.xyz - position;
+	return (u_World * vec4(pos,1.0)).xyz;
 }

@@ -1,32 +1,43 @@
-#version 150 core
+//%meta initSurface computeLight getWorldNormal getColor
 
-uniform vec4 		u_Color;
 uniform sampler2D	t_Main, t_Normal;
 
+in vec3 v_Eye;
 in vec2 v_Tex;
-in vec3 v_Light, v_Half;
-in vec4 v_Color;
 
-const float	c_Shininess	= 10.0;
-const float	c_Ambient		= 0.1;
+const float	c_Shininess		= 10.0;
 const vec3	c_ColorDiffuse	= vec3(1.0);
 const vec3	c_ColorSpecular	= vec3(0.3);
 
 
-//%meta getAlpha getFinalColor
-
-float getAlpha()	{
-	return texture(t_Main,v_Tex).a;
+vec3 getWorldNormal()	{
+	return vec3(0.0);	//FIXME
 }
 
-vec4 getFinalColor(vec3 vertexNormal)	{
-	vec3 rawNormal = texture(t_Normal,v_Tex);
-	vec3 normal = normalize(rawNormal);
-	float kdiff = dot( normal, normalize(v_Light) );
-	float kspec = dot( normal, normalize(v_Half) );
-	float xd = max(0.0,kdiff) + c_Ambient;
-	float xs = pow(max(0.01,kspec),c_Shininess);
-	vec4 sample = texture(t_Main,v_Tex);
-	vec3 color = xd*c_ColorDiffuse*sample.xyz + xs*c_ColorSpecular;
-	return vec4( color, sample.a );
+vec4 getColor()	{
+	return texture(t_Main,v_Tex);
+}
+
+struct Context	{
+	vec3 normal,eye;
+	vec4 albedo;
+}ct;
+
+
+vec4 initSurface()	{
+	vec3 rawNormal = texture(t_Normal,v_Tex).xyz * 2.0 - 1.0;
+	ct.normal = normalize(rawNormal);
+	ct.eye = normalize(v_Eye);
+	ct.albedo = getColor();
+	return vec4( vec3(0.0), ct.albedo.a );
+}
+
+vec3 computeLight(float ambient, float reflected, vec3 light)	{
+	// Blinn-Phong model BRDF, normal mapped
+    float diff = max( 0.0, dot(ct.normal,light) );
+    vec3 halfVector = normalize(ct.eye+light);
+    float spec = max( 0.01, dot(ct.normal,halfVector) );
+    vec3 diffColor	= c_ColorDiffuse * (ambient + reflected*diff) * ct.albedo.rgb;
+    vec3 specColor	= c_ColorSpecular * reflected * pow(spec,c_Shininess);
+    return diffColor + specColor;
 }

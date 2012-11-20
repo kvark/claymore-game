@@ -33,7 +33,7 @@ fn init( wid : uint, het : uint ) -> Sample	{
 	// create entity
 	let entity = {
 		let mesh = @engine::load::read_mesh( &engine::load::create_reader(~"data/jazz_dancing.k3mesh"), &ct );
-		let material = @engine::draw::load_material(~"data/code/mat/fresnel");
+		let material = @engine::draw::load_material(~"data/code/mat/phong_tangent");
 		let node = @engine::space::Node{ name:~"girl", space:engine::space::identity(), parent:None };
 		engine::draw::Entity{
 			node	: node,
@@ -63,7 +63,7 @@ fn init( wid : uint, het : uint ) -> Sample	{
 		rast.depth.test = true;
 		rast.prime.cull = true;
 		let cache = @mut engine::draw::create_cache();
-		engine::draw::load_technique( ~"data/code/tech/main", ct.default_frame_buffer, &pmap, &rast, cache)
+		engine::draw::load_technique( ~"data/code/tech/omni1", ct.default_frame_buffer, &pmap, &rast, cache)
 	};
 	// load texture
 	let mut tex : @engine::texture::Texture;
