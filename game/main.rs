@@ -33,7 +33,7 @@ fn init( wid : uint, het : uint ) -> Sample	{
 	// create entity
 	let entity = {
 		let mesh = @engine::load::read_mesh( &engine::load::create_reader(~"data/jazz_dancing.k3mesh"), &ct );
-		let material = @engine::draw::load_material(~"data/code/mat/phong_tangent");
+		let material = @engine::draw::load_material(~"data/code/mat/phong");
 		let node = @engine::space::Node{ name:~"girl", space:engine::space::identity(), parent:None };
 		engine::draw::Entity{
 			node	: node,

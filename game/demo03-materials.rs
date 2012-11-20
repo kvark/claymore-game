@@ -21,7 +21,7 @@ fn init( wid : uint, het : uint ) -> Sample	{
 	assert ct.sync_back();
 	// create entity
 	let entity = {
-		let mesh = @engine::load::read_mesh( &engine::load::create_reader(~"data/brick.k3mesh"), &ct );
+		let mesh = @engine::load::read_mesh( &engine::load::create_reader(~"data/demo03.k3mesh"), &ct );
 		let material = @engine::draw::load_material(~"data/code/mat/phong_tangent");
 		let node = @engine::space::Node{ name:~"b1", space:engine::space::identity(), parent:None };
 		engine::draw::Entity{
@@ -40,7 +40,7 @@ fn init( wid : uint, het : uint ) -> Sample	{
 		rast.depth.test = true;
 		rast.prime.cull = true;
 		let cache = @mut engine::draw::create_cache();
-		engine::draw::load_technique( ~"data/code/tech/main", ct.default_frame_buffer, &pmap, &rast, cache)
+		engine::draw::load_technique( ~"data/code/tech/omni1", ct.default_frame_buffer, &pmap, &rast, cache)
 	};
 	// load texture
 	let t_diffuse =
@@ -57,7 +57,7 @@ fn init( wid : uint, het : uint ) -> Sample	{
 			None => { fail(~"Unable to load image"); }
 		};
 	let t_normal =
-		match stb_image::image::load(~"data/texture/normal.jpg0")	{
+		match stb_image::image::load(~"data/texture/normal.jpg")	{
 			Some(image) => {
 				let t = @ct.create_texture( glcore::GL_TEXTURE_2D, image.width, image.height, 1, 0 );
 				ct.texture.bind( t );
@@ -108,6 +108,19 @@ fn init( wid : uint, het : uint ) -> Sample	{
 
 
 fn render( s : &Sample ) ->bool	{
+	if true {	// compute new rotation matrix
+		let angle = (s.frames as f32) * 0.01f32;
+		let sn = f32::sin(angle), cn = f32::cos(angle);
+		let qbase = lmath::quaternion::Quat::<f32>{ w:cn, x:0f32, y:sn, z:0f32 };
+		let model_space = engine::space::QuatSpace{
+			position 	: lmath::vector::Vec3::<f32>{ x:0f32, y:0f32, z:0f32 },
+			orientation	: qbase,
+			scale		: 1.5f32
+		};
+		let mx = model_space.to_matrix();
+		s.data.insert( ~"u_World",		engine::shade::UniMatrix(false,mx) );
+		s.data.insert( ~"u_WorldQuat",	engine::shade::UniQuat( model_space.orientation ) );
+	}
 	let cdata = engine::call::ClearData{
 		color	:Some(engine::rast::Color{ r:0.5f32, g:0.5f32, b:1.0f32, a:1.0f32 }),
 		depth	:Some( 1f ),
@@ -135,7 +148,7 @@ fn failGLFW( where: &static/str )	{
 
 
 fn main()	{
-	io::println("--- Claymore: brick demo ---");
+	io::println("--- Claymore demo 03: materials ---");
 	do task::task().sched_mode(task::PlatformThread).spawn {
 		if (glfw3::init()==0)	{
 			failGLFW("Init");

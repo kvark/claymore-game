@@ -1,12 +1,15 @@
+NAME=claymore
+DIR=${NAME}-game
+RUST=/usr/local/bin/rustc
+
 game-code: engine-code
-	rustc game/claymore.rc -L lib --out-dir build
+	${RUST} game/claymore.rc -L lib --out-dir build
 
 engine-code:
-	rustc engine/engine.rc -L lib --out-dir lib
+	${RUST} engine/engine.rc -L lib --out-dir lib
 
-brick:
-	rustc game/brick.rs -L lib --out-dir build	
-
+demo3:
+	${RUST} game/demo03-materials.rs -L lib --out-dir build	
 
 clean:
 	rm -Rf lib/* build/*
@@ -14,8 +17,6 @@ clean:
 clean-engine:
 	rm -R lib/libengine*
 
-NAME=claymore
-DIR=${NAME}-game
 
 extern: clean-lib lmath glfw3 glcore stb-image
 
