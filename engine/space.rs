@@ -98,10 +98,20 @@ pub pure fn identity()-> QuatSpace	{
 }
 
 
+enum Channel	{
+	ChanPos(anim::Channel<lmath::vector::vec3>),
+	ChanRotQuat(anim::Channel<lmath::quaternion::quat4>),
+	//ChanRotEuler(anim::Channel<lmath::vector::vec3>),
+	ChanScale(anim::Channel<f32>),
+}
+
+type Record = anim::Record<Channel>;
+
 pub struct Node	{
 	name		: ~str,
 	mut space	: QuatSpace,	//FIXME: arbitrary space
 	parent		: Option<@Node>,
+	actions		: ~[@Record],	//FIXME mutable
 }
 
 impl Node	{
@@ -109,6 +119,24 @@ impl Node	{
 		match self.parent	{
 			Some(p)	=> p.world_space().mul( &self.space ),
 			None	=> self.space
+		}
+	}
+	fn set_space( s : &QuatSpace )	{
+		self.space = *s;
+	}
+}
+
+impl Node : anim::Player<Channel>	{
+	pure fn find_record( name : ~str )-> Option<@Record>	{
+		do self.actions.find() |a| {a.name==name}
+	}
+	fn set_record( a : &Record, time : float )	{
+		for a.channels.each() |chan|	{
+			match chan	{
+				&ChanPos(c)		=> self.space.position		= c.sample(time),
+				&ChanRotQuat(c)	=> self.space.orientation	= c.sample(time),
+				&ChanScale(c)	=> self.space.scale			= c.sample(time),
+			}
 		}
 	}
 }

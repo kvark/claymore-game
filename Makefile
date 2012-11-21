@@ -1,4 +1,4 @@
-NAME=claymore
++-NAME=claymore
 DIR=${NAME}-game
 RUST=/usr/local/bin/rustc
 

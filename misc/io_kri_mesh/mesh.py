@@ -203,7 +203,7 @@ def collect_attributes(mesh,armature,groups):
 		return None,None,0,0
 
 	# 2: fill sparsed vertex array
-	avg,set_vert = 0.0,{}
+	avg,set_vert,set_surf = 0.0,{},{}
 	for face in ar_face:
 		avg += face.hand
 		nor = face.normal
@@ -217,43 +217,58 @@ def collect_attributes(mesh,armature,groups):
 			if not vs in set_vert:
 				set_vert[vs] = []
 			set_vert[vs].append(v)
+			vs = str((v.coord,v.normal,face.hand))
+			if not vs in set_surf:
+				set_surf[vs] = []
+			set_surf[vs].append(v)
 	out.log(1,'i', '%.2f avg handness' % (avg / len(ar_face)))
-	
-	# 3: update triangle indexes
-	avg,ar_vert,bad_vert = 0.0,[],0
-	for i,vgrup in enumerate(set_vert.values()):
-		v = vgrup[0]
-		assert v.quat == None
+
+	# 3a: compute tangents
+	avg,bad_vert = 0.0,0
+	for vgrup in set_surf.values():
 		tan,lensum = mathutils.Vector((0,0,0)),0.0
-		for v2 in vgrup:
-			f = v2.face
-			ind = f.v.index(v2.vert)
-			f.vi[ind] = i
-			wes = f.wes[ind]
+		for v in vgrup:
+			assert v.quat == None
+			f = v.face
 			if f.ta:
-				lensum += wes * f.ta.length
-				tan += wes * f.ta
-		no = v.normal.normalized()
+				lensum += f.ta.length
+				tan += f.ta
+		quat = vgrup[0].quat
+		no = vgrup[0].normal.normalized()
 		if Settings.fakeQuat=='Force' or (Settings.fakeQuat=='Auto' and not hasQuatUv):
-			v.quat = calc_quat(no)
+			quat = calc_quat(no)
 		if lensum>0.0:
 			avg += tan.length / lensum
 			tan.normalize()		# mean tangent
-			v.tangent = tan
-			if hasQuatUv and v.quat==None:
-				bit = no.cross(tan) * v.face.hand	# using handness
+			if hasQuatUv and quat==None:
+				bit = no.cross(tan) * vgrup[0].face.hand	# using handness
 				tan = bit.cross(no)	# handness will be applied in shader
 				tbn = mathutils.Matrix((tan,bit,no))	# tbn is orthonormal, right-handed
-				v.quat = tbn.to_quaternion().normalized()
-		if None in (v.quat,v.tangent):
+				quat = tbn.to_quaternion().normalized()
+		if None in (quat,tan):
 			bad_vert += 1
-			v.quat = mathutils.Quaternion((0,0,0,1))
-			v.tangent = mathutils.Vector((1,0,0))
-		ar_vert.append(v)
+			quat = mathutils.Quaternion((0,0,0,1))
+			tan = mathutils.Vector((1,0,0))
+		for v in vgrup:
+			v.quat = quat
+			v.tangent = tan
 	if bad_vert:
 		out.log(1,'w','%d pure vertices detected' % (bad_vert))
 	if hasQuatUv and avg!=0.0:
 		out.log(1,'i','%.2f avg tangent accuracy' % (avg / len(ar_vert)))
+	del set_surf
+	del bad_vert
+	del avg
+
+	# 3b: update triangle indexes
+	ar_vert = []
+	for i,vgrup in enumerate(set_vert.values()):
+		v = vgrup[0]
+		for v2 in vgrup:
+			f = v2.face
+			ind = f.v.index(v2.vert)
+			f.vi[ind] = i
+		ar_vert.append(v)
 	del set_vert
 
 	# 4: unlock quaternions to make all the faces QI-friendly

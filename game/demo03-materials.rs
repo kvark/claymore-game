@@ -1,3 +1,4 @@
+extern mod std;
 extern mod glfw3;
 extern mod glcore;
 extern mod lmath;
@@ -9,7 +10,7 @@ extern mod engine;
 struct Sample	{
 	context		: engine::context::Context,
 	mut data	: engine::shade::DataMap,
-	entity		: engine::draw::Entity,
+	entities	: ~[engine::draw::Entity],
 	technique	: engine::draw::Technique,
 	texture		: @engine::texture::Texture,
 	mut frames	: uint,
@@ -19,16 +20,40 @@ struct Sample	{
 fn init( wid : uint, het : uint ) -> Sample	{
 	let ct = engine::context::create( wid, het );
 	assert ct.sync_back();
-	// create entity
-	let entity = {
+	// create entities
+	let e1 = {
 		let mesh = @engine::load::read_mesh( &engine::load::create_reader(~"data/demo03.k3mesh"), &ct );
-		let material = @engine::draw::load_material(~"data/code/mat/phong_tangent");
+		let material = @engine::draw::load_material(~"data/code/mat/phong");
 		let node = @engine::space::Node{ name:~"b1", space:engine::space::identity(), parent:None };
 		engine::draw::Entity{
 			node	: node,
 			vao		: @ct.create_vertex_array(),
 			mesh	: mesh,
 			range	: mesh.get_range(),
+			mods	: ~[],
+			material: material,
+		}
+	};
+	let e2 = {
+		let material = @engine::draw::load_material(~"data/code/mat/phong_tangent");
+		let node = @engine::space::Node{ name:~"b1", space:engine::space::identity(), parent:None };
+		engine::draw::Entity{
+			node	: node,
+			vao		: e1.vao,
+			mesh	: e1.mesh,
+			range	: e1.mesh.get_range(),
+			mods	: ~[],
+			material: material,
+		}
+	};
+	let e3 = {
+		let material = @engine::draw::load_material(~"data/code/mat/fresnel");
+		let node = @engine::space::Node{ name:~"b1", space:engine::space::identity(), parent:None };
+		engine::draw::Entity{
+			node	: node,
+			vao		: e1.vao,
+			mesh	: e1.mesh,
+			range	: e1.mesh.get_range(),
 			mods	: ~[],
 			material: material,
 		}
@@ -93,7 +118,6 @@ fn init( wid : uint, het : uint ) -> Sample	{
 		params.insert( ~"t_Main",		engine::shade::UniTexture(0u,t_diffuse) );
 		params.insert( ~"t_Normal",		engine::shade::UniTexture(0u,t_normal) );
 		params.insert( ~"u_World",		engine::shade::UniMatrix(false,mx) );
-		params.insert( ~"u_WorldQuat",	engine::shade::UniQuat( lmath::quaternion::Quat::identity::<f32>() ));
 		params.insert( ~"u_ViewProj",	engine::shade::UniMatrix(false,mvp) );
 		params.insert( ~"u_CameraPos",	engine::shade::UniFloatVec(u_cam_pos) );
 		params.insert( ~"u_LightPos",	engine::shade::UniFloatVec(u_light_pos) );
@@ -101,25 +125,34 @@ fn init( wid : uint, het : uint ) -> Sample	{
 	// done
 	ct.check(~"init");
 	io::println( fmt!("init: mesh %s, texture %u",
-		entity.mesh.name, *t_diffuse.handle as uint)
+		e1.mesh.name, *t_diffuse.handle as uint)
 	);
-	Sample { context:ct, data:params, entity:entity, technique:tech, texture:t_diffuse, frames:0 }
+	Sample { context:ct, data:params, entities:~[e1,e2,e3], technique:tech, texture:t_diffuse, frames:0 }
 }
 
 
 fn render( s : &Sample ) ->bool	{
 	if true {	// compute new rotation matrix
+		//let angle = (std::time::precise_time_s() * 0.5f) as f32;
 		let angle = (s.frames as f32) * 0.01f32;
 		let sn = f32::sin(angle), cn = f32::cos(angle);
 		let qbase = lmath::quaternion::Quat::<f32>{ w:cn, x:0f32, y:sn, z:0f32 };
-		let model_space = engine::space::QuatSpace{
-			position 	: lmath::vector::Vec3::<f32>{ x:0f32, y:0f32, z:0f32 },
+		let x = 1.2f32, y = 0.9f32;
+		s.entities[0].node.set_space( &engine::space::QuatSpace{
+			position 	: lmath::vector::Vec3::<f32>{ x:-x, y:-y, z:0f32 },
 			orientation	: qbase,
-			scale		: 1.5f32
-		};
-		let mx = model_space.to_matrix();
-		s.data.insert( ~"u_World",		engine::shade::UniMatrix(false,mx) );
-		s.data.insert( ~"u_WorldQuat",	engine::shade::UniQuat( model_space.orientation ) );
+			scale		: 0.8f32
+		});
+		s.entities[1].node.set_space( &engine::space::QuatSpace{
+			position 	: lmath::vector::Vec3::<f32>{ x:x, y:-y, z:0f32 },
+			orientation	: qbase,
+			scale		: 0.8f32
+		});
+		s.entities[2].node.set_space( &engine::space::QuatSpace{
+			position 	: lmath::vector::Vec3::<f32>{ x:0f32, y:y, z:0f32 },
+			orientation	: qbase,
+			scale		: 0.8f32
+		});
 	}
 	let cdata = engine::call::ClearData{
 		color	:Some(engine::rast::Color{ r:0.5f32, g:0.5f32, b:1.0f32, a:1.0f32 }),
@@ -127,10 +160,15 @@ fn render( s : &Sample ) ->bool	{
 		stencil	:None
 	};
 	let t = &s.technique;
-	let c0 = engine::call::CallClear( t.fbo, copy t.pmap,
-		cdata, t.rast.scissor, t.rast.mask );
-	let c1 = t.process( &s.entity, &s.context, copy s.data );
-	s.context.flush(~[c0,c1]);
+	let mut calls : ~[engine::call::Call] = ~[];
+	calls.push( engine::call::CallClear( t.fbo, copy t.pmap,
+		cdata, t.rast.scissor, t.rast.mask ));
+	for s.entities.each() |e|	{
+		let mx = e.node.world_space().to_matrix();
+		s.data.insert( ~"u_World", engine::shade::UniMatrix(false,mx) );
+		calls.push( t.process( e, &s.context, copy s.data ));
+	}
+	s.context.flush(calls);
 	
 	s.frames += 1;
 	s.context.cleanup();

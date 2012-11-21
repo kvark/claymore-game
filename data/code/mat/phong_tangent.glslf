@@ -2,7 +2,7 @@
 
 uniform sampler2D	t_Main, t_Normal;
 
-in vec3 v_Eye;
+in vec3 v_Eye, v_NormalWorld;
 in vec2 v_Tex;
 
 const float	c_Shininess		= 10.0;
@@ -11,7 +11,7 @@ const vec3	c_ColorSpecular	= vec3(0.3);
 
 
 vec3 getWorldNormal()	{
-	return vec3(0.0);	//FIXME
+	return normalize( v_NormalWorld );
 }
 
 vec4 getColor()	{

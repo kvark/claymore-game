@@ -34,7 +34,7 @@ fn init( wid : uint, het : uint ) -> Sample	{
 	let entity = {
 		let mesh = @engine::load::read_mesh( &engine::load::create_reader(~"data/jazz_dancing.k3mesh"), &ct );
 		let material = @engine::draw::load_material(~"data/code/mat/phong");
-		let node = @engine::space::Node{ name:~"girl", space:engine::space::identity(), parent:None };
+		let node = @engine::space::Node{ name:~"girl", space:engine::space::identity(), parent:None, actions:~[] };
 		engine::draw::Entity{
 			node	: node,
 			vao		: @ct.create_vertex_array(),
@@ -88,7 +88,7 @@ fn init( wid : uint, het : uint ) -> Sample	{
 			orientation	: lmath::quaternion::Quat::identity::<f32>(),
 			scale		: 1f32
 		};
-		let cam_node = engine::space::Node{ name:~"cam", space:cam_space, parent:None };
+		let cam_node = engine::space::Node{ name:~"cam", space:cam_space, parent:None, actions:~[] };
 		let projection = lmath::funs::projection::perspective::<f32>( 45f, aspect, 1f, 10f );
 		let mx = lmath::matrix::Mat4::identity::<f32>();
 		let cam_world = cam_node.world_space();
