@@ -35,7 +35,7 @@ pub pure fn create_binding()-> Binding	{
 }
 
 
-enum Uniform	{
+pub enum Uniform	{
 	Unitialized,
 	UniFloat(float),
 	UniInt(int),
@@ -252,7 +252,7 @@ priv fn query_parameters( h : Handle )-> ParaMap	{
 		}
 		info_bytes[length] = 0;
 		let loc = glcore::glGetUniformLocation( *h, raw_bytes );
-		io::println(fmt!( "Discovered param '%s' at location %d", name, loc as int ));
+		//io::println(fmt!( "Discovered param '%s' at location %d", name, loc as int ));
 		let p = Parameter{ loc:Location(loc), storage:storage, size:size, value:Unitialized };
 		//p.read( h );	// no need to read them here
 		rez.insert( name, p );

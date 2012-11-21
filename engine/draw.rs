@@ -1,6 +1,7 @@
 pub trait Mod	{
 	pure fn get_name()-> ~str;
 	pure fn get_code()-> ~str;
+	fn fill_data( data : &mut shade::DataMap );
 }
 
 
@@ -16,6 +17,7 @@ pub struct Material	{
 pub struct Entity	{
 	node	: @space::Node,
 	//body	: @node::Body,
+	mut data: shade::DataMap,
 	vao		: @buf::VertexArray,
 	mesh	: @mesh::Mesh,
 	range	: mesh::Range,
@@ -23,6 +25,12 @@ pub struct Entity	{
 	material: @Material,
 }
 
+//FIXME: remove this
+impl Entity	{
+	fn set_data( name : ~str, val : shade::Uniform )	{
+		self.data.insert( name, val );
+	}
+}
 
 struct CacheEntry	{
 	mat		: @Material,
@@ -133,8 +141,17 @@ impl Technique	{
 		}
 		let s_vert = self.make_vertex( e.material, e.mods );
 		let s_frag = self.make_fragment( e.material );
-		//io::println(s_vert); io::println(s_frag);
-		let shaders = ~[ ct.create_shader('v',s_vert), ct.create_shader('f',s_frag) ];
+		let shaders = if true	{
+			io::println("Compiling vert");
+			let sv = ct.create_shader('v',s_vert);
+			io::println("Compiling frag");
+			let sf = ct.create_shader('f',s_frag);
+			io::println("Linking");
+			~[sv,sf]
+		}else	{
+			//io::println(s_vert); io::println(s_frag);
+			~[ ct.create_shader('v',s_vert), ct.create_shader('f',s_frag) ]
+		};
 		Some( @ct.create_program(shaders) )
 	}
 
@@ -152,11 +169,11 @@ impl Technique	{
 		}
 	}
 
-	fn process( e : &Entity, ct : &context::Context, data : shade::DataMap )-> call::Call	{
+	fn process( e : &Entity, ct : &context::Context )-> call::Call	{
 		//let mut data = shade::create_data();
 		match self.get_program(e,ct)	{
 			Some(p)	=> call::CallDraw( self.fbo, copy self.pmap,
-				e.vao, e.mesh, e.range, p, data, self.rast ),
+				e.vao, e.mesh, e.range, p, copy e.data, self.rast ),
 			None => call::CallEmpty
 		}
 	}

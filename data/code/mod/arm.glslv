@@ -1,6 +1,7 @@
-attribute vec4	a_BoneIndex;
-attribute vec4	a_BoneWeight;
+in uvec4	a_BoneIndex;
+in vec4		a_BoneWeight;
 
+//FIXME: use vector arrays
 struct Space	{ vec4 pos,rot; };
 uniform Space bones[90];
 
@@ -17,7 +18,7 @@ Space trans = Space( vec4(0.0), vec4(0.0) );
 
 vec3 modifyPosition(vec3 pos)	{
 	for(int i=0; i<4; ++i)	{
-		int bid = int(a_BoneIndex[i]+0.5);
+		int bid = int(a_BoneIndex[i]);	//OSX crashes on uint
 		float w = a_BoneWeight[i];
 		Space s = bones[bid];
 		trans.pos += w * vec4( transForward(s,pos), 1.0);

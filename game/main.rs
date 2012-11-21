@@ -8,8 +8,6 @@ extern mod engine;
 
 struct Sample	{
 	context		: engine::context::Context,
-	program		: @engine::shade::Program,
-	mut data	: engine::shade::DataMap,
 	entity		: engine::draw::Entity,
 	technique	: engine::draw::Technique,
 	texture		: @engine::texture::Texture,
@@ -20,42 +18,32 @@ struct Sample	{
 fn init( wid : uint, het : uint ) -> Sample	{
 	let ct = engine::context::create( wid, het );
 	assert ct.sync_back();
-	// load shaders
-	let vert_shader = match io::read_whole_file_str(&path::Path(~"data/code/test.glslv"))	{
-		Ok(text) => ct.create_shader( 'v', text ),
-		Err(msg) => fail(msg)
-	};
-	let frag_shader = match io::read_whole_file_str(&path::Path(~"data/code/test.glslf"))	{
-		Ok(text) => ct.create_shader( 'f', text ),
-		Err(msg) => fail(msg)
-	};
-	let program = @ct.create_program( ~[vert_shader,frag_shader] );
+	// crate armature
+	let armature = @engine::load::read_armature(
+		&engine::load::create_reader(~"data/jazz_dancing.k3arm"),
+		None, false );
 	// create entity
 	let entity = {
-		let mesh = @engine::load::read_mesh( &engine::load::create_reader(~"data/jazz_dancing.k3mesh"), &ct );
+		let mesh = @engine::load::read_mesh(
+			&engine::load::create_reader(~"data/jazz_dancing.k3mesh"),
+			&ct );
 		let material = @engine::draw::load_material(~"data/code/mat/phong");
-		let node = @engine::space::Node{ name:~"girl", space:engine::space::identity(), parent:None, actions:~[] };
+		let node = @engine::space::Node{
+			name	: ~"girl",
+			space	: engine::space::identity(),
+			parent	: None,
+			actions	: ~[]
+		};
 		engine::draw::Entity{
 			node	: node,
+			data	: engine::shade::create_data(),
 			vao		: @ct.create_vertex_array(),
 			mesh	: mesh,
 			range	: mesh.get_range(),
-			mods	: ~[],
+			mods	: ~[armature as @engine::draw::Mod],
 			material: material,
 		}
 	};
-	/*let vdata = ~[-1f32,-1f32,0f32,0f32,1f32,0f32,1f32,-1f32,0f32];
-	let buf = @ct.create_buffer_loaded( vdata );
-	let mut mesh = ct.create_mesh( ~"dummy", ~"3", 3, 0 );
-	mesh.attribs.insert( ~"a_Position", engine::mesh::Attribute{
-		kind			: glcore::GL_FLOAT,
-		count			: 3u,
-		normalized		: false,
-		interpolated	: true,
-		buffer			: buf,
-		stride			: 3u * sys::size_of::<f32>(),
-		offset			: 0,
-	});*/
 	// create technique
 	let tech = {
 		let pmap = engine::call::create_plane_map( ~"o_Color", engine::frame::TarEmpty );
@@ -79,8 +67,14 @@ fn init( wid : uint, het : uint ) -> Sample	{
 		None => { fail(~"Unable to load image"); }
 	}
 	// init parameters
-	let mut params = engine::shade::create_data();
 	{
+		// send armature
+		armature.update();
+		let mut d2 = engine::shade::create_data();
+		armature.fill_data( &mut d2 );
+		for d2.each() |name,val|	{
+			entity.set_data( copy *name, *val );
+		}
 		// compute matrices
 		let aspect = (wid as float) / (het as float);
 		let cam_space = engine::space::QuatSpace{
@@ -98,20 +92,17 @@ fn init( wid : uint, het : uint ) -> Sample	{
 		let u_cam_pos	= lmath::vector::Vec4::new( cam_pos.x, cam_pos.y, cam_pos.z, 0f32 );
 		let u_light_pos	= lmath::vector::Vec4::new( 3f32, 3f32, 3f32, 0f32 );
 		// push to params
-		params.insert( ~"u_Color",		engine::shade::UniFloat(1f) );
-		params.insert( ~"t_Main",		engine::shade::UniTexture(0u,tex) );
-		params.insert( ~"u_World",		engine::shade::UniMatrix(false,mx) );
-		params.insert( ~"u_WorldQuat",	engine::shade::UniQuat( lmath::quaternion::Quat::identity::<f32>() ));
-		params.insert( ~"u_ViewProj",	engine::shade::UniMatrix(false,mvp) );
-		params.insert( ~"u_CameraPos",	engine::shade::UniFloatVec(u_cam_pos) );
-		params.insert( ~"u_LightPos",	engine::shade::UniFloatVec(u_light_pos) );
+		entity.set_data( ~"u_Color",		engine::shade::UniFloat(1f) );
+		entity.set_data( ~"t_Main",			engine::shade::UniTexture(0u,tex) );
+		entity.set_data( ~"u_World",		engine::shade::UniMatrix(false,mx) );
+		entity.set_data( ~"u_ViewProj",		engine::shade::UniMatrix(false,mvp) );
+		entity.set_data( ~"u_CameraPos",	engine::shade::UniFloatVec(u_cam_pos) );
+		entity.set_data( ~"u_LightPos",		engine::shade::UniFloatVec(u_light_pos) );
 	}
 	// done
 	ct.check(~"init");
-	io::println( fmt!("init: program %u, mesh %s, texture %u",
-		*program.handle as uint, entity.mesh.name, *tex.handle as uint)
-	);
-	Sample { context:ct, program:program, data:params, entity:entity, technique:tech, texture:tex, frames:0 }
+	io::println(fmt!( "init: mesh %s, texture %u", entity.mesh.name, *tex.handle as uint ));
+	Sample { context:ct, entity:entity, technique:tech, texture:tex, frames:0 }
 }
 
 
@@ -128,8 +119,7 @@ fn render( s : &Sample ) ->bool	{
 			scale		: 2f32
 		};
 		let mx = model_space.to_matrix();
-		s.data.insert( ~"u_World",		engine::shade::UniMatrix(false,mx) );
-		s.data.insert( ~"u_WorldQuat",	engine::shade::UniQuat( model_space.orientation ) );
+		s.entity.set_data( ~"u_World",		engine::shade::UniMatrix(false,mx) );
 	}
 
 	if true	{
@@ -141,32 +131,10 @@ fn render( s : &Sample ) ->bool	{
 		let t = &s.technique;
 		let c0 = engine::call::CallClear( t.fbo, copy t.pmap,
 			cdata, t.rast.scissor, t.rast.mask );
-		let c1 = t.process( &s.entity, &s.context, copy s.data );
+		let c1 = t.process( &s.entity, &s.context );
 		s.context.flush(~[c0,c1]);
-	}else
-	if true	{
-		let cdata = engine::call::ClearData{
-			color	:Some(engine::rast::Color{ r:0.5f32, g:0.5f32, b:1.0f32, a:1.0f32 }),
-			depth	:Some( 1f ),
-			stencil	:None
-		};
-		let t = &s.technique;
-		let c0 = engine::call::CallClear( t.fbo, copy t.pmap,
-			cdata, t.rast.scissor, t.rast.mask );
-		let c1 = engine::call::CallDraw( t.fbo, copy t.pmap,
-				s.entity.vao, s.entity.mesh, s.entity.range, s.program, copy s.data, t.rast );
-		s.context.flush(~[c0,c1]);
-	}else	{
-		glcore::glClearColor( 0.5f32, 0.5f32, 1.0f32, 1.0f32 );
-		glcore::glClearDepth( 1.0f64 );
-		glcore::glClear( glcore::GL_COLOR_BUFFER_BIT | glcore::GL_DEPTH_BUFFER_BIT );
-		glcore::glEnable( glcore::GL_DEPTH_TEST );
-		glcore::glEnable( glcore::GL_CULL_FACE );
-
-		//FIXME: no copy (each_const required)
-		s.context.draw_mesh( s.entity.mesh, &s.entity.range, s.entity.vao, s.program, &copy s.data );
 	}
-	
+
 	s.frames += 1;
 	s.context.cleanup();
 	s.context.check(~"render");

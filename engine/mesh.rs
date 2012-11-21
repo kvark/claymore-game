@@ -35,13 +35,13 @@ impl Attribute	{
 		//io::println(fmt!( "Checking compatibility: kind=0x%x, count=%u, storage=0x%x",
 		//	self.kind as uint, self.count, at.storage as uint ));
 		let i = self.count - 1u;
-		if self.kind == glcore::GL_FLOAT || self.kind == glcore::GL_HALF_FLOAT || self.normalized	{
+		if [glcore::GL_FLOAT,glcore::GL_HALF_FLOAT].contains(&self.kind) || self.normalized	{
 			at.storage == [glcore::GL_FLOAT,glcore::GL_FLOAT_VEC2,glcore::GL_FLOAT_VEC3,glcore::GL_FLOAT_VEC4][i]
 		}else
 		if self.kind == glcore::GL_INT	{
 			at.storage == [glcore::GL_INT,glcore::GL_INT_VEC2,glcore::GL_INT_VEC3,glcore::GL_INT_VEC4][i]
 		}else
-		if self.kind == glcore::GL_UNSIGNED_INT	{
+		if [glcore::GL_UNSIGNED_BYTE,glcore::GL_UNSIGNED_SHORT,glcore::GL_UNSIGNED_INT].contains(&self.kind)	{
 			at.storage == [glcore::GL_UNSIGNED_INT,glcore::GL_UNSIGNED_INT_VEC2,
 				glcore::GL_UNSIGNED_INT_VEC3,glcore::GL_UNSIGNED_INT_VEC4][i]
 		}else {false}

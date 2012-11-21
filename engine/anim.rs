@@ -1,29 +1,25 @@
 extern mod std;
-extern mod lmath;
 
+//- - - - - - - - - - - - - - - - - - - - - - - - - - - //
+//		Curves											//
 
-trait Interpolate	{
-	pure fn interpolate( other : &self, t : float )-> self;
-}
-
-pub trait Channel<T>	{
+pub trait Curve<T>	{
 	pure fn sample( time : float )-> T;
 }
 
-struct KeySimple<T>	{
+pub struct KeySimple<T>	{
 	t	: float,
 	co	: T,
 }
 
-struct KeyBezier<T>	{
+pub struct KeyBezier<T>	{
 	t	: float,
 	co	: T,
 	hl	: T,
 	hr	: T
 }
 
-
-impl<T:Copy Interpolate> @[KeySimple<T>] : Channel<T>	{
+impl<T:Copy space::Interpolate> ~[KeySimple<T>] : Curve<T>	{
 	pure fn sample( time : float )-> T	{
 		let mut i = self.len();
 		while i>0u && self[i-1].t>time	{ i-=1;	}
@@ -40,7 +36,7 @@ impl<T:Copy Interpolate> @[KeySimple<T>] : Channel<T>	{
 	}
 }
 
-impl<T:Copy Interpolate> @[KeyBezier<T>] : Channel<T>	{
+impl<T:Copy space::Interpolate> ~[KeyBezier<T>] : Curve<T>	{
 	pure fn sample( time : float )-> T	{
 		let mut i = self.len();
 		while i>0u && self[i-1].t>time	{ i-=1;	}
@@ -62,10 +58,14 @@ impl<T:Copy Interpolate> @[KeyBezier<T>] : Channel<T>	{
 }
 
 
+//- - - - - - - - - - - - - - - - - - - - - - - - - - - //
+//		Player and Act trait							//
+
+
 pub struct Record<C>	{
 	name		: ~str,
 	duration	: float,
-	channels	: ~[C],
+	curves		: ~[C],
 }
 
 pub trait Player<C>	{
@@ -81,6 +81,23 @@ pub fn get_time()-> float	{
 pub trait Act	{
 	fn update()-> bool;
 }
+
+pub struct Delay	{
+	end	: float,
+}
+
+pub fn make_delay( time : float )-> Delay	{
+	Delay{
+		end : get_time() + time	
+	} 
+}
+
+impl Delay : Act	{
+	fn update()-> bool	{
+		get_time() < self.end
+	}
+}
+
 
 pub struct Action<C>	{
 	player	: @Player<C>,
