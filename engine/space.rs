@@ -140,3 +140,53 @@ impl Node : anim::Player<Channel>	{
 		}
 	}
 }
+
+
+pub struct Bone	{
+	node			: @Node,
+	bind_pose		: QuatSpace,
+	mut transform	: QuatSpace,
+	parent_id		: Option<uint>,
+}
+
+impl Bone	{
+	fn reset()	{
+		self.node.space = self.bind_pose;
+		self.transform = identity();
+	}
+}
+
+pub struct Armature	{
+	node	: @Node,
+	bones	: ~[Bone],
+	code	: ~str,
+}
+
+impl Armature : draw::Mod	{
+	pure fn get_name()-> ~str	{ ~"arm" }
+	pure fn get_code()-> ~str	{ copy self.code }
+}
+
+impl Armature	{
+	fn update()	{
+		let mut cache_bind = vec::with_capacity::<QuatSpace>( self.bones.len() );
+		for self.bones.each() |b|	{
+			let bind_inv = b.bind_pose.inverse();
+			b.transform = match b.parent_id	{
+				Some(pid)	=>	{
+					assert pid < cache_bind.len();
+					//assert b.node.parent == Some( self.bones[pid].node );	//FIXME
+					let pose = b.node.world_space();
+					let bind_pose_inv =  bind_inv * cache_bind[pid];
+					cache_bind.push( bind_pose_inv );
+					pose.mul( &bind_pose_inv )
+				},
+				None	=>	{
+					//assert b.node.parent == Some( self.node );		//FIXME
+					cache_bind.push( bind_inv );
+					b.node.space.mul( &bind_inv )
+				}
+			};
+		}
+	}
+}
