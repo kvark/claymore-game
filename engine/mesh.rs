@@ -141,18 +141,23 @@ impl context::Context	{
 		}
 	}
 
-	fn bind_mesh_attrib( va : &buf::VertexArray, loc : uint, at : &Attribute )	{
+	fn bind_mesh_attrib( va : &buf::VertexArray, loc : uint, at : &Attribute, is_int : bool )	{
 		assert self.vertex_array.is_active(va);
 		self.bind_buffer( at.buffer );
 		let mut vdata = &va.data[loc];
 		// update vertex info
 		if vdata.attrib != *at	{
 			vdata.attrib = *at;
-			glcore::glVertexAttribPointer(
-				loc as glcore::GLuint, at.count as glcore::GLint, at.kind,
-				if at.normalized {glcore::GL_TRUE} else {glcore::GL_FALSE},
-				at.stride as glcore::GLsizei, at.offset as *glcore::GLvoid
-				);
+			if is_int	{
+				glcore::glVertexAttribIPointer(
+					loc as glcore::GLuint, at.count as glcore::GLint, at.kind,
+					at.stride as glcore::GLsizei, at.offset as *glcore::GLvoid );
+			}else	{
+				glcore::glVertexAttribPointer(
+					loc as glcore::GLuint, at.count as glcore::GLint, at.kind,
+					if at.normalized {glcore::GL_TRUE} else {glcore::GL_FALSE},
+					at.stride as glcore::GLsizei, at.offset as *glcore::GLvoid );
+			}
 		}
 		// enable attribute
 		if !vdata.enabled	{
@@ -185,7 +190,7 @@ impl context::Context	{
 						return false;
 					}
 					va_clean_mask &= !(1<<pat.loc);
-					self.bind_mesh_attrib( va, pat.loc, &sat );
+					self.bind_mesh_attrib( va, pat.loc, &sat, pat.is_integer() );
 				},
 				None => {
 					m.black_list.push( prog.handle );

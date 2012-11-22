@@ -1,5 +1,5 @@
-in vec4	a_BoneIndex;
-in vec4	a_BoneWeight;
+in ivec4	a_BoneIndex;
+in vec4		a_BoneWeight;
 
 struct Space { vec4 pos; vec4 rot; };
 uniform vec4 bone_pos[90];
@@ -16,7 +16,7 @@ Space trans = Space( vec4(0.0), vec4(0.0) );
 
 vec3 modifyPosition(vec3 pos)	{
 	for(int i=0; i<4; ++i)	{
-		int bid = int(a_BoneIndex[i]+0.5);	//OSX crashes on uint
+		int bid = a_BoneIndex[i];
 		float w = a_BoneWeight[i];
 		Space s = Space( bone_pos[bid], bone_rot[bid] );
 		trans.pos += w * vec4( transForward(s,pos), 1.0);

@@ -66,19 +66,26 @@ impl Uniform : cmp::Eq	{
 }
 
 
-struct Parameter	{
-	loc		: Location,
-	storage	: glcore::GLenum,
-	size	: uint,
-	mut value	: Uniform,
-}
-
 pub struct Attribute	{
 	loc		: uint,
 	storage	: glcore::GLenum,
 	size	: uint,
 }
 
+impl Attribute	{
+	pure fn is_integer()-> bool	{
+		![glcore::GL_FLOAT,glcore::GL_FLOAT_VEC2,glcore::GL_FLOAT_VEC3,
+			glcore::GL_FLOAT_VEC4].contains( &self.storage )
+	}
+}
+
+
+struct Parameter	{
+	loc		: Location,
+	storage	: glcore::GLenum,
+	size	: uint,
+	mut value	: Uniform,
+}
 
 impl Parameter	{
 	priv unsafe fn read( h : Handle )-> bool	{
