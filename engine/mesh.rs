@@ -43,7 +43,11 @@ impl Attribute	{
 		}else
 		if [glcore::GL_UNSIGNED_BYTE,glcore::GL_UNSIGNED_SHORT,glcore::GL_UNSIGNED_INT].contains(&self.kind)	{
 			at.storage == [glcore::GL_UNSIGNED_INT,glcore::GL_UNSIGNED_INT_VEC2,
-				glcore::GL_UNSIGNED_INT_VEC3,glcore::GL_UNSIGNED_INT_VEC4][i]
+				glcore::GL_UNSIGNED_INT_VEC3,glcore::GL_UNSIGNED_INT_VEC4][i] ||
+			at.storage == [glcore::GL_INT,glcore::GL_INT_VEC2,
+				glcore::GL_INT_VEC3,glcore::GL_INT_VEC4][i] ||
+			at.storage == [glcore::GL_FLOAT,glcore::GL_FLOAT_VEC2,
+				glcore::GL_FLOAT_VEC3,glcore::GL_FLOAT_VEC4][i]
 		}else {false}
 	}
 }
@@ -127,10 +131,10 @@ impl context::Context	{
 		Mesh{ name:name, attribs:ats, index:None, poly_type:ptype, num_vert:nv, num_ind:ni, black_list:~[] }
 	}
 
-	fn disable_mesh_attribs( va : &buf::VertexArray )	{
+	fn disable_mesh_attribs( va : &buf::VertexArray, clean_mask : uint )	{
 		assert self.vertex_array.is_active(va);
 		for va.data.eachi |i,vd|	{
-			if vd.enabled	{
+			if clean_mask&(1<<i)!=0u && vd.enabled	{
 				glcore::glDisableVertexAttribArray( i as glcore::GLuint );
 				vd.enabled = false;
 			}
@@ -170,7 +174,7 @@ impl context::Context	{
 		}
 		// bind attributes
 		self.bind_vertex_array( va );
-		self.disable_mesh_attribs( va );
+		let mut va_clean_mask = va.get_mask();
 		for prog.attribs.each |name,pat|	{
 			match m.attribs.find(name)	{
 				Some(sat) => {
@@ -180,6 +184,7 @@ impl context::Context	{
 							*name, *prog.handle as int ));
 						return false;
 					}
+					va_clean_mask &= !(1<<pat.loc);
 					self.bind_mesh_attrib( va, pat.loc, &sat );
 				},
 				None => {
@@ -190,6 +195,7 @@ impl context::Context	{
 				}
 			}
 		}
+		self.disable_mesh_attribs( va, va_clean_mask );
 		// call draw
 		match m.index	{
 			Some(el) =>	{

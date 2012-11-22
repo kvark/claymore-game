@@ -69,6 +69,7 @@ pub struct Record<C>	{
 }
 
 pub trait Player<C>	{
+	//FIXME: use &str when possible
 	pure fn find_record( name : ~str )-> Option< @Record<C> >;
 	fn set_record( rec : &Record<C>, time : float );
 }
@@ -105,6 +106,7 @@ pub struct Action<C>	{
 	start	: float,
 }
 
+//FIXME: can't use on Rust-0.4
 pub fn make_action<C>( p : @Player<C>, name : ~str )-> Option<Action<C>>	{
 	match p.find_record(name)	{
 		Some(r)	=> Some(Action	{

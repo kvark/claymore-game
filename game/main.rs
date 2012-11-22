@@ -8,10 +8,13 @@ extern mod engine;
 
 struct Sample	{
 	context		: engine::context::Context,
+	armature	: @engine::space::Armature,
 	entity		: engine::draw::Entity,
 	technique	: engine::draw::Technique,
 	texture		: @engine::texture::Texture,
 	mut frames	: uint,
+	action		: engine::anim::Act,
+	start		: float,
 }
 
 
@@ -41,6 +44,7 @@ fn init( wid : uint, het : uint ) -> Sample	{
 			mesh	: mesh,
 			range	: mesh.get_range(),
 			mods	: ~[armature as @engine::draw::Mod],
+			//mods	: ~[],
 			material: material,
 		}
 	};
@@ -69,11 +73,12 @@ fn init( wid : uint, het : uint ) -> Sample	{
 	// init parameters
 	{
 		// send armature
+		armature.set_record( armature.actions[0], 0f );
 		armature.update();
 		let mut d2 = engine::shade::create_data();
 		armature.fill_data( &mut d2 );
 		for d2.each() |name,val|	{
-			entity.set_data( copy *name, *val );
+			entity.set_data( copy *name, copy *val );
 		}
 		// compute matrices
 		let aspect = (wid as float) / (het as float);
@@ -102,11 +107,23 @@ fn init( wid : uint, het : uint ) -> Sample	{
 	// done
 	ct.check(~"init");
 	io::println(fmt!( "init: mesh %s, texture %u", entity.mesh.name, *tex.handle as uint ));
-	Sample { context:ct, entity:entity, technique:tech, texture:tex, frames:0 }
+	Sample { context:ct, armature:armature, entity:entity, technique:tech, texture:tex,
+		frames:0, action:@engine::anim::make_delay(1f) as @engine::anim::Act,
+		start:engine::anim::get_time() }
 }
 
 
 fn render( s : &Sample ) ->bool	{
+	if true	{	// update animation
+		let t = engine::anim::get_time() - s.start;
+		s.armature.set_record( s.armature.actions[0], t );
+		s.armature.update();
+		let mut d2 = engine::shade::create_data();
+		s.armature.fill_data( &mut d2 );
+		for d2.each() |name,val|	{
+			s.entity.set_data( copy *name, copy *val );
+		}		
+	}
 	if true {	// compute new rotation matrix
 		let angle = (s.frames as f32) * 0.02f32;
 		let sn = f32::sin(angle), cn = f32::cos(angle);

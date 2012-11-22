@@ -41,6 +41,7 @@ pub enum Uniform	{
 	UniInt(int),
 	UniFloatVec(lmath::vector::vec4),
 	UniIntVec(lmath::vector::ivec4),
+	UniFloatVecArray(~[lmath::vector::vec4]),
 	UniQuat(lmath::quaternion::quat4),
 	UniMatrix(bool,lmath::matrix::mat4),
 	UniTexture(uint,@texture::Texture),
@@ -54,6 +55,7 @@ impl Uniform : cmp::Eq	{
 			(&UniFloatVec(fv1),&UniFloatVec(fv2))	=> fv1==fv2,
 			//FIXME: waiting for lmath to cover that
 			//(&UniIntVec(fi1),&UniIntVec(fi2))		=> fi1==fi2,
+			(&UniFloatVecArray(fa1),&UniFloatVecArray(fa2))	=> fa1==fa2,
 			(&UniQuat(q1),&UniQuat(q2))				=> q1==q2,
 			(&UniMatrix(b1,m1),&UniMatrix(b2,m2))	=> b1==b2 && m1==m2,
 			(&UniTexture(u1,_),&UniTexture(u2,_))	=> u1==u2,
@@ -67,14 +69,14 @@ impl Uniform : cmp::Eq	{
 struct Parameter	{
 	loc		: Location,
 	storage	: glcore::GLenum,
-	size	: glcore::GLint,
-	mut value	: Uniform
+	size	: uint,
+	mut value	: Uniform,
 }
 
 pub struct Attribute	{
 	loc		: uint,
 	storage	: glcore::GLenum,
-	size	: glcore::GLint
+	size	: uint,
 }
 
 
@@ -82,7 +84,7 @@ impl Parameter	{
 	priv unsafe fn read( h : Handle )-> bool	{
 		let t = self.storage;
 		let loc = *self.loc;
-		assert loc >= 0;
+		assert loc>=0 && self.size==1u;
 		if t == glcore::GL_FLOAT	{
 			let mut v = 0f32;
 			glcore::glGetUniformfv( *h, loc, ptr::addr_of(&v) );
@@ -119,6 +121,9 @@ impl Parameter	{
 			UniInt(v)		=> glcore::glUniform1i( loc, v as glcore::GLint ),
 			UniFloatVec(v)	=> glcore::glUniform4fv( loc, 1, ptr::addr_of(&v.x) ),
 			UniIntVec(v)	=> glcore::glUniform4iv( loc, 1, v.to_ptr() ),
+			UniFloatVecArray(v)	=> unsafe	{
+				glcore::glUniform4fv( loc, self.size as glcore::GLint, vec::raw::to_ptr(v) as *glcore::GLfloat )
+			},
 			UniQuat(v)		=> glcore::glUniform4fv( loc, 1, v.to_ptr() ),
 			UniMatrix(b,v)	=> glcore::glUniformMatrix4fv( loc, 1, b as glcore::GLboolean, ptr::addr_of(&v.x.x) ),
 			UniTexture(u,_)	=> glcore::glUniform1i( loc, u as glcore::GLint ),
@@ -162,7 +167,7 @@ impl Program	{
 		match self.params.find_ref(&name)	{
 			Some(ref par) =>	{
 				par.read( self.handle );
-				par.value
+				copy par.value
 			},
 			None => {Unitialized}
 		}
@@ -191,11 +196,17 @@ impl Program	{
 	}
 }
 
+impl Program : context::State	{
+	fn sync_back()-> bool	{
+		true
+	}
+}
+
 
 priv fn query_attributes( h : Handle )-> AttriMap	{
 	//assert glcore::glGetError() == 0;
-	let mut num		= 0 as glcore::GLint;
-	let mut max_len	= 0 as glcore::GLint;
+	let num		= 0 as glcore::GLint;
+	let max_len	= 0 as glcore::GLint;
 	let mut info_bytes	: ~[libc::c_char];
 	let mut raw_bytes	: *libc::c_char;
 	unsafe	{
@@ -205,21 +216,20 @@ priv fn query_attributes( h : Handle )-> AttriMap	{
 		raw_bytes = vec::raw::to_ptr(info_bytes);
 	}
 	let mut rez		= send_map::linear::linear_map_with_capacity::<~str,Attribute>( num as uint );
-	while num>(0 as glcore::GLint)	{
-		num -= 1;
+	while rez.len() < num as uint	{
 		let mut length	= 0 as glcore::GLint;
 		let mut size	= 0 as glcore::GLint;
 		let mut storage	= 0 as glcore::GLenum;
 		let mut name 	: ~str;
 		unsafe	{
-			glcore::glGetActiveAttrib( *h, num as glcore::GLuint, max_len,
+			glcore::glGetActiveAttrib( *h, rez.len() as glcore::GLuint, max_len,
 				ptr::addr_of(&length), ptr::addr_of(&size),
 				ptr::addr_of(&storage), raw_bytes );
 			name = str::raw::from_c_str_len( raw_bytes, length as uint );
 		}
 		info_bytes[length] = 0;
 		let loc = glcore::glGetAttribLocation( *h, raw_bytes );
-		rez.insert( name, Attribute{ loc:loc as uint, storage:storage, size:size } );
+		rez.insert( name, Attribute{ loc:loc as uint, storage:storage, size:size as uint } );
 	}
 	rez
 }
@@ -227,8 +237,8 @@ priv fn query_attributes( h : Handle )-> AttriMap	{
 
 priv fn query_parameters( h : Handle )-> ParaMap	{
 	//assert glcore::glGetError() == 0;
-	let mut num		= 0 as glcore::GLint;
-	let mut max_len	= 0 as glcore::GLint;
+	let num		= 0 as glcore::GLint;
+	let max_len	= 0 as glcore::GLint;
 	let mut info_bytes	: ~[libc::c_char];
 	let mut raw_bytes	: *libc::c_char;
 	unsafe	{
@@ -238,22 +248,21 @@ priv fn query_parameters( h : Handle )-> ParaMap	{
 		raw_bytes	= vec::raw::to_ptr(info_bytes);
 	}
 	let mut rez		= send_map::linear::linear_map_with_capacity::<~str,Parameter>( num as uint );
-	while num>(0 as glcore::GLint)	{
-		num -= 1;
+	while rez.len() < num as uint	{
 		let mut length	= 0 as glcore::GLint;
 		let mut size	= 0 as glcore::GLint;
 		let mut storage	= 0 as glcore::GLenum;
 		let mut name 	: ~str;
 		unsafe	{
-			glcore::glGetActiveUniform( *h, num as glcore::GLuint, max_len,
+			glcore::glGetActiveUniform( *h, rez.len() as glcore::GLuint, max_len,
 				ptr::addr_of(&length), ptr::addr_of(&size),
 				ptr::addr_of(&storage), raw_bytes );
 			name = str::raw::from_c_str_len( raw_bytes, length as uint );
 		}
 		info_bytes[length] = 0;
 		let loc = glcore::glGetUniformLocation( *h, raw_bytes );
-		//io::println(fmt!( "Discovered param '%s' at location %d", name, loc as int ));
-		let p = Parameter{ loc:Location(loc), storage:storage, size:size, value:Unitialized };
+		io::println(fmt!( "Discovered param '%s'[%d] at location %d", name, size as int, loc as int ));
+		let p = Parameter{ loc:Location(loc), storage:storage, size:size as uint, value:Unitialized };
 		//p.read( h );	// no need to read them here
 		rez.insert( name, p );
 	}
@@ -310,7 +319,10 @@ impl context::Context	{
 		if !ok	{
 			io::println( fmt!("Shader: %s",message) );	//TEMP
 		}
-		Object{ handle:h, target:target, alive:ok, info:message, pool:self.shader.pool_objects }
+		Object{ handle:h, target:target,
+			alive:ok, info:message,
+			pool:self.shader.pool_objects,
+		}
 	}
 	
 	pub fn create_program( shaders : ~[Object] )-> Program	{
@@ -336,10 +348,13 @@ impl context::Context	{
 			io::println( fmt!("Program: %s",message) );	//TEMP
 		}
 		// done
-		Program{ handle:h, alive:ok, info:message,
+		Program{ handle:h,
+			alive:ok, info:message,
 			attribs	:query_attributes(h),
 			params	:query_parameters(h),
-			outputs :~[], pool:self.shader.pool_programs }
+			outputs :~[],
+			pool	:self.shader.pool_programs,
+		}
 	}
 
 	priv fn _bind_program( h : Handle )	{
@@ -356,7 +371,7 @@ impl context::Context	{
 		for data.each |name,value|	{
 			match p.params.find_ref(name)	{
 				Some(ref par) =>	{
-					let mut val = *value;
+					let mut val = copy *value;	//FIXME: no copy
 					match *value	{
 						UniTexture(_,t)	=>	{
 							check_sampler( *t.target, par.storage );
@@ -364,14 +379,15 @@ impl context::Context	{
 							val = UniTexture( tex_unit, t );
 							tex_unit += 1;
 						},
-						_	=> {}
+						_	=> ()
 					}
 					if par.value != val	{
+						//io::println(fmt!( "Uploading val '%s'", *name ));
 						par.value = val;
 						par.write();
 					}
 				},
-				None => {}
+				None => (),
 			}
 		}
 		true

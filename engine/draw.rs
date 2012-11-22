@@ -141,15 +141,16 @@ impl Technique	{
 		}
 		let s_vert = self.make_vertex( e.material, e.mods );
 		let s_frag = self.make_fragment( e.material );
-		let shaders = if true	{
+		let shaders = if false	{
 			io::println("Compiling vert");
+			io::println(s_vert);
 			let sv = ct.create_shader('v',s_vert);
 			io::println("Compiling frag");
+			io::println(s_frag);
 			let sf = ct.create_shader('f',s_frag);
 			io::println("Linking");
 			~[sv,sf]
 		}else	{
-			//io::println(s_vert); io::println(s_frag);
 			~[ ct.create_shader('v',s_vert), ct.create_shader('f',s_frag) ]
 		};
 		Some( @ct.create_program(shaders) )

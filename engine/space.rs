@@ -6,61 +6,6 @@ pub type Scale = f32;
 
 
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - //
-//		Interpolation & Pretty							//
-
-pub trait Interpolate	{
-	pure fn interpolate( other : &self, t : float )-> self;
-}
-
-impl Vector : Interpolate	{
-	pure fn interpolate( other : &Vector, t : float )-> Vector	{
-		let t1  = (1f-t) as f32, t2 = t as f32;
-		self.mul_t(t1).add_v( &other.mul_t(t2) )
-	}
-}
-
-impl Quaternion : Interpolate	{
-	pure fn interpolate( other : &Quaternion, t : float )-> Quaternion	{
-		let t1  = (1f-t) as f32, t2 = t as f32;
-		self.mul_t(t1).add_q( &other.mul_t(t2) )
-	}
-}
-
-impl Scale : Interpolate	{
-	pure fn interpolate( other : &Scale, t : float )-> Scale	{
-		let t1  = (1f-t) as f32, t2 = t as f32;
-		self*t1 + other*t2
-	}
-}
-
-
-pub trait Pretty	{
-	pure fn to_string()-> ~str;
-}
-
-impl Vector : Pretty	{
-	pure fn to_string()-> ~str	{
-		fmt!( "(%f,%f,%f)", self.x as float, self.y as float, self.z as float )
-	}
-}
-impl lmath::vector::vec4 : Pretty	{
-	pure fn to_string()-> ~str	{
-		fmt!( "(%f,%f,%f,%f)", self.x as float, self.y as float, self.z as float, self.w as float )
-	}	
-}
-
-impl Matrix : Pretty	{
-	pure fn to_string()-> ~str	{
-		fmt!("/%s\\\n|%s|\n|%s|\n\\%s/",
-			self.row(0).to_string(),
-			self.row(1).to_string(),
-			self.row(2).to_string(),
-			self.row(3).to_string())
-	}
-}
-
-
-//- - - - - - - - - - - - - - - - - - - - - - - - - - - //
 //		Quaternion Space								//
 
 pub trait Space	{
@@ -128,6 +73,72 @@ pub pure fn identity()-> QuatSpace	{
 		position	: lmath::vector::Vec3::new(0f32,0f32,0f32),
 		orientation	: lmath::quaternion::Quat::new(1f32,0f32,0f32,0f32),
 		scale		: 1f32,
+	}
+}
+
+
+//- - - - - - - - - - - - - - - - - - - - - - - - - - - //
+//		Interpolation & Pretty							//
+
+pub trait Interpolate	{
+	pure fn interpolate( other : &self, t : float )-> self;
+}
+
+impl Vector : Interpolate	{
+	pure fn interpolate( other : &Vector, t : float )-> Vector	{
+		let t1  = (1f-t) as f32, t2 = t as f32;
+		self.mul_t(t1).add_v( &other.mul_t(t2) )
+	}
+}
+
+impl Quaternion : Interpolate	{
+	pure fn interpolate( other : &Quaternion, t : float )-> Quaternion	{
+		let t1  = (1f-t) as f32, t2 = t as f32;
+		self.mul_t(t1).add_q( &other.mul_t(t2) )
+	}
+}
+
+impl Scale : Interpolate	{
+	pure fn interpolate( other : &Scale, t : float )-> Scale	{
+		let t1  = (1f-t) as f32, t2 = t as f32;
+		self*t1 + other*t2
+	}
+}
+
+
+pub trait Pretty	{
+	pure fn to_string()-> ~str;
+}
+
+impl Vector : Pretty	{
+	pure fn to_string()-> ~str	{
+		fmt!( "(%f,%f,%f)", self.x as float, self.y as float, self.z as float )
+	}
+}
+impl lmath::vector::vec4 : Pretty	{
+	pure fn to_string()-> ~str	{
+		fmt!( "(%f,%f,%f,%f)", self.x as float, self.y as float, self.z as float, self.w as float )
+	}	
+}
+impl Quaternion : Pretty	{
+	pure fn to_string()-> ~str	{
+		fmt!( "(%f,%f,%f,%f)", self.x as float, self.y as float, self.z as float, self.w as float )
+	}
+}
+impl QuatSpace : Pretty	{
+	pure fn to_string()-> ~str	{
+		fmt!( "{pos:%s,rot:%s,scale:%f}", self.position.to_string(),
+			self.orientation.to_string(), self.scale as float )
+	}
+}
+
+impl Matrix : Pretty	{
+	pure fn to_string()-> ~str	{
+		fmt!("/%s\\\n|%s|\n|%s|\n\\%s/",
+			self.row(0).to_string(),
+			self.row(1).to_string(),
+			self.row(2).to_string(),
+			self.row(3).to_string())
 	}
 }
 
@@ -215,24 +226,28 @@ pub struct Armature	{
 
 
 impl Armature : draw::Mod	{
-	pure fn get_name()-> ~str	{ ~"arm" }
+	pure fn get_name()-> ~str	{ ~"Arm" }
 	pure fn get_code()-> ~str	{ copy self.code }
 	//FIXME: make pure when Rust allows
 	//TODO: use float arrays
 	fn fill_data( data : &mut shade::DataMap )	{
 		assert self.bones.len() < self.max_bones;
 		let mut id = identity();
-		let mut i = 0u;
-		while i<self.max_bones	{
-			let space = if i==0u || i>self.bones.len() {&mut id}
-				else { &mut self.bones[i-1u].node.space };
-			let pos_scale = lmath::vector::Vec4::new(
+		let mut pos = vec::with_capacity::<lmath::vector::vec4>( self.max_bones );
+		let mut rot = vec::with_capacity::<lmath::vector::vec4>( self.max_bones );
+		while pos.len() < self.max_bones	{
+			let space = if pos.len()==0u || pos.len()>self.bones.len() {&mut id}
+				else { &mut self.bones[pos.len()-1u].transform };
+			pos.push( lmath::vector::Vec4::new(
 				space.position.x, space.position.y, space.position.z,
-				space.scale );
-			data.insert( fmt!("bones[%u].pos",i), shade::UniFloatVec(pos_scale) );
-			data.insert( fmt!("bones[%u].rot",i), shade::UniQuat(space.orientation) );
-			i += 1u;
+				space.scale ));
+			rot.push( lmath::vector::Vec4::new(
+				space.orientation.x, space.orientation.y,
+				space.orientation.z, space.orientation.w
+				));
 		}
+		data.insert( ~"bone_pos[0]", shade::UniFloatVecArray(pos) );
+		data.insert( ~"bone_rot[0]", shade::UniFloatVecArray(rot) );
 	}
 }
 
@@ -255,7 +270,7 @@ impl Armature	{
 					assert pid < cache_bind.len();
 					assert is_same_node( b.node.parent, Some(self.bones[pid].node) );
 					let pose = b.node.world_space();
-					let bind_pose_inv =  bind_inv * cache_bind[pid];
+					let bind_pose_inv = bind_inv.mul( &cache_bind[pid] );
 					cache_bind.push( bind_pose_inv );
 					pose.mul( &bind_pose_inv )
 				},
@@ -265,6 +280,7 @@ impl Armature	{
 					b.node.space.mul( &bind_inv )
 				}
 			};
+			//io::println(fmt!( "Bone '%s' %s", b.node.name, b.transform.to_string() ));
 		}
 		self.last_updated += 1u;
 	}

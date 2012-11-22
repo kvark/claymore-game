@@ -2,7 +2,9 @@
 DIR=${NAME}-game
 RUST=/usr/local/bin/rustc
 
-game-code: engine-code
+all: engine-code game-code
+
+game-code:
 	${RUST} game/claymore.rc -L lib --out-dir build
 
 engine-code:

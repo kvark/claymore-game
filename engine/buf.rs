@@ -62,6 +62,18 @@ pub struct VertexArray	{
 	}
 }
 
+impl VertexArray	{
+	pure fn get_mask()-> uint	{
+		let mut m = 0u;
+		for self.data.eachi() |i,vd|	{
+			if vd.enabled	{
+				m |= 1<<i;
+			}
+		}
+		m
+	}
+}
+
 impl VertexArray : context::State	{
 	fn sync_back()->bool	{
 		//FIXME
