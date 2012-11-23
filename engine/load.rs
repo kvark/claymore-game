@@ -185,7 +185,7 @@ pub fn read_armature( br : &Reader, node_opt : Option<@space::Node>, _dual_quat 
 		let space = read_space(br);
 		bones.push(space::Bone{
 			node		: @space::Node{ name:name, space:space, parent:parent, actions:~[] },
-			bind_pose	: space,
+			bind_space	: space,
 			transform	: space::identity(),
 			parent_id	: if pid==0u {None} else {Some(pid-1u)},
 		});

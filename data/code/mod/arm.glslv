@@ -27,5 +27,6 @@ vec3 modifyPosition(vec3 pos)	{
 }
 
 vec3 modifyVector(vec3 vector)	{
-	return qrot( trans.rot, vector );
+	return vector;
+	//return qrot( trans.rot, vector );
 }

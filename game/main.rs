@@ -116,7 +116,10 @@ fn init( wid : uint, het : uint ) -> Sample	{
 fn render( s : &Sample ) ->bool	{
 	if true	{	// update animation
 		let t = engine::anim::get_time() - s.start;
-		s.armature.set_record( s.armature.actions[0], t );
+		let r = s.armature.actions[0];
+		let nloops = (t / r.duration) as uint;
+		let t2 = t - r.duration * (nloops as float);
+		s.armature.set_record( r, t2 );
 		s.armature.update();
 		let mut d2 = engine::shade::create_data();
 		s.armature.fill_data( &mut d2 );

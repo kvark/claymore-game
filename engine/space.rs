@@ -92,6 +92,7 @@ impl Vector : Interpolate	{
 }
 
 impl Quaternion : Interpolate	{
+	//FIXME: use slerp
 	pure fn interpolate( other : &Quaternion, t : float )-> Quaternion	{
 		let t1  = (1f-t) as f32, t2 = t as f32;
 		self.mul_t(t1).add_q( &other.mul_t(t2) )
@@ -165,7 +166,7 @@ pub struct Node	{
 impl Node	{
 	pure fn world_space() -> QuatSpace	{
 		match self.parent	{
-			Some(p)	=> p.world_space().mul( &self.space ),
+			Some(p)	=> p.world_space() * self.space,
 			None	=> self.space
 		}
 	}
@@ -194,14 +195,14 @@ impl Node : anim::Player<NodeCurve>	{
 
 pub struct Bone	{
 	node			: @Node,
-	bind_pose		: QuatSpace,
+	bind_space		: QuatSpace,
 	mut transform	: QuatSpace,
 	parent_id		: Option<uint>,
 }
 
 impl Bone	{
 	fn reset()	{
-		self.node.space = self.bind_pose;
+		self.node.space = self.bind_space;
 		self.transform = identity();
 	}
 }
@@ -264,20 +265,20 @@ impl Armature	{
 	fn update()	{
 		let mut cache_bind = vec::with_capacity::<QuatSpace>( self.bones.len() );
 		for self.bones.each() |b|	{
-			let bind_inv = b.bind_pose.inverse();
+			let bind_inv = b.bind_space.inverse();
 			b.transform = match b.parent_id	{
 				Some(pid)	=>	{
 					assert pid < cache_bind.len();
 					assert is_same_node( b.node.parent, Some(self.bones[pid].node) );
 					let pose = b.node.world_space();
-					let bind_pose_inv = bind_inv.mul( &cache_bind[pid] );
+					let bind_pose_inv = bind_inv * cache_bind[pid];
 					cache_bind.push( bind_pose_inv );
-					pose.mul( &bind_pose_inv )
+					pose * bind_pose_inv
 				},
 				None	=>	{
 					assert is_same_node( b.node.parent, self.node );
 					cache_bind.push( bind_inv );
-					b.node.space.mul( &bind_inv )
+					b.node.space * bind_inv
 				}
 			};
 			//io::println(fmt!( "Bone '%s' %s", b.node.name, b.transform.to_string() ));
@@ -294,9 +295,15 @@ impl Armature : anim::Player<ArmatureCurve>	{
 	fn set_record( a : &ArmatureRecord, time : float )	{
 		for a.curves.each() |chan|	{
 			match chan	{
-				&ACuPos(bi,c)		=> self.bones[bi].node.space.position		= c.sample(time),
-				&ACuRotQuat(bi,c)	=> self.bones[bi].node.space.orientation	= c.sample(time),
-				&ACuScale(bi,c)		=> self.bones[bi].node.space.scale			= c.sample(time),
+				&ACuPos(bi,c)		=> { let b = &self.bones[bi];
+					b.node.space.position	= b.bind_space.transform( &c.sample(time) );
+				},
+				&ACuRotQuat(bi,c)	=> { let b = &self.bones[bi];
+					b.node.space.orientation= b.bind_space.orientation.mul_q( &c.sample(time) );
+				},
+				&ACuScale(bi,c)		=> { let b = &self.bones[bi];
+					b.node.space.scale		= b.bind_space.scale * c.sample(time);
+				}
 			}
 		}
 	}

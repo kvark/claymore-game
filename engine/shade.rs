@@ -222,20 +222,22 @@ priv fn query_attributes( h : Handle )-> AttriMap	{
 		info_bytes = vec::from_elem( max_len as uint, 0 as libc::c_char );
 		raw_bytes = vec::raw::to_ptr(info_bytes);
 	}
+	io::println(fmt!( "Querying %d attributes:", num as int ));
 	let mut rez		= send_map::linear::linear_map_with_capacity::<~str,Attribute>( num as uint );
-	while rez.len() < num as uint	{
+	for uint::range(0u,num as uint) |i|	{
 		let mut length	= 0 as glcore::GLint;
 		let mut size	= 0 as glcore::GLint;
 		let mut storage	= 0 as glcore::GLenum;
 		let mut name 	: ~str;
 		unsafe	{
-			glcore::glGetActiveAttrib( *h, rez.len() as glcore::GLuint, max_len,
+			glcore::glGetActiveAttrib( *h, i as glcore::GLuint, max_len,
 				ptr::addr_of(&length), ptr::addr_of(&size),
 				ptr::addr_of(&storage), raw_bytes );
 			name = str::raw::from_c_str_len( raw_bytes, length as uint );
 		}
 		info_bytes[length] = 0;
 		let loc = glcore::glGetAttribLocation( *h, raw_bytes );
+		io::println(fmt!( "\t[%d] = '%s',\tformat %d", loc as int, name, storage as int ));
 		rez.insert( name, Attribute{ loc:loc as uint, storage:storage, size:size as uint } );
 	}
 	rez
@@ -254,21 +256,22 @@ priv fn query_parameters( h : Handle )-> ParaMap	{
 		info_bytes	= vec::from_elem( max_len as uint, 0 as libc::c_char );
 		raw_bytes	= vec::raw::to_ptr(info_bytes);
 	}
+	io::println(fmt!( "Querying %d parameters:", num as int ));
 	let mut rez		= send_map::linear::linear_map_with_capacity::<~str,Parameter>( num as uint );
-	while rez.len() < num as uint	{
+	for uint::range(0u,num as uint) |i|	{
 		let mut length	= 0 as glcore::GLint;
 		let mut size	= 0 as glcore::GLint;
 		let mut storage	= 0 as glcore::GLenum;
 		let mut name 	: ~str;
 		unsafe	{
-			glcore::glGetActiveUniform( *h, rez.len() as glcore::GLuint, max_len,
+			glcore::glGetActiveUniform( *h, i as glcore::GLuint, max_len,
 				ptr::addr_of(&length), ptr::addr_of(&size),
 				ptr::addr_of(&storage), raw_bytes );
 			name = str::raw::from_c_str_len( raw_bytes, length as uint );
 		}
 		info_bytes[length] = 0;
 		let loc = glcore::glGetUniformLocation( *h, raw_bytes );
-		io::println(fmt!( "Discovered param '%s'[%d] at location %d", name, size as int, loc as int ));
+		io::println(fmt!( "\t[%d-%d]\t= '%s',\tformat %d", loc as int, ((loc + size) as int) -1, name, storage as int ));
 		let p = Parameter{ loc:Location(loc), storage:storage, size:size as uint, value:Unitialized };
 		//p.read( h );	// no need to read them here
 		rez.insert( name, p );
