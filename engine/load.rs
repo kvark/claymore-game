@@ -239,15 +239,22 @@ pub fn read_armature( br : &Reader, dual_quat : bool )-> space::Armature	{
 		});
 	}
 	br.leave();
-	// finish
-	//FIXME: extract max_bones from the shader
+	// load shader
 	let shader = read_text( if dual_quat
 		{~"data/code/mod/arm_dualquat.glslv"} else
 		{~"data/code/mod/arm.glslv"} );
+	let max = {
+		let start	= str::find_str(shader,~"MAX_BONES")	.expect(~"Has to have MAX_BONES");
+		let end		= str::find_char_from(shader,';',start)	.expect(~"Line has to end");
+		let split	= shader.slice(start,end).split_char(' ');
+		uint::from_str( split[split.len()-1u] )				.expect(~"Unable to parse int")
+	};
+	io::println(fmt!( "\tDetected %u bones", max ));
+	// finish
 	space::Armature{
 		bones	: bones,
 		code	: shader,
 		actions	: actions,
-		max_bones		: 100u,
+		max_bones	: max,
 	}
 }

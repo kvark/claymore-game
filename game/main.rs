@@ -24,7 +24,7 @@ fn init( wid : uint, het : uint ) -> Sample	{
 	// crate armature
 	let armature = @engine::load::read_armature(
 		&engine::load::create_reader(~"data/jazz_dancing.k3arm"),
-		false );
+		true );
 	// create entity
 	let entity = {
 		let mesh = @engine::load::read_mesh(

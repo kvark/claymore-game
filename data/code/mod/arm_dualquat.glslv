@@ -1,8 +1,11 @@
-attribute vec4	a_BoneIndex;
-attribute vec4	a_BoneWeight;
+in ivec4	a_BoneIndex;
+in vec4		a_BoneWeight;
+
+const int MAX_BONES = 100;
 
 struct Space	{ vec4 pos,rot; };
-uniform Space bones[90];
+uniform vec4 bone_pos[MAX_BONES];
+uniform vec4 bone_rot[MAX_BONES];
 
 // Quaternion routines
 vec4 qinv(vec4 q)	{
@@ -37,9 +40,9 @@ Space trans = Space( vec4(0.0), vec4(0.0) );
 vec3 modifyPosition(vec3 pos)	{
 	DualQuat dq = DualQuat( vec4(0.0), vec4(0.0), 0.0 );
 	for(int i=0; i<4; ++i)	{
-		int bid = int(a_BoneIndex[i]+0.5);
+		int bid = a_BoneIndex[i];
 		float w = a_BoneWeight[i];
-		Space s = bones[bid];
+		Space s = Space( bone_pos[bid], bone_rot[bid] );
 		vec4 pos = vec4(0.5 * s.pos.xyz, 0.0);
 		dq.re += w * s.rot;
 		dq.im += w * qmul( pos, s.rot );

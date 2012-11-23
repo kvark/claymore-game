@@ -1,9 +1,11 @@
 in ivec4	a_BoneIndex;
 in vec4		a_BoneWeight;
 
+const int MAX_BONES = 100;
+
 struct Space { vec4 pos; vec4 rot; };
-uniform vec4 bone_pos[90];
-uniform vec4 bone_rot[90];
+uniform vec4 bone_pos[MAX_BONES];
+uniform vec4 bone_rot[MAX_BONES];
 
 vec3 qrot(vec4 q, vec3 v)	{
 	return v + 2.0*cross(q.xyz, cross(q.xyz,v) + q.w*v);
@@ -27,6 +29,5 @@ vec3 modifyPosition(vec3 pos)	{
 }
 
 vec3 modifyVector(vec3 vector)	{
-	return vector;
-	//return qrot( trans.rot, vector );
+	return qrot( trans.rot, vector );
 }

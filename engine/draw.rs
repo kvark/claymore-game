@@ -94,17 +94,13 @@ impl Technique	{
 		}
 		// add material
 		buf.push(fmt!( "//--- Material: %s ---//", mat.name ));
-		let mod_start = match str::find_str( mat.code_vertex, ~"//%"+S_MOD )	{
-			Some(p)	=> p,
-			None	=> fail(~"Unable to find modifier start marker")
-		};
-		buf.push( mat.code_vertex.substr(0,mod_start) );
-		let mod_end = match str::find_str_from( mat.code_vertex, "\n", mod_start )	{
-			Some(p)	=> p,
-			None	=> fail(~"Unable to find modifier end marker")
-		};
+		let mod_start = str::find_str( mat.code_vertex, ~"//%"+S_MOD )
+			.expect(~"Unable to find modifier start marker");
+		buf.push( mat.code_vertex.slice(0,mod_start) );
+		let mod_end = str::find_str_from( mat.code_vertex, "\n", mod_start )
+			.expect(~"Unable to find modifier end marker");
 		// extract position and vector names
-		let split = mat.code_vertex.substr(mod_start,mod_end-mod_start).split_char(' ');
+		let split = mat.code_vertex.slice(mod_start,mod_end).split_char(' ');
 		// add modifier calls
 		for mods.each() |m|	{
 			for split.eachi() |i,s|	{
@@ -114,7 +110,7 @@ impl Technique	{
 				}
 			}
 		}
-		buf.push( mat.code_vertex.substr( mod_end, mat.code_vertex.len()-mod_end ) );
+		buf.push( mat.code_vertex.slice( mod_end, mat.code_vertex.len() ) );
 		// finish
 		buf.push(fmt!( "//--- Technique: %s ---//", self.name ));
 		buf.push( copy self.code_vertex );
@@ -182,15 +178,9 @@ impl Technique	{
 
 
 pub pure fn extract_metas( code : &str )->~[~str]	{
-	let meta_start	= match str::find_str(code,"//%meta")	{
-			Some(p)	=> p,
-			None	=> fail(~"Unable to find meta start marker")
-	};
-	let meta_size		= match str::find_str_from(code,"\n",meta_start)	{
-			Some(p)	=> p - meta_start,
-			None	=> fail(~"Unable to find meta end marker")
-	};
-	let split = code.substr( meta_start, meta_size ).split_char(' ');
+	let meta_start	= str::find_str(code,"//%meta")				.expect(~"Unable to find meta start marker");
+	let meta_size	= str::find_str_from(code,"\n",meta_start)	.expect(~"Unable to find meta end marker");
+	let split = code.slice( meta_start, meta_size ).split_char(' ');
 	//split.tail()	//FIXME
 	vec::from_fn(split.len()-1, |i| copy split[i])
 }
