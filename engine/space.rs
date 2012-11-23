@@ -196,6 +196,7 @@ impl Node : anim::Player<NodeCurve>	{
 pub struct Bone	{
 	node			: @Node,
 	bind_space		: QuatSpace,
+	bind_pose_inv	: QuatSpace,
 	mut transform	: QuatSpace,
 	parent_id		: Option<uint>,
 }
@@ -217,12 +218,10 @@ pub type ArmatureRecord = anim::Record<ArmatureCurve>;
 
 
 pub struct Armature	{
-	node	: Option<@Node>,
 	bones	: ~[Bone],
 	code	: ~str,
 	actions	: ~[@ArmatureRecord],	//FIXME mutable
 	max_bones	: uint,
-	mut last_updated	: uint,
 }
 
 
@@ -233,12 +232,14 @@ impl Armature : draw::Mod	{
 	//TODO: use float arrays
 	fn fill_data( data : &mut shade::DataMap )	{
 		assert self.bones.len() < self.max_bones;
-		let mut id = identity();
+		let id = identity();
 		let mut pos = vec::with_capacity::<lmath::vector::vec4>( self.max_bones );
 		let mut rot = vec::with_capacity::<lmath::vector::vec4>( self.max_bones );
 		while pos.len() < self.max_bones	{
-			let space = if pos.len()==0u || pos.len()>self.bones.len() {&mut id}
-				else { &mut self.bones[pos.len()-1u].transform };
+			let space = if pos.len()>0u && pos.len()<self.bones.len()	{
+					let b = &self.bones[pos.len()-1u];
+					b.node.world_space() * b.bind_pose_inv
+				}else {id};
 			pos.push( lmath::vector::Vec4::new(
 				space.position.x, space.position.y, space.position.z,
 				space.scale ));
@@ -260,33 +261,6 @@ pure fn is_same_node( a: Option<@Node>, b : Option<@Node> )-> bool	{
 		(_,_)		=> false,
 	}
 }
-
-impl Armature	{
-	fn update()	{
-		let mut cache_bind = vec::with_capacity::<QuatSpace>( self.bones.len() );
-		for self.bones.each() |b|	{
-			let bind_inv = b.bind_space.inverse();
-			b.transform = match b.parent_id	{
-				Some(pid)	=>	{
-					assert pid < cache_bind.len();
-					assert is_same_node( b.node.parent, Some(self.bones[pid].node) );
-					let pose = b.node.world_space();
-					let bind_pose_inv = bind_inv * cache_bind[pid];
-					cache_bind.push( bind_pose_inv );
-					pose * bind_pose_inv
-				},
-				None	=>	{
-					assert is_same_node( b.node.parent, self.node );
-					cache_bind.push( bind_inv );
-					b.node.space * bind_inv
-				}
-			};
-			//io::println(fmt!( "Bone '%s' %s", b.node.name, b.transform.to_string() ));
-		}
-		self.last_updated += 1u;
-	}
-}
-
 
 impl Armature : anim::Player<ArmatureCurve>	{
 	pure fn find_record( name : ~str )-> Option<@ArmatureRecord>	{

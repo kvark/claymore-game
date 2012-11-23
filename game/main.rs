@@ -24,7 +24,7 @@ fn init( wid : uint, het : uint ) -> Sample	{
 	// crate armature
 	let armature = @engine::load::read_armature(
 		&engine::load::create_reader(~"data/jazz_dancing.k3arm"),
-		None, false );
+		false );
 	// create entity
 	let entity = {
 		let mesh = @engine::load::read_mesh(
@@ -74,7 +74,6 @@ fn init( wid : uint, het : uint ) -> Sample	{
 	{
 		// send armature
 		armature.set_record( armature.actions[0], 0f );
-		armature.update();
 		let mut d2 = engine::shade::create_data();
 		armature.fill_data( &mut d2 );
 		for d2.each() |name,val|	{
@@ -120,7 +119,6 @@ fn render( s : &Sample ) ->bool	{
 		let nloops = (t / r.duration) as uint;
 		let t2 = t - r.duration * (nloops as float);
 		s.armature.set_record( r, t2 );
-		s.armature.update();
 		let mut d2 = engine::shade::create_data();
 		s.armature.fill_data( &mut d2 );
 		for d2.each() |name,val|	{
