@@ -523,22 +523,86 @@ impl State : Stage	{
 }
 
 
-pub pure fn get_comparison( s : ~str )-> glcore::GLenum	{
-	if s == ~"!"	{glcore::GL_NEVER}		else
-	if s == ~"*"	{glcore::GL_ALWAYS}		else
-	if s == ~"=="	{glcore::GL_EQUAL}		else
-	if s == ~"!="	{glcore::GL_NOTEQUAL}	else
-	if s == ~"<"	{glcore::GL_LESS}		else
-	if s == ~"<="	{glcore::GL_LEQUAL}		else
-	if s == ~">"	{glcore::GL_GREATER}	else
-	if s == ~">="	{glcore::GL_GEQUAL}		else
-	{fail(fmt!( "Can not recognize comparison %s", s ))}
+pub pure fn map_comparison( s : ~str )-> glcore::GLenum	{
+	match s	{
+		~"!"	=> glcore::GL_NEVER,
+		~"*"	=> glcore::GL_ALWAYS,
+		~"=="	=> glcore::GL_EQUAL,
+		~"!="	=> glcore::GL_NOTEQUAL,
+		~"<"	=> glcore::GL_LESS,
+		~"<="	=> glcore::GL_LEQUAL,
+		~">"	=> glcore::GL_GREATER,
+		~">="	=> glcore::GL_GEQUAL,
+		_		=> fail(fmt!( "Can not recognize comparison %s", s ))
+	}
 }
 
+pub pure fn map_operation( c : char )-> glcore::GLenum	{
+	match c	{
+		'.'	=> glcore::GL_KEEP,
+		'0'	=> glcore::GL_ZERO,
+		'='	=> glcore::GL_REPLACE,
+		'!' => glcore::GL_INVERT,
+		'+'	=> glcore::GL_INCR,
+		'-' => glcore::GL_DECR,
+		'^' => glcore::GL_INCR_WRAP,
+		'v' => glcore::GL_DECR_WRAP,
+		_	=> fail(fmt!( "Can not recognize stencil operation '%c'", c ))
+	}
+}
+
+pub pure fn map_equation( s : ~str )-> glcore::GLenum	{
+	match s	{
+		~"s+d"	=> glcore::GL_FUNC_ADD,
+		~"s-d"	=> glcore::GL_FUNC_SUBTRACT,
+		~"d-s"	=> glcore::GL_FUNC_REVERSE_SUBTRACT,
+		~"max"	=> glcore::GL_MAX,
+		~"min"	=> glcore::GL_MIN,
+		_		=> fail(fmt!( "Can not recognize blend equation %s", s ))
+	}
+}
+
+pub pure fn map_factor( s : ~str )-> glcore::GLenum	{
+	match s	{
+		~"0"	=> glcore::GL_ZERO,
+		~"1"	=> glcore::GL_ONE,
+		~"Sc"	=> glcore::GL_SRC_COLOR,
+		~"1-Sc"	=> glcore::GL_ONE_MINUS_SRC_COLOR,
+		~"Dc"	=> glcore::GL_DST_COLOR,
+		~"1-Dc"	=> glcore::GL_ONE_MINUS_DST_COLOR,
+		~"Cc"	=> glcore::GL_CONSTANT_COLOR,
+		~"1-Cc"	=> glcore::GL_ONE_MINUS_CONSTANT_COLOR,
+		~"Sa"	=> glcore::GL_SRC_ALPHA,
+		~"1-Sa"	=> glcore::GL_ONE_MINUS_SRC_ALPHA,
+		~"Da"	=> glcore::GL_DST_ALPHA,
+		~"1-Da"	=> glcore::GL_ONE_MINUS_DST_ALPHA,
+		~"Ca"	=> glcore::GL_CONSTANT_ALPHA,
+		~"1-Ca"	=> glcore::GL_ONE_MINUS_CONSTANT_ALPHA,
+		~"Sa^"	=> glcore::GL_SRC_ALPHA_SATURATE,
+		_		=> fail(fmt!( "Can not recognize blend factor %s", s ))
+	}
+}
+
+
 impl State	{
-	pub fn set_depth( &mut self, sc : ~str )	{
+	pub fn set_stencil( &mut self, fun : ~str, cf : char, cdf : char, cp : char )	{
+		self.stencil.test = true;
+		self.stencil.front.function			= map_comparison(fun);
+		self.stencil.front.op_fail			= map_operation(cf);
+		self.stencil.front.op_depth_fail	= map_operation(cdf);
+		self.stencil.front.op_pass			= map_operation(cp);
+		self.stencil.back = self.stencil.front;
+	}
+	pub fn set_depth( &mut self, fun : ~str )	{
 		self.depth.test = true;
-		self.depth.fun = get_comparison(sc);
+		self.depth.fun = map_comparison(fun);
+	}
+	pub fn set_blend( &mut self, eq : ~str, src : ~str, dst : ~str )	{
+		self.blend.on = true;
+		self.blend.color.equation	= map_equation(eq);
+		self.blend.color.source		= map_factor(src);
+		self.blend.color.destination= map_factor(dst);
+		self.blend.alpha = self.blend.color;
 	}
 }
 

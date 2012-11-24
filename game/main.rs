@@ -164,7 +164,7 @@ fn make_game( wid : uint, het : uint )-> Game	{
 	let tech = {
 		let pmap = engine::call::create_plane_map( ~"o_Color", engine::frame::TarEmpty );
 		let mut rast = engine::rast::create_rast(0,0);
-		rast.depth.test = true;
+		rast.set_depth(~"<=");
 		rast.prime.cull = true;
 		let cache = @mut engine::draw::create_cache();
 		engine::draw::load_technique( ~"data/code/tech/omni1",

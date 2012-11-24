@@ -308,10 +308,12 @@ pure fn check_sampler( target : glcore::GLenum, storage : glcore::GLenum )	{
 }
 
 pure fn map_shader_type( t : char )-> glcore::GLenum	{
-	if t=='v'	{glcore::GL_VERTEX_SHADER}		else
-	if t=='f'	{glcore::GL_FRAGMENT_SHADER}	else
-	if t=='g'	{glcore::GL_GEOMETRY_SHADER}	else
-	{fail(fmt!( "Unknown shader type: %c", t ))}
+	match t	{
+		'v'	=> glcore::GL_VERTEX_SHADER,
+		'g' => glcore::GL_GEOMETRY_SHADER,
+		'f'	=> glcore::GL_FRAGMENT_SHADER,
+		_	=> fail(fmt!( "Unknown shader type: %c", t ))
+	}
 }
 
 
