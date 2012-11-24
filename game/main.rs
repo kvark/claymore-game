@@ -12,12 +12,20 @@ struct Camera	{
 }
 
 impl Camera	{
-	pure fn gen_matrix()-> lmath::matrix::mat4	{
+	pure fn get_matrix()-> lmath::matrix::mat4	{
 		self.proj * self.node.world_space().inverse().to_matrix()
 	}
-	pure fn gen_pos()-> lmath::vector::vec4	{
+	pure fn get_pos_vec4()-> lmath::vector::vec4	{
 		let v = self.node.world_space().position;
 		lmath::vector::Vec4::new( v.x, v.y, v.z, 0f32 )
+	}
+	pure fn get_view_vector()-> lmath::vector::vec3	{
+		let v = lmath::vector::Vec3::new( 0f32,0f32,-1f32 );
+		self.node.world_space().orientation.mul_v( &v )
+	}
+	pure fn get_up_vector()-> lmath::vector::vec3	{
+		let v = lmath::vector::Vec3::new( 0f32,1f32,0f32 );
+		self.node.world_space().orientation.mul_v( &v )
 	}
 }
 
@@ -46,8 +54,8 @@ impl Game	{
 			})
 		);
 		{// update matrices
-			let view_proj	= self.battle.cam.gen_matrix();
-			let cam_pos		= self.battle.cam.gen_pos();
+			let view_proj	= self.battle.cam.get_matrix();
+			let cam_pos		= self.battle.cam.get_pos_vec4();
 			let light_pos	= lmath::vector::Vec4::new( 4f32, 1f32, 6f32, 0f32 );
 			for [&self.battle.land].each |ent|	{
 				ent.set_data( ~"u_ViewProj", 	engine::shade::UniMatrix(false,view_proj) );
@@ -67,10 +75,21 @@ impl Game	{
 		self.context.check(~"render");
 		true
 	}
-	fn debug_move( x : int, y : int )	{
+	fn debug_move( rot : bool, x : int, y : int )	{
 		let mut s = self.battle.cam.node.space;
-		s.position.x += (x as f32) * 0.1f32;
-		s.position.y += (y as f32) * 0.1f32;
+		if rot	{
+			const mul : f32 = 0.02f32;
+			let a1 = (x as f32)*mul, a2 = (y as f32)*mul;
+			let c1 = f32::cos(a1), c2 = f32::cos(a2);
+			let s1 = f32::sin(a1), s2 = f32::sin(a2);
+			let q1 = lmath::quaternion::Quat::new( c1, 0f32, s1, 0f32 );
+			let q2 = lmath::quaternion::Quat::new( c2, s2, 0f32, 0f32 );
+			let q3 = s.orientation.mul_q( &q1.mul_q( &q2 ) );
+			s.orientation = q3.mul_t( 1f32 / q3.length() );
+		}else	{
+			s.position.x += (x as f32) * 0.1f32;
+			s.position.y += (y as f32) * 0.1f32;
+		}
 		self.battle.cam.node.set_space(&s);
 	}
 }
@@ -83,11 +102,8 @@ fn make_game( wid : uint, het : uint )-> Game	{
 	let cam = 	{
 		let aspect = (wid as float) / (het as float);
 		let cam_space = engine::space::QuatSpace{
-			position 	: lmath::vector::Vec3::new( 7.5f32, -6.5f32, 5f32 ),
-			orientation	: lmath::quaternion::Quat::new( -1f32, 0f32, 0f32, 0f32 ),
-			//orientation	: lmath::quaternion::Quat::new( 0.782f32, 0.482f32, 0.213f32, 0.334f32 ),
-			//position 	: lmath::vector::Vec3::new( 0f32, 0f32, 5f32 ),
-			//orientation	: lmath::quaternion::Quat::new( 1f32, 0f32, 0f32, 0f32 ),
+			position 	: lmath::vector::Vec3::new( 10f32, -10f32, 5f32 ),
+			orientation	: lmath::quaternion::Quat::new( 0.802f32, 0.447f32, 0.198f32, 0.343f32 ),
 			scale		: 1f32
 		};
 		let cam_node = @engine::space::Node{
@@ -96,13 +112,14 @@ fn make_game( wid : uint, het : uint )-> Game	{
 			parent	: None,
 			actions	: ~[],
 		};
-		io::println( cam_node.world_space().inverse().to_string() );
 		let projection = lmath::funs::projection::perspective::<f32>( 50f, aspect, 1f, 20f );
 		Camera{
 			node:cam_node,
 			proj:projection,
 		}
 	};
+	io::println( ~"View vector:" );
+	io::println( cam.get_view_vector().to_string() );
 	// load basic material & vao
 	let mat = @engine::draw::load_material(~"data/code/mat/phong");
 	let vao = @ct.create_vertex_array();
@@ -199,18 +216,19 @@ fn main()	{
 				glfw3::destroy_window(&mut window);
 				break;
 			}
+			let shift = window.get_key(glfw3::KEY_LEFT_SHIFT)!=0;
 			// debug keys
 			if window.get_key(glfw3::KEY_LEFT)!=0	{
-				game.debug_move(-1,0);
+				game.debug_move(shift,-1,0);
 			}
 			if window.get_key(glfw3::KEY_RIGHT)!=0	{
-				game.debug_move(1,0);
+				game.debug_move(shift,1,0);
 			}
 			if window.get_key(glfw3::KEY_DOWN)!=0	{
-				game.debug_move(0,-1);
+				game.debug_move(shift,0,-1);
 			}
 			if window.get_key(glfw3::KEY_UP)!=0	{
-				game.debug_move(0,1);
+				game.debug_move(shift,0,1);
 			}
 			// render
 			if !game.render()	{
