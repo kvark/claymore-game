@@ -43,8 +43,7 @@ fn init( wid : uint, het : uint ) -> Sample	{
 			vao		: @ct.create_vertex_array(),
 			mesh	: mesh,
 			range	: mesh.get_range(),
-			mods	: ~[armature as @engine::draw::Mod],
-			//mods	: ~[],
+			modifier: armature as @engine::draw::Mod,
 			material: material,
 		}
 	};
@@ -74,6 +73,8 @@ fn init( wid : uint, het : uint ) -> Sample	{
 	{
 		// send armature
 		armature.set_record( armature.actions[0], 0f );
+		//FIXME
+		//armature.fill_data( &mut entity.data );
 		let mut d2 = engine::shade::create_data();
 		armature.fill_data( &mut d2 );
 		for d2.each() |name,val|	{
@@ -119,11 +120,13 @@ fn render( s : &Sample ) ->bool	{
 		let nloops = (t / r.duration) as uint;
 		let t2 = t - r.duration * (nloops as float);
 		s.armature.set_record( r, t2 );
+		//FIXME
+		//s.armature.fill_data( &mut s.entity.data );
 		let mut d2 = engine::shade::create_data();
 		s.armature.fill_data( &mut d2 );
 		for d2.each() |name,val|	{
 			s.entity.set_data( copy *name, copy *val );
-		}		
+		}
 	}
 	if true {	// compute new rotation matrix
 		let angle = (s.frames as f32) * 0.02f32;

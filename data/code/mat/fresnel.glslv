@@ -15,9 +15,8 @@ vec3 cookVector(vec3 v)	{
 }
 
 vec3 initMaterial()	{
-	vec3 pos = a_Position;
-	vec3 nor = a_Normal.xyz;
-	//%modify pos nor
+	vec3 pos = modifyInit(a_Position);
+	vec3 nor = modifyVector(a_Normal.xyz);
 	vec3 wp = (u_World * vec4(pos,1.0)).xyz;
 	v_Normal = mat3(u_World) * nor;
 	v_Eye = cookVector( u_CameraPos.xyz - wp );

@@ -4,6 +4,13 @@ pub trait Mod	{
 	fn fill_data( data : &mut shade::DataMap );
 }
 
+impl () : Mod	{
+	pure fn get_name()->~str	{~"Dummy"}
+	pure fn get_code()->~str	{~"
+		vec3 modifyInit  (vec3 p) {return p}
+		vec3 modifyVector(vec3 v) { return v}"}
+	fn fill_data( _data : &mut shade::DataMap )	{}
+}
 
 pub struct Material	{
 	name			: ~str,
@@ -21,7 +28,7 @@ pub struct Entity	{
 	vao		: @buf::VertexArray,
 	mesh	: @mesh::Mesh,
 	range	: mesh::Range,
-	mods	: ~[@Mod],
+	modifier: @Mod,
 	material: @Material,
 }
 
@@ -33,17 +40,17 @@ impl Entity	{
 }
 
 struct CacheEntry	{
-	mat		: @Material,
-	mods	: ~[@Mod],
-	tech	: ~[~str],
+	material	: @Material,
+	modifier	: @Mod,
+	technique	: ~[~str],
 }
 
 impl CacheEntry : cmp::Eq	{
 	pure fn eq( other : &CacheEntry )-> bool	{
-		self.mat.code_vertex == other.mat.code_vertex &&
-		self.mat.code_fragment == other.mat.code_fragment &&
-		do vec::all2(self.mods,other.mods)  |m1,m2| { m1.get_code()==m2.get_code() } &&
-		self.tech == other.tech
+		self.material.code_vertex == other.material.code_vertex &&
+		self.material.code_fragment == other.material.code_fragment &&
+		self.modifier.get_code() == other.modifier.get_code();
+		self.technique == other.technique
 	}
 	pure fn ne( other : &CacheEntry )-> bool	{
 		!self.eq( other )
@@ -52,11 +59,9 @@ impl CacheEntry : cmp::Eq	{
 
 impl CacheEntry : to_bytes::IterBytes	{
 	pure fn iter_bytes(lsb0 : bool, f : to_bytes::Cb)	{
-		self.mat.name.iter_bytes( lsb0, f );
-		for self.mods.each() |m|	{
-			m.get_name().iter_bytes( lsb0, f );
-		}
-		self.tech.iter_bytes( lsb0, f );
+		self.material.name.iter_bytes( lsb0, f );
+		self.modifier.get_name().iter_bytes( lsb0, f );
+		self.technique.iter_bytes( lsb0, f );
 	}
 }
 
@@ -82,39 +87,16 @@ pub struct Technique	{
 impl Technique	{
 	pure fn get_header()-> ~str	{~"#version 150 core"}
 	
-	fn make_vertex( mat : @Material, mods : &[@Mod] )-> ~str	{
-		let S_MOD = ~"modify";
-		let mut buf : ~[~str] = ~[];
-		buf.push( self.get_header() );
-		// add modifier bases
-		for mods.each() |m|	{
-			let target = fmt!( "%s%s", S_MOD, m.get_name() );
-			buf.push(fmt!( "//--- Modifier: %s} ---//", m.get_name() ));
-			buf.push( str::replace( m.get_code(), S_MOD, target ) );
-		}
-		// add material
-		buf.push(fmt!( "//--- Material: %s ---//", mat.name ));
-		let mod_start = str::find_str( mat.code_vertex, ~"//%"+S_MOD )
-			.expect(~"Unable to find modifier start marker");
-		buf.push( mat.code_vertex.slice(0,mod_start) );
-		let mod_end = str::find_str_from( mat.code_vertex, "\n", mod_start )
-			.expect(~"Unable to find modifier end marker");
-		// extract position and vector names
-		let split = mat.code_vertex.slice(mod_start,mod_end).split_char(' ');
-		// add modifier calls
-		for mods.each() |m|	{
-			for split.eachi() |i,s|	{
-				let t = if i>1 {~"Vector"} else {~"Position"};
-				if i>0	{
-					buf.push(fmt!( "\t%s = %s%s%s(%s);", *s,S_MOD,m.get_name(),t,*s ));
-				}
-			}
-		}
-		buf.push( mat.code_vertex.slice( mod_end, mat.code_vertex.len() ) );
-		// finish
-		buf.push(fmt!( "//--- Technique: %s ---//", self.name ));
-		buf.push( copy self.code_vertex );
-		str::connect( buf, "\n" )
+	fn make_vertex( material : @Material, modifier : @Mod )-> ~str	{
+		str::connect([
+			self.get_header(),
+			fmt!( "//--- Modifier: %s ---//", modifier.get_name() ),
+			modifier.get_code(),
+			fmt!( "//--- Material: %s ---//", material.name ),
+			copy material.code_vertex,
+			fmt!( "//--- Technique: %s ---//", self.name ),
+			copy self.code_vertex
+		], "\n")
 	}
 	
 	fn make_fragment( mat : @Material )-> ~str	{
@@ -135,7 +117,7 @@ impl Technique	{
 			io::println(fmt!( "Material '%s' rejected by '%s'", e.material.name, self.name ));
 			return None;
 		}
-		let s_vert = self.make_vertex( e.material, e.mods );
+		let s_vert = self.make_vertex( e.material, e.modifier );
 		let s_frag = self.make_fragment( e.material );
 		let shaders = if false	{
 			io::println("Compiling vert");
@@ -153,8 +135,8 @@ impl Technique	{
 	}
 
 	fn get_program( e : &Entity, ct : &context::Context )-> Option<@shade::Program>	{
-		let ce = CacheEntry{ mat:e.material, mods:e.mods,
-			tech:~[copy self.code_vertex,copy self.code_fragment]
+		let ce = CacheEntry{ material:e.material, modifier:e.modifier,
+			technique:~[copy self.code_vertex,copy self.code_fragment]
 		};
 		match self.cache.find(&ce)	{
 			Some(p)	=> p,

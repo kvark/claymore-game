@@ -37,7 +37,7 @@ Space normalizeDq(DualQuat dq)	{
 
 Space trans = Space( vec4(0.0), vec4(0.0) );
 
-vec3 modifyPosition(vec3 pos)	{
+vec3 modifyInit(vec3 pos)	{
 	DualQuat dq = DualQuat( vec4(0.0), vec4(0.0), 0.0 );
 	for(int i=0; i<4; ++i)	{
 		int bid = a_BoneIndex[i];
