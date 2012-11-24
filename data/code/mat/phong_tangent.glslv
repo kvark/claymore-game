@@ -28,10 +28,10 @@ vec3 cookVector(vec3 v)	{
 }
 
 vec3 initMaterial()	{
-	vec3 pos = modifyInit(a_Position);
-	vec3 nor = modifyVector(a_Normal.xyz);
-	vec3 tan = modifyVector(a_Tangent.xyz);
-	mat3 m3w = mat3(u_World);
+	vec3 pos = modifyInit( a_Position );
+	vec3 nor = modifyVector( a_Normal.xyz );
+	vec3 tan = modifyVector( a_Tangent.xyz );
+	mat3 m3w = mat3( u_World );
 	vec3 wp = m3w*pos + u_World[3].xyz;
 	vec3 normal		= normalize( m3w * nor );
 	vec3 tangent	= normalize( m3w * tan );

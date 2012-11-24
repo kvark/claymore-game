@@ -9,6 +9,6 @@ vec3 cookVector(vec3 v)	{
 }
 
 vec3 initMaterial()	{
-	vec3 pos = modifyInit(a_Position);
+	vec3 pos = modifyInit( a_Position );
 	return (u_World * vec4(pos,1.0)).xyz;
 }

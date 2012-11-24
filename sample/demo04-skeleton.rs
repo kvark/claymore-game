@@ -92,7 +92,7 @@ fn init( wid : uint, het : uint ) -> Sample	{
 		let mx = lmath::matrix::Mat4::identity::<f32>();
 		let cam_world = cam_node.world_space();
 		let mview = cam_world.inverse().to_matrix();
-		let mvp = projection.mul_m( &mview );
+		let mvp = projection * mview;
 		let cam_pos = cam_world.position;
 		let u_cam_pos	= lmath::vector::Vec4::new( cam_pos.x, cam_pos.y, cam_pos.z, 0f32 );
 		let u_light_pos	= lmath::vector::Vec4::new( 3f32, 3f32, 3f32, 0f32 );

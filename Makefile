@@ -12,7 +12,9 @@ engine-code:
 	${RUST} engine/engine.rc -L lib --out-dir lib
 
 demo-03:
-	${RUST} sample/demo03-materials.rs -L lib
+	${RUST} sample/demo03-materials.rs	-L lib --out-dir build
+demo-04:
+	${RUST} sample/demo04-skeleton.rs	-L lib --out-dir build
 
 clean:
 	rm -Rf lib/* build/*

@@ -7,8 +7,8 @@ pub trait Mod	{
 impl () : Mod	{
 	pure fn get_name()->~str	{~"Dummy"}
 	pure fn get_code()->~str	{~"
-		vec3 modifyInit  (vec3 p) {return p}
-		vec3 modifyVector(vec3 v) { return v}"}
+vec3 modifyInit  (vec3 p) {return p;}
+vec3 modifyVector(vec3 v) {return v;}"}
 	fn fill_data( _data : &mut shade::DataMap )	{}
 }
 
@@ -155,6 +155,10 @@ impl Technique	{
 				e.vao, e.mesh, e.range, p, copy e.data, self.rast ),
 			None => call::CallEmpty
 		}
+	}
+
+	pure fn gen_clear( cdata : call::ClearData )-> call::Call	{
+		call::CallClear( self.fbo, copy self.pmap, cdata, self.rast.scissor, self.rast.mask )
 	}
 }
 

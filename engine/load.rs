@@ -105,14 +105,14 @@ pub fn read_mesh( br : &Reader, context : &context::Context )-> mesh::Mesh	{
 		let stride = br.get_uint(1u);
 		let mut offset = 0u;
 		let format = br.get_string();
-		io::println(fmt!( "\tbuf: stride:%u, format:%s", stride, format ));
+		io::println(fmt!( "\tbuf: stride:%u,\tformat:%s", stride, format ));
 		let mut i = 0;
 		while i < format.len()	{
 			let name = ~"a_" + br.get_string();
 			let mut fm = str::substr( format, i, 2 );
 			if br.get_bool()	{ fm += ~"."; }
 			if !br.get_bool()	{ fm += ~"!"; }
-			io::println(fmt!( "\t\tname:%s, type:%s", name, fm ));
+			io::println(fmt!( "\t\tname:%s,\ttype:%s", name, fm ));
 			let (at,size) = mesh.create_attrib( fm, buffer, stride, offset );
 			if stride == 0u	{
 				assert at.count == 1u;
