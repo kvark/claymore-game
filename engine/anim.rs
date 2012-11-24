@@ -76,7 +76,9 @@ pub trait Player<C>	{
 
 
 pub fn get_time()-> float	{
-	std::time::precise_time_s()
+	//std::time::precise_time_s()
+	let tm = std::time::get_time();
+	(tm.sec as float) + 0.000000001f * (tm.nsec as float)
 }
 
 pub trait Act	{

@@ -5,6 +5,16 @@ pub struct Color	{
 	r:f32, g:f32, b:f32, a:f32,
 }
 
+pub pure fn make_color( hex : uint )-> Color	{
+	let k = 1f32/255f32;
+	Color{
+		r : (((hex>>24)&0xFF) as f32) * k,
+		g : (((hex>>16)&0xFF) as f32) * k,
+		b : (((hex>> 8)&0xFF) as f32) * k,
+		a : (((hex>> 0)&0xFF) as f32) * k,
+	}
+}
+
 impl Color : cmp::Eq	{
 	pure fn eq( other : &Color )-> bool	{
 		self.r==other.r && self.g==other.g && self.b==other.b && self.a==other.a
