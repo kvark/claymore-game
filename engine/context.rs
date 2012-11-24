@@ -18,6 +18,32 @@ priv fn read_cap( what : glcore::GLenum )-> uint	{
 }
 
 
+pub trait GLType	{
+	pure fn to_gl_type()-> glcore::GLenum;
+}
+impl i8 : GLType	{
+	pure fn to_gl_type()-> glcore::GLenum	{glcore::GL_BYTE}
+}
+impl u8 : GLType	{
+	pure fn to_gl_type()-> glcore::GLenum	{glcore::GL_UNSIGNED_BYTE}
+}
+impl i16 : GLType	{
+	pure fn to_gl_type()-> glcore::GLenum	{glcore::GL_SHORT}
+}
+impl u16 : GLType	{
+	pure fn to_gl_type()-> glcore::GLenum	{glcore::GL_UNSIGNED_SHORT}
+}
+impl i32 : GLType	{
+	pure fn to_gl_type()-> glcore::GLenum	{glcore::GL_INT}
+}
+impl u32 : GLType	{
+	pure fn to_gl_type()-> glcore::GLenum	{glcore::GL_UNSIGNED_INT}
+}
+impl f32 : GLType	{
+	pure fn to_gl_type()-> glcore::GLenum	{glcore::GL_FLOAT}
+}
+
+
 pub struct ClearData	{
 	mut color	: rast::Color,
 	mut depth	: float,
@@ -91,7 +117,13 @@ impl Context	{
 	fn check( where : ~str )	{
 		let code = glcore::glGetError();
 		if code != 0	{
-			fail( fmt!("%s: GL Error: %d",where,code as int) );
+			let decode =
+				if code	== glcore::GL_INVALID_ENUM		{~"(enum)"}		else
+				if code	== glcore::GL_INVALID_VALUE		{~"(value)"}	else
+				if code	== glcore::GL_INVALID_OPERATION	{~"(operation)"}else
+				if code	== glcore::GL_OUT_OF_MEMORY		{~"(memory)"}	else
+				{~"(unknown)"};
+			fail( fmt!("%s: GL Error: %d %s",where,code as int,decode) );
 		}
 	}
 	fn cleanup()	{

@@ -1,7 +1,5 @@
 extern mod glfw3;
 extern mod lmath;
-extern mod stb_image;
-
 extern mod engine;
 
 
@@ -158,13 +156,16 @@ fn make_game( wid : uint, het : uint )-> Game	{
 		engine::draw::load_technique( ~"data/code/tech/omni1",
 			ct.default_frame_buffer, &pmap, &rast, cache)
 	};
+	// create grid
+	let grid = grid::make_grid( &ct, 10u );
+	grid.update_cells( &ct.texture );
 	// done
 	ct.check(~"init");
 	Game{ context:ct, frames:0u, technique:tech,
 		battle:BattleScene{
 			cam		: cam,
 			land	: battle_land,
-			grid	: grid::make_grid( &ct, 10u ),
+			grid	: grid,
 		}}
 }
 

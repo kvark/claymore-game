@@ -57,6 +57,28 @@ impl Texture : context::State	{
 }
 
 
+pub pure fn map_int_format( s : ~str )-> glcore::GLint	{
+	(match s	{
+		~"rgba8"	=> glcore::GL_RGBA8,
+		_	=> fail(fmt!( "Can not recognize texture internal format %s",s ))
+	}) as glcore::GLint
+}
+
+pub pure fn map_pix_format( s : ~str )-> glcore::GLenum	{
+	match s	{
+		~"red"	=> glcore::GL_RED,
+		~"rg"	=> glcore::GL_RG,
+		~"rgb"	=> glcore::GL_RGB,
+		~"bgr"	=> glcore::GL_BGR,
+		~"rgba"	=> glcore::GL_RGBA,
+		~"bgra"	=> glcore::GL_RGBA,
+		~"depth"=> glcore::GL_DEPTH_COMPONENT,
+		~"ds"	=> glcore::GL_DEPTH_STENCIL,
+		_	=> fail(fmt!( "Can not recognize texture pixel format %s",s ))
+	}
+}
+
+
 pub struct Slot	{
 	unit	: uint,
 	target	: Target
@@ -182,12 +204,13 @@ impl Binding	{
 	fn filter( t : &Texture, dim : uint )	{
 		assert self.is_bound( t );
 		assert t.samples == 0u;
+		assert dim>0u && dim<=3u;
 		let min_filter =	if dim==3u	{glcore::GL_LINEAR_MIPMAP_LINEAR}
 			else			if dim==2u	{glcore::GL_LINEAR}
-			else						{glcore::GL_POINT}
+			else						{glcore::GL_NEAREST}
 			as glcore::GLint;
 		let mag_filter =	if dim>1u	{glcore::GL_LINEAR}
-			else						{glcore::GL_POINT}
+			else						{glcore::GL_NEAREST}
 			as glcore::GLint;
 		glcore::glTexParameteri( *t.target, glcore::GL_TEXTURE_MIN_FILTER, min_filter );
 		glcore::glTexParameteri( *t.target, glcore::GL_TEXTURE_MAG_FILTER, mag_filter );

@@ -51,6 +51,7 @@ pub enum Uniform	{
 impl Uniform : cmp::Eq	{
 	pure fn eq( v : &Uniform )-> bool	{
 		match (&self,v)	{
+			(&Unitialized,&Unitialized)				=> true,
 			(&UniFloat(f1),&UniFloat(f2))			=> f1==f2,
 			(&UniInt(i1),&UniInt(i2))				=> i1==i2,
 			(&UniFloatVec(fv1),&UniFloatVec(fv2))	=> fv1==fv2,
@@ -413,6 +414,14 @@ impl context::Context	{
 					}
 				},
 				None => (),
+			}
+		}
+		for p.params.each_value() |par|	{
+			match par.value	{
+				Unitialized => fail(fmt!(
+					"Program %d has non-initialized parameter %d",
+					*p.handle as int, *par.loc as int )),
+				_ => (),
 			}
 		}
 		true
