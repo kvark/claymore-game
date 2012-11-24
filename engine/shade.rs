@@ -10,6 +10,7 @@ impl Handle : cmp::Eq	{
 	pure fn ne( h : &Handle )-> bool	{ !self.eq(h) }
 }
 
+
 pub struct Binding	{
 	priv mut active_program	: Handle,
 	priv pool_objects		: @mut ~[Handle],
@@ -76,6 +77,18 @@ impl Attribute	{
 	pure fn is_integer()-> bool	{
 		![glcore::GL_FLOAT,glcore::GL_FLOAT_VEC2,glcore::GL_FLOAT_VEC3,
 			glcore::GL_FLOAT_VEC4].contains( &self.storage )
+	}
+	pure fn decompose()-> (uint,glcore::GLenum)	{
+		if self.storage==glcore::GL_FLOAT_VEC2			{(2,glcore::GL_FLOAT)} else
+		if self.storage==glcore::GL_FLOAT_VEC3			{(3,glcore::GL_FLOAT)} else
+		if self.storage==glcore::GL_FLOAT_VEC4			{(4,glcore::GL_FLOAT)} else
+		if self.storage==glcore::GL_INT_VEC2			{(2,glcore::GL_INT)} else
+		if self.storage==glcore::GL_INT_VEC3			{(3,glcore::GL_INT)} else
+		if self.storage==glcore::GL_INT_VEC4			{(4,glcore::GL_INT)} else
+		if self.storage==glcore::GL_UNSIGNED_INT_VEC2	{(2,glcore::GL_UNSIGNED_INT)} else
+		if self.storage==glcore::GL_UNSIGNED_INT_VEC3	{(3,glcore::GL_UNSIGNED_INT)} else
+		if self.storage==glcore::GL_UNSIGNED_INT_VEC4	{(4,glcore::GL_UNSIGNED_INT)} else
+		{(1,self.storage)}
 	}
 }
 
@@ -222,7 +235,7 @@ priv fn query_attributes( h : Handle )-> AttriMap	{
 		info_bytes = vec::from_elem( max_len as uint, 0 as libc::c_char );
 		raw_bytes = vec::raw::to_ptr(info_bytes);
 	}
-	io::println(fmt!( "Querying %d attributes:", num as int ));
+	io::println(fmt!( "\tQuerying %d attributes:", num as int ));
 	let mut rez		= send_map::linear::linear_map_with_capacity::<~str,Attribute>( num as uint );
 	for uint::range(0u,num as uint) |i|	{
 		let mut length	= 0 as glcore::GLint;
@@ -237,7 +250,7 @@ priv fn query_attributes( h : Handle )-> AttriMap	{
 		}
 		info_bytes[length] = 0;
 		let loc = glcore::glGetAttribLocation( *h, raw_bytes );
-		io::println(fmt!( "\t[%d] = '%s',\tformat %d", loc as int, name, storage as int ));
+		io::println(fmt!( "\t\t[%d] = '%s',\tformat %d", loc as int, name, storage as int ));
 		rez.insert( name, Attribute{ loc:loc as uint, storage:storage, size:size as uint } );
 	}
 	rez
@@ -256,7 +269,7 @@ priv fn query_parameters( h : Handle )-> ParaMap	{
 		info_bytes	= vec::from_elem( max_len as uint, 0 as libc::c_char );
 		raw_bytes	= vec::raw::to_ptr(info_bytes);
 	}
-	io::println(fmt!( "Querying %d parameters:", num as int ));
+	io::println(fmt!( "\tQuerying %d parameters:", num as int ));
 	let mut rez		= send_map::linear::linear_map_with_capacity::<~str,Parameter>( num as uint );
 	for uint::range(0u,num as uint) |i|	{
 		let mut length	= 0 as glcore::GLint;
@@ -271,7 +284,7 @@ priv fn query_parameters( h : Handle )-> ParaMap	{
 		}
 		info_bytes[length] = 0;
 		let loc = glcore::glGetUniformLocation( *h, raw_bytes );
-		io::println(fmt!( "\t[%d-%d]\t= '%s',\tformat %d", loc as int, ((loc + size) as int) -1, name, storage as int ));
+		io::println(fmt!( "\t\t[%d-%d]\t= '%s',\tformat %d", loc as int, ((loc + size) as int) -1, name, storage as int ));
 		let p = Parameter{ loc:Location(loc), storage:storage, size:size as uint, value:Unitialized };
 		//p.read( h );	// no need to read them here
 		rez.insert( name, p );

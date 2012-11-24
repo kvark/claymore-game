@@ -522,6 +522,27 @@ impl State : Stage	{
 	}
 }
 
+
+pub pure fn get_comparison( s : ~str )-> glcore::GLenum	{
+	if s == ~"!"	{glcore::GL_NEVER}		else
+	if s == ~"*"	{glcore::GL_ALWAYS}		else
+	if s == ~"=="	{glcore::GL_EQUAL}		else
+	if s == ~"!="	{glcore::GL_NOTEQUAL}	else
+	if s == ~"<"	{glcore::GL_LESS}		else
+	if s == ~"<="	{glcore::GL_LEQUAL}		else
+	if s == ~">"	{glcore::GL_GREATER}	else
+	if s == ~">="	{glcore::GL_GEQUAL}		else
+	{fail(fmt!( "Can not recognize comparison %s", s ))}
+}
+
+impl State	{
+	pub fn set_depth( &mut self, sc : ~str )	{
+		self.depth.test = true;
+		self.depth.fun = get_comparison(sc);
+	}
+}
+
+
 // Creates a default GL context rasterizer state
 // make sure to verify that it matches GL specification
 pub pure fn create_rast( wid : uint, het : uint )-> State	{

@@ -71,7 +71,7 @@ pub fn create_reader( path : ~str )->Reader	{
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - //
 //		Misc utilities											//
 
-pub fn read_text( path:~str )-> ~str	{
+pub fn load_text( path : ~str )-> ~str	{
 	match io::read_whole_file_str(&path::Path(path))	{
 		Ok(text) => copy text,
 		Err(msg) => fail(msg)
@@ -85,6 +85,13 @@ pub fn read_space( br : &Reader )-> space::QuatSpace	{
 		orientation	: lmath::quaternion::Quat::new(d[7],d[4],d[5],d[6]),
 		scale		: d[3],
 	}
+}
+
+pub fn load_program( ct : &context::Context, path : ~str )-> shade::Program	{
+	io::println(fmt!( "Loading program: %s", path ));
+	let sv = ct.create_shader( 'v', load_text( path + ~".glslv" ));
+	let sf = ct.create_shader( 'f', load_text( path + ~".glslf" ));
+	ct.create_program(~[sv,sf])
 }
 
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - //
@@ -240,7 +247,7 @@ pub fn read_armature( br : &Reader, dual_quat : bool )-> space::Armature	{
 	}
 	br.leave();
 	// load shader
-	let shader = read_text( if dual_quat
+	let shader = load_text( if dual_quat
 		{~"data/code/mod/arm_dualquat.glslv"} else
 		{~"data/code/mod/arm.glslv"} );
 	let max = {

@@ -32,6 +32,7 @@ impl Camera	{
 struct BattleScene	{
 	cam		: Camera,
 	land	: engine::draw::Entity,
+	grid	: grid::Grid,
 }
 
 struct Game	{
@@ -64,9 +65,12 @@ impl Game	{
 				let world = ent.node.world_space().to_matrix();
 				ent.set_data( ~"u_World",		engine::shade::UniMatrix(false,world) );
 			}
+			self.battle.grid.data.insert( ~"u_ViewProj", engine::shade::UniMatrix(false,view_proj) );
 		}
 		// draw land
 		queue.push( self.technique.process( &self.battle.land, &self.context ) );
+		// draw grid
+		queue.push( self.battle.grid.call( self.technique.fbo, copy self.technique.pmap, self.battle.land.vao ));
 		// execute
 		self.context.flush(queue);
 		// done
@@ -112,14 +116,12 @@ fn make_game( wid : uint, het : uint )-> Game	{
 			parent	: None,
 			actions	: ~[],
 		};
-		let projection = lmath::funs::projection::perspective::<f32>( 50f, aspect, 1f, 20f );
+		let projection = lmath::funs::projection::perspective::<f32>( 40f, aspect, 1f, 20f );
 		Camera{
 			node:cam_node,
 			proj:projection,
 		}
 	};
-	io::println( ~"View vector:" );
-	io::println( cam.get_view_vector().to_string() );
 	// load basic material & vao
 	let mat = @engine::draw::load_material(~"data/code/mat/phong");
 	let vao = @ct.create_vertex_array();
@@ -174,6 +176,7 @@ fn make_game( wid : uint, het : uint )-> Game	{
 		battle:BattleScene{
 			cam		: cam,
 			land	: battle_land,
+			grid	: grid::make_grid(&ct),
 		}}
 }
 

@@ -5,6 +5,32 @@ pub struct Range	{
 	num		: uint,
 }
 
+pub trait GLType	{
+	pure fn to_gl_type()-> glcore::GLenum;
+}
+impl i8 : GLType	{
+	pure fn to_gl_type()-> glcore::GLenum	{glcore::GL_BYTE}
+}
+impl u8 : GLType	{
+	pure fn to_gl_type()-> glcore::GLenum	{glcore::GL_UNSIGNED_BYTE}
+}
+impl i16 : GLType	{
+	pure fn to_gl_type()-> glcore::GLenum	{glcore::GL_SHORT}
+}
+impl u16 : GLType	{
+	pure fn to_gl_type()-> glcore::GLenum	{glcore::GL_UNSIGNED_SHORT}
+}
+impl i32 : GLType	{
+	pure fn to_gl_type()-> glcore::GLenum	{glcore::GL_INT}
+}
+impl u32 : GLType	{
+	pure fn to_gl_type()-> glcore::GLenum	{glcore::GL_UNSIGNED_INT}
+}
+impl f32 : GLType	{
+	pure fn to_gl_type()-> glcore::GLenum	{glcore::GL_FLOAT}
+}
+
+
 pub struct Attribute	{
 	// semantics
 	kind			: glcore::GLenum,
@@ -15,6 +41,18 @@ pub struct Attribute	{
 	buffer			: @buf::Object,
 	stride			: uint,
 	offset			: uint,
+}
+
+pub fn make_attribute<T:GLType>( ct : &context::Context, vdata : ~[T], count : uint, norm : bool )-> Attribute	{
+	Attribute{
+		kind: vdata[0].to_gl_type(),
+		count: count,
+		normalized: norm,
+		interpolated: true,
+		buffer: @ct.create_buffer_loaded( vdata ),
+		stride: count * sys::size_of::<T>(),
+		offset: 0u
+	}
 }
 
 //FIXME: remove once auto-generated
@@ -34,21 +72,15 @@ impl Attribute	{
 	pure fn compatible( at : &shade::Attribute )-> bool	{
 		//io::println(fmt!( "Checking compatibility: kind=0x%x, count=%u, storage=0x%x",
 		//	self.kind as uint, self.count, at.storage as uint ));
-		let i = self.count - 1u;
-		if [glcore::GL_FLOAT,glcore::GL_HALF_FLOAT].contains(&self.kind) || self.normalized	{
-			at.storage == [glcore::GL_FLOAT,glcore::GL_FLOAT_VEC2,glcore::GL_FLOAT_VEC3,glcore::GL_FLOAT_VEC4][i]
-		}else
-		if self.kind == glcore::GL_INT	{
-			at.storage == [glcore::GL_INT,glcore::GL_INT_VEC2,glcore::GL_INT_VEC3,glcore::GL_INT_VEC4][i]
-		}else
-		if [glcore::GL_UNSIGNED_BYTE,glcore::GL_UNSIGNED_SHORT,glcore::GL_UNSIGNED_INT].contains(&self.kind)	{
-			at.storage == [glcore::GL_UNSIGNED_INT,glcore::GL_UNSIGNED_INT_VEC2,
-				glcore::GL_UNSIGNED_INT_VEC3,glcore::GL_UNSIGNED_INT_VEC4][i] ||
-			at.storage == [glcore::GL_INT,glcore::GL_INT_VEC2,
-				glcore::GL_INT_VEC3,glcore::GL_INT_VEC4][i] ||
-			at.storage == [glcore::GL_FLOAT,glcore::GL_FLOAT_VEC2,
-				glcore::GL_FLOAT_VEC3,glcore::GL_FLOAT_VEC4][i]
-		}else {false}
+		let (count,unit) = at.decompose();
+		count == self.count && if at.is_integer()	{
+			if unit == glcore::GL_INT	{
+				[glcore::GL_BYTE,glcore::GL_SHORT,glcore::GL_INT].contains( &self.kind )
+			}else
+			if unit == glcore::GL_UNSIGNED_INT	{
+				[glcore::GL_UNSIGNED_BYTE,glcore::GL_UNSIGNED_SHORT,glcore::GL_UNSIGNED_INT].contains( &self.kind )
+			}else	{false}
+		}else {true}
 	}
 }
 

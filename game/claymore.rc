@@ -4,4 +4,5 @@
        url = "http://code.google.com/p/claymore-game/")];
 #[crate_type = "bin"];
 
+mod grid;
 mod main;

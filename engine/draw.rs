@@ -117,6 +117,7 @@ impl Technique	{
 			io::println(fmt!( "Material '%s' rejected by '%s'", e.material.name, self.name ));
 			return None;
 		}
+		io::println(fmt!( "Linking material '%s' with technique '%s'", e.material.name, self.name ));
 		let s_vert = self.make_vertex( e.material, e.modifier );
 		let s_frag = self.make_fragment( e.material );
 		let shaders = if false	{
@@ -172,8 +173,8 @@ pub pure fn extract_metas( code : &str )->~[~str]	{
 }
 
 pub fn load_material( path : ~str )-> Material	{
-	let s_vert = load::read_text(path+".glslv");
-	let s_frag = load::read_text(path+".glslf");
+	let s_vert = load::load_text(path+".glslv");
+	let s_frag = load::load_text(path+".glslf");
 	Material{ name:path,
 		meta_vertex		:extract_metas(s_vert),
 		meta_fragment	:extract_metas(s_frag),
@@ -184,8 +185,8 @@ pub fn load_material( path : ~str )-> Material	{
 
 pub fn load_technique( path : ~str, fbo : @frame::Buffer, pmap : &call::PlaneMap,
 		rast : &rast::State, cache : @mut Cache )-> Technique	{
-	let s_vert = load::read_text(path+".glslv");
-	let s_frag = load::read_text(path+".glslf");
+	let s_vert = load::load_text(path+".glslv");
+	let s_frag = load::load_text(path+".glslf");
 	Technique{ name:path,
 		fbo:fbo, pmap:*pmap, rast:*rast,
 		meta_vertex		:extract_metas(s_vert),
