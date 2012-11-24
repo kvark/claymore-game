@@ -1,5 +1,4 @@
 extern mod glfw3;
-extern mod glcore;
 extern mod lmath;
 extern mod stb_image;
 
@@ -147,18 +146,7 @@ fn make_game( wid : uint, het : uint )-> Game	{
 		}
 	};
 	// load land texture
-	let tex = match stb_image::image::load(~"data/texture/diffuse.jpg")	{
-		Some(image) => {
-			let t = @ct.create_texture( glcore::GL_TEXTURE_2D, image.width, image.height, 1, 0 );
-			ct.texture.bind( t );
-			ct.texture.load_2D( t, 0, glcore::GL_RGBA as glcore::GLint,
-				glcore::GL_RGBA, glcore::GL_UNSIGNED_BYTE, image.data );
-			ct.texture.wrap( t, 0 );
-			ct.texture.filter( t, 2u );
-			t
-		}
-		None => { fail(~"Unable to load image"); }
-	};
+	let tex = @engine::load::load_texture_2D( &ct, ~"data/texture/diffuse.jpg", 0, 2u );
 	battle_land.set_data( ~"t_Main",	engine::shade::UniTexture(0u,tex) );
 	// create omni1 technique
 	let tech = {
@@ -176,7 +164,7 @@ fn make_game( wid : uint, het : uint )-> Game	{
 		battle:BattleScene{
 			cam		: cam,
 			land	: battle_land,
-			grid	: grid::make_grid(&ct),
+			grid	: grid::make_grid( &ct, 10u ),
 		}}
 }
 

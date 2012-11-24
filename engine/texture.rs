@@ -248,15 +248,27 @@ pub fn create_binding()-> Binding	{
 	Binding{ active_unit:0u, active:slots, pool:@mut ~[] }
 }
 
+pub fn map_target( s : ~str )-> Target	{
+	Target(match s	{
+		~"1D"		=> glcore::GL_TEXTURE_1D,
+		~"Rect"		=> glcore::GL_TEXTURE_RECTANGLE,
+		~"2D"		=> glcore::GL_TEXTURE_2D,
+		~"2DArray"	=> glcore::GL_TEXTURE_2D_ARRAY,
+		~"2DMS"		=> glcore::GL_TEXTURE_2D_MULTISAMPLE,
+		~"3D"		=> glcore::GL_TEXTURE_3D,
+		_	=> fail(fmt!( "Unable to map texture target %s", s ))
+	})
+}
+
 
 impl context::Context	{
-	fn create_texture( t:glcore::GLenum, w:uint, h:uint, d:uint, s:uint )->Texture	{
+	fn create_texture( st:~str, w:uint, h:uint, d:uint, s:uint )->Texture	{
 		let mut hid = 0 as glcore::GLuint;
 		unsafe	{
 			glcore::glGenTextures( 1, ptr::addr_of(&hid) );
 		}
 		let wrap = glcore::GL_REPEAT;
-		Texture{ handle:Handle(hid), target:Target(t),
+		Texture{ handle:Handle(hid), target:map_target(st),
 			width:w, height:h, depth:d, samples:s,
 			levels:0, wrap:(wrap,wrap,wrap),
 			filter:(glcore::GL_NEAREST_MIPMAP_LINEAR, glcore::GL_LINEAR),

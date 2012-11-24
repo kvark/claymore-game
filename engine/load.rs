@@ -1,5 +1,6 @@
 extern mod glcore;
 extern mod lmath;
+extern mod stb_image;
 use io::ReaderUtil;
 
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - //
@@ -92,6 +93,21 @@ pub fn load_program( ct : &context::Context, path : ~str )-> shade::Program	{
 	let sv = ct.create_shader( 'v', load_text( path + ~".glslv" ));
 	let sf = ct.create_shader( 'f', load_text( path + ~".glslf" ));
 	ct.create_program(~[sv,sf])
+}
+
+pub fn load_texture_2D( ct : &context::Context, path : ~str, wrap : int, filter : uint )-> texture::Texture	{
+	match stb_image::image::load(~"data/texture/diffuse.jpg")	{
+		Some(image) => {
+			let t = ct.create_texture( ~"2D", image.width, image.height, 1, 0 );
+			ct.texture.bind( &t );
+			ct.texture.load_2D( &t, 0, glcore::GL_RGBA as glcore::GLint,
+				glcore::GL_RGBA, glcore::GL_UNSIGNED_BYTE, image.data );
+			ct.texture.wrap( &t, wrap );
+			ct.texture.filter( &t, filter );
+			t
+		}
+		None => fail(fmt!( "Unable to load image: %s",path ))
+	}
 }
 
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - //

@@ -7,6 +7,8 @@ pub struct Grid	{
 	program	: @engine::shade::Program,
 	mut data: engine::shade::DataMap,
 	rast	: engine::rast::State,
+	nseg	: uint,
+	texture	: @engine::texture::Texture,
 }
 
 impl Grid	{
@@ -19,7 +21,7 @@ impl Grid	{
 
 
 fn make_quad( ct : &engine::context::Context )-> engine::mesh::Mesh	{
-	let vdata = ~[-1i8,-1i8,1i8,-1i8,-1i8,1i8,1i8,1i8];
+	let vdata = ~[0i8,0i8,1i8,0i8,0i8,1i8,1i8,1i8];
 	let count = 2u;
 	let mut mesh = ct.create_mesh( ~"grid", ~"3s", vdata.len()/count, 0u );
 	let vat = engine::mesh::make_attribute( ct, vdata, count, false );
@@ -27,16 +29,19 @@ fn make_quad( ct : &engine::context::Context )-> engine::mesh::Mesh	{
 	mesh
 }
 
-pub fn make_grid( ct : &engine::context::Context )-> Grid	{
+pub fn make_grid( ct : &engine::context::Context, segments : uint )-> Grid	{
 	let mut data = engine::shade::create_data();
 	let mut rast = engine::rast::create_rast(0,0);
 	rast.prime.cull = true;
 	rast.set_depth( ~"<=" );
 	rast.set_blend( ~"s+d", ~"Sa", ~"1-Sa" );
+	let tex = @engine::load::load_texture_2D( ct, ~"data/texture/diffuse.jpg", 0, 2u );
 	Grid{
 		mesh	: @make_quad( ct ),
 		program	: @engine::load::load_program( ct, ~"data/code-game/grid" ),
 		data	: data,
-		rast	: rast
+		rast	: rast,
+		nseg	: segments,
+		texture	: tex,
 	}
 }
