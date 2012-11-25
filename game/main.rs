@@ -3,7 +3,7 @@ extern mod lmath;
 extern mod engine;
 
 
-struct Camera	{
+pub struct Camera	{
 	node	: @engine::space::Node,
 	proj	: lmath::matrix::mat4,
 }
@@ -41,7 +41,10 @@ struct Game	{
 
 
 impl Game	{
-	fn render() ->bool	{
+	fn update( nx : float, ny : float )-> bool	{
+		self.battle.grid.update( &self.context.texture, &self.battle.cam, nx, ny )
+	}
+	fn render()-> bool	{
 		let mut queue : ~[engine::call::Call] = ~[];
 		// clear screen
 		queue.push( self.technique.gen_clear(
@@ -62,7 +65,6 @@ impl Game	{
 				let world = ent.node.world_space().to_matrix();
 				ent.set_data( ~"u_World",		engine::shade::UniMatrix(false,world) );
 			}
-			self.battle.grid.data.insert( ~"u_ViewProj", engine::shade::UniMatrix(false,view_proj) );
 		}
 		// draw land
 		queue.push( self.technique.process( &self.battle.land, &self.context ) );
@@ -83,7 +85,7 @@ impl Game	{
 			let a1 = (x as f32)*mul, a2 = (y as f32)*mul;
 			let c1 = f32::cos(a1), c2 = f32::cos(a2);
 			let s1 = f32::sin(a1), s2 = f32::sin(a2);
-			let q1 = lmath::quaternion::Quat::new( c1, 0f32, s1, 0f32 );
+			let q1 = lmath::quaternion::Quat::new( c1, 0f32, -s1, 0f32 );
 			let q2 = lmath::quaternion::Quat::new( c2, s2, 0f32, 0f32 );
 			let q3 = s.orientation.mul_q( &q1.mul_q( &q2 ) );
 			s.orientation = q3.mul_t( 1f32 / q3.length() );
@@ -113,7 +115,7 @@ fn make_game( wid : uint, het : uint )-> Game	{
 			parent	: None,
 			actions	: ~[],
 		};
-		let projection = lmath::funs::projection::perspective::<f32>( 40f, aspect, 1f, 20f );
+		let projection = lmath::funs::projection::perspective::<f32>( 40f, aspect, 1f, 25f );
 		Camera{
 			node:cam_node,
 			proj:projection,
@@ -158,7 +160,7 @@ fn make_game( wid : uint, het : uint )-> Game	{
 	};
 	// create grid
 	let grid = grid::make_grid( &ct, 10u );
-	grid.update_cells( &ct.texture );
+	grid.init( &ct.texture );
 	// done
 	ct.check(~"init");
 	Game{ context:ct, frames:0u, technique:tech,
@@ -223,6 +225,12 @@ fn main()	{
 				game.debug_move(shift,0,1);
 			}
 			// render
+			let (cx,cy) = window.get_cursor_pos();
+			let nx = (cx as float)/(wid as float);
+			let ny = (cy as float)/(het as float);
+			if !game.update(nx,ny)	{
+				break
+			}
 			if !game.render()	{
 				break;
 			}

@@ -176,17 +176,33 @@ impl Binding	{
 	}
 
 	fn load_2D<T>(	t : &Texture, level : uint, int_format : glcore::GLint,
-					pix_format : glcore::GLenum, pix_type : glcore::GLenum, data : &[T])	{
+			pix_format : glcore::GLenum, pix_type : glcore::GLenum, data : &const ~[T])	{
 		self.bind( t );
 		assert t.width>0 && t.height>0 && t.samples==0u;
-		let w = (((t.width-1)>>level)+1)	as glcore::GLsizei;
-		let h = (((t.height-1)>>level)+1)	as glcore::GLsizei;
-		unsafe	{
-			let raw = vec::raw::to_ptr(data) as *glcore::GLvoid;
-			glcore::glTexImage2D( *t.target, level as glcore::GLint, int_format,
-				w, h, 0 as glcore::GLint, pix_format, pix_type, raw );
-		}
 		if t.levels==0	{ t.levels=1; }
+		let (w,h) = t.get_level_size( level );
+		unsafe	{
+			let raw = vec::raw::to_ptr(*data) as *glcore::GLvoid;
+			glcore::glTexImage2D( *t.target, level as glcore::GLint, int_format,
+				w as glcore::GLint, h as glcore::GLint, 0 as glcore::GLint,
+				pix_format, pix_type, raw );
+		}
+	}
+
+	fn load_sub_2D<T>( t : &Texture, level : uint, r : &frame::Rect,
+			pix_format : glcore::GLenum, pix_type : glcore::GLenum, data : &const ~[T])	{
+		self.bind( t );
+		assert t.width>0 && t.height>0 && t.samples==0u && t.levels>level;
+		assert r.w*r.h == data.len();
+		let (w,h) = t.get_level_size( level );
+		assert frame::make_rect(w,h).contains_rect( r );
+		unsafe	{
+			let raw = vec::raw::to_ptr(*data) as *glcore::GLvoid;
+			glcore::glTexSubImage2D( *t.target, level as glcore::GLint,
+				r.x as glcore::GLint, r.y as glcore::GLint,
+				r.w as glcore::GLsizei, r.h as glcore::GLsizei,
+				pix_format, pix_type, raw );
+		}
 	}
 
 	fn wrap( t : &Texture, method : int )	{

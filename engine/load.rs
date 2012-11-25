@@ -101,7 +101,7 @@ pub fn load_texture_2D( ct : &context::Context, path : ~str, wrap : int, filter 
 			let t = ct.create_texture( ~"2D", image.width, image.height, 1, 0 );
 			ct.texture.bind( &t );
 			ct.texture.load_2D( &t, 0, glcore::GL_RGBA as glcore::GLint,
-				glcore::GL_RGBA, glcore::GL_UNSIGNED_BYTE, image.data );
+				glcore::GL_RGBA, glcore::GL_UNSIGNED_BYTE, &image.data );
 			ct.texture.wrap( &t, wrap );
 			ct.texture.filter( &t, filter );
 			t

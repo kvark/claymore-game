@@ -24,9 +24,9 @@ clean-engine:
 
 
 # external libraries section
-extern: clean-lib lmath glfw3 glcore stb-image
+libs: clean-libs lmath glfw3 glcore stb-image
 
-clean-lib:
+clean-libs:
 	(cd lib && rm -Rf liblmath* libglfw3* libglcore* libstb*)
 
 lmath:

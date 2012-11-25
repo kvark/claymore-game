@@ -15,6 +15,21 @@ pub trait Space	{
 	pure fn to_matrix()-> Matrix;
 }
 
+//todo: remove this
+impl f32 : cmp::Ord	{
+	pure fn lt( other : &f32 )-> bool	{
+		self < *other
+	}
+	pure fn le( other : &f32 )-> bool	{
+		self <= *other
+	}
+	pure fn gt( other : &f32 )-> bool	{
+		self > *other
+	}
+	pure fn ge( other : &f32 )-> bool	{
+		self >= *other
+	}
+}
 
 impl Matrix : Space	{
 	pure fn transform( value : &Vector )-> Vector	{
@@ -26,10 +41,7 @@ impl Matrix : Space	{
 		self.mul_m(other)
 	}
 	pure fn inverse()-> Matrix	{
-		match self.invert()	{
-			Some(m)	=> m,
-			None => fail(~"Unable to invert matrix")
-		}
+		self.invert().expect( ~"Unable to invert matrix" )
 	}
 	pure fn to_matrix()-> Matrix	{self}
 }

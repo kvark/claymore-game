@@ -133,12 +133,26 @@ pub struct Rect	{
 	h : uint,
 }
 
+pub pure fn make_rect( wid : uint, het : uint )-> Rect	{
+	Rect{ x:0u, y:0u, w:wid, h:het }
+}
+
 impl Rect : cmp::Eq	{
 	pure fn eq( other : &Rect )-> bool	{
 		self.x==other.x && self.y==other.y && self.w==other.w && self.h==other.h
 	}
 	pure fn ne( other : &Rect )-> bool	{
 		!self.eq( other )
+	}
+}
+
+impl Rect	{
+	pure fn contains( x : uint, y : uint )-> bool	{
+		x>=self.x && x<self.x+self.w && y>=self.y && y<self.y+self.h
+	}
+	pure fn contains_rect( r : &Rect )-> bool	{
+		r.x>=self.x && r.x+r.w<=self.x+self.w &&
+		r.y>=self.y && r.y+r.h<=self.y+self.w
 	}
 }
 

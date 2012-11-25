@@ -619,7 +619,7 @@ pub pure fn create_rast( wid : uint, het : uint )-> State	{
 			on_fill:false, on_line:false, on_point:false, factor:0f32, units:0f32
 		},
 		scissor : Scissor{
-			test:false, area:frame::Rect{x:0u,y:0u,w:wid,h:het}
+			test:false, area:frame::make_rect(wid,het)
 		},
 		multi : Multisample{
 			on:true, alpha:false, cover:false, value:1f32, invert:false
