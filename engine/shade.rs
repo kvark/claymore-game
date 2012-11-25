@@ -129,7 +129,7 @@ impl Parameter	{
 		if t == glcore::GL_FLOAT_MAT4	{
 			let mut v = lmath::matrix::Mat4::zero::<f32>();
 			glcore::glGetUniformfv( *h, loc, ptr::addr_of(&v.x.x) );
-			self.value = UniMatrix(false,v);	
+			self.value = UniMatrix(false,v);
 		}else	{return false;}
 		true
 	}

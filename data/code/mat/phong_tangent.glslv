@@ -1,6 +1,7 @@
 //%meta initMaterial cookVector 
 
 uniform mat4 u_World;
+uniform vec4 u_TexTransform;
 uniform vec4 u_CameraPos, u_WorldQuat;
 
 in	vec3	a_Position;
@@ -39,6 +40,6 @@ vec3 initMaterial()	{
 	TBN = mat3(tangent,bitangent,normal);
 	v_Eye = cookVector( u_CameraPos.xyz - wp );
 	v_NormalWorld = normal;
-	v_Tex = vec2( a_Tex0.x, 1.0-a_Tex0.y );
+	v_Tex = u_TexTransform.xy * vec2( a_Tex0.x, 1.0-a_Tex0.y ) + u_TexTransform.zw;
 	return wp;
 }

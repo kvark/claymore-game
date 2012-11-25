@@ -26,7 +26,7 @@ pub struct Texture	{
 
 impl Texture	{
 	pure fn get_level_size( lev : uint )-> (uint,uint)	{
-		assert self.width>0u && self.height>0u && lev<self.levels;
+		assert self.width>0u && self.height>0u;
 		(uint::max(1u,self.width>>lev),uint::max(1u,self.height>>lev))
 	}
 	pure fn get_level_limits()-> (uint,uint)	{
@@ -179,7 +179,8 @@ impl Binding	{
 			pix_format : glcore::GLenum, pix_type : glcore::GLenum, data : &const ~[T])	{
 		self.bind( t );
 		assert t.width>0 && t.height>0 && t.samples==0u;
-		if t.levels==0	{ t.levels=1; }
+		assert t.levels >= level;
+		if t.levels==level	{ t.levels+=1; }
 		let (w,h) = t.get_level_size( level );
 		unsafe	{
 			let raw = vec::raw::to_ptr(*data) as *glcore::GLvoid;
@@ -203,6 +204,14 @@ impl Binding	{
 				r.w as glcore::GLsizei, r.h as glcore::GLsizei,
 				pix_format, pix_type, raw );
 		}
+	}
+
+	fn generate_levels( t : &Texture )-> uint	{
+		assert self.is_bound( t );
+		assert t.samples == 0u && t.levels > 0u;
+		glcore::glGenerateMipmap( *t.target );
+		t.levels = t.count_levels();
+		t.levels
 	}
 
 	fn wrap( t : &Texture, method : int )	{

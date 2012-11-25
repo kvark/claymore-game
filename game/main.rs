@@ -26,23 +26,17 @@ impl Camera	{
 	}
 }
 
-struct BattleScene	{
-	cam		: Camera,
-	land	: engine::draw::Entity,
-	grid	: grid::Grid,
-}
-
 struct Game	{
 	context		: engine::context::Context,
 	mut frames	: uint,
 	technique	: engine::draw::Technique,
-	battle		: BattleScene,
+	battle		: battle::Scene,
 }
 
 
 impl Game	{
 	fn update( nx : float, ny : float )-> bool	{
-		self.battle.grid.update( &self.context.texture, &self.battle.cam, nx, ny )
+		self.battle.update( &self.context.texture, nx, ny )
 	}
 	fn render()-> bool	{
 		let mut queue : ~[engine::call::Call] = ~[];
@@ -54,22 +48,12 @@ impl Game	{
 				stencil	:Some( 0u ),
 			})
 		);
-		{// update matrices
-			let view_proj	= self.battle.cam.get_matrix();
-			let cam_pos		= self.battle.cam.get_pos_vec4();
-			let light_pos	= lmath::vector::Vec4::new( 4f32, 1f32, 6f32, 0f32 );
-			for [&self.battle.land].each |ent|	{
-				ent.set_data( ~"u_ViewProj", 	engine::shade::UniMatrix(false,view_proj) );
-				ent.set_data( ~"u_CameraPos",	engine::shade::UniFloatVec(cam_pos) );
-				ent.set_data( ~"u_LightPos",	engine::shade::UniFloatVec(light_pos) );
-				let world = ent.node.world_space().to_matrix();
-				ent.set_data( ~"u_World",		engine::shade::UniMatrix(false,world) );
-			}
+		// draw battle (FIXME)
+		let calls = self.battle.render( &self.technique );
+		queue.push( self.technique.process( &self.battle.land, &self.context ));
+		for calls.each |c|	{
+			queue.push( copy *c );
 		}
-		// draw land
-		queue.push( self.technique.process( &self.battle.land, &self.context ) );
-		// draw grid
-		queue.push( self.battle.grid.call( self.technique.fbo, copy self.technique.pmap, self.battle.land.vao ));
 		// execute
 		self.context.flush(queue);
 		// done
@@ -79,21 +63,7 @@ impl Game	{
 		true
 	}
 	fn debug_move( rot : bool, x : int, y : int )	{
-		let mut s = self.battle.cam.node.space;
-		if rot	{
-			const mul : f32 = 0.02f32;
-			let a1 = (x as f32)*mul, a2 = (y as f32)*mul;
-			let c1 = f32::cos(a1), c2 = f32::cos(a2);
-			let s1 = f32::sin(a1), s2 = f32::sin(a2);
-			let q1 = lmath::quaternion::Quat::new( c1, 0f32, -s1, 0f32 );
-			let q2 = lmath::quaternion::Quat::new( c2, s2, 0f32, 0f32 );
-			let q3 = s.orientation.mul_q( &q1.mul_q( &q2 ) );
-			s.orientation = q3.mul_t( 1f32 / q3.length() );
-		}else	{
-			s.position.x += (x as f32) * 0.1f32;
-			s.position.y += (y as f32) * 0.1f32;
-		}
-		self.battle.cam.node.set_space(&s);
+		self.battle.debug_move( rot, x, y );
 	}
 }
 
@@ -101,74 +71,22 @@ impl Game	{
 fn make_game( wid : uint, het : uint )-> Game	{
 	let ct = engine::context::create( wid, het );
 	assert ct.sync_back();
-	// create camera
-	let cam = 	{
-		let aspect = (wid as float) / (het as float);
-		let cam_space = engine::space::QuatSpace{
-			position 	: lmath::vector::Vec3::new( 10f32, -10f32, 5f32 ),
-			orientation	: lmath::quaternion::Quat::new( 0.802f32, 0.447f32, 0.198f32, 0.343f32 ),
-			scale		: 1f32
-		};
-		let cam_node = @engine::space::Node{
-			name	: ~"cam",
-			space	: cam_space,
-			parent	: None,
-			actions	: ~[],
-		};
-		let projection = lmath::funs::projection::perspective::<f32>( 40f, aspect, 1f, 25f );
-		Camera{
-			node:cam_node,
-			proj:projection,
-		}
-	};
-	// load basic material & vao
-	let mat = @engine::draw::load_material(~"data/code/mat/phong");
-	let vao = @ct.create_vertex_array();
-	// load battle landscape
-	let battle_land = {
-		let mesh = @engine::load::read_mesh(
-			&engine::load::create_reader(~"data/battle-test.k3mesh"),
-			&ct );
-		let node = @engine::space::Node{
-			name	: ~"landscape",
-			space	: engine::space::identity(),
-			parent	: None,
-			actions	: ~[],
-		};
-		engine::draw::Entity{
-			node	: node,
-			data	: engine::shade::create_data(),
-			vao		: vao,
-			mesh	: mesh,
-			range	: mesh.get_range(),
-			modifier: @() as @engine::draw::Mod,
-			material: mat,
-		}
-	};
-	// load land texture
-	let tex = @engine::load::load_texture_2D( &ct, ~"data/texture/diffuse.jpg", 0, 2u );
-	battle_land.set_data( ~"t_Main",	engine::shade::UniTexture(0u,tex) );
-	// create omni1 technique
+	// create a forward light technique
 	let tech = {
 		let pmap = engine::call::create_plane_map( ~"o_Color", engine::frame::TarEmpty );
 		let mut rast = engine::rast::create_rast(0,0);
-		rast.set_depth(~"<=");
+		rast.set_depth(~"<=",true);
 		rast.prime.cull = true;
 		let cache = @mut engine::draw::create_cache();
-		engine::draw::load_technique( ~"data/code/tech/omni1",
+		engine::draw::load_technique( ~"data/code/tech/forward/light",
 			ct.default_frame_buffer, &pmap, &rast, cache)
 	};
-	// create grid
-	let grid = grid::make_grid( &ct, 10u );
-	grid.init( &ct.texture );
 	// done
 	ct.check(~"init");
+	let aspect = (wid as float) / (het as float);
 	Game{ context:ct, frames:0u, technique:tech,
-		battle:BattleScene{
-			cam		: cam,
-			land	: battle_land,
-			grid	: grid,
-		}}
+		battle:battle::make_battle( &ct, aspect ),
+	}
 }
 
 

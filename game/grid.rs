@@ -11,9 +11,10 @@ pub struct Grid	{
 	priv mut selected	: (uint,uint),
 	priv texture		: @engine::texture::Texture,
 	priv mut cells		: ~[engine::rast::Color],
+	priv v_scale		: lmath::vector::vec4,
 }
 
-const CELL_EMPTY 	: uint	= 0x20E02000;
+const CELL_EMPTY 	: uint	= 0x20802000;
 const CELL_ACTIVE	: uint	= 0x2040E040;
 
 
@@ -42,14 +43,11 @@ impl Grid	{
 		let ndc = lmath::vector::Vec3::new( (nx as f32)*2f32-1f32, 1f32-(ny as f32)*2f32, 0f32 );
 		let origin = cam.node.world_space().position;
 		let ray = cam.get_matrix().inverse().transform( &ndc ).sub_v( &origin );
-		const ZLEVEL: f32 = 1f32;
-		const XSIZE	: f32 = 10f32;
-		const YSIZE	: f32 = 10f32;
-		let x_unit = 2f32*XSIZE / (self.nseg as f32);
-		let y_unit = 2f32*YSIZE / (self.nseg as f32);
-		let k = (ZLEVEL - origin.z) / ray.z;
-		let x = (origin.x + ray.x*k + XSIZE) / x_unit;
-		let y = (origin.y + ray.y*k + YSIZE) / y_unit;
+		let x_unit = 2f32*self.v_scale.x / (self.nseg as f32);
+		let y_unit = 2f32*self.v_scale.y / (self.nseg as f32);
+		let k = (self.v_scale.z - origin.z) / ray.z;
+		let x = (origin.x + ray.x*k + self.v_scale.x) / x_unit;
+		let y = (origin.y + ray.y*k + self.v_scale.y) / y_unit;
 		(x as uint, y as uint)
 	}
 	pub fn init( tb : &engine::texture::Binding )	{
@@ -87,13 +85,18 @@ pub fn make_grid( ct : &engine::context::Context, segments : uint )-> Grid	{
 	let mut data = engine::shade::create_data();
 	let mut rast = engine::rast::create_rast(0,0);
 	rast.prime.cull = true;
-	rast.set_depth( ~"<=" );
-	rast.set_blend( ~"s+d", ~"Sa", ~"1-Sa" );
+	rast.set_depth( ~"<=", false );
+	rast.set_blend( ~"s+d", ~"Sa", ~"1" );
 	let cells = do vec::from_fn::<engine::rast::Color>(segments*segments) |_i|	{
 		engine::rast::make_color(CELL_EMPTY)
 	};
 	let tex = @ct.create_texture( ~"2D", segments, segments, 0u, 0u );
-	data.insert( ~"t_Grid", engine::shade::UniTexture(0,tex) );
+	data.insert( ~"t_Grid",		engine::shade::UniTexture(0,tex) );
+	let par_scale = lmath::vector::Vec4::new( 10f32, 10f32, 0.1f32, 0f32 );
+	data.insert( ~"u_ScaleZ",	engine::shade::UniFloatVec(par_scale) );
+	let oo_seg = 1f32 / (segments as f32);
+	let par_size = lmath::vector::Vec4::new( oo_seg, oo_seg, 0f32, 0f32 );
+	data.insert( ~"u_Size",		engine::shade::UniFloatVec(par_size) );
 	Grid{
 		mesh	: @make_quad( ct ),
 		program	: @engine::load::load_program( ct, ~"data/code-game/grid" ),
@@ -102,6 +105,7 @@ pub fn make_grid( ct : &engine::context::Context, segments : uint )-> Grid	{
 		nseg	: segments,
 		selected: (0u,0u),
 		texture	: tex,
-		cells	: cells
+		cells	: cells,
+		v_scale	: par_scale,
 	}
 }

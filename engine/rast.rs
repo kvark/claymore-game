@@ -220,8 +220,8 @@ impl Multisample : Stage	{
 
 pub struct StencilSide	{
 	function		: glcore::GLenum,
-	ref_value		: uint,
-	read_mask		: uint,
+	ref_value		: int,
+	read_mask		: int,
 	op_fail			: glcore::GLenum,
 	op_depth_fail	: glcore::GLenum,
 	op_pass			: glcore::GLenum,
@@ -260,7 +260,7 @@ impl StencilSide	{
 
 priv pure fn create_stencil()-> StencilSide	{
 	StencilSide{
-		function:glcore::GL_ALWAYS, ref_value:0u, read_mask:!0,
+		function:glcore::GL_ALWAYS, ref_value:0, read_mask:-1,
 		op_fail:glcore::GL_KEEP, op_depth_fail:glcore::GL_KEEP, op_pass:glcore::GL_KEEP
 	}
 }
@@ -303,14 +303,14 @@ impl Stencil : Stage	{
 		}
 		assert self.test == ask_state( glcore::GL_STENCIL_TEST ) &&
 			self.front.function		== vals[0] as glcore::GLenum && 
-			self.front.ref_value	== vals[1] as uint && 
-			self.front.read_mask	== vals[2] as uint && 
+			self.front.ref_value	== vals[1] as int && 
+			self.front.read_mask	== vals[2] as int && 
 			self.front.op_fail		== vals[3] as glcore::GLenum &&
 			self.front.op_depth_fail== vals[4] as glcore::GLenum &&
 			self.front.op_pass		== vals[5] as glcore::GLenum &&
 			self.back.function		== vals[6] as glcore::GLenum && 
-			self.back.ref_value		== vals[7] as uint && 
-			self.back.read_mask		== vals[8] as uint && 
+			self.back.ref_value		== vals[7] as int && 
+			self.back.read_mask		== vals[8] as int && 
 			self.back.op_fail		== vals[9] as glcore::GLenum &&
 			self.back.op_depth_fail	== vals[10] as glcore::GLenum &&
 			self.back.op_pass		== vals[11] as glcore::GLenum;
@@ -441,7 +441,8 @@ impl Blend : Stage	{
 
 pub struct Mask	{
 	//TODO: different draw buffers
-	stencil	: bool,
+	stencil_front	: int,
+	stencil_back	: int,
 	depth	: bool,
 	red		: bool,
 	green	: bool,
@@ -451,9 +452,12 @@ pub struct Mask	{
 
 impl Mask : Stage	{
 	fn activate( &mut self, new : &Mask, _poly : uint )	{
-		if self.stencil != new.stencil	{
-			self.stencil = new.stencil;
-			glcore::glStencilMask( new.stencil as glcore::GLuint );
+		if self.stencil_front != new.stencil_front || self.stencil_back != new.stencil_back	{
+			self.stencil_front = new.stencil_front;
+			self.stencil_back = new.stencil_back;
+			glcore::glStencilMaskSeparate(
+				new.stencil_front as glcore::GLuint,
+				new.stencil_back as glcore::GLuint );
 		}
 		if self.depth != new.depth	{
 			self.depth = new.depth;
@@ -469,11 +473,14 @@ impl Mask : Stage	{
 		}
 	}
 	fn verify( &mut self )	{
-		let bools = vec::from_elem( 6, false as glcore::GLboolean );
+		let bools	= vec::from_elem( 5, false as glcore::GLboolean );
+		let sf		= 0 as glcore::GLint;
+		let sb		= 0 as glcore::GLint;
 		unsafe	{
 			glcore::glGetBooleanv( glcore::GL_COLOR_WRITEMASK,	vec::raw::to_ptr(bools) );
 			glcore::glGetBooleanv( glcore::GL_DEPTH_WRITEMASK,	ptr::addr_of(&bools[4]) );
-			glcore::glGetBooleanv( glcore::GL_STENCIL_WRITEMASK,ptr::addr_of(&bools[5]) );
+			glcore::glGetIntegerv( glcore::GL_STENCIL_WRITEMASK,		ptr::addr_of(&sf) );
+			glcore::glGetIntegerv( glcore::GL_STENCIL_BACK_WRITEMASK,	ptr::addr_of(&sb) );
 		}
 		assert
 			self.red	== (bools[0]==glcore::GL_TRUE) &&
@@ -481,7 +488,8 @@ impl Mask : Stage	{
 			self.blue	== (bools[2]==glcore::GL_TRUE) &&
 			self.alpha	== (bools[3]==glcore::GL_TRUE) &&
 			self.depth	== (bools[4]==glcore::GL_TRUE) &&
-			self.stencil== (bools[5]==glcore::GL_TRUE);
+			self.stencil_front	== sf as int	&&
+			self.stencil_back	== sb as int;
 	}
 }
 
@@ -585,17 +593,20 @@ pub pure fn map_factor( s : ~str )-> glcore::GLenum	{
 
 
 impl State	{
-	pub fn set_stencil( &mut self, fun : ~str, cf : char, cdf : char, cp : char )	{
+	pub fn set_stencil( &mut self, fun : ~str, cf : char, cdf : char, cp : char, mask : int )	{
 		self.stencil.test = true;
 		self.stencil.front.function			= map_comparison(fun);
 		self.stencil.front.op_fail			= map_operation(cf);
 		self.stencil.front.op_depth_fail	= map_operation(cdf);
 		self.stencil.front.op_pass			= map_operation(cp);
 		self.stencil.back = self.stencil.front;
+		self.mask.stencil_front = mask;
+		self.mask.stencil_back = mask;
 	}
-	pub fn set_depth( &mut self, fun : ~str )	{
+	pub fn set_depth( &mut self, fun : ~str, mask : bool )	{
 		self.depth.test = true;
 		self.depth.fun = map_comparison(fun);
+		self.mask.depth = mask;
 	}
 	pub fn set_blend( &mut self, eq : ~str, src : ~str, dst : ~str )	{
 		self.blend.on = true;
@@ -635,7 +646,8 @@ pub pure fn create_rast( wid : uint, het : uint )-> State	{
 			value:Color{r:0f32,g:0f32,b:0f32,a:0f32}
 		},
 		mask : Mask{
-			stencil:true, depth:true, red:true, green:true, blue:true, alpha:true
+			stencil_front:-1, stencil_back:-1, depth:true,
+			red:true, green:true, blue:true, alpha:true
 		}
 	}
 }
