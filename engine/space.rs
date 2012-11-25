@@ -119,6 +119,16 @@ impl Scale : Interpolate	{
 	}
 }
 
+impl QuatSpace : Interpolate	{
+	pure fn interpolate( other : &QuatSpace, t : float )-> QuatSpace	{
+		QuatSpace{
+			position	: self.position.interpolate( &other.position, t ),
+			orientation	: self.orientation.interpolate( &other.orientation, t ),
+			scale		: self.scale.interpolate( &other.scale, t ),
+		}
+	}
+}
+
 
 pub trait Pretty	{
 	pure fn to_string()-> ~str;

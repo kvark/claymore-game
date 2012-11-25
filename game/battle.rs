@@ -28,22 +28,59 @@ impl Character	{
 }
 
 
+pub struct View	{
+	cam				: main::Camera,
+	trans_duration	: float,
+	points			: ~[engine::space::QuatSpace],
+	mut source		: Option<engine::space::QuatSpace>,
+	mut destination	: uint,
+	mut start_time	: float,
+}
+
+impl View	{
+	pub fn update( dir : int )	{
+		let time = engine::anim::get_time();
+		if dir != 0 && time > self.start_time + 0.5f	{
+			let l = self.points.len() as int;
+			self.destination = ((self.destination as int) + dir + l) % l as uint;
+			self.source = Some( self.cam.node.space );
+			self.start_time = time;
+		}
+		match copy self.source	{
+			Some(source)	=>	{
+				let moment = (time - self.start_time) / self.trans_duration;
+				let dst = &self.points[ self.destination ];
+				let sp = if moment >= 1f	{
+						self.source = None;
+						*dst
+					}else	{
+						source.interpolate( dst, moment )
+					};
+				self.cam.node.set_space( &sp );
+			},
+			None	=> ()
+		}
+	}
+}
+
+
 pub struct Scene	{
-	cam		: main::Camera,
+	view	: View,
 	land	: engine::draw::Entity,
 	grid	: grid::Grid,
 	hero	: Character,
 }
 
 impl Scene	{
-	pub fn update( tb : &engine::texture::Binding, nx : float, ny : float )-> bool	{
+	pub fn update( tb : &engine::texture::Binding, nx : float, ny : float, cam_dir : int )-> bool	{
 		self.hero.update();
-		self.grid.update( tb, &self.cam, nx, ny )
+		self.view.update( cam_dir );
+		self.grid.update( tb, &self.view.cam, nx, ny )
 	}
 	pub fn render( ct : &engine::context::Context, tech : &engine::draw::Technique )	{
 		{// update matrices
-			let view_proj	= self.cam.get_matrix();
-			let cam_pos		= self.cam.get_pos_vec4();
+			let view_proj	= self.view.cam.get_matrix();
+			let cam_pos		= self.view.cam.get_pos_vec4();
 			let light_pos	= lmath::vector::Vec4::new( 4f32, 1f32, 6f32, 1f32 );
 			for [ &self.land, &self.hero.entity ].each |ent|	{
 				ent.set_data( ~"u_ViewProj", 	engine::shade::UniMatrix(false,view_proj) );
@@ -58,44 +95,50 @@ impl Scene	{
 		let c_grid = self.grid.call( tech.fbo, copy tech.pmap, self.land.vao );
 		ct.flush( ~[c_land,c_hero,c_grid] );
 	}
-	pub fn debug_move( rot : bool, x : int, y : int )	{
-		let mut s = self.cam.node.space;
-		if rot	{
-			const mul : f32 = 0.02f32;
-			let a1 = (x as f32)*mul, a2 = (y as f32)*mul;
-			let c1 = f32::cos(a1), c2 = f32::cos(a2);
-			let s1 = f32::sin(a1), s2 = f32::sin(a2);
-			let q1 = lmath::quaternion::Quat::new( c1, 0f32, -s1, 0f32 );
-			let q2 = lmath::quaternion::Quat::new( c2, s2, 0f32, 0f32 );
-			let q3 = s.orientation.mul_q( &q1.mul_q( &q2 ) );
-			s.orientation = q3.mul_t( 1f32 / q3.length() );
-		}else	{
-			s.position.x += (x as f32) * 0.1f32;
-			s.position.y += (y as f32) * 0.1f32;
-		}
-		self.cam.node.set_space(&s);
+	pub fn debug_move( _rot : bool, _x : int, _y : int )	{
+		//empty
 	}
 }
 
 
 pub fn make_battle( ct : &engine::context::Context, aspect : float )-> Scene	{
-	// create camera
-	let cam = 	{
-		let cam_space = engine::space::QuatSpace{
-			position 	: lmath::vector::Vec3::new( 10f32, -10f32, 5f32 ),
-			orientation	: lmath::quaternion::Quat::new( 0.802f32, 0.447f32, 0.198f32, 0.343f32 ),
-			scale		: 1f32
+	// create view
+	let view = 	{
+		// create camera
+		let cam =	{
+			let cam_space = engine::space::QuatSpace{
+				position 	: lmath::vector::Vec3::new( 10f32, -10f32, 5f32 ),
+				orientation	: lmath::quaternion::Quat::new( 0.802f32, 0.447f32, 0.198f32, 0.343f32 ),
+				scale		: 1f32
+			};
+			let cam_node = @engine::space::Node{
+				name	: ~"cam",
+				space	: cam_space,
+				parent	: None,
+				actions	: ~[],
+			};
+			let projection = lmath::funs::projection::perspective::<f32>( 45f, aspect, 1f, 25f );
+			main::Camera{
+				node:cam_node,
+				proj:projection,
+			}
 		};
-		let cam_node = @engine::space::Node{
-			name	: ~"cam",
-			space	: cam_space,
-			parent	: None,
-			actions	: ~[],
+		let points = do vec::from_fn(4) |i|	{
+			let angle = (i as f32) * 0.25f32 * f32::consts::pi;
+			let q = lmath::quaternion::Quat::new( f32::cos(angle), 0f32, 0f32, f32::sin(angle) );
+			engine::space::QuatSpace{
+				position	: q.mul_v( &cam.node.space.position ),
+				orientation	: q.mul_q( &cam.node.space.orientation ),
+				scale		: cam.node.space.scale,
+			}
 		};
-		let projection = lmath::funs::projection::perspective::<f32>( 45f, aspect, 1f, 25f );
-		main::Camera{
-			node:cam_node,
-			proj:projection,
+		View{
+			cam	: cam,
+			trans_duration	: 2f,
+			points			: points,
+			source			: None,
+			destination		: 0,
+			start_time		: 0f,
 		}
 	};
 	// load basic material & vao
@@ -175,7 +218,7 @@ pub fn make_battle( ct : &engine::context::Context, aspect : float )-> Scene	{
 	}
 	// done
 	Scene{
-		cam		: cam,
+		view	: view,
 		land	: battle_land,
 		grid	: grid,
 		hero	: hero,
