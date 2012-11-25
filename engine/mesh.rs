@@ -50,7 +50,8 @@ impl Attribute	{
 		let (count,unit) = at.decompose();
 		count == self.count && if at.is_integer()	{
 			if unit == glcore::GL_INT	{
-				[glcore::GL_BYTE,glcore::GL_SHORT,glcore::GL_INT].contains( &self.kind )
+				[glcore::GL_BYTE,glcore::GL_SHORT,glcore::GL_INT]		.contains( &self.kind ) ||
+				[glcore::GL_UNSIGNED_BYTE,glcore::GL_UNSIGNED_SHORT]	.contains( &self.kind )
 			}else
 			if unit == glcore::GL_UNSIGNED_INT	{
 				[glcore::GL_UNSIGNED_BYTE,glcore::GL_UNSIGNED_SHORT,glcore::GL_UNSIGNED_INT].contains( &self.kind )

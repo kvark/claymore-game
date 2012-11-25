@@ -39,23 +39,17 @@ impl Game	{
 		self.battle.update( &self.context.texture, nx, ny )
 	}
 	fn render()-> bool	{
-		let mut queue : ~[engine::call::Call] = ~[];
 		// clear screen
-		queue.push( self.technique.gen_clear(
+		let c0 = self.technique.gen_clear(
 			engine::call::ClearData{
 				color	:Some( engine::rast::make_color(0x8080FFFF) ),
 				depth	:Some( 1f ),
 				stencil	:Some( 0u ),
-			})
+			}
 		);
-		// draw battle (FIXME)
-		let calls = self.battle.render( &self.technique );
-		queue.push( self.technique.process( &self.battle.land, &self.context ));
-		for calls.each |c|	{
-			queue.push( copy *c );
-		}
-		// execute
-		self.context.flush(queue);
+		self.context.flush(~[c0]);
+		// draw battle
+		self.battle.render( &self.context, &self.technique );
 		// done
 		self.frames += 1;
 		self.context.cleanup();

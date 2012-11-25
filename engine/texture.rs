@@ -161,8 +161,7 @@ impl Binding	{
 		assert t.samples == 0u || num_levels == 1u;
 		t.levels = 0;
 		while t.levels<num_levels	{
-			t.levels += 1;
-			let (w,h) = t.get_level_size( num_levels-1u );
+			let (w,h) = t.get_level_size( t.levels );
 			if t.samples != 0u	{
 				glcore::glTexImage2DMultisample( *t.target, t.samples as glcore::GLsizei, int_format,
 					w as glcore::GLsizei, h as glcore::GLsizei, alpha_or_fixed_loc as glcore::GLboolean );
@@ -172,6 +171,7 @@ impl Binding	{
 					w as glcore::GLsizei, h as glcore::GLsizei, 0 as glcore::GLint,
 					pix_format, glcore::GL_UNSIGNED_BYTE, ptr::null() );
 			}
+			t.levels += 1;
 		}
 	}
 

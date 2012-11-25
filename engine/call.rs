@@ -39,7 +39,7 @@ impl context::Context	{
 		for queue.each()	|call|	{
 			match call	{
 				&CallEmpty => {},
-				&CallClear(fb,pmap,data,scissor,_mask)	=> {
+				&CallClear(fb,pmap,data,scissor,mask)	=> {
 					let mut colors : ~[frame::Target] = ~[];
 					for pmap.colors.each_value() |target|	{
 						colors.push( *target );
@@ -47,6 +47,7 @@ impl context::Context	{
 					let has_color = colors.len()!=0 && (*fb.handle==0 || colors[0]!=frame::TarEmpty);
 					self.bind_frame_buffer( fb, true, pmap.depth_stencil, colors );
 					self.rast.scissor.activate( &scissor, 0 );
+					self.rast.mask.activate( &mask, 0 );
 					let mut flags = 0 as glcore::GLenum;
 					//FIXME: cache this
 					match data.color	{
