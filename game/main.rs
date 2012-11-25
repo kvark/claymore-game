@@ -35,8 +35,8 @@ struct Game	{
 
 
 impl Game	{
-	fn update( nx : float, ny : float, cam_dir : int )-> bool	{
-		self.battle.update( &self.context.texture, nx, ny, cam_dir )
+	fn update( nx : float, ny : float, mouse_hit : bool, cam_dir : int )-> bool	{
+		self.battle.update( &self.context.texture, nx, ny, mouse_hit, cam_dir )
 	}
 	fn render()-> bool	{
 		// clear screen
@@ -136,13 +136,15 @@ fn main()	{
 			if window.get_key(glfw3::KEY_UP)!=0	{
 				game.debug_move(shift,0,1);
 			}
+			// mouse buttons
+			let mouse_hit = window.get_mouse_button( glfw3::MOUSE_BUTTON_LEFT )!=0;
 			// camera rotation
 			let cam_dir = (window.get_key(glfw3::KEY_E) - window.get_key(glfw3::KEY_Q)) as int;
 			// render
 			let (cx,cy) = window.get_cursor_pos();
 			let nx = (cx as float)/(wid as float);
 			let ny = (cy as float)/(het as float);
-			if !game.update(nx,ny,cam_dir)	{
+			if !game.update(nx,ny,mouse_hit,cam_dir)	{
 				break
 			}
 			if !game.render()	{

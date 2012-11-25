@@ -83,7 +83,7 @@ impl Grid	{
 		tb.filter(	self.texture, 1u );
 	}
 
-	pub fn update( tb : &engine::texture::Binding, cam : &main::Camera, nx : float, ny : float )-> bool	{
+	pub fn update( tb : &engine::texture::Binding, cam : &main::Camera, nx : float, ny : float )-> (uint,uint,bool)	{
 		let view_proj = cam.get_matrix();
 		self.data.insert( ~"u_ViewProj", engine::shade::UniMatrix(false,view_proj) );
 		let (sx,sy) = self.get_cell_selected( cam, nx, ny );
@@ -95,7 +95,7 @@ impl Grid	{
 			self.cells[sx + sy*self.nseg] = engine::rast::make_color(CELL_ACTIVE);
 			self.upload_single_cell(tb,sx,sy);
 		}
-		true
+		(sx,sy,true)
 	}
 }
 

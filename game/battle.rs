@@ -10,7 +10,7 @@ pub struct Character	{
 }
 
 impl Character	{
-	fn update()	{
+	fn update()-> bool	{
 		let time = engine::anim::get_time();
 		let mut moment  = time - self.start_time;
 		if moment>self.record.duration	{
@@ -24,6 +24,7 @@ impl Character	{
 		for d2.each() |name,val|	{
 			self.entity.set_data( copy *name, copy *val );
 		}
+		true
 	}
 }
 
@@ -38,7 +39,7 @@ pub struct View	{
 }
 
 impl View	{
-	pub fn update( dir : int )	{
+	pub fn update( dir : int )-> bool	{
 		let time = engine::anim::get_time();
 		if dir != 0 && time > self.start_time + 0.5f	{
 			let l = self.points.len() as int;
@@ -60,6 +61,7 @@ impl View	{
 			},
 			None	=> ()
 		}
+		true
 	}
 }
 
@@ -72,10 +74,16 @@ pub struct Scene	{
 }
 
 impl Scene	{
-	pub fn update( tb : &engine::texture::Binding, nx : float, ny : float, cam_dir : int )-> bool	{
-		self.hero.update();
-		self.view.update( cam_dir );
-		self.grid.update( tb, &self.view.cam, nx, ny )
+	pub fn update( tb : &engine::texture::Binding, nx : float, ny : float, mouse_hit : bool, cam_dir : int )-> bool	{
+		let (i,j,ok) = self.grid.update( tb, &self.view.cam, nx, ny );
+		if mouse_hit && self.grid.get_rectangle().contains(i,j)	{
+			let mut sp = engine::space::identity();
+			sp.position = self.grid.get_cell_center(i,j);
+			sp.position.z = 1.3f32;
+			sp.orientation = lmath::quaternion::Quat::new( 0.707f32, 0f32, 0f32, 0.707f32 );
+			self.hero.entity.node.set_space(&sp);
+		}
+		self.hero.update() && self.view.update( cam_dir ) && ok
 	}
 	pub fn render( ct : &engine::context::Context, tech : &engine::draw::Technique )	{
 		{// update matrices
