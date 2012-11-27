@@ -1,5 +1,6 @@
 extern mod lmath;
 extern mod engine;
+use engine::context::GLType;
 
 
 pub struct Grid	{
@@ -46,7 +47,7 @@ impl Grid	{
 	priv fn upload_all_cells( tb : &engine::texture::Binding )	{
 		tb.bind( self.texture );
 		let fm_pix = engine::texture::map_pix_format( ~"rgba" );
-		let component = (self.cells[0].r as @engine::context::GLType).to_gl_type();
+		let component = self.cells[0].r.to_gl_type();
 		let r = self.get_rectangle();
 		tb.load_sub_2D(	self.texture, 0u, &r, fm_pix, component, &const self.cells );
 	}
@@ -55,7 +56,7 @@ impl Grid	{
 		tb.bind( self.texture );
 		let col = self.cells[x + y*self.nseg];
 		let fm_pix = engine::texture::map_pix_format( ~"rgba" );
-		let component = (col.r as @engine::context::GLType).to_gl_type();
+		let component = col.r.to_gl_type();
 		let r = engine::frame::Rect{ x:x, y:y, w:1u, h:1u };
 		tb.load_sub_2D(	self.texture, 0u, &r, fm_pix, component, &const ~[col] );
 	}

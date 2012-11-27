@@ -24,7 +24,7 @@ clean-engine:
 
 
 # external libraries section
-libs: clean-libs lmath glfw3 glcore stb-image
+libs: clean-libs lmath glfw3 glcore stb-image freetype
 
 clean-libs:
 	(cd lib && rm -Rf liblmath* libglfw3* libglcore* libstb*)
@@ -40,6 +40,9 @@ glcore:
 
 stb-image:
 	(cd ../rust-stb-image && make clean && make && cp -R *.dylib* ../${DIR}/lib/)
+
+freetype:
+	(cd ../rust-freetype && make clean && make && cp -R *.dylib* ../${DIR}/lib/)
 
 # demo packing
 demo-pack:

@@ -8,6 +8,7 @@ pub mod buf;
 pub mod call;
 pub mod context;
 pub mod draw;
+pub mod font;
 pub mod frame;
 pub mod load;
 pub mod mesh;

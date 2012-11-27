@@ -1,5 +1,6 @@
 extern mod lmath;
 extern mod engine;
+use engine::draw::Mod;
 
 
 pub struct Character	{
@@ -164,7 +165,7 @@ pub fn make_battle( ct : &engine::context::Context, aspect : float )-> Scene	{
 			vao		: vao,
 			mesh	: mesh,
 			range	: mesh.get_range(),
-			modifier: @() as @engine::draw::Mod,
+			modifier: @(),
 			material: mat,
 		}
 	};
@@ -188,7 +189,7 @@ pub fn make_battle( ct : &engine::context::Context, aspect : float )-> Scene	{
 			vao		: vao,
 			mesh	: mesh,
 			range	: mesh.get_range(),
-			modifier: skel as @engine::draw::Mod,
+			modifier: skel,
 			material: mat,
 		};
 		// load char texture

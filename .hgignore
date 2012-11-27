@@ -4,9 +4,9 @@ syntax: glob
 build/*
 data/texture/*
 data/*.k3*
-project/*
 lib/*.dSYM
 lib/libengine-*
-misc/data/*
 misc/concept/*
+project/*
+util/blender/data/*
 __pycache__
