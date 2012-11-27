@@ -34,8 +34,8 @@ pub struct Entity	{
 
 //FIXME: remove this
 impl Entity	{
-	fn set_data( name : ~str, val : shade::Uniform )	{
-		self.data.insert( name, val );
+	fn mut_data(&self)-> &self/mut shade::DataMap	{
+		&mut self.data
 	}
 }
 

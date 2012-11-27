@@ -19,11 +19,7 @@ impl Character	{
 			moment = 0f;
 		}
 		self.skeleton.set_record( self.record, moment );
-		let mut d2 = engine::shade::create_data();
-		self.skeleton.fill_data( &mut d2 );
-		for d2.each() |name,val|	{
-			self.entity.set_data( copy *name, copy *val );
-		}
+		self.skeleton.fill_data( self.entity.mut_data() );
 		true
 	}
 }
@@ -51,13 +47,12 @@ impl View	{
 			Some(source)	=>	{
 				let moment = (time - self.start_time) / self.trans_duration;
 				let dst = &self.points[ self.destination ];
-				let sp = if moment >= 1f	{
+				*self.cam.node.mut_space() = if moment >= 1f	{
 						self.source = None;
 						*dst
 					}else	{
 						source.interpolate( dst, moment )
 					};
-				self.cam.node.set_space( &sp );
 			},
 			None	=> ()
 		}
@@ -77,11 +72,10 @@ impl Scene	{
 	pub fn update( tb : &engine::texture::Binding, nx : float, ny : float, mouse_hit : bool, cam_dir : int )-> bool	{
 		let (i,j,ok) = self.grid.update( tb, &self.view.cam, nx, ny );
 		if mouse_hit && self.grid.get_rectangle().contains(i,j)	{
-			let mut sp = engine::space::identity();
+			let sp = self.hero.entity.node.mut_space();
 			sp.position = self.grid.get_cell_center(i,j);
 			sp.position.z = 1.3f32;
 			sp.orientation = lmath::quaternion::Quat::new( 0.707f32, 0f32, 0f32, 0.707f32 );
-			self.hero.entity.node.set_space(&sp);
 		}
 		self.hero.update() && self.view.update( cam_dir ) && ok
 	}
@@ -91,11 +85,12 @@ impl Scene	{
 			let cam_pos		= self.view.cam.get_pos_vec4();
 			let light_pos	= lmath::vector::Vec4::new( 4f32, 1f32, 6f32, 1f32 );
 			for [ &self.land, &self.hero.entity ].each |ent|	{
-				ent.set_data( ~"u_ViewProj", 	engine::shade::UniMatrix(false,view_proj) );
-				ent.set_data( ~"u_CameraPos",	engine::shade::UniFloatVec(cam_pos) );
-				ent.set_data( ~"u_LightPos",	engine::shade::UniFloatVec(light_pos) );
+				let d = ent.mut_data();
+				d.insert( ~"u_ViewProj", 	engine::shade::UniMatrix(false,view_proj) );
+				d.insert( ~"u_CameraPos",	engine::shade::UniFloatVec(cam_pos) );
+				d.insert( ~"u_LightPos",	engine::shade::UniFloatVec(light_pos) );
 				let world = ent.node.world_space().to_matrix();
-				ent.set_data( ~"u_World",		engine::shade::UniMatrix(false,world) );
+				d.insert( ~"u_World",		engine::shade::UniMatrix(false,world) );
 			}
 		}
 		let c_land = tech.process( &self.land, ct );
@@ -198,9 +193,9 @@ pub fn make_battle( ct : &engine::context::Context, aspect : float )-> Scene	{
 		};
 		// load char texture
 		let tex = @engine::load::load_texture_2D( ct, ~"data/texture/diffuse.jpg", 1, 3u );
-		ent.set_data( ~"t_Main", engine::shade::UniTexture(0u,tex) );
+		ent.mut_data().insert( ~"t_Main", engine::shade::UniTexture(0u,tex) );
 		let utc = lmath::vector::Vec4::new(1f32,1f32,0f32,0f32);
-		ent.set_data( ~"u_TexTransform", engine::shade::UniFloatVec(utc) );
+		ent.mut_data().insert( ~"u_TexTransform", engine::shade::UniFloatVec(utc) );
 		// done
 		Character{
 			entity		: ent,
@@ -211,18 +206,17 @@ pub fn make_battle( ct : &engine::context::Context, aspect : float )-> Scene	{
 	};
 	// load land texture
 	let tex = @engine::load::load_texture_2D( ct, ~"data/texture/SoilCracked0103_2_S.jpg", 1, 3u );
-	battle_land.set_data( ~"t_Main", engine::shade::UniTexture(0u,tex) );
+	battle_land.mut_data().insert( ~"t_Main", engine::shade::UniTexture(0u,tex) );
 	let utc = lmath::vector::Vec4::new(10f32,10f32,0f32,0f32);
-	battle_land.set_data( ~"u_TexTransform", engine::shade::UniFloatVec(utc) );
+	battle_land.mut_data().insert( ~"u_TexTransform", engine::shade::UniFloatVec(utc) );
 	// create grid
 	let grid = grid::make_grid( ct, 10u );
 	grid.init( &ct.texture );
 	{	// move hero
-		let mut sp = engine::space::identity();
+		let sp = hero.entity.node.mut_space();
 		sp.position = grid.get_cell_center(7u,2u);
 		sp.position.z = 1.3f32;
 		sp.orientation = lmath::quaternion::Quat::new( 0.707f32, 0f32, 0f32, 0.707f32 );
-		hero.entity.node.set_space(&sp);
 	}
 	// done
 	Scene{

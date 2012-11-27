@@ -193,8 +193,8 @@ impl Node	{
 			None	=> self.space
 		}
 	}
-	fn set_space( s : &QuatSpace )	{
-		self.space = *s;
+	fn mut_space(&self)-> &self/mut QuatSpace	{
+		&mut self.space
 	}
 }
 
