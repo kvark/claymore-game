@@ -296,13 +296,16 @@ priv fn query_parameters( h : Handle )-> ParaMap	{
 
 pure fn check_sampler( target : glcore::GLenum, storage : glcore::GLenum )	{
 	if target == glcore::GL_TEXTURE_1D	{
-		assert [glcore::GL_SAMPLER_1D].contains( &storage );
+		assert [glcore::GL_SAMPLER_1D]		.contains( &storage );
 	}else
 	if target == glcore::GL_TEXTURE_2D	{
-		assert [glcore::GL_SAMPLER_2D].contains( &storage );
+		assert [glcore::GL_SAMPLER_2D]		.contains( &storage );
+	}else
+	if target == glcore::GL_TEXTURE_RECTANGLE	{
+		assert [glcore::GL_SAMPLER_2D_RECT]	.contains( &storage );
 	}else
 	if target == glcore::GL_TEXTURE_3D	{
-		assert [glcore::GL_SAMPLER_3D].contains( &storage );
+		assert [glcore::GL_SAMPLER_3D]		.contains( &storage );
 	}else	{
 		fail(fmt!( "Unknown texture target: %x", target as uint ));
 	}
@@ -330,17 +333,16 @@ impl context::Context	{
 		}
 		glcore::glCompileShader( *h );
 		// get info message
-		let mut message:~str;
 		let mut status = 0 as glcore::GLint;
 		length = 0;
-		unsafe	{
+		let message = unsafe	{
 			glcore::glGetShaderiv( *h, glcore::GL_COMPILE_STATUS, ptr::addr_of(&status) );
 			glcore::glGetShaderiv( *h, glcore::GL_INFO_LOG_LENGTH, ptr::addr_of(&length) );
 			let info_bytes = vec::from_elem( length as uint, 0 as libc::c_char );
 			let raw_bytes = vec::raw::to_ptr(info_bytes);
 			glcore::glGetShaderInfoLog( *h, length, ptr::addr_of(&length), raw_bytes );
-			message = str::raw::from_c_str( raw_bytes );
-		}
+			str::raw::from_c_str( raw_bytes )
+		};
 		let ok = (status != (0 as glcore::GLint));
 		if !ok	{
 			io::println( fmt!("Shader: %s",message) );	//TEMP
@@ -358,17 +360,16 @@ impl context::Context	{
 		}
 		glcore::glLinkProgram( *h );
 		// get info message
-		let mut message:~str;
 		let mut status = 0 as glcore::GLint;
 		let mut length = 0 as glcore::GLint;
-		unsafe	{
+		let message = unsafe	{
 			glcore::glGetProgramiv( *h, glcore::GL_LINK_STATUS, ptr::addr_of(&status) );
 			glcore::glGetProgramiv( *h, glcore::GL_INFO_LOG_LENGTH, ptr::addr_of(&length) );
 			let info_bytes = vec::from_elem( length as uint, 0 as libc::c_char );
 			let raw_bytes = vec::raw::to_ptr(info_bytes);
 			glcore::glGetProgramInfoLog( *h, length, ptr::addr_of(&length), raw_bytes );
-			message = str::raw::from_c_str( raw_bytes );
-		}
+			str::raw::from_c_str( raw_bytes )
+		};
 		let ok = (status != (0 as glcore::GLint));
 		if !ok	{
 			io::println( fmt!("Program: %s",message) );	//TEMP

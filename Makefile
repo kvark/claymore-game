@@ -15,6 +15,8 @@ demo-03:
 	${RUST} sample/demo03-materials.rs	-L lib --out-dir build
 demo-04:
 	${RUST} sample/demo04-skeleton.rs	-L lib --out-dir build
+demo-05:
+	${RUST} sample/demo05-text.rs		-L lib --out-dir build
 
 clean:
 	rm -Rf lib/* build/*

@@ -126,6 +126,16 @@ impl Mesh	{
 }
 
 
+pub fn create_quad( ct : &context::Context )-> mesh::Mesh	{
+	let vdata = ~[0i8,0i8,1i8,0i8,0i8,1i8,1i8,1i8];
+	let count = 2u;
+	let mut mesh = ct.create_mesh( ~"grid", ~"3s", vdata.len()/count, 0u );
+	let vat = make_attribute( ct, vdata, count, false );
+	mesh.attribs.insert( ~"a_Vertex", vat );
+	mesh
+}
+
+
 impl context::Context	{
 	fn create_mesh( name : ~str, poly : ~str, nv : uint, ni : uint )-> Mesh	{
 		let ptype = if poly == ~"1"		{glcore::GL_POINTS}
@@ -175,6 +185,7 @@ impl context::Context	{
 	}
 
 	fn draw_mesh( m : &Mesh, range : &Range, va : &buf::VertexArray, prog : &shade::Program, data : &shade::DataMap )-> bool	{
+		assert *va.handle as int != 0;
 		// check black list
 		if m.black_list.contains( &prog.handle )	{
 			return false;

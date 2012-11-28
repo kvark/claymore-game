@@ -2,6 +2,7 @@ syntax: glob
 
 .DS_Store
 build/*
+data/font/*
 data/texture/*
 data/*.k3*
 lib/*.dSYM

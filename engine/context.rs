@@ -114,7 +114,7 @@ impl ClearData : State	{
 
 
 impl Context	{
-	fn check( where : ~str )	{
+	fn check( where : &str )	{
 		let code = glcore::glGetError();
 		if code != 0	{
 			let decode =

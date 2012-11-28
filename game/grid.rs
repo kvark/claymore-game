@@ -101,15 +101,6 @@ impl Grid	{
 }
 
 
-fn make_quad( ct : &engine::context::Context )-> engine::mesh::Mesh	{
-	let vdata = ~[0i8,0i8,1i8,0i8,0i8,1i8,1i8,1i8];
-	let count = 2u;
-	let mut mesh = ct.create_mesh( ~"grid", ~"3s", vdata.len()/count, 0u );
-	let vat = engine::mesh::make_attribute( ct, vdata, count, false );
-	mesh.attribs.insert( ~"a_Vertex", vat );
-	mesh
-}
-
 pub fn make_grid( ct : &engine::context::Context, segments : uint )-> Grid	{
 	let mut data = engine::shade::create_data();
 	let mut rast = engine::rast::create_rast(0,0);
@@ -127,7 +118,7 @@ pub fn make_grid( ct : &engine::context::Context, segments : uint )-> Grid	{
 	let par_size = lmath::vector::Vec4::new( oo_seg, oo_seg, 0f32, 0f32 );
 	data.insert( ~"u_Size",		engine::shade::UniFloatVec(par_size) );
 	Grid{
-		mesh	: @make_quad( ct ),
+		mesh	: @engine::mesh::create_quad( ct ),
 		program	: @engine::load::load_program( ct, ~"data/code-game/grid" ),
 		data	: data,
 		rast	: rast,
