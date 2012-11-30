@@ -2,6 +2,8 @@ extern mod freetype;
 use context::GLType;
 
 
+const SHIFT : uint = 6u;
+
 trait FontError	{
 	fn check( s : &str );
 }
@@ -112,22 +114,30 @@ impl Font	{
 		}
 	}
 
-	pub fn bake( gr : &context::Context, s : ~str, limit_x : uint, limit_y : uint )-> texture::Texture	{
+	pub fn bake( gr : &context::Context, s : ~str, max_size : (uint,uint), kerning : float )-> texture::Texture	{
+		let (limit_x,limit_y) = max_size;
+		let kern_offset = kerning * 64f as uint;
 		io::println(fmt!( "Font baking text: %s", s ));
-		type Target = (char,uint,uint);
+		struct Target	{
+			c : char, x : uint, y : uint
+		}
 		let mut pos_array = vec::with_capacity::<Target>( s.len() );
 		let face  = unsafe { &*(self.face) };
-		let mut position = 0u;
-		let mut baseline = face.ascender as uint;
+		let mut position = 0u, baseline = face.ascender as uint;	// in font units
 		io::println(fmt!( "\tFace up %d down %d", face.ascender as int, face.descender as int ));
-		let mut prev_index = 0 as freetype::FT_UInt;
-		let mut max_x = 0u, max_y = 0u;
+		let mut prev_index = 0 as freetype::FT_UInt;	// font char index
+		let mut max_x = 0u, max_y = 0u;				// in font units
+		let mut start_word = 0u;	// index in pos_array
+		let width_capacity = limit_x << SHIFT;
 		for s.each_char() |c|	{
 			if c == '\n'	{
 				baseline += face.height as uint;
 				position = 0u;
 				prev_index = 0 as freetype::FT_UInt;
 			}else	{
+				if char::is_whitespace(c)	{
+					start_word = pos_array.len();
+				}
 				let index = freetype::bindgen::FT_Get_Char_Index( self.face, c as freetype::FT_ULong );
 				freetype::bindgen::FT_Load_Glyph( self.face, index,
 					freetype::FT_LOAD_DEFAULT as freetype::FT_Int32 )
@@ -140,45 +150,53 @@ impl Font	{
 						.check( "Get_Kerning" );
 					//io::println(fmt!( "\tKerning %d-%d is %d",
 					//	prev_index as int, index as int, delta.x as int ));
-					delta.x as uint
+					delta.x as uint + kern_offset
 				};
 				prev_index = index;
 				let glyph = unsafe { &*(face.glyph as freetype::FT_GlyphSlot) };
 				assert self.face as uint == glyph.face as uint;
-				let cx = position >> 6u;
-				let cy = (baseline - glyph.metrics.horiBearingY as uint) >> 6u;
-				let ex = position + (glyph.metrics.width + glyph.metrics.horiBearingX) as uint;
-				let ey = baseline + (glyph.metrics.height- glyph.metrics.horiBearingY) as uint;
-				/*if ex>limit_x	{
-					let i = pos_array.len();
-					baseline += face.height as uint;
-					position = 0u;
-					prev_index = 0 as freetype::FT_UInt;
-					while i>0	{
-						let &(c,_,y) = &pos_array[i];
-						i = if c.is_whitespace() || y!=cy	{0u}
-						else	{
-							y = baseline>>6u;
-							i-1u
-						}
+				let cx = position + glyph.metrics.horiBearingX as uint;
+				let cy = baseline - glyph.metrics.horiBearingY as uint;
+				pos_array.push( Target{ c:c, x:cx, y:cy });
+				let mut ex = cx + glyph.metrics.width	as uint;
+				let mut ey = cy + glyph.metrics.height	as uint;
+				if ex>width_capacity	{
+					io::println(fmt!( "\tMoving the word: %u-%u", start_word, pos_array.len() ));
+					let word_offset = pos_array[start_word].x;
+					if ex - word_offset > width_capacity	{
+						fail(fmt!( "Text exceeds horisontal bound: %s", s ));
 					}
-				}*/
-				max_x = uint::max( max_x, ((ex-1u)>>6u) + 1u );
-				max_y = uint::max( max_y, ((ey-1u)>>6u) + 1u );
+					let height_offset = face.height as uint;
+					io::println(fmt!( "\tHor:%d Ver:%d", -word_offset as int, height_offset as int ));
+					prev_index = 0 as freetype::FT_UInt;
+					for uint::range( start_word, pos_array.len() ) |i|	{
+						pos_array[i].x -= word_offset;
+						pos_array[i].y += height_offset;
+					}
+					baseline += height_offset;
+					position -= word_offset;
+					ex -= word_offset;
+					ey += height_offset;
+				}
+				max_x = uint::max( max_x, ((ex-1u)>>SHIFT)+1u );
+				max_y = uint::max( max_y, ((ey-1u)>>SHIFT)+1u );
+				io::println(fmt!( "\tsymbol:%c cx:%u cy:%u", c, cx, cy ));
 				/*io::println(fmt!( "\tSymbol '%c' (id=%u) at (%u,%u): size=(%d,%d) bearing=(%d,%d)",
 					c, self.get_char_index(c), position, baseline,
 					glyph.metrics.width as int, glyph.metrics.height as int,
 					glyph.metrics.horiBearingX as int, glyph.metrics.horiBearingY as int ));*/
-				pos_array.push( (c,cx,cy) );
 				position += glyph.advance.x as uint;
 			}
 		}
+		// align to 4 bytes
+		max_x = (max_x|3u)+1u;
+		max_y = (max_y|3u)+1u;
 		assert max_x<=limit_x && max_y<=limit_y;
 		io::println(fmt!( "Sufficient dimensions (%u,%u)", max_x, max_y ));
 		let mut image = vec::from_elem( max_x*max_y, 0u8 );
 		for pos_array.each |slice|	{
-			let &(c,x,y) = slice;
-			freetype::bindgen::FT_Load_Char( self.face, c as freetype::FT_ULong,
+			freetype::bindgen::FT_Load_Char( self.face,
+				slice.c as freetype::FT_ULong,
 				freetype::FT_LOAD_DEFAULT as freetype::FT_Int32 )
 				.check( "Load_Char" );
 			freetype::bindgen::FT_Render_Glyph(
@@ -187,8 +205,13 @@ impl Font	{
 				.check( "Render_Glyph" );
 			let glyph = unsafe { &*(face.glyph as freetype::FT_GlyphSlot) };
 			let bmp = &(glyph.bitmap);
-			assert x + (bmp.width	as uint) <= max_x;
-			assert y + (bmp.rows	as uint) <= max_y;
+			let bw = bmp.width as uint, bh = bmp.rows as uint;
+			assert bw == glyph.metrics.width	as uint >> SHIFT;
+			assert bh == glyph.metrics.height	as uint >> SHIFT;
+			let x = slice.x >> SHIFT;
+			let y = slice.y >> SHIFT;
+			assert x + bw <= max_x && y + bh <= max_y;
+			io::println(fmt!( "\ty:%u by:%u maxy:%u", y, bh, max_y ));
 			self.draw( bmp, &mut image, y*max_x + x, max_x );
 		}
 		let tex = gr.create_texture( ~"2D", max_x, max_y, 1u, 0u );

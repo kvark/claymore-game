@@ -29,7 +29,7 @@ fn init( wid : uint, het : uint ) -> Sample	{
 	// done
 	ct.check(~"init");
 	Sample { context:ct, font_lib:fl,
-		texture	:@font.bake( &ct, ~"Hello, world!\nI'm here!", 400u, 100u ),
+		texture	:@font.bake( &ct, ~"Hello, world!\nI'm here!", (200u,200u), -3f ),
 		program	:@engine::load::load_program( &ct, ~"data/code/hud/text" ),
 		vao		:@ct.create_vertex_array(),
 		mesh	:@engine::mesh::create_quad( &ct ),
