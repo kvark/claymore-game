@@ -24,6 +24,10 @@ impl Color : cmp::Eq	{
 	}
 }
 
+impl Color	{
+	
+}
+
 
 priv trait Stage	{
 	fn activate( &mut self, new : &self, poly : uint );

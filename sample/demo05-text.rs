@@ -4,6 +4,11 @@ extern mod lmath;
 extern mod engine;
 
 
+pure fn color_to_vec(col : &engine::rast::Color)-> lmath::vector::vec4	{
+	lmath::vector::Vec4::new( col.r, col.g, col.b, col.a )
+}
+
+
 struct Sample	{
 	context		: engine::context::Context,
 	font_lib	: engine::font::Context,
@@ -20,12 +25,12 @@ fn init( wid : uint, het : uint ) -> Sample	{
 	assert ct.sync_back();
 	// create text
 	let fl = engine::font::create_context();
-	let font = fl.load_font( ~"data/font/AnnabelScript.ttf", 0u, 30u, 30u );
+	let font = fl.load_font( ~"data/font/Vera.ttf", 0u, 50u, 30u );
 	// done
 	ct.check(~"init");
 	Sample { context:ct, font_lib:fl,
-		texture	:@font.bake( &ct, ~"Hello, world!", 200u, 50u ),
-		program	:@engine::load::load_program( &ct, ~"data/code/text" ),
+		texture	:@font.bake( &ct, ~"Hello, world!\nI'm here!", 400u, 100u ),
+		program	:@engine::load::load_program( &ct, ~"data/code/hud/text" ),
 		vao		:@ct.create_vertex_array(),
 		mesh	:@engine::mesh::create_quad( &ct ),
 		frames	:0 }
@@ -40,11 +45,18 @@ fn render( s : &Sample ) ->bool	{
 	};
 	let fbo = s.context.default_frame_buffer;
 	let pmap = engine::call::create_plane_map( ~"o_Color", engine::frame::TarEmpty );
-	let rast = engine::rast::create_rast(0,0);
+	let mut rast = engine::rast::create_rast(0,0);
+	rast.set_blend( ~"s+d", ~"Sa", ~"1-Sa" );
 
 	let mut data = engine::shade::create_data();
-	let transform = lmath::vector::Vec4::new( 1f32, 1f32, 0f32, 0f32 );
+	let (wid,het) = s.context.screen_size;
+	let transform = lmath::vector::Vec4::new(
+		2f32 * (s.texture.width as f32) / (wid as f32),
+		2f32 * (s.texture.height as f32)/ (het as f32),
+		-0.5f32, -0.5f32 );
+	let color = color_to_vec( &engine::rast::make_color(0xFF2020FF) );
 	data.insert( ~"u_Transform",	engine::shade::UniFloatVec(transform)	);
+	data.insert( ~"u_Color",		engine::shade::UniFloatVec(color)		);
 	data.insert( ~"t_Text",			engine::shade::UniTexture(0u,s.texture)	);
 
 	let c0 = engine::call::CallClear(

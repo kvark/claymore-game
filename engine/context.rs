@@ -64,6 +64,7 @@ pub struct Context	{
 	frame_buffer_read	: frame::Binding,
 	texture				: texture::Binding,
 	// defaults
+	screen_size			: (uint,uint),
 	default_vertex_array: @buf::VertexArray,
 	default_frame_buffer: @frame::Buffer,
 }
@@ -87,6 +88,7 @@ pub fn create( wid : uint, het : uint )-> Context	{
 		frame_buffer_draw	: frame::create_binding( glcore::GL_DRAW_FRAMEBUFFER ),
 		frame_buffer_read	: frame::create_binding( glcore::GL_READ_FRAMEBUFFER ),
 		texture				: texture::create_binding(),
+		screen_size			: (wid,het),
 		default_vertex_array: @buf::default_vertex_array(),
 		default_frame_buffer: @frame::default_frame_buffer(wid,het),
 	}
