@@ -8,11 +8,18 @@ pure fn color_to_vec(col : &engine::rast::Color)-> lmath::vector::vec4	{
 	lmath::vector::Vec4::new( col.r, col.g, col.b, col.a )
 }
 
+struct Bubble	{
+	tex	: @engine::texture::Texture,
+	cx	: uint,
+	cy	: uint,
+}
+
 
 struct Sample	{
 	context		: engine::context::Context,
 	font_lib	: engine::font::Context,
 	texture		: @engine::texture::Texture,
+	bubble		: Bubble, 
 	program		: @engine::shade::Program,
 	vao			: @engine::buf::VertexArray,
 	mesh		: @engine::mesh::Mesh,
@@ -30,7 +37,10 @@ fn init( wid : uint, het : uint ) -> Sample	{
 	ct.check(~"init");
 	Sample { context:ct, font_lib:fl,
 		texture	:@font.bake( &ct, ~"Hello, world!\nI'm here!", (200u,200u), -3f ),
-		program	:@engine::load::load_program( &ct, ~"data/code/hud/text" ),
+		bubble	: Bubble{
+			tex :@engine::load::load_texture_2D( &ct, ~"data/texture/text_bubble2.png", 0, 2u ),
+			cx :32u, cy :20u },
+		program	:@engine::load::load_program( &ct, ~"data/code/hud/text_bubble" ),
 		vao		:@ct.create_vertex_array(),
 		mesh	:@engine::mesh::create_quad( &ct ),
 		frames	:0 }
@@ -55,9 +65,22 @@ fn render( s : &Sample ) ->bool	{
 		2f32 * (s.texture.height as f32)/ (het as f32),
 		-0.5f32, -0.5f32 );
 	let color = color_to_vec( &engine::rast::make_color(0xFF2020FF) );
+	let bubble_param = lmath::vector::Vec4::new(
+		(s.bubble.cx as f32) / (s.bubble.tex.width as f32),
+		(s.bubble.cy as f32) / (s.bubble.tex.height as f32),
+		(s.bubble.tex.width	 as f32) / (s.texture.width as f32),
+		(s.bubble.tex.height as f32) / (s.texture.height as f32)
+		);
+
+	if s.frames==0	{
+		io::println(fmt!( "Bubble params: %s", bubble_param.to_string() ));
+	}
+
 	data.insert( ~"u_Transform",	engine::shade::UniFloatVec(transform)	);
 	data.insert( ~"u_Color",		engine::shade::UniFloatVec(color)		);
 	data.insert( ~"t_Text",			engine::shade::UniTexture(0u,s.texture)	);
+	data.insert( ~"t_Bubble",		engine::shade::UniTexture(0u,s.bubble.tex)	);
+	data.insert( ~"u_Bubble",		engine::shade::UniFloatVec(bubble_param));
 
 	let c0 = engine::call::CallClear(
 		fbo, copy pmap, cdata, rast.scissor, rast.mask);
@@ -80,7 +103,7 @@ fn failGLFW( where: &static/str )	{
 
 
 fn main()	{
-	io::println("--- Claymore demo 03: materials ---");
+	io::println("--- Claymore demo 04: text ---");
 	do task::task().sched_mode(task::PlatformThread).spawn {
 		if (glfw3::init()==0)	{
 			failGLFW("Init");

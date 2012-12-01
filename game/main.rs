@@ -91,7 +91,7 @@ fn fail_GLFW( where: &static/str ) -> !	{
 	let code = glfw3::get_error();
 	io::println(~"GLFW error: " + glfw3::error_string(code));
 	glfw3::terminate();
-	fail fmt!("glfw%s() failed\n",where);
+	fail fmt!("glfw%s() failed\n",where)
 }
 
 
@@ -130,8 +130,8 @@ fn main()	{
 
 		let config = load_config::<Config>(~"data/config.json");
 
-		glfw3::window_hint( glfw3::OPENGL_DEBUG_CONTEXT, if config.GL.debug {1} else {0} );
 		glfw3::window_hint( glfw3::WINDOW_RESIZABLE, 0 );
+		glfw3::window_hint( glfw3::OPENGL_DEBUG_CONTEXT, if config.GL.debug {1} else {0} );
 		glfw3::window_hint( glfw3::OPENGL_VERSION_MAJOR, config.GL.major as libc::c_int );
 		glfw3::window_hint( glfw3::OPENGL_VERSION_MINOR, config.GL.minor as libc::c_int );
 		glfw3::window_hint( glfw3::OPENGL_PROFILE, glfw3::OPENGL_CORE_PROFILE );
