@@ -24,9 +24,8 @@ struct BubbleManager	{
 }
 
 impl BubbleManager	{
-	fn spawn( ct : &engine::context::Context, pos:(f32,f32),
-			text : ~str, kerning : float, color : uint )-> Bubble	{
-		let texture = @self.font.bake( ct, text, self.max_size, kerning );
+	fn spawn( ct : &engine::context::Context, pos:(f32,f32), text : ~str, color : uint )-> Bubble	{
+		let texture = @self.font.bake( ct, text, self.max_size );
 		// prepare data
 		let mut data = engine::shade::create_data();
 		let v_color = color_to_vec( &engine::rast::make_color(color) );
@@ -55,7 +54,6 @@ impl BubbleManager	{
 
 struct Sample	{
 	context		: engine::context::Context,
-	font_lib	: engine::font::Context,
 	bman		: BubbleManager,
 	bubbles		: ~[Bubble],
 	vao			: @engine::buf::VertexArray,
@@ -68,27 +66,27 @@ fn init( wid : uint, het : uint ) -> Sample	{
 	let ct = engine::context::create( wid, het );
 	assert ct.sync_back();
 	// create text
-	let fl = engine::font::create_context();
-	let font = fl.load_font( "data/font/Vera.ttf", 0u, 20u, 20u );
+	let fl = @engine::font::create_context();
+	let font = fl.load_font( "data/font/AnnabelScript.ttf", 0u, 30u, 30u, -1f, -15f );
 	// done
 	ct.check(~"init");
 	let bman = BubbleManager{
 		font	: font,
-		max_size: (640u,400u),
+		max_size: (500u,800u),
 		program	: @engine::load::load_program( &ct, ~"data/code/hud/text_bubble" ),
 		t_bubble: @engine::load::load_texture_2D( &ct, ~"data/texture/text_bubble2.png", 0, 2u ),
 		seam	: (32u,20u),
 	};
 	let b0 = bman.spawn( &ct, (-0.9f32,-0.8f32), ~"Hello, world!\nClaymore text demo is here!",
-		-1f, 0x2020FFFF );
-	let b1 = bman.spawn( &ct, (-0.4f32,0.4f32), fmt!(
-		"There is a single bu bble texture in this demo,\nand the size is just %ux%u.\n%s",
+		0x2020FFFF );
+	let b1 = bman.spawn( &ct, (-0.5f32,0.3f32), fmt!(
+		"There is a single bubble texture in this demo, and the size is just %ux%u.\n%s",
 		bman.t_bubble.width, bman.t_bubble.height,
-		"It is drawn together with the text\nusing a very smart bubble shader."
-		), -1f, 0xFF2020FF );
-	let b2 = bman.spawn( &ct, (0.1f32,-0.5f32), ~"Please don't mind the very basic\nfont (Bitstream Vera).",
-		-1f, 0x20FF20FF );
-	Sample { context:ct, font_lib:fl,
+		"It is drawn together with the text using a very smart bubble shader."
+		), 0xFF2020FF );
+	let b2 = bman.spawn( &ct, (0f32,-0.2f32), ~"Kerning and word-wrapping are supposedly here.",
+		0x20FF20FF );
+	Sample { context:ct,
 		bman : bman,
 		bubbles	: ~[b0,b1,b2],
 		vao		:@ct.create_vertex_array(),
