@@ -26,7 +26,7 @@ impl Character	{
 
 
 pub struct View	{
-	cam				: main::Camera,
+	cam				: scene::Camera,
 	trans_duration	: float,
 	points			: ~[engine::space::QuatSpace],
 	mut source		: Option<engine::space::QuatSpace>,
@@ -121,7 +121,7 @@ pub fn make_battle( ct : &engine::context::Context, aspect : float )-> Scene	{
 				actions	: ~[],
 			};
 			let projection = lmath::funs::projection::perspective::<f32>( 45f, aspect, 1f, 25f );
-			main::Camera{
+			scene::Camera{
 				node:cam_node,
 				proj:projection,
 			}

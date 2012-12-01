@@ -16,16 +16,14 @@ struct Bubble	{
 }
 
 struct BubbleManager	{
-	font		: engine::font::Font,
-	max_size	: (uint,uint),
 	program		: @engine::shade::Program,
 	t_bubble	: @engine::texture::Texture,
 	seam		: (uint,uint),
 }
 
 impl BubbleManager	{
-	fn spawn( ct : &engine::context::Context, pos:(f32,f32), text : ~str, color : uint )-> Bubble	{
-		let texture = @self.font.bake( ct, text, self.max_size );
+	fn spawn( ct : &engine::context::Context, pos:(f32,f32),
+			texture : @engine::texture::Texture, color : uint )-> Bubble	{
 		// prepare data
 		let mut data = engine::shade::create_data();
 		let v_color = color_to_vec( &engine::rast::make_color(color) );
@@ -47,7 +45,7 @@ impl BubbleManager	{
 		data.insert( ~"t_Bubble",		engine::shade::UniTexture(0u,self.t_bubble));
 		data.insert( ~"u_Bubble",		engine::shade::UniFloatVec(param)		);
 		// spawn
-		Bubble{ text:text, data:data, t_string:texture, t_bubble:self.t_bubble }
+		Bubble{ text:~"", data:data, t_string:texture, t_bubble:self.t_bubble }
 	}
 }
 
@@ -67,25 +65,27 @@ fn init( wid : uint, het : uint ) -> Sample	{
 	assert ct.sync_back();
 	// create text
 	let fl = @engine::font::create_context();
-	let font = fl.load_font( "data/font/AnnabelScript.ttf", 0u, 30u, 30u, -1f, -15f );
+	let font_anabel	= fl.load_font( "data/font/AnnabelScript.ttf", 0u, 30u, 30u, -1f, -15f );
+	let font_vera	= fl.load_font( "data/font/Vera.ttf", 0u, 20u, 20u, -1f, -10f );
+	let font_obelix	= fl.load_font( "data/font/ObelixPro.ttf", 0u, 30u, 30u, 0f, 25f );
+	let max_size = (300u,800u);
 	// done
 	ct.check(~"init");
 	let bman = BubbleManager{
-		font	: font,
-		max_size: (500u,800u),
 		program	: @engine::load::load_program( &ct, ~"data/code/hud/text_bubble" ),
-		t_bubble: @engine::load::load_texture_2D( &ct, ~"data/texture/text_bubble2.png", 0, 2u ),
+		t_bubble: @engine::load::load_texture_2D( &ct, ~"data/texture/text_bubble3.png", 0, 1u ),
 		seam	: (32u,20u),
 	};
-	let b0 = bman.spawn( &ct, (-0.9f32,-0.8f32), ~"Hello, world!\nClaymore text demo is here!",
-		0x2020FFFF );
-	let b1 = bman.spawn( &ct, (-0.5f32,0.3f32), fmt!(
+	let tex0 = @font_anabel.bake( &ct, ~"Hello, world!\nClaymore text demo is here!", max_size );
+	let b0 = bman.spawn( &ct, (-0.9f32,-0.8f32), tex0, 0x2020FFFF );
+	let tex1 = @font_vera.bake( &ct, fmt!(
 		"There is a single bubble texture in this demo, and the size is just %ux%u.\n%s",
 		bman.t_bubble.width, bman.t_bubble.height,
-		"It is drawn together with the text using a very smart bubble shader."
-		), 0xFF2020FF );
-	let b2 = bman.spawn( &ct, (0f32,-0.2f32), ~"Kerning and word-wrapping are supposedly here.",
-		0x20FF20FF );
+		"It is drawn together with the text using a very smart bubble shader."),
+		max_size );
+	let b1 = bman.spawn( &ct, (-0.5f32,-0.1f32), tex1, 0xC13100FF );
+	let tex2 = @font_obelix.bake( &ct, ~"Kerning and word-wrapping are in effect.", max_size );
+	let b2 = bman.spawn( &ct, (0.1f32,-0.5f32), tex2, 0x20FF20FF );
 	Sample { context:ct,
 		bman : bman,
 		bubbles	: ~[b0,b1,b2],
@@ -97,7 +97,7 @@ fn init( wid : uint, het : uint ) -> Sample	{
 
 fn render( s : &Sample ) ->bool	{
 	let cdata = engine::call::ClearData{
-		color	:Some(engine::rast::make_color(0x8080FFFF)),
+		color	:Some(engine::rast::make_color(0xE0E0FFFF)),
 		depth	:Some( 1f ),
 		stencil	:None
 	};

@@ -2,7 +2,7 @@ extern mod freetype;
 use context::GLType;
 
 
-const SHIFT : uint = 6u;
+const SHIFT : int = 6;
 
 trait FontError	{
 	fn check( s : &str );
@@ -48,8 +48,8 @@ struct Glyph	{
 
 pub struct Font	{
 	priv face		: freetype::FT_Face,
-	kern_offset		: uint,
-	line_offset		: uint,
+	kern_offset		: int,
+	line_offset		: int,
 	priv context	: @Context,
 	//priv mut cache	: send_map::linear::LinearMap<char,Glyph>,
 
@@ -120,24 +120,23 @@ impl Font	{
 	pub fn bake( gr : &context::Context, s : &str, max_size : (uint,uint) )-> texture::Texture	{
 		let (limit_x,limit_y) = max_size;
 		io::println(fmt!( "Font baking text: %s", s ));
-		struct Target	{
-			c : char, x : uint, y : uint
-		}
+		struct Target	{ c:char, x:int, y:int }
 		let face  = unsafe { &*(self.face) };
-		let line_gap = self.line_offset + (face.height as uint);
-		let min_position = 1<<SHIFT;
-		let mut position = min_position, baseline = face.ascender as uint;	// in font units
+		let line_gap = (self.line_offset as int) + (face.height as int);
+		let mut position = 0, baseline = face.ascender as int;	// in font units
 		io::println(fmt!( "\tFace height=%d, up=%d, down=%d", face.height as int,
 			face.ascender as int, face.descender as int ));
 		let mut prev_index = 0 as freetype::FT_UInt;	// font char index
-		let mut max_x = 0u, max_y = 0u;				// in font units
-		let mut start_word = 0u;	// index in pos_array
-		let width_capacity = limit_x << SHIFT;
+		const BIG	:int = 999999;
+		const BORDER:int = 1;
+		let mut max_x = -BIG, max_y = -BIG, min_x = BIG, min_y = BIG;	// in font units
+		let mut start_word = 0u;
+		let width_capacity = limit_x as int << SHIFT;
 		let mut pos_array = vec::with_capacity::<Target>( s.len() );
 		for s.each_char() |c|	{
 			if c == '\n'	{
 				baseline += line_gap;
-				position = min_position;
+				position = 0;
 				prev_index = 0 as freetype::FT_UInt;
 			}else	{
 				if char::is_whitespace(c)	{
@@ -155,23 +154,26 @@ impl Font	{
 						.check( "Get_Kerning" );
 					//io::println(fmt!( "\tKerning %d-%d is %d",
 					//	prev_index as int, index as int, delta.x as int ));
-					delta.x as uint + self.kern_offset
+					delta.x as int + self.kern_offset
 				};
 				prev_index = index;
 				let glyph = unsafe { &*(face.glyph as freetype::FT_GlyphSlot) };
 				assert self.face as uint == glyph.face as uint;
-				let cx = int::max( position as int + glyph.metrics.horiBearingX as int, min_position as int) as uint;
-				let cy = int::max( baseline as int - glyph.metrics.horiBearingY as int, min_position as int) as uint;
+				let cx = position + glyph.metrics.horiBearingX as int;
+				let cy = baseline - glyph.metrics.horiBearingY as int;
 				pos_array.push( Target{ c:c, x:cx, y:cy });
-				let mut ex = cx + glyph.metrics.width	as uint;
-				let mut ey = cy + glyph.metrics.height	as uint;
-				if ex>width_capacity	{
+				min_x = int::min( min_x, cx );
+				min_y = int::min( min_y, cy );
+				let mut ex = cx + glyph.metrics.width	as int;
+				let mut ey = cy + glyph.metrics.height	as int;
+				let e_border = ex - min_x + (2*BORDER<<SHIFT);
+				if e_border > width_capacity	{
 					io::println(fmt!( "\tMoving the word: %u-%u", start_word, pos_array.len() ));
-					let word_offset = pos_array[start_word].x - min_position;
-					if ex - word_offset > width_capacity	{
+					let word_offset = pos_array[start_word].x - min_x;
+					if e_border - word_offset > width_capacity	{
 						fail fmt!( "Text exceeds horisontal bound: %s", s )
 					}
-					io::println(fmt!( "\tHor:%d Ver:%u", -word_offset as int, line_gap ));
+					io::println(fmt!( "\tHor:%d Ver:%d", -word_offset, line_gap ));
 					prev_index = 0 as freetype::FT_UInt;
 					for uint::range( start_word, pos_array.len() ) |i|	{
 						pos_array[i].x -= word_offset;
@@ -182,22 +184,23 @@ impl Font	{
 					ex -= word_offset;
 					ey += line_gap;
 				}
-				max_x = uint::max( max_x, ((ex-1u)>>SHIFT)+1u );
-				max_y = uint::max( max_y, ((ey-1u)>>SHIFT)+1u );
-				io::println(fmt!( "\tsymbol:%c cx:%u cy:%u", c, cx, cy ));
+				max_x = int::max( max_x, ex );
+				max_y = int::max( max_y, ey );
+				//io::println(fmt!( "\tsymbol:%c cx:%d cy:%d", c, cx, cy ));
 				/*io::println(fmt!( "\tSymbol '%c' (id=%u) at (%u,%u): size=(%d,%d) bearing=(%d,%d)",
 					c, self.get_char_index(c), position, baseline,
 					glyph.metrics.width as int, glyph.metrics.height as int,
 					glyph.metrics.horiBearingX as int, glyph.metrics.horiBearingY as int ));*/
-				position += glyph.advance.x as uint;
+				position += glyph.advance.x as int;
 			}
 		}
-		// align to 4 bytes
-		max_x = (max_x|3u)+1u;
-		max_y = (max_y|3u)+1u;
-		assert max_x<=limit_x && max_y<=limit_y;
-		io::println(fmt!( "Sufficient dimensions (%u,%u)", max_x, max_y ));
-		let mut image = vec::from_elem( max_x*max_y, 0u8 );
+		// add border and align to 4 bytes
+		let width = ((((SHIFT+max_x-min_x)>>SHIFT)+3+2*BORDER) & !3) as uint;
+		let height= ((((SHIFT+max_y-min_y)>>SHIFT)+3+2*BORDER) & !3) as uint;
+		min_x -= BORDER<<SHIFT; min_y -= BORDER<<SHIFT; 
+		io::println(fmt!( "\tBox at (%d,%d) of size %ux%u", min_x, min_y, width, height ));
+		assert width<=limit_x && height<=limit_y;
+		let mut image = vec::from_elem( width*height, 0u8 );
 		for pos_array.each |slice|	{
 			freetype::bindgen::FT_Load_Char( self.face,
 				slice.c as freetype::FT_ULong,
@@ -212,13 +215,13 @@ impl Font	{
 			let bw = bmp.width as uint, bh = bmp.rows as uint;
 			assert bw == glyph.metrics.width	as uint >> SHIFT;
 			assert bh == glyph.metrics.height	as uint >> SHIFT;
-			let x = slice.x >> SHIFT;
-			let y = slice.y >> SHIFT;
-			assert x + bw <= max_x && y + bh <= max_y;
-			//io::println(fmt!( "\ty:%u by:%u maxy:%u", y, bh, max_y ));
-			self.draw( bmp, &mut image, y*max_x + x, max_x );
+			let x = ((slice.x - min_x) >>SHIFT) as uint;
+			let y = ((slice.y - min_y) >>SHIFT) as uint;
+			//io::println(fmt!( "\tx:%u bw:%u, width:%u, y:%u bh:%u height:%u", x,bw,width, y,bh,height ));
+			assert x + bw <= width && y + bh <= height;
+			self.draw( bmp, &mut image, y*width + x, width );
 		}
-		let tex = gr.create_texture( ~"2D", max_x, max_y, 1u, 0u );
+		let tex = gr.create_texture( ~"2D", width, height, 1u, 0u );
 		gr.texture.load_2D( &tex, 0u, texture::map_int_format(~"r8"),
 			texture::map_pix_format(~"red"), image[0].to_gl_type(), &image );
 		gr.texture.wrap( &tex, 0 );
@@ -242,8 +245,8 @@ impl Context	{
 			xs as freetype::FT_UInt, ys as freetype::FT_UInt )
 			.check( "Set_Pixel_Sizes" );
 		Font{ face:face, context:self,
-			kern_offset: kerning * ((1<<SHIFT) as float) as uint,
-			line_offset: line_gap* ((1<<SHIFT) as float) as uint,
+			kern_offset: kerning * ((1<<SHIFT) as float) as int,
+			line_offset: line_gap* ((1<<SHIFT) as float) as int,
 			//cache	:send_map::linear::LinearMap::<char,Glyph>(),
 		}
 	}

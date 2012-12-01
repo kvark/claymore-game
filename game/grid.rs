@@ -61,7 +61,7 @@ impl Grid	{
 		tb.load_sub_2D(	self.texture, 0u, &r, fm_pix, component, &const ~[col] );
 	}
 
-	priv fn get_cell_selected( cam : &main::Camera, nx : float, ny : float )-> (uint,uint)	{
+	priv fn get_cell_selected( cam : &scene::Camera, nx : float, ny : float )-> (uint,uint)	{
 		let ndc = lmath::vector::Vec3::new( (nx as f32)*2f32-1f32, 1f32-(ny as f32)*2f32, 0f32 );
 		let origin = cam.node.world_space().position;
 		let ray = cam.get_matrix().inverse().transform( &ndc ).sub_v( &origin );
@@ -84,7 +84,7 @@ impl Grid	{
 		tb.filter(	self.texture, 1u );
 	}
 
-	pub fn update( tb : &engine::texture::Binding, cam : &main::Camera, nx : float, ny : float )-> (uint,uint,bool)	{
+	pub fn update( tb : &engine::texture::Binding, cam : &scene::Camera, nx : float, ny : float )-> (uint,uint,bool)	{
 		let view_proj = cam.get_matrix();
 		self.data.insert( ~"u_ViewProj", engine::shade::UniMatrix(false,view_proj) );
 		let (sx,sy) = self.get_cell_selected( cam, nx, ny );

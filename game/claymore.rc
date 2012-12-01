@@ -7,3 +7,4 @@
 mod battle;
 mod grid;
 mod main;
+mod scene;

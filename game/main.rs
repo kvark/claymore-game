@@ -5,29 +5,6 @@ extern mod engine;
 extern mod std;
 use std::json;
 
-pub struct Camera	{
-	node	: @engine::space::Node,
-	proj	: lmath::matrix::mat4,
-}
-
-impl Camera	{
-	pure fn get_matrix()-> lmath::matrix::mat4	{
-		self.proj * self.node.world_space().inverse().to_matrix()
-	}
-	pure fn get_pos_vec4()-> lmath::vector::vec4	{
-		let v = self.node.world_space().position;
-		lmath::vector::Vec4::new( v.x, v.y, v.z, 0f32 )
-	}
-	pure fn get_view_vector()-> lmath::vector::vec3	{
-		let v = lmath::vector::Vec3::new( 0f32,0f32,-1f32 );
-		self.node.world_space().orientation.mul_v( &v )
-	}
-	pure fn get_up_vector()-> lmath::vector::vec3	{
-		let v = lmath::vector::Vec3::new( 0f32,1f32,0f32 );
-		self.node.world_space().orientation.mul_v( &v )
-	}
-}
-
 
 struct Game	{
 	context		: engine::context::Context,
@@ -35,7 +12,6 @@ struct Game	{
 	technique	: engine::draw::Technique,
 	battle		: battle::Scene,
 }
-
 
 impl Game	{
 	fn update( nx : float, ny : float, mouse_hit : bool, cam_dir : int )-> bool	{
@@ -109,17 +85,6 @@ struct Config	{
 	GL		: ConfigGL,
 }
 
-fn load_config<T : std::serialization::Deserializable>( path : ~str )-> T	{
-	let rd = match io::file_reader(&path::Path(path))	{
-		Ok(reader)	=> reader,
-		Err(e)		=> fail e.to_str(),
-	};
-	match json::Deserializer(rd)	{
-		Ok(ref deser)	=> std::serialization::deserialize(deser),
-		Err(e)			=> fail e.to_str(),
-	}
-}
-
 
 fn main()	{
 	io::println("--- Claymore ---");
@@ -128,7 +93,7 @@ fn main()	{
 			fail_GLFW("Init");
 		}
 
-		let config = load_config::<Config>(~"data/config.json");
+		let config = scene::load_config::<Config>(~"data/config.json");
 
 		glfw3::window_hint( glfw3::WINDOW_RESIZABLE, 0 );
 		glfw3::window_hint( glfw3::OPENGL_DEBUG_CONTEXT, if config.GL.debug {1} else {0} );
