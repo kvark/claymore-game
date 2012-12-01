@@ -114,16 +114,17 @@ impl Font	{
 		}
 	}
 
-	pub fn bake( gr : &context::Context, s : ~str, max_size : (uint,uint), kerning : float )-> texture::Texture	{
+	pub fn bake( gr : &context::Context, s : &str, max_size : (uint,uint), kerning : float )-> texture::Texture	{
 		let (limit_x,limit_y) = max_size;
-		let kern_offset = kerning * 64f as uint;
+		let kern_offset = kerning * ((1<<SHIFT) as float) as uint;
 		io::println(fmt!( "Font baking text: %s", s ));
 		struct Target	{
 			c : char, x : uint, y : uint
 		}
 		let mut pos_array = vec::with_capacity::<Target>( s.len() );
 		let face  = unsafe { &*(self.face) };
-		let mut position = 0u, baseline = face.ascender as uint;	// in font units
+		let min_position = 1<<SHIFT;
+		let mut position = min_position, baseline = face.ascender as uint;	// in font units
 		io::println(fmt!( "\tFace up %d down %d", face.ascender as int, face.descender as int ));
 		let mut prev_index = 0 as freetype::FT_UInt;	// font char index
 		let mut max_x = 0u, max_y = 0u;				// in font units
@@ -132,7 +133,7 @@ impl Font	{
 		for s.each_char() |c|	{
 			if c == '\n'	{
 				baseline += face.height as uint;
-				position = 0u;
+				position = min_position;
 				prev_index = 0 as freetype::FT_UInt;
 			}else	{
 				if char::is_whitespace(c)	{
@@ -157,12 +158,15 @@ impl Font	{
 				assert self.face as uint == glyph.face as uint;
 				let cx = position + glyph.metrics.horiBearingX as uint;
 				let cy = baseline - glyph.metrics.horiBearingY as uint;
-				pos_array.push( Target{ c:c, x:cx, y:cy });
+				pos_array.push( Target{ c:c,
+					x:if cx<min_position {min_position} else {cx},
+					y:cy
+				});
 				let mut ex = cx + glyph.metrics.width	as uint;
 				let mut ey = cy + glyph.metrics.height	as uint;
 				if ex>width_capacity	{
 					io::println(fmt!( "\tMoving the word: %u-%u", start_word, pos_array.len() ));
-					let word_offset = pos_array[start_word].x;
+					let word_offset = pos_array[start_word].x - min_position;
 					if ex - word_offset > width_capacity	{
 						fail(fmt!( "Text exceeds horisontal bound: %s", s ));
 					}
@@ -225,7 +229,7 @@ impl Font	{
 
 
 impl Context	{
-	pub fn load_font( path : ~str, index : uint, xs : uint, ys : uint )-> Font	{
+	pub fn load_font( path : &str, index : uint, xs : uint, ys : uint )-> Font	{
 		let mut face : freetype::FT_Face = ptr::null();
 		do str::as_c_str(path) |text|	{
 			unsafe	{
