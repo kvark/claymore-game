@@ -150,7 +150,7 @@ pub fn make_battle( ct : &engine::context::Context, aspect : float )-> Scene	{
 	// load battle landscape
 	let battle_land = {
 		let mesh = @engine::load::read_mesh(
-			&engine::load::create_reader(~"data/battle-test.k3mesh"),
+			&engine::load::create_reader(~"data/mesh/battle-test.k3mesh"),
 			ct );
 		let node = @engine::space::Node{
 			name	: ~"landscape",
@@ -171,7 +171,7 @@ pub fn make_battle( ct : &engine::context::Context, aspect : float )-> Scene	{
 	// load protagonist
 	let hero =	{
 		let mesh = @engine::load::read_mesh(
-			&engine::load::create_reader(~"data/character.k3mesh"),
+			&engine::load::create_reader(~"data/mesh/character.k3mesh"),
 			ct );
 		let node = @engine::space::Node{
 			name	: ~"hero",
@@ -180,7 +180,7 @@ pub fn make_battle( ct : &engine::context::Context, aspect : float )-> Scene	{
 			actions	: ~[],
 		};
 		let skel = @engine::load::read_armature(
-			&engine::load::create_reader(~"data/character.k3arm"),
+			&engine::load::create_reader(~"data/arm/character.k3arm"),
 			false );
 		let ent = engine::draw::Entity{
 			node	: node,

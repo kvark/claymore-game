@@ -2,6 +2,8 @@ extern mod glfw3;
 extern mod lmath;
 extern mod engine;
 
+extern mod std;
+use std::json;
 
 pub struct Camera	{
 	node	: @engine::space::Node,
@@ -25,6 +27,7 @@ impl Camera	{
 		self.node.world_space().orientation.mul_v( &v )
 	}
 }
+
 
 struct Game	{
 	context		: engine::context::Context,
@@ -84,11 +87,37 @@ fn make_game( wid : uint, het : uint )-> Game	{
 }
 
 
-fn fail_GLFW( where: &static/str )	{
+fn fail_GLFW( where: &static/str ) -> !	{
 	let code = glfw3::get_error();
 	io::println(~"GLFW error: " + glfw3::error_string(code));
 	glfw3::terminate();
-	fail( fmt!("glfw%s() failed\n",where) );
+	fail fmt!("glfw%s() failed\n",where);
+}
+
+
+#[auto_deserialize]
+struct ConfigWindow	{
+	title:~str, width:uint, height:uint, samples:uint, fullscreen:bool,
+}
+#[auto_deserialize]
+struct ConfigGL	{
+	major:uint, minor:uint, debug:bool,
+}
+#[auto_deserialize]
+struct Config	{
+	window	: ConfigWindow,
+	GL		: ConfigGL,
+}
+
+fn load_config<T : std::serialization::Deserializable>( path : ~str )-> T	{
+	let rd = match io::file_reader(&path::Path(path))	{
+		Ok(reader)	=> reader,
+		Err(e)		=> fail e.to_str(),
+	};
+	match json::Deserializer(rd)	{
+		Ok(ref deser)	=> std::serialization::deserialize(deser),
+		Err(e)			=> fail e.to_str(),
+	}
 }
 
 
@@ -99,21 +128,24 @@ fn main()	{
 			fail_GLFW("Init");
 		}
 
-		//glfw3::window_hint( glfw3::OPENGL_DEBUG_CONTEXT, 1 );
+		let config = load_config::<Config>(~"data/config.json");
+
+		glfw3::window_hint( glfw3::OPENGL_DEBUG_CONTEXT, if config.GL.debug {1} else {0} );
 		glfw3::window_hint( glfw3::WINDOW_RESIZABLE, 0 );
-        glfw3::window_hint( glfw3::OPENGL_VERSION_MAJOR, 3 );
-        glfw3::window_hint( glfw3::OPENGL_VERSION_MINOR, 2 );
+		glfw3::window_hint( glfw3::OPENGL_VERSION_MAJOR, config.GL.major as libc::c_int );
+		glfw3::window_hint( glfw3::OPENGL_VERSION_MINOR, config.GL.minor as libc::c_int );
 		glfw3::window_hint( glfw3::OPENGL_PROFILE, glfw3::OPENGL_CORE_PROFILE );
-        glfw3::window_hint( glfw3::OPENGL_FORWARD_COMPAT, 1 );
-	
-		let wid = 800u, het = 600u;
-		let mut window = glfw3::create_window( wid, het, glfw3::WINDOWED, "Claymore" );
+		glfw3::window_hint( glfw3::OPENGL_FORWARD_COMPAT, 1 );
+
+		let mut window = glfw3::create_window( config.window.width, config.window.height,
+			if config.window.fullscreen {glfw3::FULLSCREEN} else {glfw3::WINDOWED},
+			config.window.title );
 		if (ptr::is_null(window.ptr))	{
 			fail_GLFW("OpenWindow");
 		}
 	
 		window.make_context_current();
-		let game = make_game( wid, het );
+		let game = make_game( config.window.width, config.window.height );
 		
 		loop	{
 			glfw3::poll_events();
@@ -142,8 +174,8 @@ fn main()	{
 			let cam_dir = (window.get_key(glfw3::KEY_E) - window.get_key(glfw3::KEY_Q)) as int;
 			// render
 			let (cx,cy) = window.get_cursor_pos();
-			let nx = (cx as float)/(wid as float);
-			let ny = (cy as float)/(het as float);
+			let nx = (cx as float)/(config.window.width as float);
+			let ny = (cy as float)/(config.window.height as float);
 			if !game.update(nx,ny,mouse_hit,cam_dir)	{
 				break
 			}
