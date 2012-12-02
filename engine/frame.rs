@@ -78,9 +78,7 @@ pub struct Binding	{
 impl RenBinding : context::State	{
 	fn sync_back()->bool	{
 		let mut hid = 0 as glcore::GLint;
-		unsafe	{
-			glcore::glGetIntegerv( glcore::GL_RENDERBUFFER_BINDING, ptr::addr_of(&hid) );
-		}
+		glcore::glGetIntegerv( glcore::GL_RENDERBUFFER_BINDING, ptr::addr_of(&hid) );
 		let hu = hid as glcore::GLuint;
 		if *self.active != hu	{
 			self.active = Handle( hu );
@@ -92,9 +90,7 @@ impl RenBinding : context::State	{
 impl Binding : context::State	{
 	fn sync_back()->bool	{
 		let mut hid = 0 as glcore::GLint;
-		unsafe	{
-			glcore::glGetIntegerv( glcore::GL_FRAMEBUFFER_BINDING, ptr::addr_of(&hid) );
-		}
+		glcore::glGetIntegerv( glcore::GL_FRAMEBUFFER_BINDING, ptr::addr_of(&hid) );
 		let hu = hid as glcore::GLuint;
 		if *self.active != hu	{
 			self.active = Handle( hu );
@@ -215,11 +211,9 @@ pub fn default_frame_buffer( wid : uint, het : uint )-> Buffer	{
 
 
 impl context::Context	{
-	pure fn create_render_buffer( wid:uint, het:uint, sam:uint )-> Surface	{
+	fn create_render_buffer( wid:uint, het:uint, sam:uint )-> Surface	{
 		let mut hid = 0 as glcore::GLuint;
-		unsafe	{
-			glcore::glGenRenderbuffers( 1, ptr::addr_of(&hid) );
-		}
+		glcore::glGenRenderbuffers( 1, ptr::addr_of(&hid) );
 		Surface{ handle:Handle(hid),
 			target:self.render_buffer.target,
 			width:wid, height:het, samples:sam,
@@ -242,9 +236,7 @@ impl context::Context	{
 
 	fn create_frame_buffer()-> Buffer	{
 		let mut hid = 0 as glcore::GLuint;
-		unsafe	{
-			glcore::glGenFramebuffers( 1, ptr::addr_of(&hid) );
-		}
+		glcore::glGenFramebuffers( 1, ptr::addr_of(&hid) );
 		Buffer{ handle:Handle(hid), viewport:Rect{x:0u,y:0u,w:0u,h:0u},
 			draw_mask:0u, read_id:None,
 			depth_stencil	: TarEmpty,
@@ -329,9 +321,8 @@ impl context::Context	{
 			if list.len() == 1u	{
 				glcore::glDrawBuffer( list[0] );
 			}else	{
-				unsafe	{
-					glcore::glDrawBuffers( list.len() as glcore::GLsizei, vec::raw::to_ptr(list) )
-				}
+				glcore::glDrawBuffers( list.len() as glcore::GLsizei,
+					unsafe{vec::raw::to_ptr(list)} );
 			}
 		}
 		// update the viewport
@@ -360,9 +351,7 @@ impl context::Context	{
 			if *h == *self.render_buffer.active	{
 				self.unbind_render_buffers();
 			}
-			unsafe	{
-				glcore::glDeleteRenderbuffers( 1, ptr::addr_of(&*h) );	
-			}
+			glcore::glDeleteRenderbuffers( 1, ptr::addr_of(&*h) );	
 		}
 		while self.frame_buffer_draw.pool.len()!=0	{
 			let h = self.frame_buffer_draw.pool.pop();
@@ -373,9 +362,7 @@ impl context::Context	{
 			if *h == *self.frame_buffer_read.active	{
 				//self.unbind_read_buffer();
 			}
-			unsafe	{
-				glcore::glDeleteFramebuffers( 1, ptr::addr_of(&*h) );
-			}
+			glcore::glDeleteFramebuffers( 1, ptr::addr_of(&*h) );
 		}
 	}
 }

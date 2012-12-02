@@ -20,9 +20,7 @@ pub struct Binding	{
 impl Binding : context::State	{
 	fn sync_back()-> bool	{
 		let mut hid = 0 as glcore::GLint;
-		unsafe	{
-			glcore::glGetIntegerv( glcore::GL_CURRENT_PROGRAM, ptr::addr_of(&hid) );
-		}
+		glcore::glGetIntegerv( glcore::GL_CURRENT_PROGRAM, ptr::addr_of(&hid) );
 		let program = Handle( hid as glcore::GLuint );
 		if *self.active_program != *program	{
 			self.active_program = program;
@@ -102,7 +100,7 @@ struct Parameter	{
 }
 
 impl Parameter	{
-	priv unsafe fn read( h : Handle )-> bool	{
+	priv fn read( h : Handle )-> bool	{
 		let t = self.storage;
 		let loc = *self.loc;
 		assert loc>=0 && self.size==1u;
@@ -142,9 +140,8 @@ impl Parameter	{
 			UniInt(v)		=> glcore::glUniform1i( loc, v as glcore::GLint ),
 			UniFloatVec(v)	=> glcore::glUniform4fv( loc, 1, ptr::addr_of(&v.x) ),
 			UniIntVec(v)	=> glcore::glUniform4iv( loc, 1, v.to_ptr() ),
-			UniFloatVecArray(v)	=> unsafe	{
-				glcore::glUniform4fv( loc, self.size as glcore::GLint, vec::raw::to_ptr(v) as *glcore::GLfloat )
-			},
+			UniFloatVecArray(v)	=> glcore::glUniform4fv( loc, self.size as glcore::GLint,
+				unsafe{vec::raw::to_ptr(v)} as *glcore::GLfloat ),
 			UniQuat(v)		=> glcore::glUniform4fv( loc, 1, v.to_ptr() ),
 			UniMatrix(b,v)	=> glcore::glUniformMatrix4fv( loc, 1, b as glcore::GLboolean, ptr::addr_of(&v.x.x) ),
 			UniTexture(u,_)	=> glcore::glUniform1i( loc, u as glcore::GLint ),
@@ -199,10 +196,8 @@ impl Program	{
 			None	=>	{
 				/*let mut p = -1 as glcore::GLint;
 				do str::as_c_str(*name) |text|	{
-					unsafe {
-						//FIXME:doesn't work!
-						glcore::glGetFragDataLocation( *self.handle, text );
-					}
+					//FIXME:doesn't work!
+					glcore::glGetFragDataLocation( *self.handle, text );
 				}
 				assert p >= 0;
 				let pu = p as uint;*/
@@ -228,27 +223,20 @@ priv fn query_attributes( h : Handle )-> AttriMap	{
 	//assert glcore::glGetError() == 0;
 	let num		= 0 as glcore::GLint;
 	let max_len	= 0 as glcore::GLint;
-	let mut info_bytes	: ~[libc::c_char];
-	let mut raw_bytes	: *libc::c_char;
-	unsafe	{
-		glcore::glGetProgramiv( *h, glcore::GL_ACTIVE_ATTRIBUTES, ptr::addr_of(&num) );
-		glcore::glGetProgramiv( *h, glcore::GL_ACTIVE_ATTRIBUTE_MAX_LENGTH, ptr::addr_of(&max_len) );
-		info_bytes = vec::from_elem( max_len as uint, 0 as libc::c_char );
-		raw_bytes = vec::raw::to_ptr(info_bytes);
-	}
+	glcore::glGetProgramiv( *h, glcore::GL_ACTIVE_ATTRIBUTES, ptr::addr_of(&num) );
+	glcore::glGetProgramiv( *h, glcore::GL_ACTIVE_ATTRIBUTE_MAX_LENGTH, ptr::addr_of(&max_len) );
+	let mut info_bytes	= vec::from_elem( max_len as uint, 0 as libc::c_char );
+	let raw_bytes		= unsafe{ vec::raw::to_ptr(info_bytes) };
 	io::println(fmt!( "\tQuerying %d attributes:", num as int ));
 	let mut rez		= send_map::linear::linear_map_with_capacity::<~str,Attribute>( num as uint );
 	for uint::range(0u,num as uint) |i|	{
 		let mut length	= 0 as glcore::GLint;
 		let mut size	= 0 as glcore::GLint;
 		let mut storage	= 0 as glcore::GLenum;
-		let mut name 	: ~str;
-		unsafe	{
-			glcore::glGetActiveAttrib( *h, i as glcore::GLuint, max_len,
-				ptr::addr_of(&length), ptr::addr_of(&size),
-				ptr::addr_of(&storage), raw_bytes );
-			name = str::raw::from_c_str_len( raw_bytes, length as uint );
-		}
+		glcore::glGetActiveAttrib( *h, i as glcore::GLuint, max_len,
+			ptr::addr_of(&length), ptr::addr_of(&size),
+			ptr::addr_of(&storage), raw_bytes );
+		let name = unsafe{ str::raw::from_c_str_len( raw_bytes, length as uint ) };
 		info_bytes[length] = 0;
 		let loc = glcore::glGetAttribLocation( *h, raw_bytes );
 		io::println(fmt!( "\t\t[%d] = '%s',\tformat %d", loc as int, name, storage as int ));
@@ -262,27 +250,20 @@ priv fn query_parameters( h : Handle )-> ParaMap	{
 	//assert glcore::glGetError() == 0;
 	let num		= 0 as glcore::GLint;
 	let max_len	= 0 as glcore::GLint;
-	let mut info_bytes	: ~[libc::c_char];
-	let mut raw_bytes	: *libc::c_char;
-	unsafe	{
-		glcore::glGetProgramiv( *h, glcore::GL_ACTIVE_UNIFORMS, ptr::addr_of(&num) );
-		glcore::glGetProgramiv( *h, glcore::GL_ACTIVE_UNIFORM_MAX_LENGTH, ptr::addr_of(&max_len) );
-		info_bytes	= vec::from_elem( max_len as uint, 0 as libc::c_char );
-		raw_bytes	= vec::raw::to_ptr(info_bytes);
-	}
+	glcore::glGetProgramiv( *h, glcore::GL_ACTIVE_UNIFORMS, ptr::addr_of(&num) );
+	glcore::glGetProgramiv( *h, glcore::GL_ACTIVE_UNIFORM_MAX_LENGTH, ptr::addr_of(&max_len) );
+	let mut info_bytes	= vec::from_elem( max_len as uint, 0 as libc::c_char );
+	let raw_bytes		= unsafe{ vec::raw::to_ptr(info_bytes) };
 	io::println(fmt!( "\tQuerying %d parameters:", num as int ));
 	let mut rez		= send_map::linear::linear_map_with_capacity::<~str,Parameter>( num as uint );
 	for uint::range(0u,num as uint) |i|	{
 		let mut length	= 0 as glcore::GLint;
 		let mut size	= 0 as glcore::GLint;
 		let mut storage	= 0 as glcore::GLenum;
-		let mut name 	: ~str;
-		unsafe	{
-			glcore::glGetActiveUniform( *h, i as glcore::GLuint, max_len,
-				ptr::addr_of(&length), ptr::addr_of(&size),
-				ptr::addr_of(&storage), raw_bytes );
-			name = str::raw::from_c_str_len( raw_bytes, length as uint );
-		}
+		glcore::glGetActiveUniform( *h, i as glcore::GLuint, max_len,
+			ptr::addr_of(&length), ptr::addr_of(&size),
+			ptr::addr_of(&storage), raw_bytes );
+		let name = unsafe{ str::raw::from_c_str_len( raw_bytes, length as uint ) };
 		info_bytes[length] = 0;
 		let loc = glcore::glGetUniformLocation( *h, raw_bytes );
 		io::println(fmt!( "\t\t[%d-%d]\t= '%s',\tformat %d", loc as int, ((loc + size) as int) -1, name, storage as int ));
@@ -327,9 +308,7 @@ impl context::Context	{
 		let h = Handle( glcore::glCreateShader(target) );
 		let mut length = code.len() as glcore::GLint;
 		do str::as_c_str(code) |text|	{
-			unsafe {
-				glcore::glShaderSource(	*h, 1i32, ptr::addr_of(&text), ptr::addr_of(&length) );
-			}
+			glcore::glShaderSource(	*h, 1i32, ptr::addr_of(&text), ptr::addr_of(&length) );
 		}
 		glcore::glCompileShader( *h );
 		// get info message
@@ -338,8 +317,8 @@ impl context::Context	{
 		let message = unsafe	{
 			glcore::glGetShaderiv( *h, glcore::GL_COMPILE_STATUS, ptr::addr_of(&status) );
 			glcore::glGetShaderiv( *h, glcore::GL_INFO_LOG_LENGTH, ptr::addr_of(&length) );
-			let info_bytes = vec::from_elem( length as uint, 0 as libc::c_char );
-			let raw_bytes = vec::raw::to_ptr(info_bytes);
+			let info_bytes	= vec::from_elem( length as uint, 0 as libc::c_char );
+			let raw_bytes	= vec::raw::to_ptr(info_bytes);
 			glcore::glGetShaderInfoLog( *h, length, ptr::addr_of(&length), raw_bytes );
 			str::raw::from_c_str( raw_bytes )
 		};
@@ -365,8 +344,8 @@ impl context::Context	{
 		let message = unsafe	{
 			glcore::glGetProgramiv( *h, glcore::GL_LINK_STATUS, ptr::addr_of(&status) );
 			glcore::glGetProgramiv( *h, glcore::GL_INFO_LOG_LENGTH, ptr::addr_of(&length) );
-			let info_bytes = vec::from_elem( length as uint, 0 as libc::c_char );
-			let raw_bytes = vec::raw::to_ptr(info_bytes);
+			let info_bytes	= vec::from_elem( length as uint, 0 as libc::c_char );
+			let raw_bytes	= vec::raw::to_ptr(info_bytes);
 			glcore::glGetProgramInfoLog( *h, length, ptr::addr_of(&length), raw_bytes );
 			str::raw::from_c_str( raw_bytes )
 		};

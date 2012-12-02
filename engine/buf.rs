@@ -33,9 +33,7 @@ impl Binding : context::State	{
 				fail( fmt!("Unknown binding to query: %d",*self.target as int) );
 			};
 		let hid = 0 as glcore::GLint;
-		unsafe	{
-			glcore::glGetIntegerv( query, ptr::addr_of(&hid) );
-		}
+		glcore::glGetIntegerv( query, ptr::addr_of(&hid) );
 		let h = Handle( hid as glcore::GLuint );
 		if *self.active != *h	{
 			self.active = h;
@@ -127,11 +125,9 @@ pub pure fn default_vertex_array()-> VertexArray	{
 
 
 impl context::Context	{
-	pure fn create_vertex_array()-> VertexArray	{
+	fn create_vertex_array()-> VertexArray	{
 		let mut hid = 0 as glcore::GLuint;
-		unsafe	{
-			glcore::glGenVertexArrays( 1, ptr::addr_of(&hid) );
-		}
+		glcore::glGenVertexArrays( 1, ptr::addr_of(&hid) );
 		VertexArray{ handle : Handle(hid), data : _create_zero_data(),
 			element	: create_binding( glcore::GL_ELEMENT_ARRAY_BUFFER ),
 			pool : self.vertex_array.pool,
@@ -151,11 +147,9 @@ impl context::Context	{
 		self._bind_vertex_array( Handle(0) );
 	}
 
-	pure fn create_buffer()-> Object	{
+	fn create_buffer()-> Object	{
 		let mut hid = 0 as glcore::GLuint;
-		unsafe	{
-			glcore::glGenBuffers( 1, ptr::addr_of(&hid) );
-		}
+		glcore::glGenBuffers( 1, ptr::addr_of(&hid) );
 		Object{ handle:Handle(hid), pool:self.array_buffer.pool }
 	}
 
@@ -186,10 +180,8 @@ impl context::Context	{
 		self.bind_buffer( obj );
 		let usage = if dynamic {glcore::GL_STATIC_DRAW} else {glcore::GL_DYNAMIC_DRAW};
 		let size = data.len() * sys::size_of::<T>() as glcore::GLsizeiptr;
-		unsafe	{
-			let raw = vec::raw::to_ptr(data) as *glcore::GLvoid;
-			glcore::glBufferData( *self.array_buffer.target, size, raw, usage );
-		}
+		let raw = unsafe{vec::raw::to_ptr(data)} as *glcore::GLvoid;
+		glcore::glBufferData( *self.array_buffer.target, size, raw, usage );
 	}
 
 	fn create_buffer_sized( size : uint )-> Object	{
@@ -211,9 +203,7 @@ impl context::Context	{
 			if *h == *self.vertex_array.active	{
 				self.unbind_vertex_array();
 			}
-			unsafe	{
-				glcore::glDeleteVertexArrays( 1, ptr::addr_of(&*h) );
-			}
+			glcore::glDeleteVertexArrays( 1, ptr::addr_of(&*h) );
 		}
 		while self.array_buffer.pool.len()!=0	{
 			let h = self.array_buffer.pool.pop();

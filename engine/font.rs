@@ -28,11 +28,8 @@ pub struct Context	{
 
 pub fn create_context()-> Context	{
 	let mut lib : freetype::FT_Library = ptr::null();
-	unsafe	{
-		freetype::bindgen::FT_Init_FreeType( ptr::addr_of(&lib) )
-			.check( "Init_FreeType" );
-		
-	}
+	freetype::bindgen::FT_Init_FreeType( ptr::addr_of(&lib) )
+		.check( "Init_FreeType" );
 	Context{ lib:lib }
 }
 
@@ -79,8 +76,7 @@ impl Font	{
 					freetype::FT_RENDER_MODE_NORMAL )
 					.check( "Render_Glyph" );
 				let mut slot : freetype::FT_GlyphSlot = ptr::null();
-				freetype::bindgen::FT_Get_Glyph( self.face,
-					unsafe{ ptr::addr_of(&slot) })
+				freetype::bindgen::FT_Get_Glyph( self.face,	ptr::addr_of(&slot))
 					.check( "Get_Glyph" );
 				let g = Glyph{ slot:slot };
 				self.cache.insert( c, slot );
@@ -146,7 +142,7 @@ impl Font	{
 				freetype::bindgen::FT_Load_Glyph( self.face, index,
 					freetype::FT_LOAD_DEFAULT as freetype::FT_Int32 )
 					.check( "Load_Glyph" );
-				position += unsafe	{
+				position += {
 					let zero = 0 as freetype::FT_Pos;
 					let delta = { x:zero, y:zero };
 					freetype::bindgen::FT_Get_Kerning( self.face, prev_index, index,
@@ -236,10 +232,9 @@ impl Context	{
 			kerning : float, line_gap : float )-> Font	{
 		let mut face : freetype::FT_Face = ptr::null();
 		do str::as_c_str(path) |text|	{
-			unsafe	{
-				freetype::bindgen::FT_New_Face( self.lib, text, 
-					index as freetype::FT_Long, ptr::addr_of(&face) )
-			}.check( "New_Face" );
+			freetype::bindgen::FT_New_Face( self.lib, text, 
+				index as freetype::FT_Long, ptr::addr_of(&face) )
+				.check( "New_Face" );
 		}
 		freetype::bindgen::FT_Set_Pixel_Sizes( face,
 			xs as freetype::FT_UInt, ys as freetype::FT_UInt )

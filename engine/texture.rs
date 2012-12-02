@@ -183,12 +183,10 @@ impl Binding	{
 		assert t.levels >= level;
 		if t.levels==level	{ t.levels+=1; }
 		let (w,h) = t.get_level_size( level );
-		unsafe	{
-			let raw = vec::raw::to_ptr(*data) as *glcore::GLvoid;
-			glcore::glTexImage2D( *t.target, level as glcore::GLint, int_format,
-				w as glcore::GLint, h as glcore::GLint, 0 as glcore::GLint,
-				pix_format, pix_type, raw );
-		}
+		let raw = unsafe{vec::raw::to_ptr(*data)} as *glcore::GLvoid;
+		glcore::glTexImage2D( *t.target, level as glcore::GLint, int_format,
+			w as glcore::GLint, h as glcore::GLint, 0 as glcore::GLint,
+			pix_format, pix_type, raw );
 	}
 
 	fn load_sub_2D<T>( t : &Texture, level : uint, r : &frame::Rect,
@@ -198,13 +196,11 @@ impl Binding	{
 		assert r.w*r.h == data.len();
 		let (w,h) = t.get_level_size( level );
 		assert frame::make_rect(w,h).contains_rect( r );
-		unsafe	{
-			let raw = vec::raw::to_ptr(*data) as *glcore::GLvoid;
-			glcore::glTexSubImage2D( *t.target, level as glcore::GLint,
-				r.x as glcore::GLint, r.y as glcore::GLint,
-				r.w as glcore::GLsizei, r.h as glcore::GLsizei,
-				pix_format, pix_type, raw );
-		}
+		let raw = unsafe{vec::raw::to_ptr(*data)} as *glcore::GLvoid;
+		glcore::glTexSubImage2D( *t.target, level as glcore::GLint,
+			r.x as glcore::GLint, r.y as glcore::GLint,
+			r.w as glcore::GLsizei, r.h as glcore::GLsizei,
+			pix_format, pix_type, raw );
 	}
 
 	fn generate_levels( t : &Texture )-> uint	{
@@ -261,9 +257,7 @@ impl Binding : context::State	{
 	fn sync_back()->bool	{
 		let mut was_ok = true;
 		let mut id = 0 as glcore::GLint;
-		unsafe	{
-			glcore::glGetIntegerv( glcore::GL_ACTIVE_TEXTURE, ptr::addr_of(&id) );
-		}
+		glcore::glGetIntegerv( glcore::GL_ACTIVE_TEXTURE, ptr::addr_of(&id) );
 		let cur_unit = id as uint - (glcore::GL_TEXTURE0 as uint);
 		if self.active_unit != cur_unit	{
 			was_ok = false;
@@ -277,9 +271,7 @@ impl Binding : context::State	{
 				fail(fmt!( "Unkown binding %d", *slot.target as int ));
 			};
 			self.switch( slot.unit );
-			unsafe	{
-				glcore::glGetIntegerv( query, ptr::addr_of(&id) );		
-			}
+			glcore::glGetIntegerv( query, ptr::addr_of(&id) );
 			if *(*handle) != id as glcore::GLuint	{
 				io::println("bad2");
 				was_ok = false;
@@ -313,9 +305,7 @@ pub fn map_target( s : ~str )-> Target	{
 impl context::Context	{
 	fn create_texture( st:~str, w:uint, h:uint, d:uint, s:uint )->Texture	{
 		let mut hid = 0 as glcore::GLuint;
-		unsafe	{
-			glcore::glGenTextures( 1, ptr::addr_of(&hid) );
-		}
+		glcore::glGenTextures( 1, ptr::addr_of(&hid) );
 		let wrap = glcore::GL_REPEAT;
 		Texture{ handle:Handle(hid), target:map_target(st),
 			width:w, height:h, depth:d, samples:s,
@@ -334,9 +324,7 @@ impl context::Context	{
 					self.texture.unbind( s.target );
 				}
 			}
-			unsafe	{
-				glcore::glDeleteTextures( 1, ptr::addr_of(&*han) );
-			}
+			glcore::glDeleteTextures( 1, ptr::addr_of(&*han) );
 		}
 	}
 }

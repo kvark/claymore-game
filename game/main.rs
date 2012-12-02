@@ -8,6 +8,7 @@ use std::json;
 
 struct Game	{
 	context		: engine::context::Context,
+	audio		: engine::audio::Context,
 	mut frames	: uint,
 	technique	: engine::draw::Technique,
 	battle		: battle::Scene,
@@ -44,6 +45,7 @@ impl Game	{
 fn make_game( wid : uint, het : uint )-> Game	{
 	let ct = engine::context::create( wid, het );
 	assert ct.sync_back();
+	let ac = engine::audio::create_context();
 	// create a forward light technique
 	let tech = {
 		let pmap = engine::call::create_plane_map( ~"o_Color", engine::frame::TarEmpty );
@@ -57,7 +59,8 @@ fn make_game( wid : uint, het : uint )-> Game	{
 	// done
 	ct.check(~"init");
 	let aspect = (wid as float) / (het as float);
-	Game{ context:ct, frames:0u, technique:tech,
+	Game{ context:ct, audio:ac,
+		frames:0u, technique:tech,
 		battle:battle::make_battle( &ct, aspect ),
 	}
 }
