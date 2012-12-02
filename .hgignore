@@ -9,6 +9,7 @@ data/arm/*
 lib/*.dSYM
 lib/libengine-*
 misc/concept/*
+misc/models/*
 project/*
 util/blender/data/*
 __pycache__

@@ -47,9 +47,6 @@ class ExportArm( bpy.types.Operator, ExportHelper ):
 	break_err	= BoolProperty( name='Break on error',
 		description='Stop the process on first error',
 		default=Settings.breakError )
-	frame_conv	= FloatProperty( name='Frames per second',
-		description='Conversion rate from frames to seconds',
-		default=Settings.kFrameSec, min=0.1, max=100000.0 )
 	key_bezier	= BoolProperty( name='Include Bezier points',
 		description='Store additional information for smoother interpolation',
 		default=Settings.keyBezier )
@@ -58,7 +55,6 @@ class ExportArm( bpy.types.Operator, ExportHelper ):
 		Settings.showInfo		= self.properties.show_info
 		Settings.showWarning	= self.properties.show_warn
 		Settings.breakError		= self.properties.break_err
-		Settings.kFrameSec		= self.properties.frame_conv
 		Settings.keyBezier		= self.properties.key_bezier
 		save_arm(self.properties.filepath, context)
 		return {'FINISHED'}

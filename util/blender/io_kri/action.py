@@ -43,7 +43,7 @@ def save_actions(ob):
 		if not len(rnas): continue
 		out.begin( 'action' )
 		out.text( act.name )
-		out.pack('f', nf / Settings.kFrameSec )
+		out.pack('f', nf / bpy.context.scene.render.fps )
 		out.logu(1,'+anim: %s, %d frames, %d groups' % ( act.name,nf,len(act.groups) ))
 		if n_empty:
 			out.log(2,'w','%d empty curves detected' % (n_empty))
@@ -79,7 +79,7 @@ def save_curve_pack(curves,offset):
 	for i in range(num):
 		kp = tuple(c.keyframe_points[i] for c in curves)
 		frame = kp[0].co[0]
-		out.pack('f', (frame-offset) / Settings.kFrameSec)
+		out.pack('f', (frame-offset) / bpy.context.scene.render.fps)
 		#print ('Time', x, i, data)
 		out.array('f', (k.co[1] for k in kp))
 		if not Settings.keyBezier:

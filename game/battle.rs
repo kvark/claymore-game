@@ -120,10 +120,16 @@ pub fn make_battle( ct : &engine::context::Context, aspect : float )-> Scene	{
 				parent	: None,
 				actions	: ~[],
 			};
-			let projection = lmath::funs::projection::perspective::<f32>( 45f, aspect, 1f, 25f );
+			let fov = 45f;
 			scene::Camera{
-				node:cam_node,
-				proj:projection,
+				node	: cam_node,
+				proj	: scene::Projector{
+					fov_x	: aspect*fov,
+					fov_y	: fov,
+					r_near	: 1f,
+					r_far	: 25f,
+				},
+				ear		: engine::audio::Listener{ volume:0f },
 			}
 		};
 		let points = do vec::from_fn(4) |i|	{

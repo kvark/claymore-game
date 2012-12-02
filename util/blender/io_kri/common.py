@@ -15,7 +15,6 @@ class Settings:
 	fakeQuat	= 'Auto'
 	logInfo		= True
 	keyBezier	= False
-	kFrameSec	= 30.0
 
 
 class Writer:

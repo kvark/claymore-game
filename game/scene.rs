@@ -16,6 +16,8 @@ pub fn load_config<T : std::serialization::Deserializable>( path : ~str )-> T	{
 	}
 }
 
+//- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -//
+//	Space
 
 #[auto_deserialize]
 struct SpaceInfo	{
@@ -24,20 +26,24 @@ struct SpaceInfo	{
 	scale		: f32,
 }
 
-priv pure fn make_space( info : &SpaceInfo )-> engine::space::QuatSpace	{
-	engine::space::QuatSpace{
-		position : {
-			let (x,y,z) = info.position;
-			lmath::vector::Vec3::new(x,y,z)
-		},
-		orientation : {
-			let (w,x,y,z) = info.orientation;
-			lmath::quaternion::Quat::new(w,x,y,z)
-		},
-		scale : info.scale,
+impl SpaceInfo	{
+	pure fn spawn()-> engine::space::QuatSpace	{
+		engine::space::QuatSpace{
+			position : {
+				let (x,y,z) = self.position;
+				lmath::vector::Vec3::new(x,y,z)
+			},
+			orientation : {
+				let (w,x,y,z) = self.orientation;
+				lmath::quaternion::Quat::new(w,x,y,z)
+			},
+			scale : self.scale,
+		}
 	}
 }
 
+//- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -//
+//	Node
 
 #[auto_deserialize]
 struct NodeInfo	{
@@ -49,11 +55,11 @@ struct NodeInfo	{
 pub type NodeRef = @engine::space::Node;
 pub type NodeMap = send_map::linear::LinearMap<~str,NodeRef>;
 
-priv fn make_node( info : &NodeInfo, par : Option<NodeRef>, map : &mut NodeMap )->NodeRef	{
+pub fn make_node( info : &NodeInfo, par : Option<NodeRef>, map : &mut NodeMap )->NodeRef	{
 	let node = @engine::space::Node{
 		name	: copy info.name,
 		parent	: par,
-		space	: make_space( &info.space ),
+		space	: info.space.spawn(),
 		actions	: ~[],	//TODO
 	};
 	map.insert( copy info.name, node );
@@ -63,13 +69,12 @@ priv fn make_node( info : &NodeInfo, par : Option<NodeRef>, map : &mut NodeMap )
 	node
 }
 
-pub fn load_node( path : ~str )-> (NodeRef,NodeMap) 	{
+priv fn load_node( path : ~str )-> (NodeRef,NodeMap) 	{
 	let mut map = send_map::linear::LinearMap::<~str,NodeRef>();
 	let node_info = load_config::<NodeInfo>(path);
 	let node = make_node( &node_info, None, &mut map );
 	(node,map)
 }
-
 
 
 #[auto_deserialize]
@@ -80,6 +85,9 @@ struct EntityInfo	{
 	skel_path	: ~str,
 	material	: ~str,
 }
+
+//- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -//
+//	Texture,Material,Armature
 
 #[auto_deserialize]
 struct TextureInfo	{
@@ -96,17 +104,68 @@ struct MaterialInfo	{
 	textures	: ~[TextureInfo],
 }
 
+#[auto_deserialize]
+struct ArmatureInfo	{
+	node	: NodeInfo,
+	path	: ~str,
+}
 
+//- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -//
+//	Projector
 
+pub struct Projector	{
+	fov_x	: float,
+	fov_y	: float,
+	r_near	: float,
+	r_far	: float,
+}
+
+impl Projector	{
+	pure fn to_matrix() -> lmath::matrix::mat4	{
+		lmath::funs::projection::perspective::<f32>(
+			self.fov_y,
+			self.fov_x / self.fov_y,
+			self.r_near, self.r_far )
+	}
+}
+
+#[auto_deserialize]
+pub struct ProjectorInfo	{
+	fov		: float,
+	range	: (float,float),
+}
+
+impl ProjectorInfo	{
+	pure fn spawn( aspect : float )-> Projector	{
+		let (near,far) = self.range;
+		Projector{
+			fov_x	: aspect * self.fov,
+			fov_y	: self.fov,
+			r_near	: near,
+			r_far	: far,
+		}
+	}
+}
+
+//- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -//
+//	Camera
 
 pub struct Camera	{
-	node	: @engine::space::Node,
-	proj	: lmath::matrix::mat4,
+	node	: NodeRef,
+	proj	: Projector,
+	ear		: engine::audio::Listener,
+}
+
+#[auto_deserialize]
+pub struct CameraInfo	{
+	node	: NodeInfo,
+	proj	: ProjectorInfo,
 }
 
 impl Camera	{
 	pure fn get_matrix()-> lmath::matrix::mat4	{
-		self.proj * self.node.world_space().inverse().to_matrix()
+		let proj = self.proj.to_matrix();
+		proj * self.node.world_space().inverse().to_matrix()
 	}
 	pure fn get_pos_vec4()-> lmath::vector::vec4	{
 		let v = self.node.world_space().position;
@@ -120,4 +179,31 @@ impl Camera	{
 		let v = lmath::vector::Vec3::new( 0f32,1f32,0f32 );
 		self.node.world_space().orientation.mul_v( &v )
 	}
+}
+
+//- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -//
+//	Light
+
+pub struct Light	{
+	node	: NodeRef,
+	proj	: Projector,
+}
+
+#[auto_deserialize]
+pub struct LightInfo	{
+	node	: NodeInfo,
+	proj	: ProjectorInfo,
+}
+
+//- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -//
+//	Scene
+
+#[auto_deserialize]
+pub struct SceneInfo	{
+	materials	: ~[MaterialInfo],
+	entities	: ~[EntityInfo],
+	skeletons	: ~[ArmatureInfo],
+	cameras		: ~[CameraInfo],
+	lights		: ~[LightInfo],
+	dummies		: ~[NodeInfo],
 }
