@@ -241,6 +241,7 @@ pub type ArmatureRecord = anim::Record<ArmatureCurve>;
 
 
 pub struct Armature	{
+	root	: @Node,
 	bones	: ~[Bone],
 	code	: ~str,
 	actions	: ~[@ArmatureRecord],	//FIXME mutable
@@ -258,10 +259,11 @@ impl Armature : draw::Mod	{
 		let id = identity();
 		let mut pos = vec::with_capacity::<lmath::vector::vec4>( self.max_bones );
 		let mut rot = vec::with_capacity::<lmath::vector::vec4>( self.max_bones );
+		let parent_inv = self.root.world_space().inverse();
 		while pos.len() < self.max_bones	{
 			let space = if pos.len()>0u && pos.len()<self.bones.len()	{
 					let b = &self.bones[pos.len()-1u];
-					b.node.world_space() * b.bind_pose_inv
+					parent_inv * b.node.world_space() * b.bind_pose_inv
 				}else {id};
 			pos.push( lmath::vector::Vec4::new(
 				space.position.x, space.position.y, space.position.z,

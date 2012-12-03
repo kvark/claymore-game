@@ -195,7 +195,7 @@ pub fn read_curve<T : space::Interpolate>( br : &Reader, fkey : &fn(&Reader)->T 
 }
 
 
-pub fn read_armature( br : &Reader, dual_quat : bool )-> space::Armature	{
+pub fn read_armature( br : &Reader, root : @space::Node, dual_quat : bool )-> space::Armature	{
 	let signature = br.enter();
 	if signature != ~"k3arm"	{
 		fail(fmt!( "Invalid armature signature '%s': %s", signature, br.path ));
@@ -207,7 +207,7 @@ pub fn read_armature( br : &Reader, dual_quat : bool )-> space::Armature	{
 	while bones.len()<num_bones	{
 		let name = br.get_string();
 		let pid = br.get_uint(1u);
-		let parent = if pid==0u {None}	else {Some(bones[pid-1u].node)};
+		let parent = Some(if pid==0u {root}	else {bones[pid-1u].node});
 		let space = read_space(br);
 		let bind_inv = space.inverse();
 		bones.push(space::Bone{
@@ -278,6 +278,7 @@ pub fn read_armature( br : &Reader, dual_quat : bool )-> space::Armature	{
 	io::println(fmt!( "\tDetected %u bones", max ));
 	// finish
 	space::Armature{
+		root	: root,
 		bones	: bones,
 		code	: shader,
 		actions	: actions,

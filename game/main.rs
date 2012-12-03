@@ -6,30 +6,73 @@ extern mod std;
 use std::json;
 
 
+enum Screen	{
+	ScreenEntry,
+	ScreenBattle,
+	ScreenWorld,
+	ScreenDeath,
+}
+
+struct Entry	{
+	ok	: bool
+}
+
+fn make_entry( _ct : &engine::context::Context, _aspect : float )-> Entry	{
+	let _info = scene::load_config::<scene::SceneInfo>( ~"data/object/scene.json" );
+	Entry{ok:true}
+}
+
+
 struct Game	{
 	context		: engine::context::Context,
 	audio		: engine::audio::Context,
 	mut frames	: uint,
 	technique	: engine::draw::Technique,
+	entry		: Entry,
 	battle		: battle::Scene,
+	mut screen	: Screen,
 }
 
 impl Game	{
 	fn update( nx : float, ny : float, mouse_hit : bool, cam_dir : int )-> bool	{
-		self.battle.update( &self.context.texture, nx, ny, mouse_hit, cam_dir )
+		match self.screen	{
+			ScreenEntry => {
+				true
+			},
+			ScreenBattle => {
+				self.battle.update( &self.context.texture, nx, ny, mouse_hit, cam_dir )
+			},
+			_ => true
+		}
 	}
 	fn render()-> bool	{
-		// clear screen
-		let c0 = self.technique.gen_clear(
-			engine::call::ClearData{
-				color	:Some( engine::rast::make_color(0x8080FFFF) ),
-				depth	:Some( 1f ),
-				stencil	:Some( 0u ),
-			}
-		);
-		self.context.flush(~[c0]);
-		// draw battle
-		self.battle.render( &self.context, &self.technique );
+		match self.screen	{
+			ScreenEntry => {
+				// clear screen
+				let c0 = self.technique.gen_clear(
+					engine::call::ClearData{
+						color	:Some( engine::rast::make_color(0x8080FFFF) ),
+						depth	:Some( 1f ),
+						stencil	:Some( 0u ),
+					}
+				);
+				self.context.flush(~[c0]);
+			},
+			ScreenBattle => {
+				// clear screen
+				let c0 = self.technique.gen_clear(
+					engine::call::ClearData{
+						color	:Some( engine::rast::make_color(0x8080FFFF) ),
+						depth	:Some( 1f ),
+						stencil	:Some( 0u ),
+					}
+				);
+				self.context.flush(~[c0]);
+				// draw battle
+				self.battle.render( &self.context, &self.technique );
+			},
+			_ => ()
+		}
 		// done
 		self.frames += 1;
 		self.context.cleanup();
@@ -42,7 +85,7 @@ impl Game	{
 }
 
 
-fn make_game( wid : uint, het : uint )-> Game	{
+fn create_game( wid : uint, het : uint )-> Game	{
 	let ct = engine::context::create( wid, het );
 	assert ct.sync_back();
 	let ac = engine::audio::create_context();
@@ -61,7 +104,9 @@ fn make_game( wid : uint, het : uint )-> Game	{
 	let aspect = (wid as float) / (het as float);
 	Game{ context:ct, audio:ac,
 		frames:0u, technique:tech,
+		entry:make_entry( &ct, aspect ),
 		battle:battle::make_battle( &ct, aspect ),
+		screen:ScreenEntry,
 	}
 }
 
@@ -113,7 +158,7 @@ fn main()	{
 		}
 	
 		window.make_context_current();
-		let game = make_game( config.window.width, config.window.height );
+		let game = create_game( config.window.width, config.window.height );
 		
 		loop	{
 			glfw3::poll_events();
