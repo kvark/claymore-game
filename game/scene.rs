@@ -134,7 +134,7 @@ fn generate_material_data( minfo : &MaterialInfo, ct : &engine::context::Context
 	}
 	for minfo.textures.each() |tinfo|	{
 		let tex = @engine::load::load_texture_2D( ct, &tinfo.path, tinfo.wrap, tinfo.filter );
-		data.insert( copy tinfo.name, engine::shade::UniTexture(0,tex) );
+		data.insert( ~"t_"+tinfo.name, engine::shade::UniTexture(0,tex) );
 	}
 	data
 }
@@ -309,7 +309,7 @@ pub fn load_scene( path : ~str, gc : &engine::context::Context,
 				gc ),
 			range	: engine::mesh::Range{
 				start	:r_min,
-				num		:r_min-r_max,
+				num		:r_max-r_min,
 				},
 			modifier: skel,
 			material: mat,

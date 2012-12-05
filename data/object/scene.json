@@ -6,8 +6,8 @@
 			"data"		: [],
 			"textures"	: [
 				{
-					"name"	: "t_Image",
-					"path"	: "data/texture/diffuse.jpg",
+					"name"	: "Main",
+					"path"	: "data/texture/SexyFem_Texture.tga",
 					"filter": 3,
 					"wrap"	: 0
 				}]
@@ -33,13 +33,41 @@
 					"scale"			: 1
 					}
 				},
-			"path"		: "data/arm/character.k3arm",
+			"path"		: "data/arm/jazz_dancing.k3arm",
 			"dual_quat"	: false
 		}],
 	"entities"	: [
-		],
+		{
+			"node"	: {
+				"name"	: "girl",
+				"parent": "armature",
+				"space"	:{
+					"position"		: [0,-1.5,0],
+					"orientation"	: [0.707,-0.707,0,0],
+					"scale"			: 1.5
+					}
+				},
+			"material"	: "phong",
+			"mesh_path"	: "data/mesh/jazz_dancing.k3mesh",
+			"range"		: [0,41688],
+			"has_armature"	: true
+		}],
 	"cameras"	: [
-		],
+		{
+			"node"	: {
+				"name"	: "cam",
+				"parent": "",
+				"space"	:{
+					"position"		: [0,0,5],
+					"orientation"	: [1,0,0,0],
+					"scale"			: 1
+					}
+				},
+			"proj"	: {
+				"fov"	: 45,
+				"range"	: [1,10]
+			}
+		}],
 	"lights"	: [
 		]
 }

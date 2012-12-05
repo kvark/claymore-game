@@ -14,13 +14,34 @@ enum Screen	{
 }
 
 struct Entry	{
-	ok	: bool
+	girl	: engine::draw::Entity,
+	skel	: @engine::space::Armature,
+	cam		: scene::Camera,
+	tech	: engine::draw::Technique,
+	start	: float,
 }
 
 fn make_entry( ct : &engine::context::Context, aspect : float )-> Entry	{
-	let _scene = scene::load_scene( ~"data/object/scene.json", ct,
-		Some(@ct.create_vertex_array()), aspect );
-	Entry{ok:true}
+	let tech = {
+		let pmap = engine::call::create_plane_map( ~"o_Color", engine::frame::TarEmpty );
+		let mut rast = engine::rast::create_rast(0,0);
+		rast.depth.test = true;
+		rast.prime.cull = true;
+		let cache = @mut engine::draw::create_cache();
+		engine::draw::load_technique( ~"data/code/tech/forward/light",
+			ct.default_frame_buffer, &pmap, &rast, cache)
+	};
+	let scene = scene::load_scene( ~"data/object/scene.json", ct,
+			Some(@ct.create_vertex_array()), aspect );
+	let arm = scene.armatures.get(&~"armature");
+	arm.set_record( arm.actions[0], 0f );
+	Entry	{
+		girl : scene::divide_group(&mut scene.entities,&~"girl")[0],
+		skel : arm,
+		cam	 : scene.cameras.get(&~"cam"),
+		tech : tech,
+		start: engine::anim::get_time(),
+	}
 }
 
 
@@ -34,10 +55,27 @@ struct Game	{
 	mut screen	: Screen,
 }
 
+pure fn vec3_to_vec4( v : &lmath::vector::vec3 )-> lmath::vector::vec4	{
+	lmath::vector::Vec4::new( v.x, v.y, v.z, 0f32 )
+}
+
 impl Game	{
 	fn update( nx : float, ny : float, mouse_hit : bool, cam_dir : int )-> bool	{
 		match self.screen	{
 			ScreenEntry => {
+				let gd = self.entry.girl.mut_data();
+				let viewproj = self.entry.cam.get_matrix();
+				let world = self.entry.girl.node.world_space().to_matrix();
+				let cam_pos = self.entry.cam.get_pos_vec4();
+				let lit_pos	= lmath::vector::Vec4::new( 3f32, 3f32, 3f32, 0f32 );
+				let tt = lmath::vector::Vec4::new( 1f32, 1f32, 0f32, 0f32 );
+				gd.insert( ~"u_Color",		engine::shade::UniFloat(1f) );
+				gd.insert( ~"u_World",		engine::shade::UniMatrix(false,world) );
+				gd.insert( ~"u_ViewProj",	engine::shade::UniMatrix(false,viewproj) );
+				gd.insert( ~"u_CameraPos",	engine::shade::UniFloatVec(cam_pos) );
+				gd.insert( ~"u_LightPos",	engine::shade::UniFloatVec(lit_pos) );
+				gd.insert( ~"u_TexTransform", engine::shade::UniFloatVec(tt) );	//TEMP
+				self.entry.skel.fill_data( gd );
 				true
 			},
 			ScreenBattle => {
@@ -57,7 +95,16 @@ impl Game	{
 						stencil	:Some( 0u ),
 					}
 				);
-				self.context.flush(~[c0]);
+				if true	{	// update animation
+					let t = engine::anim::get_time() - self.entry.start;
+					let r = self.entry.skel.actions[0];
+					let nloops = (t / r.duration) as uint;
+					let t2 = t - r.duration * (nloops as float);
+					self.entry.skel.set_record( r, t2 );
+					self.entry.skel.fill_data( self.entry.girl.mut_data() );
+				}
+				let c1 = self.entry.tech.process( &self.entry.girl, &self.context );
+				self.context.flush(~[c0,c1]);
 			},
 			ScreenBattle => {
 				// clear screen
