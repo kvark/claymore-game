@@ -95,8 +95,8 @@ pub fn load_program( ct : &context::Context, path : ~str )-> shade::Program	{
 	ct.create_program(~[sv,sf])
 }
 
-pub fn load_texture_2D( ct : &context::Context, path : ~str, wrap : int, filter : uint )-> texture::Texture	{
-	match stb_image::image::load(copy path)	{
+pub fn load_texture_2D( ct : &context::Context, path : &~str, wrap : int, filter : uint )-> texture::Texture	{
+	match stb_image::image::load(copy *path)	{
 		Some(image) => {
 			let t = ct.create_texture( ~"2D", image.width, image.height, 1, 0 );
 			ct.texture.bind( &t );
@@ -109,7 +109,7 @@ pub fn load_texture_2D( ct : &context::Context, path : ~str, wrap : int, filter 
 			ct.texture.filter( &t, filter );
 			t
 		}
-		None => fail(fmt!( "Unable to load image: %s",path ))
+		None => fail(fmt!( "Unable to load image: %s",*path ))
 	}
 }
 

@@ -8,8 +8,7 @@ data/mesh/*
 data/arm/*
 lib/*.dSYM
 lib/libengine-*
-misc/concept/*
-misc/models/*
+misc/*
 project/*
 util/blender/data/*
 __pycache__

@@ -196,6 +196,12 @@ impl Node	{
 	fn mut_space(&self)-> &self/mut QuatSpace	{
 		&mut self.space
 	}
+	pure fn is_under( name : &~str )-> bool	{
+		self.name == *name || match self.parent	{
+			Some(p) => p.is_under(name),
+			None	=> false,
+		}
+	}
 }
 
 impl Node : anim::Player<NodeCurve>	{

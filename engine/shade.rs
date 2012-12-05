@@ -2,6 +2,7 @@ extern mod glcore;
 extern mod lmath;
 use send_map::linear::LinearMap;
 
+
 pub enum Handle		= glcore::GLuint;
 pub enum Location	= glcore::GLint;
 
@@ -64,7 +65,6 @@ impl Uniform : cmp::Eq	{
 	}
 	pure fn ne( v : &Uniform )-> bool	{ !self.eq(v) }
 }
-
 
 pub struct Attribute	{
 	loc		: uint,

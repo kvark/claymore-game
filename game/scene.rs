@@ -4,9 +4,10 @@ extern mod engine;
 extern mod std;
 use std::json;
 use send_map::linear::LinearMap;
+use std::serialization::{Deserializer,Deserializable};
 
 
-pub fn load_config<T : std::serialization::Deserializable>( path : ~str )-> T	{
+pub fn load_config<T:Deserializable>( path : ~str )-> T	{
 	let rd = match io::file_reader(&path::Path(path))	{
 		Ok(reader)	=> reader,
 		Err(e)		=> fail e.to_str(),
@@ -81,6 +82,16 @@ struct EntityInfo	{
 }
 
 #[auto_deserialize]
+struct ArmatureInfo	{
+	node	: NodeInfo,
+	path	: ~str,
+	dual_quat	: bool,
+}
+
+//- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -//
+//	Material
+
+#[auto_deserialize]
 struct TextureInfo	{
 	name	: ~str,
 	path	: ~str,
@@ -88,18 +99,44 @@ struct TextureInfo	{
 	filter	: uint,
 }
 
+pub struct ShaderParam	{
+	name	: ~str,
+	value	: engine::shade::Uniform,
+}
+impl ShaderParam : Deserializable	{
+	static fn deserialize<D:Deserializer>( &self, d : &D )-> ShaderParam	{
+		let v = d.read_float();
+		ShaderParam{
+			name	: ~"",
+			value	: engine::shade::UniFloat(v),
+		}
+	}
+}
+
+
 #[auto_deserialize]
 struct MaterialInfo	{
 	name		: ~str,
 	code_path	: ~str,
+	data		: ~[ShaderParam],
 	textures	: ~[TextureInfo],
 }
 
-#[auto_deserialize]
-struct ArmatureInfo	{
-	node	: NodeInfo,
-	path	: ~str,
-	dual_quat	: bool,
+pure fn color_to_vec(col : &engine::rast::Color)-> lmath::vector::vec4	{
+	lmath::vector::Vec4::new( col.r, col.g, col.b, col.a )
+}
+
+
+fn generate_material_data( minfo : &MaterialInfo, ct : &engine::context::Context) -> engine::shade::DataMap	{
+	let mut data = engine::shade::create_data();
+	for minfo.data.each() |par|	{
+		data.insert( copy par.name, copy par.value );
+	}
+	for minfo.textures.each() |tinfo|	{
+		let tex = @engine::load::load_texture_2D( ct, &tinfo.path, tinfo.wrap, tinfo.filter );
+		data.insert( copy tinfo.name, engine::shade::UniTexture(0,tex) );
+	}
+	data
 }
 
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -//
@@ -190,11 +227,25 @@ pub struct LightInfo	{
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -//
 //	Scene
 
+pub type EntityGroup = ~[engine::draw::Entity];
+pub fn divide_group( group : &mut EntityGroup, name : &~str )->EntityGroup	{
+	let mut i = 0u;
+	let mut rez : EntityGroup = ~[];
+	while i<group.len()	{
+		if group[i].node.is_under(name)	{
+			rez.push( group.swap_remove(i) );
+		}else	{
+			i += 1u;
+		}
+	}
+	rez
+}
+
 pub struct Scene	{
 	materials	: LinearMap<~str,@engine::draw::Material>,
 	nodes		: LinearMap<~str,NodeRef>,
 	armatures	: LinearMap<~str,@engine::space::Armature>,
-	entities	: LinearMap<~str,engine::draw::Entity>,
+	mut entities: EntityGroup,
 	cameras		: LinearMap<~str,Camera>,
 	lights		: LinearMap<~str,Light>,
 }
@@ -215,9 +266,11 @@ pub fn load_scene( path : ~str, gc : &engine::context::Context,
 	let scene = load_config::<SceneInfo>( path );
 	// materials
 	let mut map_material = LinearMap::<~str,@engine::draw::Material>();
+	let mut map_material_data = LinearMap::<~str,engine::shade::DataMap>();
 	for scene.materials.each() |imat|	{
 		let mat = @engine::draw::load_material( copy imat.code_path );
 		map_material.insert( copy imat.name, mat );
+		map_material_data.insert( copy imat.name, generate_material_data(imat,gc) );
 	}
 	// nodes
 	let mut map_node = LinearMap::<~str,@engine::space::Node>();
@@ -234,7 +287,7 @@ pub fn load_scene( path : ~str, gc : &engine::context::Context,
 		map_armature.insert( copy root.name, arm );
 	}
 	// entities
-	let mut map_entity = LinearMap::<~str,engine::draw::Entity>();
+	let mut entity_group : EntityGroup = ~[];
 	for scene.entities.each() |ient|	{
 		let root = make_node( &ient.node, &mut map_node );
 		let mat = map_material.get( &ient.material );
@@ -246,7 +299,7 @@ pub fn load_scene( path : ~str, gc : &engine::context::Context,
 		let (r_min,r_max) = ient.range;
 		let ent = engine::draw::Entity{
 			node	: root,
-			data	: engine::shade::create_data(),
+			data	: map_material_data.get( &ient.material ),
 			vao		: match opt_vao	{
 					Some(v) => v,
 					None	=> @gc.create_vertex_array(),
@@ -261,7 +314,7 @@ pub fn load_scene( path : ~str, gc : &engine::context::Context,
 			modifier: skel,
 			material: mat,
 		};
-		map_entity.insert( copy root.name, ent );
+		entity_group.push(ent)
 	}
 	// cameras
 	let mut map_camera = LinearMap::<~str,Camera>();
@@ -285,7 +338,7 @@ pub fn load_scene( path : ~str, gc : &engine::context::Context,
 		materials	: map_material,
 		nodes		: map_node,
 		armatures	: map_armature,
-		entities	: map_entity,
+		entities	: entity_group,
 		cameras		: map_camera,
 		lights		: map_light,
 	}

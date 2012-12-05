@@ -1,8 +1,45 @@
 {
-	"materials"	: [],
-	"dummies"	: [],
-	"armatures"	: [],
-	"entities"	: [],
-	"cameras"	: [],
-	"lights"	: []
+	"materials"	: [
+		{
+			"name"		: "phong",
+			"code_path"	: "data/code/mat/phong",
+			"data"		: [],
+			"textures"	: [
+				{
+					"name"	: "t_Image",
+					"path"	: "data/texture/diffuse.jpg",
+					"filter": 3,
+					"wrap"	: 0
+				}]
+		}],
+	"dummies"	: [
+		{
+			"name"	: "dummy",
+			"parent": "",
+			"space"	:{
+				"position"		: [0,0,0],
+				"orientation"	: [1,0,0,0],
+				"scale"			: 1
+				}
+		}],
+	"armatures"	: [
+		{
+			"node"	: {
+				"name"	: "armature",
+				"parent": "",
+				"space"	:{
+					"position"		: [0,0,0],
+					"orientation"	: [1,0,0,0],
+					"scale"			: 1
+					}
+				},
+			"path"		: "data/arm/character.k3arm",
+			"dual_quat"	: false
+		}],
+	"entities"	: [
+		],
+	"cameras"	: [
+		],
+	"lights"	: [
+		]
 }

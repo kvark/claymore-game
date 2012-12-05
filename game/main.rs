@@ -17,8 +17,9 @@ struct Entry	{
 	ok	: bool
 }
 
-fn make_entry( _ct : &engine::context::Context, _aspect : float )-> Entry	{
-	let _info = scene::load_config::<scene::SceneInfo>( ~"data/object/scene.json" );
+fn make_entry( ct : &engine::context::Context, aspect : float )-> Entry	{
+	let _scene = scene::load_scene( ~"data/object/scene.json", ct,
+		Some(@ct.create_vertex_array()), aspect );
 	Entry{ok:true}
 }
 

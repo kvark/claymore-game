@@ -1,6 +1,7 @@
 __author__ = ['Dzmitry Malyshau']
 __bpydoc__ = 'Action module of KRI exporter.'
 
+import bpy
 from io_kri.common	import *
 
 
@@ -63,9 +64,12 @@ def save_actions(ob):
 
 ###  ACTION:CURVES   ###
 
-def save_curve_pack(curves,offset):
+def save_curve_pack(orig_curves,offset):
 	out = Writer.inst
-	if not len(curves):
+	curves = [c for c in orig_curves if c!=None]
+	if len(curves)!=len(orig_curves):
+		out.log(2,'w','null curves detected')
+	if len(curves)==0:
 		out.log(2,'w','zero length curve pack')
 		out.pack('H',0)
 		return
