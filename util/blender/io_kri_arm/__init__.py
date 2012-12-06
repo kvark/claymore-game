@@ -25,7 +25,7 @@ if 'bpy' in locals():
 import bpy
 from bpy.props			import *
 from bpy_extras.io_utils	import ImportHelper, ExportHelper
-from io_kri.common		import Settings
+from io_kri.common		import *
 from io_kri_arm.arm		import save_arm
 
 
@@ -56,7 +56,11 @@ class ExportArm( bpy.types.Operator, ExportHelper ):
 		Settings.showWarning	= self.properties.show_warn
 		Settings.breakError		= self.properties.break_err
 		Settings.keyBezier		= self.properties.key_bezier
-		save_arm(self.properties.filepath, context)
+		out = Writer(self.properties.filepath)
+		log = Logger()
+		save_arm(out, context, log)
+		out.close()
+		log.conclude()
 		return {'FINISHED'}
 
 

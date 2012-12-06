@@ -23,11 +23,14 @@ def save_mat(mat):
 			'scale'	:tuple(mt.scale),
 			'offset':tuple(mt.offset)
 			})
+	kind = 'phong'
+	if mat.use_shadeless:
+		kind = 'unshaded'
+	elif mat.use_tangent_shading:
+		kind = 'anisotropic'
 	return {
-		'name'		: mat.name,
-		'code_path' : 'data/code/mat/phong',
-		'no_shading'		: mat.use_shadeless,
-		'tangent_shading'	: mat.use_tangent_shading,
+		'name'	: mat.name,
+		'kind' 	: kind,
 		'data'		: [
 			{
 				'name'	: 'Ambient',
@@ -36,22 +39,22 @@ def save_mat(mat):
 			},
 			{
 				'name'	: 'DiffuseColor',
-				'type'	: 'vector',
+				'type'	: 'vec3',
 				'value'	: tuple(mat.diffuse_color)
 			},
 			{
 				'name'	: 'DiffuseParams',
-				'type'	: 'vector',
+				'type'	: 'vec4',
 				'value'	: (mat.diffuse_intensity,mat.emit,0,mat.alpha)
 			},
 			{
 				'name'	: 'SpecularColor',
-				'type'	: 'vector',
+				'type'	: 'vec3',
 				'value'	: tuple(mat.diffuse_color)
 			},
 			{
 				'name'	: 'SpecularParams',
-				'type'	: 'vector',
+				'type'	: 'vec4',
 				'value'	: (mat.specular_intensity,mat.specular_hardness,0,mat.specular_alpha)
 			}],
 		'textures'	: textures
@@ -67,25 +70,28 @@ def save_scene(filename,context):
 	cameras		= []
 	lights		= []
 	# ready...
-	out = Writer.inst = Writer(filename)
+	log			= Logger()
+	oMesh		= Writer(filename+'.k3mesh')
+	oArmature	= Writer(filename+'.k3arm')
 	sc = context.scene
 	# -globals
 	bDegrees = (sc.unit_settings.system_rotation == 'DEGREES')
 	if not bDegrees:
 		#it's easier to convert on loading than here
-		out.log(1,'w','Radians are not supported')
+		log.log(1,'w','Radians are not supported')
 	if sc.use_gravity:
 		gv = sc.gravity
-		out.log(1,'i', 'gravity: (%.1f,%.1f,%.1f)' % (gv.x,gv.y,gv.z))
+		log.log(1,'i', 'gravity: (%.1f,%.1f,%.1f)' % (gv.x,gv.y,gv.z))
 		glob['gravity'] = tuple(sc.gravity)
 	else:
 		glob['gravity'] = (0,0,0)
 	# -materials
 	for mat in context.blend_data.materials:
-		if out.stop:	break
+		if log.stop:	break
 		materials.append( save_mat(mat) )
 		#save_actions( mat, 'm','t' )
 	# steady...
+	# animations
 	# go!
 	document = {
 		'global'	: glob,
@@ -97,10 +103,8 @@ def save_scene(filename,context):
 		'lights'	: lights
 	}
 	text = json.dumps(document, indent=2);
-	file = open(filename,'w')
+	file = open(filename+'.json','w')
 	file.write(text)
 	file.close()
-	# animations
-	# done
 	print('Done.')
-
+	log.conclude()

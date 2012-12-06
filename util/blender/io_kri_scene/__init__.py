@@ -6,13 +6,11 @@ bl_info = {
     'version': (0, 1, 0),
     'blender': (2, 6, 2),
     'api': 36079,
-    'location': 'File > Export > Claymore Scene (.json)',
-    'description': 'Export the scene to Claymore engine',
+    'location': 'File > Export > Claymore Scene',
+    'description': 'Export the scene to Claymore engine (.json,.k3arm,.k3mesh)',
     'warning': '',
     'tracker_url': '',
     'category': 'Import-Export'}
-
-extension = '.json'
 
 # To support reload properly, try to access a package var, if it's there, reload everything
 if 'bpy' in locals():
@@ -31,8 +29,8 @@ from io_kri_scene.scene	import save_scene
 class ExportScene( bpy.types.Operator, ExportHelper ):
 	'''Export the scene to Claymore engine'''
 	bl_idname	= 'export_scene.kri_scene'
-	bl_label	= '-= Claymore scene=- (%s)' % extension
-	filename_ext	= extension
+	bl_label	= '-= Claymore scene =-'
+	filename_ext	= ''
 
 	# general settings
 	filepath	= StringProperty( name='File Path',

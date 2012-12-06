@@ -77,7 +77,7 @@ pub fn make_node( info : &NodeInfo, map : &mut NodeMap )-> NodeRef	{
 struct EntityInfo	{
 	node		: NodeInfo,
 	material	: ~str,
-	mesh_path	: ~str,
+	mesh		: ~str,
 	range		: (uint,uint),
 	has_armature: bool,
 }
@@ -85,7 +85,7 @@ struct EntityInfo	{
 #[auto_deserialize]
 struct ArmatureInfo	{
 	node	: NodeInfo,
-	path	: ~str,
+	name	: ~str,
 	dual_quat	: bool,
 }
 
@@ -122,7 +122,10 @@ impl ShaderParam : Deserializable	{
 				let c : uint	= d.read_field(~"value",	2u, || {deserialize(d)} );
 				let v = color_to_vec( &engine::rast::make_color(c) );
 				engine::shade::UniFloatVec(v)
-			}else		if kind==~"vector"	{
+			}else		if kind==~"vec3"	{
+				let (x,y,z) : (f32,f32,f32) = d.read_field(~"value", 2u, || {deserialize(d)} );
+				engine::shade::UniFloatVec( lmath::vector::Vec4::new(x,y,z,0f32) )
+			}else		if kind==~"vec4"	{
 				let (x,y,z,w) : (f32,f32,f32,f32) = d.read_field(~"value", 2u, || {deserialize(d)} );
 				engine::shade::UniFloatVec( lmath::vector::Vec4::new(x,y,z,w) )
 			}else	{fail ~"Unknown type: "+kind};
@@ -137,10 +140,10 @@ impl ShaderParam : Deserializable	{
 
 #[auto_deserialize]
 struct MaterialInfo	{
-	name		: ~str,
-	code_path	: ~str,
-	data		: ~[ShaderParam],
-	textures	: ~[TextureInfo],
+	name	: ~str,
+	kind	: ~str,
+	data	: ~[ShaderParam],
+	textures: ~[TextureInfo],
 }
 
 type TextureCache = LinearMap<~str,@engine::texture::Texture>;
@@ -293,11 +296,11 @@ pub fn load_scene( path : ~str, gc : &engine::context::Context,
 	let mut tex_cache = LinearMap::<~str,@engine::texture::Texture>();
 	let mut map_material = LinearMap::<~str,@engine::draw::Material>();
 	for scene.materials.each() |imat|	{
-		let mat = @engine::draw::load_material( copy imat.code_path );
+		let mat = @engine::draw::load_material( ~"data/code/mat/"+imat.kind );
 		map_material.insert( copy imat.name, mat );
 		for imat.textures.each() |itex|	{
 			if !tex_cache.contains_key( &itex.name )	{
-				let tex = @engine::load::load_texture_2D( gc, &itex.path, true );
+				let tex = @engine::load::load_texture_2D( gc, ~"data/texture/"+itex.path, true );
 				tex_cache.insert( copy itex.name, tex );
 			}
 		}
@@ -312,7 +315,7 @@ pub fn load_scene( path : ~str, gc : &engine::context::Context,
 	for scene.armatures.each() |iarm|	{
 		let root = make_node( &iarm.node, &mut map_node );
 		let arm = @engine::load::read_armature(
-			&engine::load::create_reader( copy iarm.path ),
+			&engine::load::create_reader( ~"data/arm/" + iarm.name + ~".k3arm" ),
 			root, iarm.dual_quat );
 		map_armature.insert( copy root.name, arm );
 	}
@@ -341,7 +344,7 @@ pub fn load_scene( path : ~str, gc : &engine::context::Context,
 					None	=> @gc.create_vertex_array(),
 				},
 			mesh	: @engine::load::read_mesh(
-				&engine::load::create_reader( copy ient.mesh_path ),
+				&engine::load::create_reader( ~"data/mesh" + ient.mesh + ~".k3mesh" ),
 				gc ),
 			range	: engine::mesh::Range{
 				start	:r_min,

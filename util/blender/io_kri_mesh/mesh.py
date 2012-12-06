@@ -111,7 +111,7 @@ class Mesh:
 		self.index = None
 
 
-def save_mesh(filename,context):
+def save_mesh(out,context,log):
 	# ready...
 	obj = None
 	for ob in context.scene.objects:
@@ -125,14 +125,13 @@ def save_mesh(filename,context):
 		arm = ob.parent.data
 	# steady...
 	print('Exporting Mesh...')
-	out = Writer.inst = Writer(filename)
 	out.begin('k3mesh')
-	km = collect_attributes(ob.data, arm, ob.vertex_groups)
+	km = collect_attributes(ob.data, arm, ob.vertex_groups, log)
 	# go!
 	totalFm = ''.join(a.type for a in km.attribs)
 	assert len(totalFm) == 2*len(km.attribs)
 	stride = out.sizeOf(totalFm)
-	out.logu(1,'Format: %s, Stride: %d' % (totalFm,stride))
+	log.logu(1,'Format: %s, Stride: %d' % (totalFm,stride))
 	out.pack('LL', km.nv, km.ni)
 	out.text('3')	# topology
 	out.pack('BB', 2, stride)
@@ -146,7 +145,7 @@ def save_mesh(filename,context):
 			tip = a.type[1]
 			size = out.sizeOf(a.type)
 			if (size&3)!=0:
-				out.log(2,'w','Attrib %d has has non-aligned type: %d' % (a.name,tip))
+				log.log(2,'w','Attrib %d has has non-aligned type: %d' % (a.name,tip))
 			d2 = (d if a.fixed<=1 else fix_convert(tip,d))
 			out.array(tip,d2)
 	assert out.tell() == seqStart + km.nv*stride
@@ -163,16 +162,14 @@ def save_mesh(filename,context):
 		assert out.tell() == seqStart + km.ni*stride
 	# done
 	out.end()	#k3mesh
-	out.conclude()
 	print('Done.')
 
 
-def collect_attributes(mesh,armature,groups):
-	out = Writer.inst
+def collect_attributes(mesh,armature,groups,log):
 	# 1: convert Mesh to Triangle Mesh
 	for layer in mesh.uv_textures:
 		if not len(layer.data):
-			out.log(1,'e','UV layer is locked by the user')
+			log.log(1,'e','UV layer is locked by the user')
 			return None,None,0,0
 	hasUv		= len(mesh.uv_textures)>0
 	hasTangent	= Settings.putTangent and hasUv
@@ -191,15 +188,15 @@ def collect_attributes(mesh,armature,groups):
 			colors.append(cur)
 		if nvert>=3:	ar_face.append( Face(face, mesh, (0,1,2), uves,colors) )
 		if nvert>=4:	ar_face.append( Face(face, mesh, (0,2,3), uves,colors) )
-	#else: out.logu(1,'converted to tri-mesh')
+	#else: log.logu(1,'converted to tri-mesh')
 	if not 'ClearNonUV':
 		n_bad_face =	len(ar_face)
 		ar_face = list(filter( lambda f: f.ta!=None, ar_face ))
 		n_bad_face -=	len(ar_face)
 		if n_bad_face:
-			out.log(1,'w','%d pure faces detected' % (n_bad_face))
+			log.log(1,'w','%d pure faces detected' % (n_bad_face))
 	if not len(ar_face):
-		out.log(1,'e','object has no faces')
+		log.log(1,'e','object has no faces')
 		return None,None,0,0
 
 	# 2: fill sparsed vertex array
@@ -221,7 +218,7 @@ def collect_attributes(mesh,armature,groups):
 			if not vs in set_surf:
 				set_surf[vs] = []
 			set_surf[vs].append(v)
-	out.log(1,'i', '%.2f avg handness' % (avg / len(ar_face)))
+	log.log(1,'i', '%.2f avg handness' % (avg / len(ar_face)))
 
 	# 3a: compute tangents
 	avg,bad_vert = 0.0,0
@@ -253,9 +250,9 @@ def collect_attributes(mesh,armature,groups):
 			v.quat = quat
 			v.tangent = tan
 	if bad_vert:
-		out.log(1,'w','%d pure vertices detected' % (bad_vert))
+		log.log(1,'w','%d pure vertices detected' % (bad_vert))
 	if hasQuatUv and avg!=0.0:
-		out.log(1,'i','%.2f avg tangent accuracy' % (avg / len(ar_vert)))
+		log.log(1,'i','%.2f avg tangent accuracy' % (avg / len(ar_vert)))
 	del set_surf
 	del bad_vert
 	del avg
@@ -343,7 +340,7 @@ def collect_attributes(mesh,armature,groups):
 		for ind in f.vi: mark_used(ind)
 
 	if Settings.doQuatInt and hasQuat:
-		out.log(1,'i', 'extra %d vertices, %d faces' % (n_dup,len(ex_face)))
+		log.log(1,'i', 'extra %d vertices, %d faces' % (n_dup,len(ex_face)))
 		ar_face += ex_face
 		# run a check
 		for f in ar_face: qi_check(f)
@@ -356,7 +353,7 @@ def collect_attributes(mesh,armature,groups):
 #		out.pack('H', fn)
 #		s = (m.name	if m else '')
 #		out.text(s)
-#		out.logu(1, '+entity: %d faces, [%s]' % (fn,s))
+#		log.logu(1, '+entity: %d faces, [%s]' % (fn,s))
 #	out.pack('H',0)
 #	out.end()
 
@@ -365,9 +362,9 @@ def collect_attributes(mesh,armature,groups):
 	face_num = (len(mesh.materials)+1) * [0]
 	for face in ar_face:
 		face_num[face.mat] += 1
-	out.logu(1, 'total: %d vertices, %d faces' % (len(ar_vert),len(ar_face)))
+	log.logu(1, 'total: %d vertices, %d faces' % (len(ar_vert),len(ar_face)))
 	avg_vu = 3.0 * len(ar_face) / len(ar_vert)
-	out.log(1,'i', '%.2f avg vertex usage' % (avg_vu))
+	log.log(1,'i', '%.2f avg vertex usage' % (avg_vu))
 	
 	km = Mesh()
 	
@@ -402,7 +399,7 @@ def collect_attributes(mesh,armature,groups):
 	
 	if Settings.putUv:
 		all = mesh.uv_textures
-		out.log(1,'i', 'UV layers: %d' % (len(all)))
+		log.log(1,'i', 'UV layers: %d' % (len(all)))
 		for i,layer in enumerate(all):
 			name = 'Tex%d' % i
 			vat = None
@@ -418,7 +415,7 @@ def collect_attributes(mesh,armature,groups):
 
 	if Settings.putColor:
 		all = mesh.vertex_colors
-		out.log(1,'i', 'Color layers: %d' % (len(all)))
+		log.log(1,'i', 'Color layers: %d' % (len(all)))
 		for i,layer in enumerate(all):
 			vat = Attribute('Color%d' % i, '4B', 2)
 			km.attribs.append(vat)
@@ -429,7 +426,7 @@ def collect_attributes(mesh,armature,groups):
 
 	if not 'putSticky':
 		all = mesh.sticky
-		out.log(1,'i', 'Sticky layers: %d' % (len(all)))
+		log.log(1,'i', 'Sticky layers: %d' % (len(all)))
 		for i in range(len(all)):
 			for v in ar_vert:
 				pass
@@ -477,7 +474,7 @@ def collect_attributes(mesh,armature,groups):
 			vat1.data.append(r_ids)
 			vat2.data.append(r_weights)
 		avg /= len(ar_vert)
-		out.logu(1, 'bone weights: %d empty, %.1f avg' % (nempty,avg))
+		log.logu(1, 'bone weights: %d empty, %.1f avg' % (nempty,avg))
 	
 	# 9: the end!
 	km.nv = len(ar_vert)

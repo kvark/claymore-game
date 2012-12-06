@@ -25,7 +25,7 @@ if 'bpy' in locals():
 import bpy
 from bpy.props			import *
 from bpy_extras.io_utils	import ImportHelper, ExportHelper
-from io_kri.common		import Settings
+from io_kri.common		import *
 from io_kri_mesh.mesh	import save_mesh
 
 
@@ -88,7 +88,11 @@ class ExportMesh( bpy.types.Operator, ExportHelper ):
 		Settings.putColor	= self.properties.put_color
 		Settings.doQuatInt	= self.properties.quat_int
 		Settings.fakeQuat	= self.properties.quat_fake
-		save_mesh(self.properties.filepath, context)
+		out = Writer(self.properties.filepath)
+		log = Logger()
+		save_mesh(out, context, log)
+		out.close()
+		log.conclude()
 		return {'FINISHED'}
 
 

@@ -18,14 +18,10 @@ class Settings:
 
 
 class Writer:
-	tabs = ('',"\t","\t\t","\t\t\t")
-	inst = None
-	__slots__= 'fx','pos','counter','stop'
+	__slots__= 'fx','pos'
 	def __init__(self,path):
 		self.fx = open(path,'wb')
 		self.pos = []
-		self.counter = {'':0,'i':0,'w':0,'e':0}
-		self.stop = False
 	def sizeOf(self,tip):
 		import struct
 		return struct.calcsize(tip)
@@ -56,6 +52,17 @@ class Writer:
 		self.fx.seek(+off+0,1)
 	def tell(self):
 		return self.fx.tell()
+	def close(self):
+		assert len(self.pos) == 0
+		self.fx.close()
+
+
+class Logger:
+	tabs = ('',"\t","\t\t","\t\t\t")
+	__slots__= 'counter','stop'
+	def __init__(self):
+		self.counter = {'':0,'i':0,'w':0,'e':0}
+		self.stop = False
 	def log(self,indent,level,message):
 		self.counter[level] += 1
 		if level=='i' and not Settings.showInfo:
@@ -64,28 +71,27 @@ class Writer:
 			return
 		if level=='e' and Settings.breakError:
 			self.stop = True
-		print('%s(%c) %s' % (Writer.tabs[indent],level,message))
+		print('%s(%c) %s' % (Logger.tabs[indent],level,message))
 	def logu(self,indent,message):
-		print( "%s%s" % (Writer.tabs[indent],message) )
+		print( "%s%s" % (Logger.tabs[indent],message) )
 	def conclude(self):
-		assert len(self.pos) == 0
-		self.fx.close()
 		c = self.counter
 		print(c['e'],'errors,',c['w'],'warnings,',c['i'],'infos')
+		self.counter.clear()
 
 
-def save_color(rgb):
+
+def save_color(out,rgb):
 	for c in rgb:
-		Writer.inst.pack('B', int(255*c) )
+		out.pack('B', int(255*c) )
 
 
-def save_matrix(mx):
+def save_matrix(out,mx):
 	import math
 	pos,rot,sca = mx.decompose()
 	scale = (sca.x + sca.y + sca.z)/3.0
-	out = Writer.inst
 	if math.fabs(sca.x-sca.y) + math.fabs(sca.x-sca.z) > 0.01:
-		out.log(1,'w', 'non-uniform scale: (%.1f,%.1f,%.1f)' % sca.to_tuple(1))
+		log.log(1,'w', 'non-uniform scale: (%.1f,%.1f,%.1f)' % sca.to_tuple(1))
 	out.pack('8f',
 		pos.x, pos.y, pos.z, scale,
 		rot.x, rot.y, rot.z, rot.w )
