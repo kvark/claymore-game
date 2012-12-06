@@ -3,22 +3,7 @@
 		{
 			"name"		: "phong",
 			"code_path"	: "data/code/mat/phong",
-			"data"		: [
-				{
-					"name"	: "d1",
-					"type"	: "scalar",
-					"value"	: 5.3
-				},
-				{
-					"name"	: "d1",
-					"type"	: "color",
-					"value"	: 44993388
-				},
-				{
-					"name"	: "d1",
-					"type"	: "vector",
-					"value"	: [1,2,3,4]
-				}],
+			"data"		: [],
 			"textures"	: [
 				{
 					"name"	: "Main",

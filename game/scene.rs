@@ -147,7 +147,7 @@ type TextureCache = LinearMap<~str,@engine::texture::Texture>;
 impl MaterialInfo	{
 	fn fill_data( data : &mut engine::shade::DataMap, cache : &TextureCache )	{
 		for self.data.each() |par|	{
-			data.insert( copy par.name, copy par.value );
+			data.insert( ~"u"+par.name, copy par.value );
 		}
 		for self.textures.eachi() |i,tinfo|	{
 			let tex = cache.get( &tinfo.name );
