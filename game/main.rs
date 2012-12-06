@@ -63,18 +63,11 @@ impl Game	{
 	fn update( nx : float, ny : float, mouse_hit : bool, cam_dir : int )-> bool	{
 		match self.screen	{
 			ScreenEntry => {
+				self.entry.girl.update_world();
 				let gd = self.entry.girl.mut_data();
-				let viewproj = self.entry.cam.get_matrix();
-				let world = self.entry.girl.node.world_space().to_matrix();
-				let cam_pos = self.entry.cam.get_pos_vec4();
 				let lit_pos	= lmath::vector::Vec4::new( 3f32, 3f32, 3f32, 0f32 );
-				let tt = lmath::vector::Vec4::new( 1f32, 1f32, 0f32, 0f32 );
-				gd.insert( ~"u_Color",		engine::shade::UniFloat(1f) );
-				gd.insert( ~"u_World",		engine::shade::UniMatrix(false,world) );
-				gd.insert( ~"u_ViewProj",	engine::shade::UniMatrix(false,viewproj) );
-				gd.insert( ~"u_CameraPos",	engine::shade::UniFloatVec(cam_pos) );
 				gd.insert( ~"u_LightPos",	engine::shade::UniFloatVec(lit_pos) );
-				gd.insert( ~"u_TexTransform", engine::shade::UniFloatVec(tt) );	//TEMP
+				self.entry.cam.fill_data( gd );
 				self.entry.skel.fill_data( gd );
 				true
 			},

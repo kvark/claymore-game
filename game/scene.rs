@@ -4,10 +4,11 @@ extern mod engine;
 extern mod std;
 use std::json;
 use send_map::linear::LinearMap;
-use std::serialization::{Deserializer,Deserializable};
+use std::serialization::{deserialize,Deserializer,Deserializable};
 
 
 pub fn load_config<T:Deserializable>( path : ~str )-> T	{
+	io::println( ~"Loading config: "+path );
 	let rd = match io::file_reader(&path::Path(path))	{
 		Ok(reader)	=> reader,
 		Err(e)		=> fail e.to_str(),
@@ -91,6 +92,10 @@ struct ArmatureInfo	{
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -//
 //	Material
 
+pure fn color_to_vec(col : &engine::rast::Color)-> lmath::vector::vec4	{
+	lmath::vector::Vec4::new( col.r, col.g, col.b, col.a )
+}
+
 #[auto_deserialize]
 struct TextureInfo	{
 	name	: ~str,
@@ -107,10 +112,24 @@ pub struct ShaderParam	{
 }
 impl ShaderParam : Deserializable	{
 	static fn deserialize<D:Deserializer>( &self, d : &D )-> ShaderParam	{
-		let v = d.read_float();
-		ShaderParam{
-			name	: ~"",
-			value	: engine::shade::UniFloat(v),
+		do d.read_rec()	{
+			let name : ~str		= d.read_field(~"name",		0u, || {deserialize(d)} );
+			let kind : ~str		= d.read_field(~"type",		1u, || {deserialize(d)} );
+			let value = if kind==~"scalar"	{
+				let v : float	= d.read_field(~"value",	2u, || {deserialize(d)} );
+				engine::shade::UniFloat(v)
+			}else		if kind==~"color"	{
+				let c : uint	= d.read_field(~"value",	2u, || {deserialize(d)} );
+				let v = color_to_vec( &engine::rast::make_color(c) );
+				engine::shade::UniFloatVec(v)
+			}else		if kind==~"vector"	{
+				let (x,y,z,w) : (f32,f32,f32,f32) = d.read_field(~"value", 2u, || {deserialize(d)} );
+				engine::shade::UniFloatVec( lmath::vector::Vec4::new(x,y,z,w) )
+			}else	{fail ~"Unknown type: "+kind};
+			ShaderParam{
+				name	: name,
+				value	: value,
+			}
 		}
 	}
 }
@@ -122,10 +141,6 @@ struct MaterialInfo	{
 	code_path	: ~str,
 	data		: ~[ShaderParam],
 	textures	: ~[TextureInfo],
-}
-
-pure fn color_to_vec(col : &engine::rast::Color)-> lmath::vector::vec4	{
-	lmath::vector::Vec4::new( col.r, col.g, col.b, col.a )
 }
 
 type TextureCache = LinearMap<~str,@engine::texture::Texture>;
@@ -207,6 +222,10 @@ impl Camera	{
 	pure fn get_up_vector()-> lmath::vector::vec3	{
 		let v = lmath::vector::Vec3::new( 0f32,1f32,0f32 );
 		self.node.world_space().orientation.mul_v( &v )
+	}
+	pub fn fill_data( data : &mut engine::shade::DataMap )	{
+		data.insert( ~"u_ViewProj",		engine::shade::UniMatrix(false,self.get_matrix()) );
+		data.insert( ~"u_CameraPos",	engine::shade::UniFloatVec(self.get_pos_vec4()) );
 	}
 }
 

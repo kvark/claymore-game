@@ -32,10 +32,13 @@ pub struct Entity	{
 	material: @Material,
 }
 
-//FIXME: remove this
 impl Entity	{
 	fn mut_data(&self)-> &self/mut shade::DataMap	{
 		&mut self.data
+	}
+	fn update_world()	{
+		let world = self.node.world_space().to_matrix();
+		self.data.insert( ~"u_World", shade::UniMatrix(false,world) );
 	}
 }
 
