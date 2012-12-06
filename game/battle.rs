@@ -204,8 +204,9 @@ pub fn make_battle( ct : &engine::context::Context, aspect : float )-> Scene	{
 			material: mat,
 		};
 		// load char texture
-		let tex = @engine::load::load_texture_2D( ct, &~"data/texture/diffuse.jpg", 1, 3u );
-		ent.mut_data().insert( ~"t_Main", engine::shade::UniTexture(0u,tex) );
+		let tex = @engine::load::load_texture_2D( ct, &~"data/texture/diffuse.jpg", true );
+		let s_opt = Some( engine::texture::make_sampler(3u,1) );
+		ent.mut_data().insert( ~"t_Main", engine::shade::UniTexture(0u,tex,s_opt) );
 		let utc = lmath::vector::Vec4::new(1f32,1f32,0f32,0f32);
 		ent.mut_data().insert( ~"u_TexTransform", engine::shade::UniFloatVec(utc) );
 		// done
@@ -217,8 +218,9 @@ pub fn make_battle( ct : &engine::context::Context, aspect : float )-> Scene	{
 		}
 	};
 	// load land texture
-	let tex = @engine::load::load_texture_2D( ct, &~"data/texture/SoilCracked0103_2_S.jpg", 1, 3u );
-	battle_land.mut_data().insert( ~"t_Main", engine::shade::UniTexture(0u,tex) );
+	let tex = @engine::load::load_texture_2D( ct, &~"data/texture/SoilCracked0103_2_S.jpg", true );
+	let s_opt = Some( engine::texture::make_sampler(3u,1) );
+	battle_land.mut_data().insert( ~"t_Main", engine::shade::UniTexture(0u,tex,s_opt) );
 	let utc = lmath::vector::Vec4::new(10f32,10f32,0f32,0f32);
 	battle_land.mut_data().insert( ~"u_TexTransform", engine::shade::UniFloatVec(utc) );
 	// create grid

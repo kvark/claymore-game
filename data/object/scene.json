@@ -9,7 +9,9 @@
 					"name"	: "Main",
 					"path"	: "data/texture/SexyFem_Texture.tga",
 					"filter": 3,
-					"wrap"	: 0
+					"wrap"	: 0,
+					"scale"	: [1,1],
+					"offset": [0,0]
 				}]
 		}],
 	"dummies"	: [

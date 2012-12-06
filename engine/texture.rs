@@ -5,6 +5,31 @@ pub enum Handle	= glcore::GLuint;
 pub enum Target	= glcore::GLenum;
 
 
+pub struct Sampler	{
+	filter	: [glcore::GLint * 2],
+	wrap	: [glcore::GLint * 3],
+}
+
+pub pure fn make_sampler( filter : uint, wrap : int )-> Sampler	{
+	assert filter>0u && filter<=3u;
+	let min_filter =	if filter==3u	{glcore::GL_LINEAR_MIPMAP_LINEAR}
+		else			if filter==2u	{glcore::GL_LINEAR}
+		else							{glcore::GL_NEAREST}
+		as glcore::GLint;
+	let mag_filter =	if filter>1u	{glcore::GL_LINEAR}
+		else							{glcore::GL_NEAREST}
+		as glcore::GLint;
+	let wr =	if wrap>0	{glcore::GL_REPEAT}
+		else	if wrap<0	{glcore::GL_MIRRORED_REPEAT}
+		else				{glcore::GL_CLAMP_TO_EDGE}
+		as glcore::GLint;
+	Sampler{
+		filter	: [min_filter,mag_filter],
+		wrap	: [wr,wr,wr],
+	}
+}
+
+
 pub struct Texture	{
 	handle	: Handle,
 	target	: Target,
@@ -13,8 +38,7 @@ pub struct Texture	{
 	depth		: uint,
 	samples		: uint,
 	priv mut levels		: uint,
-	priv mut wrap		: (Mode,Mode,Mode),
-	priv mut filter		: (Mode,Mode),
+	priv mut sampler	: Sampler,
 	priv mut level_base	: uint,
 	priv mut level_max	: uint,
 	priv pool	: @mut ~[Handle],
@@ -42,7 +66,7 @@ impl Texture	{
 	pure fn is_filtering_mapmap()-> bool	{
 		[glcore::GL_LINEAR_MIPMAP_LINEAR,glcore::GL_NEAREST_MIPMAP_NEAREST,
 		glcore::GL_LINEAR_MIPMAP_NEAREST,glcore::GL_NEAREST_MIPMAP_LINEAR].
-		contains(&match self.filter {(m,_)=>m})
+		contains(&(self.sampler.filter[1] as glcore::GLenum))
 	}
 	pure fn can_sample()-> bool	{
 		self.samples==0u && (!self.is_filtering_mapmap() || self.levels==1u)
@@ -127,9 +151,23 @@ impl Binding	{
 	fn bind( t : &Texture )	{
 		self._bind( t.target, t.handle );
 	}
-	fn bind_to( unit: uint, t : &Texture )	{
+	fn bind_to( unit: uint, t : &Texture, s : &Sampler )	{
 		self.switch( unit );
 		self.bind( t );
+		if t.samples != 0	{return}
+		let filter_modes = [glcore::GL_TEXTURE_MIN_FILTER,glcore::GL_TEXTURE_MAG_FILTER];
+		for [0,..1].each() |i|	{
+			if t.sampler.filter[*i] != s.filter[*i]	{
+				glcore::glTexParameteri( *t.target, filter_modes[*i], s.filter[*i] );
+			}
+		}
+		let wrap_modes = [glcore::GL_TEXTURE_WRAP_S,glcore::GL_TEXTURE_WRAP_T,glcore::GL_TEXTURE_WRAP_R];
+		for [0,..2].each() |i|	{
+			if t.sampler.wrap[*i] != s.wrap[*i]	{
+				glcore::glTexParameteri( *t.target, wrap_modes[*i], s.wrap[*i] );
+			}
+		}
+		t.sampler = *s;
 	}
 	fn unbind( target : Target )	{
 		self._bind( target, Handle(0) );
@@ -211,33 +249,6 @@ impl Binding	{
 		t.levels
 	}
 
-	fn wrap( t : &Texture, method : int )	{
-		assert self.is_bound( t );
-		assert t.samples == 0u;
-		let wr =	if method>0	{glcore::GL_REPEAT}
-			else	if method<0 {glcore::GL_MIRRORED_REPEAT}
-			else				{glcore::GL_CLAMP_TO_EDGE}
-			as glcore::GLint;
-		glcore::glTexParameteri( *t.target, glcore::GL_TEXTURE_WRAP_S, wr );
-		glcore::glTexParameteri( *t.target, glcore::GL_TEXTURE_WRAP_T, wr );
-		glcore::glTexParameteri( *t.target, glcore::GL_TEXTURE_WRAP_R, wr );
-	}
-
-	fn filter( t : &Texture, dim : uint )	{
-		assert self.is_bound( t );
-		assert t.samples == 0u;
-		assert dim>0u && dim<=3u;
-		let min_filter =	if dim==3u	{glcore::GL_LINEAR_MIPMAP_LINEAR}
-			else			if dim==2u	{glcore::GL_LINEAR}
-			else						{glcore::GL_NEAREST}
-			as glcore::GLint;
-		let mag_filter =	if dim>1u	{glcore::GL_LINEAR}
-			else						{glcore::GL_NEAREST}
-			as glcore::GLint;
-		glcore::glTexParameteri( *t.target, glcore::GL_TEXTURE_MIN_FILTER, min_filter );
-		glcore::glTexParameteri( *t.target, glcore::GL_TEXTURE_MAG_FILTER, mag_filter );
-	}
-
 	fn limit_levels( t : &Texture, base : uint, max : uint )	{
 		assert self.is_bound( t );
 		assert base <= max;
@@ -306,11 +317,9 @@ impl context::Context	{
 	fn create_texture( st:~str, w:uint, h:uint, d:uint, s:uint )->Texture	{
 		let mut hid = 0 as glcore::GLuint;
 		glcore::glGenTextures( 1, ptr::addr_of(&hid) );
-		let wrap = glcore::GL_REPEAT;
 		Texture{ handle:Handle(hid), target:map_target(st),
 			width:w, height:h, depth:d, samples:s,
-			levels:0, wrap:(wrap,wrap,wrap),
-			filter:(glcore::GL_NEAREST_MIPMAP_LINEAR, glcore::GL_LINEAR),
+			levels:0, sampler:make_sampler(3u,1),
 			level_base:0u, level_max:1000u,
 			pool:self.texture.pool }
 	}

@@ -220,8 +220,6 @@ impl Font	{
 		let tex = gr.create_texture( ~"2D", width, height, 1u, 0u );
 		gr.texture.load_2D( &tex, 0u, texture::map_int_format(~"r8"),
 			texture::map_pix_format(~"red"), image[0].to_gl_type(), &image );
-		gr.texture.wrap( &tex, 0 );
-		gr.texture.filter( &tex, 1u );
 		tex
 	}
 }

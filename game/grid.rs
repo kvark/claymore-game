@@ -80,8 +80,6 @@ impl Grid	{
 		// load data
 		self.upload_all_cells(tb);
 		// set up texture
-		tb.wrap(	self.texture, 0 );
-		tb.filter(	self.texture, 1u );
 	}
 
 	pub fn update( tb : &engine::texture::Binding, cam : &scene::Camera, nx : float, ny : float )-> (uint,uint,bool)	{
@@ -111,7 +109,8 @@ pub fn make_grid( ct : &engine::context::Context, segments : uint )-> Grid	{
 		engine::rast::make_color(CELL_EMPTY)
 	};
 	let tex = @ct.create_texture( ~"2D", segments, segments, 0u, 0u );
-	data.insert( ~"t_Grid",		engine::shade::UniTexture(0,tex) );
+	let s_opt = Some( engine::texture::make_sampler(1u,0) );
+	data.insert( ~"t_Grid",		engine::shade::UniTexture(0,tex,s_opt) );
 	let par_scale = lmath::vector::Vec4::new( 10f32, 10f32, 0.1f32, 0f32 );
 	data.insert( ~"u_ScaleZ",	engine::shade::UniFloatVec(par_scale) );
 	let oo_seg = 1f32 / (segments as f32);

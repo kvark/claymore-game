@@ -44,23 +44,23 @@ pub enum Uniform	{
 	UniFloatVecArray(~[lmath::vector::vec4]),
 	UniQuat(lmath::quaternion::quat4),
 	UniMatrix(bool,lmath::matrix::mat4),
-	UniTexture(uint,@texture::Texture),
+	UniTexture(uint,@texture::Texture,Option<texture::Sampler>),
 }
 
 impl Uniform : cmp::Eq	{
 	pure fn eq( v : &Uniform )-> bool	{
 		match (&self,v)	{
-			(&Unitialized,&Unitialized)				=> true,
-			(&UniFloat(f1),&UniFloat(f2))			=> f1==f2,
-			(&UniInt(i1),&UniInt(i2))				=> i1==i2,
-			(&UniFloatVec(fv1),&UniFloatVec(fv2))	=> fv1==fv2,
+			(&Unitialized,&Unitialized)						=> true,
+			(&UniFloat(f1),&UniFloat(f2))					=> f1==f2,
+			(&UniInt(i1),&UniInt(i2))						=> i1==i2,
+			(&UniFloatVec(fv1),&UniFloatVec(fv2))			=> fv1==fv2,
 			//FIXME: waiting for lmath to cover that
-			//(&UniIntVec(fi1),&UniIntVec(fi2))		=> fi1==fi2,
+			//(&UniIntVec(fi1),&UniIntVec(fi2))				=> fi1==fi2,
 			(&UniFloatVecArray(fa1),&UniFloatVecArray(fa2))	=> fa1==fa2,
-			(&UniQuat(q1),&UniQuat(q2))				=> q1==q2,
-			(&UniMatrix(b1,m1),&UniMatrix(b2,m2))	=> b1==b2 && m1==m2,
-			(&UniTexture(u1,_),&UniTexture(u2,_))	=> u1==u2,
-			(_,_)									=> false
+			(&UniQuat(q1),&UniQuat(q2))						=> q1==q2,
+			(&UniMatrix(b1,m1),&UniMatrix(b2,m2))			=> b1==b2 && m1==m2,
+			(&UniTexture(u1,_,_),&UniTexture(u2,_,_))		=> u1==u2,
+			(_,_)											=> false
 		}
 	}
 	pure fn ne( v : &Uniform )-> bool	{ !self.eq(v) }
@@ -135,16 +135,16 @@ impl Parameter	{
 	priv fn write()	{
 		let loc = *self.loc;
 		match copy self.value	{
-			Unitialized		=> fail(fmt!( "Uninitalized parameter at location %d", loc as int )),
-			UniFloat(v)		=> glcore::glUniform1f( loc, v as glcore::GLfloat ),
-			UniInt(v)		=> glcore::glUniform1i( loc, v as glcore::GLint ),
-			UniFloatVec(v)	=> glcore::glUniform4fv( loc, 1, ptr::addr_of(&v.x) ),
-			UniIntVec(v)	=> glcore::glUniform4iv( loc, 1, v.to_ptr() ),
+			Unitialized			=> fail(fmt!( "Uninitalized parameter at location %d", loc as int )),
+			UniFloat(v)			=> glcore::glUniform1f( loc, v as glcore::GLfloat ),
+			UniInt(v)			=> glcore::glUniform1i( loc, v as glcore::GLint ),
+			UniFloatVec(v)		=> glcore::glUniform4fv( loc, 1, ptr::addr_of(&v.x) ),
+			UniIntVec(v)		=> glcore::glUniform4iv( loc, 1, v.to_ptr() ),
 			UniFloatVecArray(v)	=> glcore::glUniform4fv( loc, self.size as glcore::GLint,
 				unsafe{vec::raw::to_ptr(v)} as *glcore::GLfloat ),
-			UniQuat(v)		=> glcore::glUniform4fv( loc, 1, v.to_ptr() ),
-			UniMatrix(b,v)	=> glcore::glUniformMatrix4fv( loc, 1, b as glcore::GLboolean, ptr::addr_of(&v.x.x) ),
-			UniTexture(u,_)	=> glcore::glUniform1i( loc, u as glcore::GLint ),
+			UniQuat(v)			=> glcore::glUniform4fv( loc, 1, v.to_ptr() ),
+			UniMatrix(b,v)		=> glcore::glUniformMatrix4fv( loc, 1, b as glcore::GLboolean, ptr::addr_of(&v.x.x) ),
+			UniTexture(u,_,_)	=> glcore::glUniform1i( loc, u as glcore::GLint ),
 		}
 	}
 }
@@ -379,10 +379,16 @@ impl context::Context	{
 				Some(ref par) =>	{
 					let mut val = copy *value;	//FIXME: no copy
 					match *value	{
-						UniTexture(_,t)	=>	{
+						UniTexture(_,t,s_opt)	=>	{
 							check_sampler( *t.target, par.storage );
-							self.texture.bind_to( tex_unit, t );
-							val = UniTexture( tex_unit, t );
+							match s_opt	{
+								Some(ref s) => self.texture.bind_to( tex_unit, t, s ),
+								None	=>	{
+									self.texture.switch(tex_unit);
+									self.texture.bind(t);
+								}
+							}
+							val = UniTexture( tex_unit, t, s_opt );
 							tex_unit += 1;
 						},
 						_	=> ()
