@@ -56,11 +56,18 @@ class ExportArm( bpy.types.Operator, ExportHelper ):
 		Settings.showWarning	= self.properties.show_warn
 		Settings.breakError		= self.properties.break_err
 		Settings.keyBezier		= self.properties.key_bezier
-		out = Writer(self.properties.filepath)
-		log = Logger()
-		save_arm(out, context, log)
-		out.close()
-		log.conclude()
+		obj = None
+		for ob in context.scene.objects:
+			if (ob.type == 'ARMATURE' and ob.select):
+				obj = ob
+				break
+		if obj != None:
+			fp = self.properties.filepath
+			log = Logger(fp+'.log')
+			out = Writer(fp)
+			save_arm(out, context, log)
+			out.close()
+			log.conclude()
 		return {'FINISHED'}
 
 

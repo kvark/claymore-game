@@ -59,8 +59,9 @@ class Writer:
 
 class Logger:
 	tabs = ('',"\t","\t\t","\t\t\t")
-	__slots__= 'counter','stop'
-	def __init__(self):
+	__slots__= 'file','counter','stop'
+	def __init__(self,path):
+		self.file = open(path,'w')
 		self.counter = {'':0,'i':0,'w':0,'e':0}
 		self.stop = False
 	def log(self,indent,level,message):
@@ -71,12 +72,13 @@ class Logger:
 			return
 		if level=='e' and Settings.breakError:
 			self.stop = True
-		print('%s(%c) %s' % (Logger.tabs[indent],level,message))
+		self.file.write("%s(%c) %s\n" % (Logger.tabs[indent],level,message))
 	def logu(self,indent,message):
-		print( "%s%s" % (Logger.tabs[indent],message) )
+		self.file.write( "%s%s\n" % (Logger.tabs[indent],message) )
 	def conclude(self):
 		c = self.counter
-		print(c['e'],'errors,',c['w'],'warnings,',c['i'],'infos')
+		self.file.write('%d errors, %d warnings, %d infos' % (c['e'],c['w'],c['i']))
+		self.file.close()
 		self.counter.clear()
 
 

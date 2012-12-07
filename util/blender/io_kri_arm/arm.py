@@ -5,18 +5,10 @@ import mathutils
 from io_kri.common	import *
 from io_kri.action	import *
 
-def save_arm(out,context,log):
-	# ready...
-	obj = None
-	for ob in context.scene.objects:
-		if (ob.type == 'ARMATURE' and ob.select):
-			obj = ob
-			break
-	if obj == None:
-		return
-	skel = obj.data
-	# steady...
+def save_arm(out,ob,log):
+	skel = ob.data
 	print('Exporting Armature.')
+	log.logu(0,'Armature %s' % (ob.data.name))
 	out.begin('k3arm')
 	nbon = len(skel.bones)
 	log.logu(1,'%d bones' % (nbon))
@@ -33,7 +25,7 @@ def save_arm(out,context,log):
 		out.pack('B', parid+1)
 		save_matrix(out,mx)
 	# animations
-	save_actions(out,obj,log)
+	save_actions(out,ob,log)
 	# done
 	out.end();	#k3arm
 	print('Done.')

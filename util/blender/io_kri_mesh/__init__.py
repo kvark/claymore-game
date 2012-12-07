@@ -88,11 +88,18 @@ class ExportMesh( bpy.types.Operator, ExportHelper ):
 		Settings.putColor	= self.properties.put_color
 		Settings.doQuatInt	= self.properties.quat_int
 		Settings.fakeQuat	= self.properties.quat_fake
-		out = Writer(self.properties.filepath)
-		log = Logger()
-		save_mesh(out, context, log)
-		out.close()
-		log.conclude()
+		obj = None
+		for ob in context.scene.objects:
+			if (ob.type == 'MESH' and ob.select):
+				obj = ob
+				break
+		if obj != None:
+			fp = self.properties.filepath
+			log = Logger(fp+'.log')
+			out = Writer(fp)
+			save_mesh(out, obj, log)
+			out.close()
+			log.conclude()
 		return {'FINISHED'}
 
 

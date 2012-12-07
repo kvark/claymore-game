@@ -111,22 +111,16 @@ class Mesh:
 		self.index = None
 
 
-def save_mesh(out,context,log):
+def save_mesh(out,ob,log):
 	# ready...
-	obj = None
-	for ob in context.scene.objects:
-		if (ob.type == 'MESH' and ob.select):
-			obj = ob
-			break
-	if obj == None:
-		return
+	print('Exporting Mesh...')
+	log.logu(0,'Mesh %s' % (ob.data.name))
 	arm = None
 	if ob.parent and ob.parent.type == 'ARMATURE':
 		arm = ob.parent.data
 	# steady...
-	print('Exporting Mesh...')
 	out.begin('k3mesh')
-	km = collect_attributes(ob.data, arm, ob.vertex_groups, log)
+	(km,face_num) = collect_attributes(ob.data, arm, ob.vertex_groups, log)
 	# go!
 	totalFm = ''.join(a.type for a in km.attribs)
 	assert len(totalFm) == 2*len(km.attribs)
@@ -163,6 +157,7 @@ def save_mesh(out,context,log):
 	# done
 	out.end()	#k3mesh
 	print('Done.')
+	return (km,face_num)
 
 
 def collect_attributes(mesh,armature,groups,log):
@@ -346,17 +341,6 @@ def collect_attributes(mesh,armature,groups,log):
 		for f in ar_face: qi_check(f)
 	del ex_face
 
-	# 6: materials
-#	out.begin('entity')
-#	for fn,m in zip(face_num,mesh.materials):
-#		if not fn: break
-#		out.pack('H', fn)
-#		s = (m.name	if m else '')
-#		out.text(s)
-#		log.logu(1, '+entity: %d faces, [%s]' % (fn,s))
-#	out.pack('H',0)
-#	out.end()
-
 	# 5: face indices
 	ar_face.sort(key = lambda x: x.mat)
 	face_num = (len(mesh.materials)+1) * [0]
@@ -478,4 +462,4 @@ def collect_attributes(mesh,armature,groups,log):
 	
 	# 9: the end!
 	km.nv = len(ar_vert)
-	return km
+	return (km,face_num)
