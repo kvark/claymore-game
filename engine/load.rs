@@ -229,6 +229,7 @@ pub fn read_armature( br : &Reader, root : @space::Node, dual_quat : bool )-> sp
 			assert br.enter() == ~"curve";
 			let curve_name = br.get_string();
 			let dimension = br.get_uint(1u);
+			io::println( ~"\t\tCurve" + curve_name );
 			let split = curve_name.split_char('"');
 			if split.len() == 3u	{
 				assert split[0] == ~"pose.bones[";
@@ -246,6 +247,11 @@ pub fn read_armature( br : &Reader, root : @space::Node, dual_quat : bool )-> sp
 					assert dimension == 4u;
 					let c = read_curve( br, read_key_orientation_quat );
 					curves.push( space::ACuRotQuat(bid,c) );
+				}else
+				if split[2] == ~"].rotation_euler"	{
+					assert dimension == 3u;
+					read_curve( br, read_key_position );
+					//curves.push( space)	//FIXME!
 				}else
 				if split[2] == ~"].scale"	{
 					assert dimension == 3u;

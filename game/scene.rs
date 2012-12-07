@@ -54,40 +54,36 @@ pub type NodeMap = LinearMap<~str,NodeRef>;
 #[auto_deserialize]
 struct NodeInfo	{
 	name		: ~str,
-	parent		: ~str,
 	space		: SpaceInfo,
+	children	: ~[NodeInfo],
 }
 
-pub fn make_node( info : &NodeInfo, map : &mut NodeMap )-> NodeRef	{
-	let node = @engine::space::Node{
-		name	: copy info.name,
-		space	: info.space.spawn(),
-		parent	: map.find( &info.parent ),
-		actions	: ~[],	//TODO
-	};
-	map.insert( copy info.name, node );
-	node
+pub fn make_nodes( infos : &~[NodeInfo], par : Option<NodeRef>, map : &mut NodeMap )	{
+	for infos.each() |inode|	{
+		let node = @engine::space::Node{
+			name	: copy inode.name,
+			space	: inode.space.spawn(),
+			parent	: par,
+			actions	: ~[],	//TODO
+		};
+		map.insert( copy inode.name, node );
+		make_nodes( &inode.children, Some(node), map );
+	}
 }
 
 
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -//
-//	Entity, Texture, Material, Armature
+//	Entity
 
 #[auto_deserialize]
 struct EntityInfo	{
-	node		: NodeInfo,
+	node		: ~str,
 	material	: ~str,
 	mesh		: ~str,
 	range		: (uint,uint),
-	has_armature: bool,
+	armature	: ~str,
 }
 
-#[auto_deserialize]
-struct ArmatureInfo	{
-	node	: NodeInfo,
-	name	: ~str,
-	dual_quat	: bool,
-}
 
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -//
 //	Material
@@ -234,7 +230,7 @@ impl Camera	{
 
 #[auto_deserialize]
 pub struct CameraInfo	{
-	node	: NodeInfo,
+	node	: ~str,
 	proj	: ProjectorInfo,
 }
 
@@ -248,7 +244,7 @@ pub struct Light	{
 
 #[auto_deserialize]
 pub struct LightInfo	{
-	node	: NodeInfo,
+	node	: ~str,
 	proj	: ProjectorInfo,
 }
 
@@ -272,6 +268,7 @@ pub fn divide_group( group : &mut EntityGroup, name : &~str )->EntityGroup	{
 pub struct Scene	{
 	materials	: LinearMap<~str,@engine::draw::Material>,
 	nodes		: LinearMap<~str,NodeRef>,
+	meshes		: LinearMap<~str,@engine::mesh::Mesh>,
 	armatures	: LinearMap<~str,@engine::space::Armature>,
 	mut entities: EntityGroup,
 	cameras		: LinearMap<~str,Camera>,
@@ -281,8 +278,7 @@ pub struct Scene	{
 #[auto_deserialize]
 pub struct SceneInfo	{
 	materials	: ~[MaterialInfo],
-	dummies		: ~[NodeInfo],
-	armatures	: ~[ArmatureInfo],
+	nodes		: ~[NodeInfo],
 	entities	: ~[EntityInfo],
 	cameras		: ~[CameraInfo],
 	lights		: ~[LightInfo],
@@ -291,43 +287,65 @@ pub struct SceneInfo	{
 
 pub fn load_scene( path : ~str, gc : &engine::context::Context,
 		opt_vao : Option<@engine::buf::VertexArray>, aspect : float )-> Scene	{
-	let scene = load_config::<SceneInfo>( path );
+	let scene = load_config::<SceneInfo>( path+~".json" );
 	// materials
-	let mut tex_cache = LinearMap::<~str,@engine::texture::Texture>();
-	let mut map_material = LinearMap::<~str,@engine::draw::Material>();
+	let mut tex_cache		= LinearMap::<~str,@engine::texture::Texture>();
+	let mut map_material	= LinearMap::<~str,@engine::draw::Material>();
 	for scene.materials.each() |imat|	{
 		let mat = @engine::draw::load_material( ~"data/code/mat/"+imat.kind );
 		map_material.insert( copy imat.name, mat );
 		for imat.textures.each() |itex|	{
 			if !tex_cache.contains_key( &itex.name )	{
-				let tex = @engine::load::load_texture_2D( gc, ~"data/texture/"+itex.path, true );
+				let path = ~"data/texture/" + itex.path;
+				let tex = @engine::load::load_texture_2D( gc, &path, true );
 				tex_cache.insert( copy itex.name, tex );
 			}
 		}
 	}
 	// nodes
 	let mut map_node = LinearMap::<~str,@engine::space::Node>();
-	for scene.dummies.each() |idummy|	{
-		make_node( idummy, &mut map_node );
-	}
+	make_nodes( &scene.nodes, None, &mut map_node );
+	// meshes
+	let mut map_mesh = {
+		let mut map = LinearMap::<~str,@engine::mesh::Mesh>();
+		let rd = engine::load::create_reader( path+".k3mesh" );
+		assert rd.enter() == ~"*mesh";
+		while rd.has_more()	{
+			assert rd.enter() == ~"meta";
+			let name = rd.get_string();
+			let mesh = @engine::load::read_mesh( &rd, gc );
+			map.insert( name, mesh );
+			rd.leave();
+		}
+		rd.leave();
+		map
+	};
 	// armatures
-	let mut map_armature = LinearMap::<~str,@engine::space::Armature>();
-	for scene.armatures.each() |iarm|	{
-		let root = make_node( &iarm.node, &mut map_node );
-		let arm = @engine::load::read_armature(
-			&engine::load::create_reader( ~"data/arm/" + iarm.name + ~".k3arm" ),
-			root, iarm.dual_quat );
-		map_armature.insert( copy root.name, arm );
-	}
+	let mut map_armature = {
+		let mut map = LinearMap::<~str,@engine::space::Armature>();
+		let rd = engine::load::create_reader( path+".k3arm" );	
+		assert rd.enter() == ~"*arm";
+		while rd.has_more()	{
+			assert rd.enter() == ~"meta";
+			let name = rd.get_string();
+			let node_name = rd.get_string();
+			let dual_quat = rd.get_bool();
+			let root = map_node.get( &node_name );
+			let arm = @engine::load::read_armature( &rd, root, dual_quat );
+			map.insert( name, arm );
+			rd.leave();
+		}
+		rd.leave();
+		map
+	};
 	// entities
 	let mut entity_group : EntityGroup = ~[];
 	for scene.entities.each() |ient|	{
-		let root = make_node( &ient.node, &mut map_node );
+		let root = map_node.get( &ient.node );
 		let mat = map_material.get( &ient.material );
-		let skel = if ient.has_armature	{
-			map_armature.get(&ient.node.parent) as @engine::draw::Mod
-		}else	{
-			@() as @engine::draw::Mod
+		let skel = match map_armature.find(&ient.armature)	{
+			Some(arm)	=> arm	as @engine::draw::Mod,
+			None		=> ()	as @engine::draw::Mod,
 		};
 		let mut data = engine::shade::create_data();
 		for scene.materials.each() |imat|	{
@@ -343,9 +361,7 @@ pub fn load_scene( path : ~str, gc : &engine::context::Context,
 					Some(v) => v,
 					None	=> @gc.create_vertex_array(),
 				},
-			mesh	: @engine::load::read_mesh(
-				&engine::load::create_reader( ~"data/mesh" + ient.mesh + ~".k3mesh" ),
-				gc ),
+			mesh	: map_mesh.get( &ient.mesh ),
 			range	: engine::mesh::Range{
 				start	:r_min,
 				num		:r_max-r_min,
@@ -358,7 +374,7 @@ pub fn load_scene( path : ~str, gc : &engine::context::Context,
 	// cameras
 	let mut map_camera = LinearMap::<~str,Camera>();
 	for scene.cameras.each() |icam|	{
-		let root = make_node( &icam.node, &mut map_node );
+		let root = map_node.get( &icam.node );
 		map_camera.insert( copy root.name, Camera{
 			node:root, proj:icam.proj.spawn(aspect),
 			ear:engine::audio::Listener{ volume:0f },
@@ -367,7 +383,7 @@ pub fn load_scene( path : ~str, gc : &engine::context::Context,
 	// lights
 	let mut map_light = LinearMap::<~str,Light>();
 	for scene.lights.each() |ilight|	{
-		let root = make_node( &ilight.node, &mut map_node );
+		let root = map_node.get( &ilight.node );
 		map_light.insert( copy root.name, Light{
 			node:root, proj:ilight.proj.spawn(1f),
 		});
@@ -376,6 +392,7 @@ pub fn load_scene( path : ~str, gc : &engine::context::Context,
 	Scene{
 		materials	: map_material,
 		nodes		: map_node,
+		meshes		: map_mesh,
 		armatures	: map_armature,
 		entities	: entity_group,
 		cameras		: map_camera,

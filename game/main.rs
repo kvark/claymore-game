@@ -22,6 +22,8 @@ struct Entry	{
 }
 
 fn make_entry( ct : &engine::context::Context, aspect : float )-> Entry	{
+	let scene_exp = scene::load_scene( ~"data/claymore-2", ct,
+		Some(@ct.create_vertex_array()), aspect );
 	let tech = {
 		let pmap = engine::call::create_plane_map( ~"o_Color", engine::frame::TarEmpty );
 		let mut rast = engine::rast::create_rast(0,0);
@@ -31,8 +33,8 @@ fn make_entry( ct : &engine::context::Context, aspect : float )-> Entry	{
 		engine::draw::load_technique( ~"data/code/tech/forward/light",
 			ct.default_frame_buffer, &pmap, &rast, cache)
 	};
-	let scene = scene::load_scene( ~"data/object/scene.json", ct,
-			Some(@ct.create_vertex_array()), aspect );
+	let scene = scene::load_scene( ~"data/object/scene", ct,
+		Some(@ct.create_vertex_array()), aspect );
 	let arm = scene.armatures.get(&~"armature");
 	arm.set_record( arm.actions[0], 0f );
 	Entry	{

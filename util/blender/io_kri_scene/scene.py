@@ -68,12 +68,12 @@ def cook_node(ob,log):
 		log.log(1,'w', 'Non-uniform scale: (%.1f,%.1f,%.1f)' % sca.to_tuple(1))
 	return {
 		'name'	: ob.name,
-		'parent': ob.parent.name if ob.parent else '',
 		'space'	: {
 			'position'		: tuple(pos),
 			'orientation'	: tuple(rot),
 			'scale'			: scale
-		}
+		},
+		'children'	: []
 	}
 
 def cook_camera_proj(cam,log):
@@ -92,8 +92,7 @@ def cook_light_proj(lamp,log):
 def save_scene(filename,context):
 	glob		= {}
 	materials	= []
-	dummies		= []
-	armatures	= []
+	nodes		= []
 	entities	= []
 	cameras		= []
 	lights		= []
@@ -101,6 +100,8 @@ def save_scene(filename,context):
 	log			= Logger(filename+'.log')
 	out_mesh	= Writer(filename+'.k3mesh')
 	out_arm		= Writer(filename+'.k3arm')
+	out_mesh.begin('*mesh')
+	out_arm.begin('*arm')
 	sc = context.scene
 	print('Exporting Scene...')
 	log.logu(0,'Scene %s' % (filename))
@@ -120,15 +121,21 @@ def save_scene(filename,context):
 		if log.stop:	break
 		materials.append( cook_mat(mat) )
 		#save_actions( mat, 'm','t' )
+	# nodes
+	node_tree = {}
+	for ob in sc.objects:
+		node_tree[ob.name] = n = cook_node(ob,log)
+		if ob.parent == None:
+			nodes.append(n)
+		else:
+			node_tree[ob.parent.name]['children'].append(n)
+	del node_tree
 	# steady...
 	for ob in sc.objects:
 		if log.stop:	break
-		node = cook_node(ob,log)
 		if len(ob.modifiers):
 			log.log(1,'w','Unapplied modifiers detected on object %s' % (ob.name))
-		if ob.type == 'EMPTY':
-			dummies.append(node)
-		elif ob.type == 'MESH':
+		if ob.type == 'MESH':
 			out_mesh.begin('meta')
 			out_mesh.text(ob.data.name)
 			(_,face_num) = save_mesh(out_mesh,ob,log)
@@ -138,34 +145,34 @@ def save_scene(filename,context):
 				if not fn: break
 				s = (m.name	if m else '')
 				log.logu(1, '+entity: %d faces, [%s]' % (fn,s))
+				arm_name = ob.parent.data.name if (ob.parent and ob.parent.type == 'ARMATURE') else ''
 				entities.append({
-					'node'		: node,
+					'node'		: ob.name,
 					'material'	: s,
 					'mesh'		: ob.data.name,
 					'range'		: (offset,offset+fn),
-					'has_armature'	: ob.parent and ob.parent.type == 'ARMATURE'
+					'armature'	: arm_name
 					})
 				offset += fn
 		elif ob.type == 'ARMATURE':
-			out_mesh.begin('meta')
-			out_mesh.text(ob.data.name)
+			out_arm.begin('meta')
+			out_arm.text(ob.data.name)
+			out_arm.text(ob.name)	# root node
+			out_arm.pack('B', 0)	# dual-quat
 			save_arm(out_arm,ob,log)
-			out_mesh.end()
-			armatures.append({
-				'node'	: node,
-				'name'	: ob.data.name,
-				'dual_quat'	: False,
-				})
+			out_arm.end()
 		elif ob.type == 'CAMERA':
 			cameras.append({
-				'node'	: node,
+				'node'	: ob.name,
 				'proj'	: cook_camera_proj(ob.data,log)
 				})
 		elif ob.type == 'LAMP':
 			lights.append({
-				'node'	: node,
+				'node'	: ob.name,
 				'proj'	: cook_light_proj(ob.data,log)
 				})
+	out_mesh.end()
+	out_arm.end()
 	out_mesh.close()
 	out_arm.close()
 	# animations
@@ -173,8 +180,7 @@ def save_scene(filename,context):
 	document = {
 		'global'	: glob,
 		'materials'	: materials,
-		'dummies'	: dummies,
-		'armatures'	: armatures,
+		'nodes'		: nodes,
 		'entities'	: entities,
 		'cameras'	: cameras,
 		'lights'	: lights

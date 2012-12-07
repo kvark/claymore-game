@@ -18,18 +18,6 @@ pub struct Attribute	{
 	offset			: uint,
 }
 
-pub fn make_attribute<T:context::GLType>( ct : &context::Context, vdata : ~[T], count : uint, norm : bool )-> Attribute	{
-	Attribute{
-		kind: vdata[0].to_gl_type(),
-		count: count,
-		normalized: norm,
-		interpolated: true,
-		buffer: @ct.create_buffer_loaded( vdata ),
-		stride: count * sys::size_of::<T>(),
-		offset: 0u
-	}
-}
-
 //FIXME: remove once auto-generated
 impl Attribute : cmp::Eq	{
 	pure fn eq( other : &Attribute )-> bool	{
@@ -130,13 +118,25 @@ pub fn create_quad( ct : &context::Context )-> mesh::Mesh	{
 	let vdata = ~[0i8,0i8,1i8,0i8,0i8,1i8,1i8,1i8];
 	let count = 2u;
 	let mut mesh = ct.create_mesh( ~"grid", ~"3s", vdata.len()/count, 0u );
-	let vat = make_attribute( ct, vdata, count, false );
+	let vat = ct.create_attribute( vdata, count, false );
 	mesh.attribs.insert( ~"a_Vertex", vat );
 	mesh
 }
 
 
 impl context::Context	{
+	pub fn create_attribute<T:context::GLType>( vdata : ~[T], count : uint, norm : bool )-> Attribute	{
+		Attribute{
+			kind: vdata[0].to_gl_type(),
+			count: count,
+			normalized: norm,
+			interpolated: true,
+			buffer: @self.create_buffer_loaded( vdata ),
+			stride: count * sys::size_of::<T>(),
+			offset: 0u
+		}
+	}
+
 	fn create_mesh( name : ~str, poly : ~str, nv : uint, ni : uint )-> Mesh	{
 		let ptype = if poly == ~"1"		{glcore::GL_POINTS}
 			else	if poly == ~"2"		{glcore::GL_LINES}

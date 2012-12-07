@@ -75,8 +75,11 @@ def save_curve_pack(out,orig_curves,offset,log):
 	extra = curves[0].extrapolation
 	#log.log(2,'i', '%s, keys %d' %(curves,num))
 	for c in curves:
-		assert len(c.keyframe_points) == num
 		assert c.extrapolation == extra
+		if len(c.keyframe_points) != num:
+			log.log(2,'w','unmatched keyframes detected')
+			out.pack('H',0)
+			return
 	out.pack('HBB', num, (extra == 'LINEAR'), Settings.keyBezier)
 	for i in range(num):
 		kp = tuple(c.keyframe_points[i] for c in curves)
