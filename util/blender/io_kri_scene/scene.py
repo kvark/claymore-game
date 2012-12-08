@@ -16,14 +16,15 @@ def cook_mat(mat):
 		it = mt.texture
 		if it==None: continue
 		textures.append({
-			'name'	:mt.name,
+			#'name'	:mt.name,
+			'name'	:'Main',
 			'path'	:it.image.filepath,
 			'filter':(1,(2,3)[it.use_mipmap])[it.use_interpolation],
 			'wrap'	:0,
 			'scale'	:tuple(mt.scale),
 			'offset':tuple(mt.offset)
 			})
-	kind = 'phong'
+	kind = ('flat','phong')[len(textures)!=0]
 	if mat.use_shadeless:
 		kind = 'unshaded'
 	elif mat.use_tangent_shading:
@@ -160,7 +161,7 @@ def save_scene(filename,context,export_meshes,export_armatures):
 					'node'		: ob.name,
 					'material'	: s,
 					'mesh'		: ob.data.name,
-					'range'		: (offset,offset+fn),
+					'range'		: (3*offset,3*(offset+fn)),
 					'armature'	: arm_name
 					})
 				offset += fn

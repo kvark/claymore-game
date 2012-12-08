@@ -14,33 +14,49 @@ enum Screen	{
 }
 
 struct Entry	{
-	girl	: engine::draw::Entity,
+	girl	: scene::EntityGroup,
 	skel	: @engine::space::Armature,
 	cam		: scene::Camera,
 	tech	: engine::draw::Technique,
 	start	: float,
 }
 
+impl Entry	{
+	fn rotate_camera( dir : f32 )	{
+		let angle = dir * 0.01f32;
+		let q = lmath::quaternion::Quat::new( f32::cos(angle),
+			0f32, 0f32, f32::sin(angle) );
+		let s = engine::space::QuatSpace{
+			position : lmath::vector::Vec3::zero::<f32>(),
+			orientation : q, scale : 1f32 };
+		let n = self.cam.node;
+		*n.mut_space() = s * n.space;
+	}
+}
+
 fn make_entry( ct : &engine::context::Context, aspect : float )-> Entry	{
-	let scene_exp = scene::load_scene( ~"data/claymore-2", ct,
+	let scene = scene::load_scene( ~"data/claymore-2", ct,
 		Some(@ct.create_vertex_array()), aspect );
 	let tech = {
 		let pmap = engine::call::create_plane_map( ~"o_Color", engine::frame::TarEmpty );
 		let mut rast = engine::rast::create_rast(0,0);
 		rast.depth.test = true;
-		rast.prime.cull = true;
+		//rast.prime.cull = true;	//the cloak is 2-sided
 		let cache = @mut engine::draw::create_cache();
 		engine::draw::load_technique( ~"data/code/tech/forward/light",
 			ct.default_frame_buffer, &pmap, &rast, cache)
 	};
-	let scene = scene::load_scene( ~"data/object/scene", ct,
-		Some(@ct.create_vertex_array()), aspect );
-	let arm = scene.armatures.get(&~"armature");
-	arm.set_record( arm.actions[0], 0f );
+	let arm = scene.armatures.get(&~"Armature.002");
+	let cam = scene.cameras.get(&~"Camera");
+	let group = scene::divide_group( &mut scene.entities, &~"noTrasnform" );
+	io::println(fmt!( "Group size: %u", group.len() ));
+	io::println(fmt!( "Camera fovx:%f,%f, range:%f-%f",
+		cam.proj.fov_x, cam.proj.fov_y, cam.proj.r_near, cam.proj.r_far ));
+	//arm.set_record( arm.actions[0], 0f );
 	Entry	{
-		girl : scene::divide_group(&mut scene.entities,&~"girl")[0],
+		girl : group,
 		skel : arm,
-		cam	 : scene.cameras.get(&~"cam"),
+		cam	 : cam,
 		tech : tech,
 		start: engine::anim::get_time(),
 	}
@@ -65,12 +81,26 @@ impl Game	{
 	fn update( nx : float, ny : float, mouse_hit : bool, cam_dir : int )-> bool	{
 		match self.screen	{
 			ScreenEntry => {
-				self.entry.girl.update_world();
-				let gd = self.entry.girl.mut_data();
+				if nx<0.1	{
+					self.entry.rotate_camera(-2f32);
+				}else
+				if nx<0.25	{
+					self.entry.rotate_camera(-1f32);
+				}else
+				if nx>0.9	{
+					self.entry.rotate_camera(2f32);
+				}else
+				if nx>0.75	{
+					self.entry.rotate_camera(1f32);
+				}
 				let lit_pos	= lmath::vector::Vec4::new( 3f32, 3f32, 3f32, 0f32 );
-				gd.insert( ~"u_LightPos",	engine::shade::UniFloatVec(lit_pos) );
-				self.entry.cam.fill_data( gd );
-				self.entry.skel.fill_data( gd );
+				for self.entry.girl.each() |ent|	{
+					ent.update_world();
+					let gd = ent.mut_data();
+					gd.insert( ~"u_LightPos",	engine::shade::UniFloatVec(lit_pos) );
+					self.entry.cam.fill_data( gd );
+					//self.entry.skel.fill_data( gd );
+				}
 				true
 			},
 			ScreenBattle => {
@@ -90,16 +120,20 @@ impl Game	{
 						stencil	:Some( 0u ),
 					}
 				);
+				let mut queue = ~[c0];
 				if true	{	// update animation
 					let t = engine::anim::get_time() - self.entry.start;
 					let r = self.entry.skel.actions[0];
 					let nloops = (t / r.duration) as uint;
 					let t2 = t - r.duration * (nloops as float);
 					self.entry.skel.set_record( r, t2 );
-					self.entry.skel.fill_data( self.entry.girl.mut_data() );
+					//self.entry.skel.fill_data( self.entry.girl.mut_data() );
 				}
-				let c1 = self.entry.tech.process( &self.entry.girl, &self.context );
-				self.context.flush(~[c0,c1]);
+				for self.entry.girl.each() |ent|	{
+					queue.push( self.entry.tech.process( ent, &self.context )
+						);
+				}
+				self.context.flush(queue);
 			},
 			ScreenBattle => {
 				// clear screen

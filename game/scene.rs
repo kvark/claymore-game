@@ -187,9 +187,10 @@ pub struct ProjectorInfo	{
 impl ProjectorInfo	{
 	pure fn spawn( aspect : float )-> Projector	{
 		let (near,far) = self.range;
+		let fov = self.fov * 180f / float::consts::pi;
 		Projector{
-			fov_x	: aspect * self.fov,
-			fov_y	: self.fov,
+			fov_x	: aspect * fov,
+			fov_y	: fov,
 			r_near	: near,
 			r_far	: far,
 		}
