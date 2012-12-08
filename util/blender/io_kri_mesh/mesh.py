@@ -120,7 +120,7 @@ def save_mesh(out,ob,log):
 		arm = ob.parent.data
 	# steady...
 	out.begin('k3mesh')
-	(km,face_num) = collect_attributes(ob.data, arm, ob.vertex_groups, log)
+	(km,face_num) = collect_attributes(ob.data, arm, ob.vertex_groups, False, log)
 	# go!
 	totalFm = ''.join(a.type for a in km.attribs)
 	assert len(totalFm) == 2*len(km.attribs)
@@ -160,7 +160,7 @@ def save_mesh(out,ob,log):
 	return (km,face_num)
 
 
-def collect_attributes(mesh,armature,groups,log):
+def collect_attributes(mesh,armature,groups,no_output,log):
 	# 1: convert Mesh to Triangle Mesh
 	for layer in mesh.uv_textures:
 		if not len(layer.data):
@@ -350,6 +350,9 @@ def collect_attributes(mesh,armature,groups,log):
 	avg_vu = 3.0 * len(ar_face) / len(ar_vert)
 	log.log(1,'i', '%.2f avg vertex usage' % (avg_vu))
 	
+	if no_output:
+		return (None,face_num)
+
 	km = Mesh()
 	
 	if 'putVertex':

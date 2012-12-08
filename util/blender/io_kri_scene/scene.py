@@ -5,8 +5,8 @@ import mathutils
 import json
 from io_kri.common	import *
 from io_kri.action	import *
-from io_kri_arm.arm		import save_arm
-from io_kri_mesh.mesh	import save_mesh
+from io_kri_arm.arm		import *
+from io_kri_mesh.mesh	import *
 
 
 def cook_mat(mat):
@@ -89,7 +89,7 @@ def cook_light_proj(lamp,log):
 	}
 
 
-def save_scene(filename,context):
+def save_scene(filename,context,export_meshes,export_armatures):
 	glob		= {}
 	materials	= []
 	nodes		= []
@@ -97,11 +97,17 @@ def save_scene(filename,context):
 	cameras		= []
 	lights		= []
 	# ready...
-	log			= Logger(filename+'.log')
-	out_mesh	= Writer(filename+'.k3mesh')
-	out_arm		= Writer(filename+'.k3arm')
-	out_mesh.begin('*mesh')
-	out_arm.begin('*arm')
+	log	= Logger(filename+'.log')
+	if export_meshes:
+		out_mesh	= Writer(filename+'.k3mesh')
+		out_mesh.begin('*mesh')
+	else:
+		out_mesh	= None
+	if export_armatures:
+		out_arm		= Writer(filename+'.k3arm')
+		out_arm.begin('*arm')
+	else:
+		out_arm		= None
 	sc = context.scene
 	print('Exporting Scene...')
 	log.logu(0,'Scene %s' % (filename))
@@ -136,16 +142,20 @@ def save_scene(filename,context):
 		if len(ob.modifiers):
 			log.log(1,'w','Unapplied modifiers detected on object %s' % (ob.name))
 		if ob.type == 'MESH':
-			out_mesh.begin('meta')
-			out_mesh.text(ob.data.name)
-			(_,face_num) = save_mesh(out_mesh,ob,log)
-			out_mesh.end()
+			if out_mesh != None:
+				out_mesh.begin('meta')
+				out_mesh.text(ob.data.name)
+				(_,face_num) = save_mesh(out_mesh,ob,log)
+				out_mesh.end()
+			else:
+				(_,face_num) = collect_attributes(ob.data,None,ob.vertex_groups,True,log)
 			offset = 0
 			for fn,m in zip( face_num, ob.data.materials ):
 				if not fn: break
 				s = (m.name	if m else '')
 				log.logu(1, '+entity: %d faces, [%s]' % (fn,s))
-				arm_name = ob.parent.data.name if (ob.parent and ob.parent.type == 'ARMATURE') else ''
+				has_arm = ob.parent and ob.parent.type == 'ARMATURE'
+				arm_name = ob.parent.data.name if has_arm else ''
 				entities.append({
 					'node'		: ob.name,
 					'material'	: s,
@@ -154,7 +164,7 @@ def save_scene(filename,context):
 					'armature'	: arm_name
 					})
 				offset += fn
-		elif ob.type == 'ARMATURE':
+		elif ob.type == 'ARMATURE' and out_arm != None:
 			out_arm.begin('meta')
 			out_arm.text(ob.data.name)
 			out_arm.text(ob.name)	# root node
@@ -171,10 +181,12 @@ def save_scene(filename,context):
 				'node'	: ob.name,
 				'proj'	: cook_light_proj(ob.data,log)
 				})
-	out_mesh.end()
-	out_arm.end()
-	out_mesh.close()
-	out_arm.close()
+	if out_mesh != None:
+		out_mesh.end()
+		out_mesh.close()
+	if out_arm != None:
+		out_arm.end()
+		out_arm.close()
 	# animations
 	# go!
 	document = {

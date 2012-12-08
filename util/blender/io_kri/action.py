@@ -82,7 +82,7 @@ def save_curve_pack(out,orig_curves,offset,log):
 			return
 	out.pack('HBB', num, (extra == 'LINEAR'), Settings.keyBezier)
 	for i in range(num):
-		kp = tuple(c.keyframe_points[i] for c in curves)
+		kp = tuple((c if c else curves[0]).keyframe_points[i] for c in orig_curves)
 		frame = kp[0].co[0]
 		out.pack('f', (frame-offset) / bpy.context.scene.render.fps)
 		#print ('Time', x, i, data)

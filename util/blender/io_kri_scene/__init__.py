@@ -32,6 +32,13 @@ class ExportScene( bpy.types.Operator, ExportHelper ):
 	bl_label	= '-= Claymore scene =-'
 	filename_ext	= ''
 
+	# scene settings
+	export_meshes	= BoolProperty( name='Export meshes',
+		description='Dump mesh binary collection',
+		default=True )
+	export_arms		= BoolProperty( name='Export armatures',
+		description='Dump armatures binary collection',
+		default=True )
 	# general settings
 	filepath	= StringProperty( name='File Path',
 		description='Filepath used for exporting the Claymore scene',
@@ -87,7 +94,8 @@ class ExportScene( bpy.types.Operator, ExportHelper ):
 		Settings.putColor	= self.properties.put_color
 		Settings.doQuatInt	= self.properties.quat_int
 		Settings.fakeQuat	= self.properties.quat_fake
-		save_scene(self.properties.filepath, context)
+		save_scene( self.properties.filepath, context,
+			self.properties.export_meshes, self.properties.export_arms )
 		return {'FINISHED'}
 
 

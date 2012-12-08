@@ -4,8 +4,9 @@ syntax: glob
 build/*
 data/font/*
 data/texture/*
-data/mesh/*
-data/arm/*
+*.k3mesh
+*.k3arm
+data/*.json
 lib/*.dSYM
 lib/libengine-*
 misc/*
