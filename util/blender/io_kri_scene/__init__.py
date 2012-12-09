@@ -39,6 +39,9 @@ class ExportScene( bpy.types.Operator, ExportHelper ):
 	export_arms		= BoolProperty( name='Export armatures',
 		description='Dump armatures binary collection',
 		default=True )
+	num_precision	= IntProperty( name='Numeric precision',
+		description='Number of digit past the dot for numerics',
+		default=3, min=0, max=10)
 	# general settings
 	filepath	= StringProperty( name='File Path',
 		description='Filepath used for exporting the Claymore scene',
@@ -95,7 +98,9 @@ class ExportScene( bpy.types.Operator, ExportHelper ):
 		Settings.doQuatInt	= self.properties.quat_int
 		Settings.fakeQuat	= self.properties.quat_fake
 		save_scene( self.properties.filepath, context,
-			self.properties.export_meshes, self.properties.export_arms )
+			self.properties.export_meshes,
+			self.properties.export_arms,
+			self.properties.num_precision )
 		return {'FINISHED'}
 
 

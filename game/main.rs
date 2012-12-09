@@ -81,17 +81,19 @@ impl Game	{
 	fn update( nx : float, ny : float, mouse_hit : bool, cam_dir : int )-> bool	{
 		match self.screen	{
 			ScreenEntry => {
-				if nx<0.1	{
-					self.entry.rotate_camera(-2f32);
-				}else
-				if nx<0.25	{
-					self.entry.rotate_camera(-1f32);
-				}else
-				if nx>0.9	{
-					self.entry.rotate_camera(2f32);
-				}else
-				if nx>0.75	{
-					self.entry.rotate_camera(1f32);
+				if nx>=0f && nx<=1f && ny>=0f && ny<=1f	{
+					if nx<0.1f	{
+						self.entry.rotate_camera(-2f32);
+					}else
+					if nx<0.25f	{
+						self.entry.rotate_camera(-1f32);
+					}else
+					if nx>0.9f	{
+						self.entry.rotate_camera(2f32);
+					}else
+					if nx>0.75f	{
+						self.entry.rotate_camera(1f32);
+					}
 				}
 				let lit_pos	= lmath::vector::Vec4::new( 3f32, 3f32, 3f32, 0f32 );
 				for self.entry.girl.each() |ent|	{

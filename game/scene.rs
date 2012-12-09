@@ -146,10 +146,10 @@ type TextureCache = LinearMap<~str,@engine::texture::Texture>;
 impl MaterialInfo	{
 	fn fill_data( data : &mut engine::shade::DataMap, cache : &TextureCache )	{
 		for self.data.each() |par|	{
-			data.insert( ~"u"+par.name, copy par.value );
+			data.insert( ~"u_"+par.name, copy par.value );
 		}
 		for self.textures.eachi() |i,tinfo|	{
-			let tex = cache.get( &tinfo.name );
+			let tex = cache.get( &tinfo.path );
 			let s_opt = Some(engine::texture::make_sampler( tinfo.filter, tinfo.wrap ));
 			data.insert( ~"t_"+tinfo.name, engine::shade::UniTexture(0,tex,s_opt) );
 			let (sx,sy) = tinfo.scale, (ox,oy) = tinfo.offset;
@@ -288,18 +288,36 @@ pub struct SceneInfo	{
 
 pub fn load_scene( path : ~str, gc : &engine::context::Context,
 		opt_vao : Option<@engine::buf::VertexArray>, aspect : float )-> Scene	{
-	let scene = load_config::<SceneInfo>( path+~".json" );
+	let scene = load_config::<SceneInfo>( path + ~".json" );
+	let mat_config = load_config::<~[MaterialInfo]>( path + ~".mat.json" );
 	// materials
 	let mut tex_cache		= LinearMap::<~str,@engine::texture::Texture>();
 	let mut map_material	= LinearMap::<~str,@engine::draw::Material>();
-	for scene.materials.each() |imat|	{
-		let mat = @engine::draw::load_material( ~"data/code/mat/"+imat.kind );
+	for mat_config.each() |imat|	{
+		let mat = @engine::draw::load_material( copy imat.kind );
 		map_material.insert( copy imat.name, mat );
+		io::println( ~"Custom material: " + imat.name );
 		for imat.textures.each() |itex|	{
-			if !tex_cache.contains_key( &itex.name )	{
+			if !tex_cache.contains_key( &itex.path )	{
+				let tex = @engine::load::load_texture_2D( gc, &itex.path, true );
+				tex_cache.insert( copy itex.path, tex );
+			}
+		}
+	}
+	for scene.materials.each() |imat|	{
+		let mat = @engine::draw::load_material( ~"data/code/mat/" + imat.kind );
+		if !map_material.contains_key( &imat.name )	{
+			io::println( ~"Standard material: " + imat.name );
+			map_material.insert( copy imat.name, mat );
+		}
+		for imat.textures.each() |itex|	{
+			if !tex_cache.contains_key( &itex.path )	{
 				let path = ~"data/texture/" + itex.path;
-				let tex = @engine::load::load_texture_2D( gc, &path, true );
-				tex_cache.insert( copy itex.name, tex );
+				let tex = match tex_cache.find(&path)	{
+					Some(t) => t,
+					None	=> @engine::load::load_texture_2D( gc, &path, true ),
+				};
+				tex_cache.insert( copy itex.path, tex );
 			}
 		}
 	}
@@ -348,12 +366,18 @@ pub fn load_scene( path : ~str, gc : &engine::context::Context,
 			Some(arm)	=> arm	as @engine::draw::Mod,
 			None		=> ()	as @engine::draw::Mod,
 		};
-		let mut data = engine::shade::create_data();
-		for scene.materials.each() |imat|	{
-			if imat.name == ient.material	{
-				imat.fill_data( &mut data, &tex_cache );
-			}
-		}
+		let data = {
+			let o1 = do vec::position(mat_config)		|mi|	{ mi.name==ient.material };
+			let o2 = do vec::position(scene.materials)	|mi|	{ mi.name==ient.material };
+			let imat = match (o1,o2)	{
+				(Some(p1),_)	=> &mat_config[p1],
+				(None,Some(p2))	=> &scene.materials[p2],
+				_	=> fail ~"Entity material not found: " + ient.material
+			};
+			let mut d = engine::shade::create_data();
+			imat.fill_data( &mut d, &tex_cache );
+			d
+		};
 		let (r_min,r_max) = ient.range;
 		let ent = engine::draw::Entity{
 			node	: root,

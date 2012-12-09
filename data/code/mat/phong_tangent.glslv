@@ -40,6 +40,7 @@ vec3 initMaterial()	{
 	TBN = mat3(tangent,bitangent,normal);
 	v_Eye = cookVector( u_CameraPos.xyz - wp );
 	v_NormalWorld = normal;
-	v_Tex = u_Tex0Transform.xy * vec2( a_Tex0.x, 1.0-a_Tex0.y ) + u_Tex0Transform.zw;
+	vec2 tc = vec2( a_Tex0.x, 1.0-a_Tex0.y );
+	v_Tex = u_Tex0Transform.xy*tc + u_Tex0Transform.zw;
 	return wp;
 }

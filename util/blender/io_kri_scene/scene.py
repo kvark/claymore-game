@@ -90,7 +90,7 @@ def cook_light_proj(lamp,log):
 	}
 
 
-def save_scene(filename,context,export_meshes,export_armatures):
+def save_scene(filename,context,export_meshes,export_armatures,precision):
 	glob		= {}
 	materials	= []
 	nodes		= []
@@ -198,7 +198,14 @@ def save_scene(filename,context,export_meshes,export_armatures):
 		'cameras'	: cameras,
 		'lights'	: lights
 	}
-	text = json.dumps(document, indent=2);
+	num_format = '%' + ('.%df' % precision)
+	class KriEncoder(json.JSONEncoder):
+		def default(self,obj):
+			if isinstance(obj,float):
+				return num_format % obj
+			return json.JSONEncoder.default(self,obj)
+	json.encoder.FLOAT_REPR = lambda o: num_format % (o)
+	text = json.dumps(document, indent="\t", cls=KriEncoder)
 	file = open(filename+'.json','w')
 	file.write(text)
 	file.close()

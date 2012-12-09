@@ -194,6 +194,15 @@ def collect_attributes(mesh,armature,groups,no_output,log):
 		log.log(1,'e','object has no faces')
 		return None,None,0,0
 
+	# 1.5: face indices
+	ar_face.sort(key = lambda x: x.mat)
+	face_num = (len(mesh.materials)+1) * [0]
+	for face in ar_face:
+		face_num[face.mat] += 1
+
+	if no_output:
+		return (None,face_num)
+
 	# 2: fill sparsed vertex array
 	avg,set_vert,set_surf = 0.0,{},{}
 	for face in ar_face:
@@ -341,18 +350,11 @@ def collect_attributes(mesh,armature,groups,no_output,log):
 		for f in ar_face: qi_check(f)
 	del ex_face
 
-	# 5: face indices
-	ar_face.sort(key = lambda x: x.mat)
-	face_num = (len(mesh.materials)+1) * [0]
-	for face in ar_face:
-		face_num[face.mat] += 1
+	# 5: stats and output
 	log.logu(1, 'total: %d vertices, %d faces' % (len(ar_vert),len(ar_face)))
 	avg_vu = 3.0 * len(ar_face) / len(ar_vert)
 	log.log(1,'i', '%.2f avg vertex usage' % (avg_vu))
 	
-	if no_output:
-		return (None,face_num)
-
 	km = Mesh()
 	
 	if 'putVertex':
