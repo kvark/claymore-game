@@ -14,10 +14,12 @@ enum Screen	{
 }
 
 struct Entry	{
-	girl	: scene::EntityGroup,
+	gMain	: scene::EntityGroup,
+	gHair	: scene::EntityGroup,
 	skel	: @engine::space::Armature,
 	cam		: scene::Camera,
-	tech	: engine::draw::Technique,
+	techSolid	: engine::draw::Technique,
+	techAlpha	: engine::draw::Technique,
 	start	: float,
 }
 
@@ -37,27 +39,35 @@ impl Entry	{
 fn make_entry( ct : &engine::context::Context, aspect : float )-> Entry	{
 	let scene = scene::load_scene( ~"data/claymore-2", ct,
 		Some(@ct.create_vertex_array()), aspect );
-	let tech = {
+	let (tSolid,tAlpha) = {
 		let pmap = engine::call::create_plane_map( ~"o_Color", engine::frame::TarEmpty );
 		let mut rast = engine::rast::create_rast(0,0);
 		rast.depth.test = true;
 		//rast.prime.cull = true;	//the cloak is 2-sided
 		let cache = @mut engine::draw::create_cache();
-		engine::draw::load_technique( ~"data/code/tech/forward/light",
-			ct.default_frame_buffer, &pmap, &rast, cache)
+		let t1 = engine::draw::load_technique( ~"data/code/tech/forward/light",
+			ct.default_frame_buffer, &pmap, rast, cache);
+		rast.prime.cull = true;
+		rast.set_blend( ~"s+d", ~"Sa", ~"1-Sa" );
+		let t2 = engine::draw::load_technique( ~"data/code/tech/forward/light",
+			ct.default_frame_buffer, &pmap, rast, cache);
+		(t1,t2)
 	};
 	let arm = scene.armatures.get(&~"Armature.002");
 	let cam = scene.cameras.get(&~"Camera");
-	let group = scene::divide_group( &mut scene.entities, &~"noTrasnform" );
+	let mut group = scene::divide_group( &mut scene.entities, &~"noTrasnform" );
+	let hair = scene::divide_group( &mut group, &~"Hair_Geo2" );
 	io::println(fmt!( "Group size: %u", group.len() ));
 	io::println(fmt!( "Camera fovx:%f,%f, range:%f-%f",
 		cam.proj.fov_x, cam.proj.fov_y, cam.proj.r_near, cam.proj.r_far ));
 	//arm.set_record( arm.actions[0], 0f );
 	Entry	{
-		girl : group,
+		gMain : group,
+		gHair : hair,
 		skel : arm,
 		cam	 : cam,
-		tech : tech,
+		techSolid : tSolid,
+		techAlpha : tAlpha,
 		start: engine::anim::get_time(),
 	}
 }
@@ -96,7 +106,14 @@ impl Game	{
 					}
 				}
 				let lit_pos	= lmath::vector::Vec4::new( 3f32, 3f32, 3f32, 0f32 );
-				for self.entry.girl.each() |ent|	{
+				for self.entry.gMain.each() |ent|	{
+					ent.update_world();
+					let gd = ent.mut_data();
+					gd.insert( ~"u_LightPos",	engine::shade::UniFloatVec(lit_pos) );
+					self.entry.cam.fill_data( gd );
+					//self.entry.skel.fill_data( gd );
+				}
+				for self.entry.gHair.each() |ent|	{
 					ent.update_world();
 					let gd = ent.mut_data();
 					gd.insert( ~"u_LightPos",	engine::shade::UniFloatVec(lit_pos) );
@@ -131,8 +148,12 @@ impl Game	{
 					self.entry.skel.set_record( r, t2 );
 					//self.entry.skel.fill_data( self.entry.girl.mut_data() );
 				}
-				for self.entry.girl.each() |ent|	{
-					queue.push( self.entry.tech.process( ent, &self.context )
+				for self.entry.gMain.each() |ent|	{
+					queue.push( self.entry.techSolid.process( ent, &self.context )
+						);
+				}
+				for self.entry.gHair.each() |ent|	{
+					queue.push( self.entry.techAlpha.process( ent, &self.context )
 						);
 				}
 				self.context.flush(queue);
@@ -176,7 +197,7 @@ fn create_game( wid : uint, het : uint )-> Game	{
 		rast.prime.cull = true;
 		let cache = @mut engine::draw::create_cache();
 		engine::draw::load_technique( ~"data/code/tech/forward/light",
-			ct.default_frame_buffer, &pmap, &rast, cache)
+			ct.default_frame_buffer, &pmap, rast, cache)
 	};
 	// done
 	ct.check(~"init");

@@ -21,6 +21,7 @@ vec3 initMaterial()	{
 	vec3 wp = (u_World * vec4(pos,1.0)).xyz;
 	v_Normal = mat3(u_World) * nor;
 	v_Eye = cookVector( u_CameraPos.xyz - wp );
-	v_Tex = u_Tex0Transform.xy * vec2( a_Tex0.x, 1.0-a_Tex0.y ) + u_Tex0Transform.zw;
+	vec2 tc = vec2( a_Tex0.x, 1.0-a_Tex0.y );
+	v_Tex = u_Tex0Transform.xy*tc + u_Tex0Transform.zw;
 	return wp;
 }

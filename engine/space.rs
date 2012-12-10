@@ -79,6 +79,14 @@ impl QuatSpace : Space	{
 		m4.w.z = self.position.z;
 		m4
 	}
+	pure fn get_pos_scale()-> lmath::vector::vec4	{
+		lmath::vector::Vec4::new( self.position.x, self.position.y, self.position.z, self.scale )
+	}
+	pure fn get_orientation()-> lmath::vector::vec4	{
+		lmath::vector::Vec4::new(
+			self.orientation.x, self.orientation.y,
+			self.orientation.z, self.orientation.w )	
+	}
 }
 
 pub pure fn identity()-> QuatSpace	{
@@ -271,13 +279,8 @@ impl Armature : draw::Mod	{
 					let b = &self.bones[pos.len()-1u];
 					parent_inv * b.node.world_space() * b.bind_pose_inv
 				}else {id};
-			pos.push( lmath::vector::Vec4::new(
-				space.position.x, space.position.y, space.position.z,
-				space.scale ));
-			rot.push( lmath::vector::Vec4::new(
-				space.orientation.x, space.orientation.y,
-				space.orientation.z, space.orientation.w
-				));
+			pos.push( space.get_pos_scale() );
+			rot.push( space.get_orientation() );
 		}
 		data.insert( ~"bone_pos[0]", shade::UniFloatVecArray(pos) );
 		data.insert( ~"bone_rot[0]", shade::UniFloatVecArray(rot) );

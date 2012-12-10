@@ -211,10 +211,6 @@ impl Camera	{
 		let proj = self.proj.to_matrix();
 		proj * self.node.world_space().inverse().to_matrix()
 	}
-	pure fn get_pos_vec4()-> lmath::vector::vec4	{
-		let v = self.node.world_space().position;
-		lmath::vector::Vec4::new( v.x, v.y, v.z, 0f32 )
-	}
 	pure fn get_view_vector()-> lmath::vector::vec3	{
 		let v = lmath::vector::Vec3::new( 0f32,0f32,-1f32 );
 		self.node.world_space().orientation.mul_v( &v )
@@ -224,8 +220,10 @@ impl Camera	{
 		self.node.world_space().orientation.mul_v( &v )
 	}
 	pub fn fill_data( data : &mut engine::shade::DataMap )	{
+		let sw = self.node.world_space();
 		data.insert( ~"u_ViewProj",		engine::shade::UniMatrix(false,self.get_matrix()) );
-		data.insert( ~"u_CameraPos",	engine::shade::UniFloatVec(self.get_pos_vec4()) );
+		data.insert( ~"u_CameraPos",	engine::shade::UniFloatVec(sw.get_pos_scale()) );
+		data.insert( ~"u_CameraRot",	engine::shade::UniFloatVec(sw.get_orientation()) );
 	}
 }
 

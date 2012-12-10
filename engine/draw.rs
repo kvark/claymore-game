@@ -187,11 +187,11 @@ pub fn load_material( path : ~str )-> Material	{
 }
 
 pub fn load_technique( path : ~str, fbo : @frame::Buffer, pmap : &call::PlaneMap,
-		rast : &rast::State, cache : @mut Cache )-> Technique	{
+		rast : rast::State, cache : @mut Cache )-> Technique	{
 	let s_vert = load::load_text(path+".glslv");
 	let s_frag = load::load_text(path+".glslf");
 	Technique{ name:path,
-		fbo:fbo, pmap:*pmap, rast:*rast,
+		fbo:fbo, pmap:*pmap, rast:rast,
 		meta_vertex		:extract_metas(s_vert),
 		meta_fragment	:extract_metas(s_frag),
 		code_vertex		:s_vert,

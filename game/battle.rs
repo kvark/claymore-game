@@ -81,13 +81,10 @@ impl Scene	{
 	}
 	pub fn render( ct : &engine::context::Context, tech : &engine::draw::Technique )	{
 		{// update matrices
-			let view_proj	= self.view.cam.get_matrix();
-			let cam_pos		= self.view.cam.get_pos_vec4();
 			let light_pos	= lmath::vector::Vec4::new( 4f32, 1f32, 6f32, 1f32 );
 			for [ &self.land, &self.hero.entity ].each |ent|	{
 				let d = ent.mut_data();
-				d.insert( ~"u_ViewProj", 	engine::shade::UniMatrix(false,view_proj) );
-				d.insert( ~"u_CameraPos",	engine::shade::UniFloatVec(cam_pos) );
+				self.view.cam.fill_data( d );
 				d.insert( ~"u_LightPos",	engine::shade::UniFloatVec(light_pos) );
 				let world = ent.node.world_space().to_matrix();
 				d.insert( ~"u_World",		engine::shade::UniMatrix(false,world) );

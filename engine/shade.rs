@@ -42,7 +42,6 @@ pub enum Uniform	{
 	UniFloatVec(lmath::vector::vec4),
 	UniIntVec(lmath::vector::ivec4),
 	UniFloatVecArray(~[lmath::vector::vec4]),
-	UniQuat(lmath::quaternion::quat4),
 	UniMatrix(bool,lmath::matrix::mat4),
 	UniTexture(uint,@texture::Texture,Option<texture::Sampler>),
 }
@@ -57,7 +56,6 @@ impl Uniform : cmp::Eq	{
 			//FIXME: waiting for lmath to cover that
 			//(&UniIntVec(fi1),&UniIntVec(fi2))				=> fi1==fi2,
 			(&UniFloatVecArray(fa1),&UniFloatVecArray(fa2))	=> fa1==fa2,
-			(&UniQuat(q1),&UniQuat(q2))						=> q1==q2,
 			(&UniMatrix(b1,m1),&UniMatrix(b2,m2))			=> b1==b2 && m1==m2,
 			(&UniTexture(u1,_,_),&UniTexture(u2,_,_))		=> u1==u2,
 			(_,_)											=> false
@@ -142,7 +140,6 @@ impl Parameter	{
 			UniIntVec(v)		=> glcore::glUniform4iv( loc, 1, v.to_ptr() ),
 			UniFloatVecArray(v)	=> glcore::glUniform4fv( loc, self.size as glcore::GLint,
 				unsafe{vec::raw::to_ptr(v)} as *glcore::GLfloat ),
-			UniQuat(v)			=> glcore::glUniform4fv( loc, 1, v.to_ptr() ),
 			UniMatrix(b,v)		=> glcore::glUniformMatrix4fv( loc, 1, b as glcore::GLboolean, ptr::addr_of(&v.x.x) ),
 			UniTexture(u,_,_)	=> glcore::glUniform1i( loc, u as glcore::GLint ),
 		}
