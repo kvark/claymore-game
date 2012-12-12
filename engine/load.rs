@@ -95,19 +95,30 @@ pub fn load_program( ct : &context::Context, path : ~str )-> shade::Program	{
 	ct.create_program(~[sv,sf])
 }
 
+fn create_texture_2D<T>( ct : &context::Context, image : &stb_image::image::Image<T>, mipmap : bool,
+	int_format : glcore::GLenum, pix_type : glcore::GLenum )-> texture::Texture	{
+	let format = match image.depth	{
+		4u	=> glcore::GL_RGBA,
+		3u	=> glcore::GL_RGB,
+		_	=> fail fmt!("Unknown image depth: %u", image.depth)
+	};
+	let t = ct.create_texture( ~"2D", image.width, image.height, 1, 0 );
+	ct.texture.bind( &t );
+	ct.texture.load_2D( &t, 0, int_format as glcore::GLint,	format, pix_type, &image.data );
+	if mipmap	{
+		ct.texture.generate_levels( &t );
+	}
+	t
+}
+
 pub fn load_texture_2D( ct : &context::Context, path : &~str, mipmap : bool )-> texture::Texture	{
 	match stb_image::image::load(copy *path)	{
-		Some(image) => {
-			let t = ct.create_texture( ~"2D", image.width, image.height, 1, 0 );
-			ct.texture.bind( &t );
-			ct.texture.load_2D( &t, 0, glcore::GL_RGBA as glcore::GLint,
-				glcore::GL_RGBA, glcore::GL_UNSIGNED_BYTE, &image.data );
-			if mipmap	{
-				ct.texture.generate_levels( &t );
-			}
-			t
-		}
-		None => fail(fmt!( "Unable to load image: %s",*path ))
+		stb_image::image::ImageU8(img)	=>
+			create_texture_2D( ct, &img, mipmap, glcore::GL_RGBA, glcore::GL_UNSIGNED_BYTE ),
+		stb_image::image::ImageF32(img)	=>
+			create_texture_2D( ct, &img, mipmap, glcore::GL_RGBA16F, glcore::GL_FLOAT ),
+		stb_image::image::Error			=>
+			fail fmt!( "Unable to load image: %s", *path )
 	}
 }
 
