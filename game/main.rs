@@ -13,11 +13,20 @@ enum Screen	{
 	ScreenDeath,
 }
 
+struct Envir	{
+	vao		: @engine::buf::VertexArray,
+	mesh	: @engine::mesh::Mesh,
+	prog	: @engine::shade::Program,
+	mut data: engine::shade::DataMap,
+	rast	: engine::rast::State,
+}
+
 struct Entry	{
 	gMain	: scene::EntityGroup,
 	gHair	: scene::EntityGroup,
 	skel	: @engine::space::Armature,
 	cam		: scene::Camera,
+	envir	: Envir,
 	techSolid	: engine::draw::Technique,
 	techAlpha	: engine::draw::Technique,
 	start	: float,
@@ -37,11 +46,11 @@ impl Entry	{
 }
 
 fn make_entry( ct : &engine::context::Context, aspect : float )-> Entry	{
-	let scene = scene::load_scene( ~"data/claymore-2", ct,
-		Some(@ct.create_vertex_array()), aspect );
+	let vao = @ct.create_vertex_array();
+	let scene = scene::load_scene( ~"data/claymore-2", ct, Some(vao), aspect );
 	let (tSolid,tAlpha) = {
-		let pmap = engine::call::create_plane_map( ~"o_Color", engine::frame::TarEmpty );
-		let mut rast = engine::rast::create_rast(0,0);
+		let pmap = engine::call::make_plane_map( ~"o_Color", engine::frame::TarEmpty );
+		let mut rast = engine::rast::make_rast(0,0);
 		rast.depth.test = true;
 		//rast.prime.cull = true;	//the cloak is 2-sided
 		let cache = @mut engine::draw::create_cache();
@@ -60,12 +69,30 @@ fn make_entry( ct : &engine::context::Context, aspect : float )-> Entry	{
 	io::println(fmt!( "Group size: %u", group.len() ));
 	io::println(fmt!( "Camera fovx:%f,%f, range:%f-%f",
 		cam.proj.fov_x, cam.proj.fov_y, cam.proj.r_near, cam.proj.r_far ));
+	let envir = {
+		let mesh = @engine::mesh::create_quad( ct );
+		let prog = @engine::load::load_program( ct, ~"data/code-game/envir" );
+		let tex = scene.textures.get( &~"data/texture/Topanga_Forest_B_3k.hdr" );
+		let samp = engine::texture::make_sampler(3u,1);
+		let mut data = engine::shade::make_data();
+		data.insert( ~"t_Environment",		engine::shade::UniTexture(0,tex,Some(samp)) );
+		let mut rast = engine::rast::make_rast(0,0);
+		rast.set_depth( ~"<=", false );
+		Envir{
+			vao:vao,
+			mesh:mesh,
+			prog:prog,
+			data:data,
+			rast:rast,
+		}		
+	};
 	//arm.set_record( arm.actions[0], 0f );
 	Entry	{
 		gMain : group,
 		gHair : hair,
 		skel : arm,
 		cam	 : cam,
+		envir: envir,
 		techSolid : tSolid,
 		techAlpha : tAlpha,
 		start: engine::anim::get_time(),
@@ -120,6 +147,9 @@ impl Game	{
 					self.entry.cam.fill_data( gd );
 					//self.entry.skel.fill_data( gd );
 				}
+				let vpi = self.entry.cam.get_matrix().inverse();
+				self.entry.envir.data.insert( ~"u_ViewProjInverse",
+					engine::shade::UniMatrix(false,vpi) );
 				true
 			},
 			ScreenBattle => {
@@ -139,7 +169,14 @@ impl Game	{
 						stencil	:Some( 0u ),
 					}
 				);
-				let mut queue = ~[c0];
+				let envir =	{
+					let e = &self.entry.envir;
+					let tech = &self.entry.techSolid;
+					engine::call::CallDraw( tech.fbo, copy tech.pmap,
+						e.vao, e.mesh, e.mesh.get_range(),
+						e.prog, copy e.data, copy e.rast )
+				};
+				let mut queue = ~[c0,envir];
 				if true	{	// update animation
 					let t = engine::anim::get_time() - self.entry.start;
 					let r = self.entry.skel.actions[0];
@@ -191,8 +228,8 @@ fn create_game( wid : uint, het : uint )-> Game	{
 	let ac = engine::audio::create_context();
 	// create a forward light technique
 	let tech = {
-		let pmap = engine::call::create_plane_map( ~"o_Color", engine::frame::TarEmpty );
-		let mut rast = engine::rast::create_rast(0,0);
+		let pmap = engine::call::make_plane_map( ~"o_Color", engine::frame::TarEmpty );
+		let mut rast = engine::rast::make_rast(0,0);
 		rast.set_depth(~"<=",true);
 		rast.prime.cull = true;
 		let cache = @mut engine::draw::create_cache();

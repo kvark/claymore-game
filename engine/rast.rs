@@ -620,7 +620,7 @@ impl State	{
 
 // Creates a default GL context rasterizer state
 // make sure to verify that it matches GL specification
-pub pure fn create_rast( wid : uint, het : uint )-> State	{
+pub pure fn make_rast( wid : uint, het : uint )-> State	{
 	State{
 		prime : Primitive{
 			poly_mode:glcore::GL_FILL, front_cw:false, cull:false,

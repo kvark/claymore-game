@@ -79,7 +79,7 @@ pub fn create( wid : uint, het : uint )-> Context	{
 	// fill up the context
 	Context{
 		caps				: caps,
-		rast				: rast::create_rast(wid,het),
+		rast				: rast::make_rast(wid,het),
 		clear_data			: ClearData{ color:color, depth:1f, stencil:0u },
 		shader				: shade::create_binding(),
 		vertex_array		: buf::create_va_binding(),

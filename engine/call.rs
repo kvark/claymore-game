@@ -8,7 +8,7 @@ pub struct PlaneMap	{
 
 impl PlaneMap : Copy	{}
 
-pub fn create_plane_map( name : ~str, col : frame::Target )-> PlaneMap	{
+pub fn make_plane_map( name : ~str, col : frame::Target )-> PlaneMap	{
 	let mut pmap = PlaneMap	{
 		depth_stencil : frame::TarEmpty,
 		colors : send_map::linear::LinearMap::<~str,frame::Target>(),

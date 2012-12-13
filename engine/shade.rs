@@ -431,6 +431,6 @@ impl context::Context	{
 }
 
 
-pub fn create_data()-> DataMap	{
+pub fn make_data()-> DataMap	{
 	LinearMap::<~str,Uniform>()
 }

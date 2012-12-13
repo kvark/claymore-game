@@ -116,7 +116,7 @@ pub fn load_texture_2D( ct : &context::Context, path : &~str, mipmap : bool )-> 
 		stb_image::image::ImageU8(img)	=>
 			create_texture_2D( ct, &img, mipmap, glcore::GL_RGBA, glcore::GL_UNSIGNED_BYTE ),
 		stb_image::image::ImageF32(img)	=>
-			create_texture_2D( ct, &img, mipmap, glcore::GL_RGBA16F, glcore::GL_FLOAT ),
+			create_texture_2D( ct, &img, mipmap, glcore::GL_RGB16F, glcore::GL_FLOAT ),
 		stb_image::image::Error			=>
 			fail fmt!( "Unable to load image: %s", *path )
 	}

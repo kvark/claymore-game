@@ -266,6 +266,7 @@ pub fn divide_group( group : &mut EntityGroup, name : &~str )->EntityGroup	{
 
 pub struct Scene	{
 	materials	: LinearMap<~str,@engine::draw::Material>,
+	textures	: LinearMap<~str,@engine::texture::Texture>,
 	nodes		: LinearMap<~str,NodeRef>,
 	meshes		: LinearMap<~str,@engine::mesh::Mesh>,
 	armatures	: LinearMap<~str,@engine::space::Armature>,
@@ -372,7 +373,7 @@ pub fn load_scene( path : ~str, gc : &engine::context::Context,
 				(None,Some(p2))	=> &scene.materials[p2],
 				_	=> fail ~"Entity material not found: " + ient.material
 			};
-			let mut d = engine::shade::create_data();
+			let mut d = engine::shade::make_data();
 			imat.fill_data( &mut d, &tex_cache );
 			d
 		};
@@ -414,6 +415,7 @@ pub fn load_scene( path : ~str, gc : &engine::context::Context,
 	// done
 	Scene{
 		materials	: map_material,
+		textures	: tex_cache,
 		nodes		: map_node,
 		meshes		: map_mesh,
 		armatures	: map_armature,

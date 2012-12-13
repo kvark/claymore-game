@@ -163,7 +163,7 @@ pub fn make_battle( ct : &engine::context::Context, aspect : float )-> Scene	{
 		};
 		engine::draw::Entity{
 			node	: node,
-			data	: engine::shade::create_data(),
+			data	: engine::shade::make_data(),
 			vao		: vao,
 			mesh	: mesh,
 			range	: mesh.get_range(),
@@ -193,7 +193,7 @@ pub fn make_battle( ct : &engine::context::Context, aspect : float )-> Scene	{
 		};
 		let ent = engine::draw::Entity{
 			node	: node,
-			data	: engine::shade::create_data(),
+			data	: engine::shade::make_data(),
 			vao		: vao,
 			mesh	: mesh,
 			range	: mesh.get_range(),

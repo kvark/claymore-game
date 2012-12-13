@@ -1,15 +1,16 @@
 //%meta initSurface computeLight getWorldNormal getColor
 
-uniform sampler2D	t_DiffuseDirt, t_SpecBumpReflect;
+uniform sampler2D	t_DiffuseDirt, t_SpecBumpReflect, t_Reflection;
 uniform vec4		u_SpecularParams;
 
 in vec3 v_Eye, v_NormalWorld;
 in vec2 v_Tex;
+in mat3 TBN;
 
 const float	c_BumpFactor	= 2.0;
+const float c_ReflectFactor	= 0.1;
 const vec3	c_ColorDiffuse	= vec3(1.0);
 const vec3	c_ColorSpecular	= vec3(1.0);
-
 
 vec3 getWorldNormal()	{
 	return normalize( v_NormalWorld );
@@ -39,12 +40,17 @@ vec4 initSurface()	{
 	vec3 rawNormal = computeNormal( param.y );
 	ct.normal = normalize(rawNormal);
 	ct.eye = normalize(v_Eye);
+	vec3 refl_tbn = reflect( -ct.eye, ct.normal );
+	vec3 refl_world = normalize( TBN*refl_tbn );
+	vec4 refl_color = texture(t_Reflection,refl_world.zy*0.5+0.5);
+	vec3 reflected = c_ReflectFactor*param.z*refl_color.rbg;
 	ct.albedo = texture(t_DiffuseDirt,v_Tex);
 	ct.specular = param.x;
-	return vec4(0.0,0.0,0.0,1.0);
+	return vec4( reflected, 1.0 );
 }
 
 vec3 computeLight(float ambient, float reflected, vec3 light)	{
+	//return vec3(0.0);
 	// Blinn-Phong model BRDF, normal mapped
     float diff = max( 0.0, dot(ct.normal,light) );
     vec3 halfVector = normalize(ct.eye+light);
