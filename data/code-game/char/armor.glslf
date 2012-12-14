@@ -35,15 +35,23 @@ vec3 computeNormal(float height)	{
 	return vec3( hx0-hx1, hy0-hy1, 2.0/c_BumpFactor );
 }
 
+vec2 envir_coords(vec3 vOrig)	{
+	const float PI = 3.1415926;
+	vec3 R = normalize(vOrig);
+	float u = (atan(R.x/R.z) + PI)/(2.0*PI);
+	float v = (asin(R.y)+0.5*PI)/PI;
+	return vec2(u,1.0-v);
+}
+
 vec4 initSurface()	{
 	vec4 param = texture(t_SpecBumpReflect,v_Tex);
 	vec3 rawNormal = computeNormal( param.y );
 	ct.normal = normalize(rawNormal);
 	ct.eye = normalize(v_Eye);
 	vec3 refl_tbn = reflect( -ct.eye, ct.normal );
-	vec3 refl_world = normalize( TBN*refl_tbn );
-	vec4 refl_color = texture(t_Reflection,refl_world.zy*0.5+0.5);
-	vec3 reflected = c_ReflectFactor*param.z*refl_color.rbg;
+	vec2 refl_tc = envir_coords( TBN*refl_tbn );
+	vec4 refl_color = texture(t_Reflection,refl_tc);
+	vec3 reflected = c_ReflectFactor*param.z*refl_color.xyz;
 	ct.albedo = texture(t_DiffuseDirt,v_Tex);
 	ct.specular = param.x;
 	return vec4( reflected, 1.0 );

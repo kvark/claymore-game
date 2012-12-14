@@ -6,5 +6,6 @@
 
 mod battle;
 mod grid;
+mod hud;
 mod main;
 mod scene;
