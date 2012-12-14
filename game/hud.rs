@@ -1,17 +1,19 @@
+extern mod engine;
 extern mod std;
+
 use send_map::linear::LinearMap;
 use std::json;
 use std::serialization::{deserialize,Deserializer,Deserializable};
 
 
-enum Anchor	{
+pub enum Anchor	{
 	ATopLeft,
 	ATopRight,
 	ABotLeft,
 	ACenter,
 }
 
-enum Relation	{
+pub enum Relation	{
 	RelParent,
 	RelHead,
 	RelTail,
@@ -39,11 +41,11 @@ impl Relation : Deserializable {
 }
 
 
-type Alignment = (Anchor,Relation,Anchor);
-type Point = (int,int);
+pub type Alignment = (Anchor,Relation,Anchor);
+pub type Point = (int,int);
 
 #[auto_deserialize]
-struct Rect    {
+pub struct Rect    {
 	base	: Point,
 	size	: Point,
 }
@@ -57,19 +59,14 @@ impl Rect	{
 }
 
 
-enum Call	{
-	CallEmpty
-}
-
-
 trait Element	{
 	pure fn get_size()-> Point;
-	fn draw( &Point )-> Call;
+	fn draw( &Point )-> engine::call::Call;
 }
 
 impl () : Element	{
 	pure fn get_size()-> Point	{(0,0)}
-	fn draw( _base : &Point )-> Call	{CallEmpty}
+	fn draw( _base : &Point )-> engine::call::Call	{engine::call::CallEmpty}
 }
 
 impl @Element : Deserializable {
@@ -80,7 +77,7 @@ impl @Element : Deserializable {
 
 
 #[auto_deserialize]
-struct Frame	{
+pub struct Frame	{
 	name		: ~str,
 	mut area	: Rect,				// in absolute coords
 	alignment	: Alignment,
@@ -157,12 +154,12 @@ impl Frame	{
 		false
 	}
 
-	fn draw_all()-> ~[Call]	{
+	fn draw_all()-> ~[engine::call::Call]	{
 		let base = self.area.base;
 		let c0 = self.element.draw( &base );
 		let mut queue = ~[c0];
 		for self.children.each() |child|	{
-			queue += child.draw_all();
+			queue.push_all_move( child.draw_all() );
 		}
 		queue
 	}
@@ -175,12 +172,12 @@ struct ImageInfo	{
 	path	: ~str,
 }
 
-struct Image	{
+pub struct Image	{
 	texture	: int
 }
 impl Image : Element	{
 	pure fn get_size()-> Point	{(0,0)}
-	fn draw( _base : &Point )-> Call	{CallEmpty}
+	fn draw( _base : &Point )-> engine::call::Call	{engine::call::CallEmpty}
 }
 
 
@@ -193,12 +190,12 @@ struct LabelInfo	{
 	bound		: (uint,uint),
 }
 
-struct Label	{
+pub struct Label	{
 	texture	: int
 }
 impl Label : Element	{
 	pure fn get_size()-> Point	{(0,0)}
-	fn draw( _base : &Point )-> Call	{CallEmpty}
+	fn draw( _base : &Point )-> engine::call::Call	{engine::call::CallEmpty}
 }
 
 
@@ -209,24 +206,15 @@ struct ScreenInfo	{
 	labels	: ~[LabelInfo],
 }
 
-struct Screen    {
+pub struct Screen    {
 	root	: Frame,
 	images	: LinearMap<~str,@Image>,
 	labels	: LinearMap<~str,@Label>,
 }
 
 
-fn load_screen(path : ~str)-> Screen	{
-	let mut iscreen : ScreenInfo = {
-		let rd = match io::file_reader(&path::Path(path)) {
-			Ok(reader) => reader,
-			Err(e) => fail e.to_str(),
-		};
-		match json::Deserializer(rd) {
-			Ok(ref deser) => std::serialization::deserialize(deser),
-			Err(e) => fail e.to_str(),
-		}
-	};
+pub fn load_screen(path : ~str)-> Screen	{
+	let mut iscreen = scene::load_config::<ScreenInfo>(path);
 	//let mut tex_map	= LinearMap::<~str,@Texture>();
 	let mut image_map	= LinearMap::<~str,@Image>();
 	let mut label_map	= LinearMap::<~str,@Label>();
@@ -250,11 +238,4 @@ fn load_screen(path : ~str)-> Screen	{
 		images	: image_map,
 		labels	: label_map,
 	}
-}
-
-
-fn test()	{
-	let screen = load_screen(~"hud.json");
-	screen.root.update();
-	screen.root.draw_all();
 }

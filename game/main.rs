@@ -148,6 +148,7 @@ impl Game	{
 					//self.entry.skel.fill_data( gd );
 				}
 				let vpi = self.entry.cam.get_matrix().inverse();
+				//self.entry.cam.fill_data( &mut self.entry.envir.data );
 				self.entry.envir.data.insert( ~"u_ViewProjInverse",
 					engine::shade::UniMatrix(false,vpi) );
 				true
@@ -236,6 +237,10 @@ fn create_game( wid : uint, het : uint )-> Game	{
 		engine::draw::load_technique( ~"data/code/tech/forward/light",
 			ct.default_frame_buffer, &pmap, rast, cache)
 	};
+	// load char HUD
+	let screen = hud::load_screen(~"data/hud/char.json");
+	screen.root.update();
+	screen.root.draw_all();
 	// done
 	ct.check(~"init");
 	let aspect = (wid as float) / (het as float);

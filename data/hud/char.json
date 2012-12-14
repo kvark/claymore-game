@@ -1,0 +1,13 @@
+{
+	"root":
+		{
+			"name"	: "screen",
+			"area"	: {"base":[0,0],"size":[400,400]},
+			"alignment"	: ["top-left","parent","top-left"],
+			"element"	: null,
+			"margin"	: [10,20,30],
+			"children"	: []
+		},
+	"images":[],
+	"labels":[]
+}
