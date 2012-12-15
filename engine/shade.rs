@@ -321,7 +321,7 @@ impl context::Context	{
 		};
 		let ok = (status != (0 as glcore::GLint));
 		if !ok	{
-			io::println( fmt!("Shader: %s",message) );	//TEMP
+			io::println( ~"\tShader message: " + message );
 		}
 		Object{ handle:h, target:target,
 			alive:ok, info:message,
@@ -335,6 +335,7 @@ impl context::Context	{
 			glcore::glAttachShader( *h, *s.handle );
 		}
 		glcore::glLinkProgram( *h );
+		io::println(fmt!( "Linked program %d", *h as int ));
 		// get info message
 		let mut status = 0 as glcore::GLint;
 		let mut length = 0 as glcore::GLint;
@@ -348,7 +349,7 @@ impl context::Context	{
 		};
 		let ok = (status != (0 as glcore::GLint));
 		if !ok	{
-			io::println( fmt!("Program: %s",message) );	//TEMP
+			io::println( ~"\tMessage: " + message );
 		}
 		// done
 		Program{ handle:h,

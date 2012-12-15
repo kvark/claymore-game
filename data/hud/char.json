@@ -1,13 +1,23 @@
 {
-	"root":
+	"frames":
+	[
 		{
-			"name"	: "screen",
-			"area"	: {"base":[0,0],"size":[400,400]},
-			"alignment"	: ["top-left","parent","top-left"],
-			"element"	: null,
-			"margin"	: [10,20,30],
+			"name"	: "test-label",
+			"size"	: [100,100],
+			"align"	: "top-left=parent.top-left",
+			"margin"	: [15,25,35],
 			"children"	: []
-		},
+		}
+	],
 	"images":[],
-	"labels":[]
+	"labels":
+	[
+		{
+			"frame"		: "test-label",
+			"content"	: "Hello, world!",
+			"font"		: ["Vera.ttf",20,20],
+			"color"		: -1,
+			"bound"		: [400,200]		
+		}
+	]
 }

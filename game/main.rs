@@ -22,14 +22,16 @@ struct Envir	{
 }
 
 struct Entry	{
-	gMain	: scene::EntityGroup,
-	gHair	: scene::EntityGroup,
+	gr_main	: scene::EntityGroup,
+	gr_hair	: scene::EntityGroup,
 	skel	: @engine::space::Armature,
 	cam		: scene::Camera,
 	envir	: Envir,
-	techSolid	: engine::draw::Technique,
-	techAlpha	: engine::draw::Technique,
+	tech_solid	: engine::draw::Technique,
+	tech_alpha	: engine::draw::Technique,
 	start	: float,
+	hud_screen	: hud::Screen,
+	hud_context	: hud::Context,
 }
 
 impl Entry	{
@@ -48,7 +50,7 @@ impl Entry	{
 fn make_entry( ct : &engine::context::Context, aspect : float )-> Entry	{
 	let vao = @ct.create_vertex_array();
 	let scene = scene::load_scene( ~"data/claymore-2", ct, Some(vao), aspect );
-	let (tSolid,tAlpha) = {
+	let (t_solid,t_alpha) = {
 		let pmap = engine::call::make_plane_map( ~"o_Color", engine::frame::TarEmpty );
 		let mut rast = engine::rast::make_rast(0,0);
 		rast.depth.test = true;
@@ -64,6 +66,7 @@ fn make_entry( ct : &engine::context::Context, aspect : float )-> Entry	{
 	};
 	let arm = scene.armatures.get(&~"Armature.002");
 	let cam = scene.cameras.get(&~"Camera");
+	//cam.test();
 	let mut group = scene::divide_group( &mut scene.entities, &~"noTrasnform" );
 	let hair = scene::divide_group( &mut group, &~"Hair_Geo2" );
 	io::println(fmt!( "Group size: %u", group.len() ));
@@ -86,16 +89,32 @@ fn make_entry( ct : &engine::context::Context, aspect : float )-> Entry	{
 			rast:rast,
 		}		
 	};
+	// load char HUD
+	let fcon = @engine::font::create_context();
+	let hud_screen = hud::load_screen( ~"data/hud/char.json", ct, fcon );
+	hud_screen.root.update();
+	let mut hud_rast = engine::rast::make_rast(0,0);
+	hud_rast.set_blend( ~"s+d", ~"Sa", ~"1-Sa" );
+	let hc = hud::Context{
+		vao		: vao,
+		quad	: @engine::mesh::create_quad(ct),
+		fbo		: ct.default_frame_buffer,
+		pmap	: copy t_solid.pmap,
+		rast	: hud_rast,
+		size	: ct.screen_size,
+	};
 	//arm.set_record( arm.actions[0], 0f );
 	Entry	{
-		gMain : group,
-		gHair : hair,
-		skel : arm,
-		cam	 : cam,
-		envir: envir,
-		techSolid : tSolid,
-		techAlpha : tAlpha,
-		start: engine::anim::get_time(),
+		gr_main	: group,
+		gr_hair	: hair,
+		skel	: arm,
+		cam		: cam,
+		envir	: envir,
+		tech_solid	: t_solid,
+		tech_alpha	: t_alpha,
+		start	: engine::anim::get_time(),
+		hud_screen	: hud_screen,
+		hud_context : hc,
 	}
 }
 
@@ -133,14 +152,14 @@ impl Game	{
 					}
 				}
 				let lit_pos	= lmath::vector::Vec4::new( 3f32, 3f32, 3f32, 0f32 );
-				for self.entry.gMain.each() |ent|	{
+				for self.entry.gr_main.each() |ent|	{
 					ent.update_world();
 					let gd = ent.mut_data();
 					gd.insert( ~"u_LightPos",	engine::shade::UniFloatVec(lit_pos) );
 					self.entry.cam.fill_data( gd );
 					//self.entry.skel.fill_data( gd );
 				}
-				for self.entry.gHair.each() |ent|	{
+				for self.entry.gr_hair.each() |ent|	{
 					ent.update_world();
 					let gd = ent.mut_data();
 					gd.insert( ~"u_LightPos",	engine::shade::UniFloatVec(lit_pos) );
@@ -172,7 +191,7 @@ impl Game	{
 				);
 				let envir =	{
 					let e = &self.entry.envir;
-					let tech = &self.entry.techSolid;
+					let tech = &self.entry.tech_solid;
 					engine::call::CallDraw( tech.fbo, copy tech.pmap,
 						e.vao, e.mesh, e.mesh.get_range(),
 						e.prog, copy e.data, copy e.rast )
@@ -186,14 +205,16 @@ impl Game	{
 					self.entry.skel.set_record( r, t2 );
 					//self.entry.skel.fill_data( self.entry.girl.mut_data() );
 				}
-				for self.entry.gMain.each() |ent|	{
-					queue.push( self.entry.techSolid.process( ent, &self.context )
+				for self.entry.gr_main.each() |ent|	{
+					queue.push( self.entry.tech_solid.process( ent, &self.context )
 						);
 				}
-				for self.entry.gHair.each() |ent|	{
-					queue.push( self.entry.techAlpha.process( ent, &self.context )
+				for self.entry.gr_hair.each() |ent|	{
+					queue.push( self.entry.tech_alpha.process( ent, &self.context )
 						);
 				}
+				let hud_calls = self.entry.hud_screen.root.draw_all( &self.entry.hud_context );
+				queue.push_all_move( hud_calls );
 				self.context.flush(queue);
 			},
 			ScreenBattle => {
@@ -237,10 +258,6 @@ fn create_game( wid : uint, het : uint )-> Game	{
 		engine::draw::load_technique( ~"data/code/tech/forward/light",
 			ct.default_frame_buffer, &pmap, rast, cache)
 	};
-	// load char HUD
-	let screen = hud::load_screen(~"data/hud/char.json");
-	screen.root.update();
-	screen.root.draw_all();
 	// done
 	ct.check(~"init");
 	let aspect = (wid as float) / (het as float);

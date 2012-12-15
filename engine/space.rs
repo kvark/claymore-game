@@ -9,7 +9,8 @@ pub type Scale = f32;
 //		Quaternion Space								//
 
 pub trait Space	{
-	pure fn transform( value : &Vector )-> Vector;
+	pure fn transform( point : &Vector )-> Vector;
+	pure fn rotate( vector : &Vector )-> Vector;
 	pure fn mul( other : &self )-> self;
 	pure fn inverse()-> self;
 	pure fn to_matrix()-> Matrix;
@@ -32,10 +33,15 @@ impl f32 : cmp::Ord	{
 }
 
 impl Matrix : Space	{
-	pure fn transform( value : &Vector )-> Vector	{
-		let v4 = lmath::vector::Vec4::new( value.x, value.y, value.z, 1f32 );
+	pure fn transform( point : &Vector )-> Vector	{
+		let v4 = lmath::vector::Vec4::new( point.x, point.y, point.z, 1f32 );
 		let vt = self.mul_v(&v4);
 		lmath::vector::Vec3::new( vt.x/vt.w, vt.y/vt.w, vt.z/vt.w )
+	}
+	pure fn rotate( vector : &Vector )-> Vector	{
+		let v4 = lmath::vector::Vec4::new( vector.x, vector.y, vector.z, 0f32 );
+		let vt = self.mul_v(&v4);
+		lmath::vector::Vec3::new( vt.x, vt.y, vt.z ).normalize()
 	}
 	pure fn mul( other : &Matrix )-> Matrix	{
 		self.mul_m(other)
@@ -54,8 +60,11 @@ pub struct QuatSpace	{
 }
 
 impl QuatSpace : Space	{
-	pure fn transform( value : &Vector )-> Vector	{
-		self.orientation.mul_v( value ).mul_t( self.scale ).add_v( &self.position )
+	pure fn transform( point : &Vector )-> Vector	{
+		self.orientation.mul_v( point ).mul_t( self.scale ).add_v( &self.position )
+	}
+	pure fn rotate( vector : &Vector )-> Vector	{
+		self.orientation.mul_v( vector )
 	}
 	pure fn mul( other : &QuatSpace )-> QuatSpace	{
 		QuatSpace{
