@@ -46,6 +46,11 @@ pure fn parse_alignment( expression : &str )-> Alignment	{
 }
 
 
+struct Margin	{
+	side	: int,
+	bot		: int,
+	top		: int,
+}
 
 pub struct Rect    {
 	base	: Point,
@@ -66,15 +71,14 @@ impl Rect	{
 		let (sx,sy) = self.size;
 		(bx+sx,by+sy)
 	}
-	pure fn get_point( anchor : Anchor, margin : &(int,int,int) )-> Point	{
+	pure fn get_point( anchor : Anchor, m : &Margin )-> Point	{
 		let (bx,by) = self.base;
 		let (sx,sy) = self.size;
-		let &(mx,mt,mb) = margin;
 		match anchor	{
-			ATopLeft	=> (bx+mx,by+mt),
-			ATopRight	=> (bx+sx-mx,by+mt),
-			ABotLeft	=> (bx+mx,by+sy-mb),
-			ACenter		=> (bx+(mx+sx-mx)/2,by+(mt+sy-mb)/2),
+			ATopLeft	=> (bx+m.side,by+sy-m.top),
+			ATopRight	=> (bx+sx-m.side,by+sy-m.top),
+			ABotLeft	=> (bx+m.side,by+m.bot),
+			ACenter		=> (bx+(m.side+sx-m.side)/2,by+(m.bot+sy-m.top)/2),
 		}
 	}
 }
@@ -90,23 +94,39 @@ pub struct Context	{
 }
 
 impl Context	{
-	fn call( prog : @engine::shade::Program, data : engine::shade::DataMap )-> engine::call::Call	{
+	fn call( prog : @engine::shade::Program, data : engine::shade::DataMap,
+		rast_override : Option<&engine::rast::State> )-> engine::call::Call	{
+		let r = copy match rast_override	{
+			Some(ro)	=> *ro,
+			None		=> self.rast,
+		};
 		engine::call::CallDraw(
 			self.fbo, copy self.pmap,
 			self.vao, self.quad, self.quad.get_range(),
-			prog, data, copy self.rast
-			)
+			prog, data, r)
+	}
+	pure fn transform( r : &Rect )-> engine::shade::Uniform	{
+		let (tx,ty) = self.size, (bx,by) = r.base, (sx,sy) = r.size;
+		let dx = 2f32 / (tx as f32);
+		let dy = 2f32 / (ty as f32);
+		let vt = lmath::vector::Vec4::new(
+			dx * (sx as f32),
+			dy * (sy as f32),
+			dx * (bx as f32) - 1f32,
+			dy * (by as f32) - 1f32
+			);
+		engine::shade::UniFloatVec(vt)
 	}
 }
 
 trait Element	{
 	pure fn get_size()-> Point;
-	fn draw( &Context, &Point )-> engine::call::Call;
+	fn draw( &Context, &Rect )-> engine::call::Call;
 }
 
 impl () : Element	{
 	pure fn get_size()-> Point	{(0,0)}
-	fn draw( _hc : &Context, _base : &Point )-> engine::call::Call	{
+	fn draw( _hc : &Context, _r : &Rect )-> engine::call::Call	{
 		engine::call::CallEmpty
 	}
 }
@@ -124,50 +144,69 @@ pub struct Frame	{
 	mut area	: Rect,				// in absolute coords
 	alignment	: Alignment,
 	element		: @Element,
-	margin		: (int,int,int),	// x, top, bottom
+	margin		: Margin,
 	children	: ~[Frame],
 }
 
 impl Frame	{
+	pure fn get_size()-> Point	{
+		let m = &self.margin;
+		let (sx,sy) = self.min_size;
+		let (ex,ey) = self.element.get_size();
+		( int::max(sx,m.side+ex+m.side), int::max(sy,m.bot+ey+m.top) )
+	}
+
+	pure fn get_draw_rect()-> Rect	{
+		let m = &self.margin;
+		let (bx,by) = self.area.base;
+		let (sx,sy) = self.area.size;
+		Rect{
+			base:(bx+m.side,by+m.bot),
+			size:(sx-m.side-m.side,sy-m.bot-m.top),
+		}
+	}
+
 	fn adjust( r:&Rect )	{
 		let (rbx,rby) = r.base;
 		let (rsx,rsy) = r.size;
 		let (bx,by) = self.area.base;
 		let (sx,sy) = self.area.size;
-		let (mx,mt,mb) = self.margin;
+		let m = &self.margin;
 		self.area.base = (
-			int::min( bx, rbx-mx ),
-			int::min( by, rby-mt )
+			int::min( bx, rbx-m.side ),
+			int::min( by, rby-m.bot )
 		);
 		self.area.size = (
-			int::max( sx, mx+mx+rsx ),
-			int::max( sy, mt+mb+rsy )
+			int::max( sx, m.side+rsx+m.side ),
+			int::max( sy, m.bot+rsy+m.top )
 		);
 	}
 
-	fn update()-> Point	{
-		self.area.size = {
-			let (mx,mt,mb) = self.margin;
-			let (sx,sy) = self.min_size;
-			let (ex,ey) = self.element.get_size();
-			( int::max(sx,mx+ex+mx), int::max(sy,mt+ey+mb) )
-		};
+	fn update()	{
 		for uint::range(0,self.children.len()) |i|	{
 			let child = &self.children[i];
-			let size = child.update();
+			let size = child.get_size();
 			let (destination,relation,source) = child.alignment;
-			let (src_x,src_y) = Rect{base:(0,0),size:size}.get_point( source, &(0,0,0) );
+			let (src_x,src_y) = Rect{base:(0,0),size:size}.
+				get_point( source, &Margin{side:0,bot:0,top:0} );
+			assert match relation	{
+				RelParent	=> true,
+				_			=> i!=0u,
+			};
 			let fr = match relation	{
 				RelParent	=> &self,
 				RelHead		=> &self.children[0],
 				RelTail		=> &self.children[i-1u],
 			};
 			let (dst_x,dst_y) = fr.area.get_point( destination, &fr.margin );
+			io::println(fmt!( "\tFrame '%s' rel (%d,%d) := '%s' (%d,%d)", child.name,
+				src_x,src_y, fr.name, dst_x,dst_y ));
 			child.area.base = ( dst_x-src_x, dst_y-src_y );
+			child.area.size = size;
+			child.update();
+			io::println(fmt!( "\tUpdated '%s' to: %s", child.name, child.area.to_string() ));
 			self.adjust( &copy child.area );
 		}
-		io::println(fmt!( "Frame '%s' updated to: %s", self.name, self.area.to_string() ));
-		self.area.size
 	}
 
 	fn populate( &mut self, name : &~str, elem : @Element )-> bool	{
@@ -185,12 +224,21 @@ impl Frame	{
 	}
 
 	fn draw_all( hc : &Context )-> ~[engine::call::Call]	{
-		let (bx,by) = self.area.base;
-		let (mx,mt,_) = self.margin;
-		let c0 = self.element.draw( hc, &(bx+mx,by+mt) );
+		let c0 = self.element.draw( hc, &self.get_draw_rect() );
 		let mut queue = ~[c0];
 		for self.children.each() |child|	{
 			queue.push_all_move( child.draw_all(hc) );
+		}
+		queue
+	}
+
+	fn draw_debug( hc : &Context, prog : @engine::shade::Program,
+		data : &mut engine::shade::DataMap, rast : &engine::rast::State )-> ~[engine::call::Call]	{
+		data.insert( ~"u_Transform", hc.transform(&self.area) );
+		let c0 = hc.call( prog, copy *data, Some(rast) );
+		let mut queue = ~[c0];
+		for self.children.each() |child|	{
+			queue.push_all_move( child.draw_debug(hc,prog,data,rast) );
 		}
 		queue
 	}
@@ -208,13 +256,14 @@ pub struct FrameInfo	{
 
 pub fn convert_frames( fi_array : &~[FrameInfo] )-> ~[Frame]	{
 	do vec::map(*fi_array) |fi|	{
+		let (mx,mb,mt) = fi.margin;
 		Frame{
 			name		: copy fi.name,
 			min_size	: fi.size,
 			area		: Rect{base:(0,0),size:fi.size},
 			alignment	: parse_alignment( fi.align ),
 			element		: @() as @Element,
-			margin		: fi.margin,
+			margin		: Margin{side:mx,bot:mb,top:mt},
 			children	: convert_frames( &fi.children ),
 		}
 	}
@@ -226,17 +275,33 @@ pub fn convert_frames( fi_array : &~[FrameInfo] )-> ~[Frame]	{
 struct ImageInfo	{
 	frame	: ~str,
 	path	: ~str,
+	center	: (f32,f32),
 }
 
 pub struct Image	{
 	texture	: @engine::texture::Texture,
 	sampler	: engine::texture::Sampler,
-	shader	: @engine::shade::Program,
+	program	: @engine::shade::Program,
+	center	: (f32,f32),
 }
 impl Image : Element	{
-	pure fn get_size()-> Point	{(0,0)}
-	fn draw( _hc : &Context, _base : &Point )-> engine::call::Call	{
-		engine::call::CallEmpty
+	pure fn get_size()-> Point	{
+		(self.texture.width as int, self.texture.height as int)
+	}
+	fn draw( hc : &Context, rect : &Rect )-> engine::call::Call	{
+		// fill shader data
+		let mut data = engine::shade::make_data();
+		data.insert( ~"t_Image",	engine::shade::UniTexture(
+			0, self.texture, Some(self.sampler) ));
+		let (cx,cy) = self.center, (sx,sy) = rect.size;
+		let vc = lmath::vector::Vec4::new( cx, cy,
+			(sx as f32)/(self.texture.width as f32),
+			(sy as f32)/(self.texture.height as f32)
+			);
+		data.insert( ~"u_Center",	engine::shade::UniFloatVec(vc) );
+		data.insert( ~"u_Transform", hc.transform(rect) );
+		// return
+		hc.call( self.program, data, None )
 	}
 }
 
@@ -260,23 +325,17 @@ impl Label : Element	{
 	pure fn get_size()-> Point	{
 		(self.texture.width as int, self.texture.height as int)
 	}
-	fn draw( hc : &Context, base : &Point )-> engine::call::Call	{
+	fn draw( hc : &Context, rect : &Rect )-> engine::call::Call	{
 		// fill shader data
 		let mut data = engine::shade::make_data();
 		let sm = engine::texture::make_sampler(1u,0);
 		data.insert( ~"t_Text",	engine::shade::UniTexture(0,self.texture,Some(sm)) );
 		let vc = lmath::vector::Vec4::new( self.color.r, self.color.g, self.color.b, self.color.a );
 		data.insert( ~"u_Color",	engine::shade::UniFloatVec(vc) );
-		let &(bx,by) = base, (tx,ty) = hc.size;
-		let vt = lmath::vector::Vec4::new(
-			2f32 * (self.texture.width	as f32) / (tx as f32),
-			2f32 * (self.texture.height	as f32) / (ty as f32),
-			2f32 * (bx as f32) / (tx as f32) - 1f32,
-			2f32 * (by as f32) / (ty as f32) - 1f32
-			);
-		data.insert( ~"u_Transform",engine::shade::UniFloatVec(vt) );
+		let dr = Rect{ base:rect.base, size:self.get_size() };
+		data.insert( ~"u_Transform", hc.transform(&dr) );
 		// return
-		hc.call( self.program, data )
+		hc.call( self.program, data, None )
 	}
 }
 
@@ -306,20 +365,27 @@ pub fn load_screen(path : ~str, ct : &engine::context::Context,
 		area		: Rect{ base:(0,0), size:size },
 		alignment	: (ACenter,RelParent,ACenter),
 		element		: @() as @Element,
-		margin		: (0,0,0),
+		margin		: Margin{side:0,bot:0,top:0},
 		children	: convert_frames( &iscreen.frames ),
 	};
 	//let mut tex_map	= LinearMap::<~str,@Texture>();
-	let mut image_map	= LinearMap::<~str,@Image>();
-	let mut label_map	= LinearMap::<~str,@Label>();
-
-	for iscreen.images.each() |_iimage|	{
-		/*let image = @Image{ texture:0 };
-		image_map.insert( copy iimage.frame, image );
-		if !iscreen.root.populate( &iimage.frame, image as @Element )	{
+	let mut map_image = LinearMap::<~str,@Image>();
+	let prog_image = @engine::load::load_program( ct, ~"data/code/hud/image" );
+	for iscreen.images.each() |iimage|	{
+		let path = ~"data/texture/" + iimage.path;
+		let texture = @engine::load::load_texture_2D( ct, &path, false );
+		let image = @Image	{
+			texture	: texture,
+			sampler	: engine::texture::make_sampler(1u,0),
+			program	: prog_image,
+			center	: iimage.center,
+		};
+		map_image.insert( copy iimage.frame, image );
+		if !root.populate( &iimage.frame, image as @Element )	{
 			fail ~"Image frame not found: " + iimage.frame
-		}*/
+		}
 	}
+	let mut map_label = LinearMap::<~str,@Label>();
 	let prog_label = @engine::load::load_program( ct, ~"data/code/hud/text" );
 	for iscreen.labels.each() |ilabel|	{
 		let &(fname,fsx,fsy) = &ilabel.font;
@@ -330,14 +396,14 @@ pub fn load_screen(path : ~str, ct : &engine::context::Context,
 			program	: prog_label,
 			color	: engine::rast::make_color(ilabel.color),
 		};
-		label_map.insert( copy ilabel.frame, label );
+		map_label.insert( copy ilabel.frame, label );
 		if !root.populate( &ilabel.frame, label as @Element )	{
 			fail ~"Text frame not found: " + ilabel.frame
 		}
 	}
 	Screen{
 		root	: root,
-		images	: image_map,
-		labels	: label_map,
+		images	: map_image,
+		labels	: map_label,
 	}
 }

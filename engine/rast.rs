@@ -531,6 +531,10 @@ impl State : Stage	{
 }
 
 
+pub pure fn map_polygon_fill( dim : int )-> glcore::GLenum	{
+	[glcore::GL_POINT,glcore::GL_LINE,glcore::GL_FILL][dim-1]
+}
+
 pub pure fn map_comparison( s : ~str )-> glcore::GLenum	{
 	match s	{
 		~"!"	=> glcore::GL_NEVER,

@@ -5,6 +5,8 @@ uniform sampler2D	t_Environment;
 in	vec4	v_TexCoords;
 out	vec4	o_Color;
 
+const float c_EnvirFactor = 0.1;
+
 const float PI = 3.1415926;
 //Blinn/Newell Latitude Mapping
 //http://www.reindelsoftware.com/Documents/Mapping/Mapping.html
@@ -18,5 +20,5 @@ vec2 envir_coords(vec3 vOrig)	{
 
 void main()	{
 	vec2 tc = envir_coords(v_TexCoords.xyz);
-	o_Color = texture(t_Environment,tc);
+	o_Color = c_EnvirFactor * texture(t_Environment,tc);
 }

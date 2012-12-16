@@ -32,6 +32,7 @@ struct Entry	{
 	start	: float,
 	hud_screen	: hud::Screen,
 	hud_context	: hud::Context,
+	hud_debug	: @engine::shade::Program,
 }
 
 impl Entry	{
@@ -103,6 +104,7 @@ fn make_entry( ct : &engine::context::Context, aspect : float )-> Entry	{
 		rast	: hud_rast,
 		size	: ct.screen_size,
 	};
+	let hdebug = @engine::load::load_program( ct, ~"data/code/hud/debug" );
 	//arm.set_record( arm.actions[0], 0f );
 	Entry	{
 		gr_main	: group,
@@ -115,6 +117,7 @@ fn make_entry( ct : &engine::context::Context, aspect : float )-> Entry	{
 		start	: engine::anim::get_time(),
 		hud_screen	: hud_screen,
 		hud_context : hc,
+		hud_debug	: hdebug,
 	}
 }
 
@@ -204,7 +207,7 @@ impl Game	{
 					let t2 = t - r.duration * (nloops as float);
 					self.entry.skel.set_record( r, t2 );
 					//self.entry.skel.fill_data( self.entry.girl.mut_data() );
-				}
+				}/*
 				for self.entry.gr_main.each() |ent|	{
 					queue.push( self.entry.tech_solid.process( ent, &self.context )
 						);
@@ -212,8 +215,18 @@ impl Game	{
 				for self.entry.gr_hair.each() |ent|	{
 					queue.push( self.entry.tech_alpha.process( ent, &self.context )
 						);
-				}
+				}*/
+				let hud_debug = {
+					let mut rast  = engine::rast::make_rast(0,0);
+					rast.prime.poly_mode = engine::rast::map_polygon_fill(2);
+					let mut data = engine::shade::make_data();
+					let vc = lmath::vector::Vec4::new(1f32,0f32,0f32,1f32);
+					data.insert( ~"u_Color", engine::shade::UniFloatVec(vc) );
+					self.entry.hud_screen.root.draw_debug( &self.entry.hud_context,
+						self.entry.hud_debug, &mut data, &rast )
+				};
 				let hud_calls = self.entry.hud_screen.root.draw_all( &self.entry.hud_context );
+				queue.push_all_move( hud_debug );
 				queue.push_all_move( hud_calls );
 				self.context.flush(queue);
 			},

@@ -156,13 +156,13 @@ impl Binding	{
 		self.bind( t );
 		if t.samples != 0	{return}
 		let filter_modes = [glcore::GL_TEXTURE_MIN_FILTER,glcore::GL_TEXTURE_MAG_FILTER];
-		for [0,..1].each() |i|	{
+		for [0,1].each() |i|	{
 			if t.sampler.filter[*i] != s.filter[*i]	{
 				glcore::glTexParameteri( *t.target, filter_modes[*i], s.filter[*i] );
 			}
 		}
 		let wrap_modes = [glcore::GL_TEXTURE_WRAP_S,glcore::GL_TEXTURE_WRAP_T,glcore::GL_TEXTURE_WRAP_R];
-		for [0,..2].each() |i|	{
+		for [0,1,2].each() |i|	{
 			if t.sampler.wrap[*i] != s.wrap[*i]	{
 				glcore::glTexParameteri( *t.target, wrap_modes[*i], s.wrap[*i] );
 			}

@@ -2,21 +2,37 @@
 	"frames":
 	[
 		{
-			"name"	: "test-label",
-			"size"	: [100,100],
+			"name"	: "test-image",
+			"size"	: [10,10],
 			"align"	: "top-left=parent.top-left",
-			"margin"	: [15,25,35],
-			"children"	: []
+			"margin"	: [10,15,20],
+			"children"	:
+			[
+				{
+				"name"	: "test-label",
+				"size"	: [10,10],
+				"align"	: "top-left=parent.top-left",
+				"margin"	: [30,5,15],
+				"children"	: []
+				}
+			]
 		}
 	],
-	"images":[],
+	"images":
+	[
+		{
+			"frame"		: "test-image",
+			"path"		: "hud/text_bubble3.png",
+			"center"	: [0.5,0.44]
+		}
+	],
 	"labels":
 	[
 		{
 			"frame"		: "test-label",
 			"content"	: "Hello, world!",
 			"font"		: ["Vera.ttf",20,20],
-			"color"		: -1,
+			"color"		: 255,
 			"bound"		: [400,200]		
 		}
 	]
