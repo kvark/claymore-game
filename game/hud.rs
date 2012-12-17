@@ -9,6 +9,7 @@ use std::serialization::{deserialize,Deserializer,Deserializable};
 
 pub enum Anchor	{
 	ATopLeft,
+	ATopMid,
 	ATopRight,
 	ABotLeft,
 	ACenter,
@@ -26,6 +27,7 @@ pub type Point = (int,int);
 
 pure fn parse_anchor( s : &str )-> Anchor	{
 	if s == "top-left"	{ATopLeft}	else
+	if s == "top-mid"	{ATopMid}	else
 	if s == "top-right"	{ATopRight}	else
 	if s == "bot-left"	{ABotLeft}	else
 	if s == "center"	{ACenter}	else
@@ -75,10 +77,11 @@ impl Rect	{
 		let (bx,by) = self.base;
 		let (sx,sy) = self.size;
 		match anchor	{
-			ATopLeft	=> (bx+m.side,by+sy-m.top),
-			ATopRight	=> (bx+sx-m.side,by+sy-m.top),
-			ABotLeft	=> (bx+m.side,by+m.bot),
-			ACenter		=> (bx+(m.side+sx-m.side)/2,by+(m.bot+sy-m.top)/2),
+			ATopLeft	=> (bx+m.side, by+sy-m.top),
+			ATopMid		=> (bx+(m.side+sx-m.side)/2, by+sy-m.top),
+			ATopRight	=> (bx+sx-m.side, by+sy-m.top),
+			ABotLeft	=> (bx+m.side, by+m.bot),
+			ACenter		=> (bx+(m.side+sx-m.side)/2, by+(m.bot+sy-m.top)/2),
 		}
 	}
 }
@@ -149,64 +152,88 @@ pub struct Frame	{
 }
 
 impl Frame	{
-	pure fn get_size()-> Point	{
+	pure fn get_size( content : Point )-> Point	{
 		let m = &self.margin;
 		let (sx,sy) = self.min_size;
-		let (ex,ey) = self.element.get_size();
+		let (ex,ey) = content;
 		( int::max(sx,m.side+ex+m.side), int::max(sy,m.bot+ey+m.top) )
 	}
 
 	pure fn get_draw_rect()-> Rect	{
-		let m = &self.margin;
+		/*let m = &self.margin;
 		let (bx,by) = self.area.base;
 		let (sx,sy) = self.area.size;
 		Rect{
 			base:(bx+m.side,by+m.bot),
 			size:(sx-m.side-m.side,sy-m.bot-m.top),
-		}
+		}*/
+		self.area
 	}
 
-	fn adjust( r:&Rect )	{
-		let (rbx,rby) = r.base;
-		let (rsx,rsy) = r.size;
-		let (bx,by) = self.area.base;
-		let (sx,sy) = self.area.size;
-		let m = &self.margin;
-		self.area.base = (
-			int::min( bx, rbx-m.side ),
-			int::min( by, rby-m.bot )
-		);
-		self.area.size = (
-			int::max( sx, m.side+rsx+m.side ),
-			int::max( sy, m.bot+rsy+m.top )
-		);
+	priv fn update_size()-> Point	{
+		let (ex,ey) = self.element.get_size();
+		let (cx,cy) = self.get_size((ex,ey));
+		if self.children.is_empty()	{
+			self.area.size = (cx,cy);
+			return (cx,cy);
+		}
+		let no_margin = Margin{side:0,bot:0,top:0};
+		const BIG : int = 10000;
+		let mut x_min=BIG, y_min=BIG, x_max=-BIG, y_max=-BIG;
+		for uint::range(0,self.children.len()) |i|	{
+			let child = &self.children[i];
+			let size = child.update_size();
+			let (destination,relation,source) = child.alignment;
+			let (src_x,src_y) = Rect{base:(0,0),size:size}.
+				get_point( destination, &no_margin );
+			let (dst_x,dst_y) = match relation	{
+				RelParent	=> (0,0),
+				RelHead		=> { assert i>0u;
+					let fr = &self.children[0];
+					fr.area.get_point( source, &no_margin )
+				},
+				RelTail		=> { assert i>0u;
+					let fr = &self.children[i-1u];
+					fr.area.get_point( source, &no_margin )
+				}
+			};
+			//io::println(fmt!( "\tFrame1 '%s' rel (%d,%d) := (%d,%d)", child.name,
+			//	src_x,src_y, dst_x,dst_y ));
+			child.area.base = ( dst_x-src_x, dst_y-src_y );
+			let (x1,y1) = child.area.get_point( ABotLeft, &no_margin );
+			let (x2,y2) = child.area.get_point( ATopRight,&no_margin );
+			x_min = int::min(x_min,x1); y_min = int::min(y_min,y1);
+			x_max = int::max(x_max,x2); y_max = int::max(y_max,y2);
+			//io::println(fmt!( "\tUpdated1 '%s' to: %s", child.name, child.area.to_string() ));
+		}
+		let content = ( int::max(ex,x_max-x_min), int::max(ey,y_max-y_min) ); 
+		self.area.size = self.get_size(content);
+		self.area.size
+	}
+
+	priv fn update_base()	{
+		let no_margin = Margin{side:0,bot:0,top:0};
+		for uint::range(0,self.children.len()) |i|	{
+			let child = &self.children[i];
+			let (destination,relation,source) = child.alignment;
+			let (src_x,src_y) = Rect{base:(0,0),size:child.area.size}.
+				get_point( destination, &Margin{side:0,bot:0,top:0} );
+			let (dst_x,dst_y) = match relation	{
+				RelParent	=> self.area.get_point( source, &self.margin ),
+				RelHead		=> self.children[0+0u].area.get_point( source, &no_margin ),
+				RelTail		=> self.children[i-1u].area.get_point( source, &no_margin ),
+			};
+			//io::println(fmt!( "\tFrame2 '%s' rel (%d,%d) := '%s' (%d,%d)", child.name,
+			//	src_x,src_y, fr.name, dst_x,dst_y ));
+			child.area.base = ( dst_x-src_x, dst_y-src_y );
+			child.update_base();
+			//io::println(fmt!( "\tUpdated2 '%s' to: %s", child.name, child.area.to_string() ));
+		}
 	}
 
 	fn update()	{
-		for uint::range(0,self.children.len()) |i|	{
-			let child = &self.children[i];
-			let size = child.get_size();
-			let (destination,relation,source) = child.alignment;
-			let (src_x,src_y) = Rect{base:(0,0),size:size}.
-				get_point( source, &Margin{side:0,bot:0,top:0} );
-			assert match relation	{
-				RelParent	=> true,
-				_			=> i!=0u,
-			};
-			let fr = match relation	{
-				RelParent	=> &self,
-				RelHead		=> &self.children[0],
-				RelTail		=> &self.children[i-1u],
-			};
-			let (dst_x,dst_y) = fr.area.get_point( destination, &fr.margin );
-			io::println(fmt!( "\tFrame '%s' rel (%d,%d) := '%s' (%d,%d)", child.name,
-				src_x,src_y, fr.name, dst_x,dst_y ));
-			child.area.base = ( dst_x-src_x, dst_y-src_y );
-			child.area.size = size;
-			child.update();
-			io::println(fmt!( "\tUpdated '%s' to: %s", child.name, child.area.to_string() ));
-			self.adjust( &copy child.area );
-		}
+		self.update_size();
+		self.update_base();
 	}
 
 	fn populate( &mut self, name : &~str, elem : @Element )-> bool	{
@@ -305,12 +332,21 @@ impl Image : Element	{
 	}
 }
 
+pub type FontInfo = (~str,uint,uint);
+impl FontInfo : to_bytes::IterBytes	{
+	pure fn iter_bytes(lsb0 : bool, f : to_bytes::Cb)	{
+		let &(name,sx,sy) = &self;
+		name.iter_bytes(lsb0,f);
+		sx.iter_bytes(lsb0,f);
+		sy.iter_bytes(lsb0,f);
+	}
+}
 
 #[auto_deserialize]
 struct LabelInfo	{
 	frame		: ~str,
 	content		: ~str,
-	font		: (~str,uint,uint),
+	font		: FontInfo,
 	color		: uint,
 	bound		: (uint,uint),
 }
@@ -351,6 +387,7 @@ pub struct Screen    {
 	root	: Frame,
 	images	: LinearMap<~str,@Image>,
 	labels	: LinearMap<~str,@Label>,
+	fonts	: LinearMap<FontInfo,@engine::font::Font>,
 }
 
 
@@ -385,11 +422,19 @@ pub fn load_screen(path : ~str, ct : &engine::context::Context,
 			fail ~"Image frame not found: " + iimage.frame
 		}
 	}
-	let mut map_label = LinearMap::<~str,@Label>();
+	let mut map_font	= LinearMap::<FontInfo,@engine::font::Font>();
+	let mut map_label	= LinearMap::<~str,@Label>();
 	let prog_label = @engine::load::load_program( ct, ~"data/code/hud/text" );
 	for iscreen.labels.each() |ilabel|	{
-		let &(fname,fsx,fsy) = &ilabel.font;
-		let font = ft.load_font( ~"data/font/"+fname, 0u, fsx, fsy, 0f, 0f );
+		let font = match map_font.find(&ilabel.font)	{
+			Some(f)	=> f,
+			None	=>	{
+				let &(fname,fsx,fsy) = &ilabel.font;
+				let f = @ft.load_font( ~"data/font/"+fname, 0u, fsx, fsy, 0f, 0f );
+				map_font.insert( copy ilabel.font, f );
+				f
+			}
+		};
 		let label = @Label{
 			texture	: @font.bake( ct, ilabel.content, ilabel.bound ),
 			content	: ilabel.content,
@@ -405,5 +450,6 @@ pub fn load_screen(path : ~str, ct : &engine::context::Context,
 		root	: root,
 		images	: map_image,
 		labels	: map_label,
+		fonts	: map_font,
 	}
 }

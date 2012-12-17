@@ -1,39 +1,73 @@
 {
-	"frames":
-	[
+	"frames":[
 		{
-			"name"	: "test-image",
+			"name"	: "number",
 			"size"	: [10,10],
 			"align"	: "top-left=parent.top-left",
-			"margin"	: [10,15,20],
-			"children"	:
-			[
+			"margin"	: [10,10,10],
+			"children"	: []
+		},
+		{
+			"name"	: "id.table",
+			"size"	: [10,10],
+			"align"	: "top-left=tail.bot-left",
+			"margin"	: [30,10,10],
+			"children"	:[
 				{
-				"name"	: "test-label",
-				"size"	: [10,10],
-				"align"	: "top-left=parent.top-left",
-				"margin"	: [30,5,15],
-				"children"	: []
+					"name"	: "id.text",
+					"size"	: [10,10],
+					"align"	: "top-mid=parent.top-mid",
+					"margin"	: [0,0,0],
+					"children"	: []
+				},
+				{
+					"name"	: "id.tilde1",
+					"size"	: [0,0],
+					"align"	: "top-right=head.top-left",
+					"margin"	: [0,0,0],
+					"children"	: []
+				},
+				{
+					"name"	: "id.tilde2",
+					"size"	: [0,0],
+					"align"	: "top-left=head.top-right",
+					"margin"	: [0,0,0],
+					"children"	: []
 				}
 			]
 		}
 	],
-	"images":
-	[
+	"images":[
 		{
-			"frame"		: "test-image",
-			"path"		: "hud/text_bubble3.png",
-			"center"	: [0.5,0.44]
+			"frame"		: "id.table",
+			"path"		: "hud/frame_rich2.png",
+			"center"	: [0.5,0.5]
+		},
+		{
+			"frame"		: "id.tilde1",
+			"path"		: "hud/tilde-left.png",
+			"center"	: [0,0]
+		},
+		{
+			"frame"		: "id.tilde2",
+			"path"		: "hud/tilde-right.png",
+			"center"	: [0,0]
 		}
 	],
-	"labels":
-	[
+	"labels":[
 		{
-			"frame"		: "test-label",
-			"content"	: "Hello, world!",
-			"font"		: ["Vera.ttf",20,20],
-			"color"		: 255,
+			"frame"		: "number",
+			"content"	: "no.47",
+			"font"		: ["Vera.ttf",40,40],
+			"color"		: -1,
 			"bound"		: [400,200]		
+		},
+		{
+			"frame"		: "id.text",
+			"content"	: "IDENTIFICATION",
+			"font"		: ["Vera.ttf",30,30],
+			"color"		: 255,
+			"bound"		: [400,100]
 		}
 	]
 }
