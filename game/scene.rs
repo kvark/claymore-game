@@ -352,9 +352,9 @@ pub fn load_scene( path : ~str, gc : &engine::context::Context,
 	// meshes
 	let mut map_mesh = {
 		let mut map = LinearMap::<~str,@engine::mesh::Mesh>();
-		let rd = engine::load::create_reader( path+".k3mesh" );
+		let rd = engine::load::create_reader_std( path+".k3mesh" );
 		assert rd.enter() == ~"*mesh";
-		while rd.has_more()	{
+		while rd.has_more()!=0u	{
 			assert rd.enter() == ~"meta";
 			let name = rd.get_string();
 			let mesh = @engine::load::read_mesh( &rd, gc );
@@ -367,9 +367,9 @@ pub fn load_scene( path : ~str, gc : &engine::context::Context,
 	// armatures
 	let mut map_armature = {
 		let mut map = LinearMap::<~str,@engine::space::Armature>();
-		let rd = engine::load::create_reader( path+".k3arm" );	
+		let rd = engine::load::create_reader_std( path+".k3arm" );	
 		assert rd.enter() == ~"*arm";
-		while rd.has_more()	{
+		while rd.has_more()!=0u	{
 			assert rd.enter() == ~"meta";
 			let name = rd.get_string();
 			let node_name = rd.get_string();

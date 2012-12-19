@@ -6,12 +6,33 @@ use io::ReaderUtil;
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - //
 //		Chunk reader									//
 
-const NAME_SIZE	:uint = 8;
+pub struct Chunk	{
+	name	: ~str,
+	size	: uint,
+	finish	: uint,
+}
+
 
 pub struct Reader	{
 	path	: ~str,
-	bin		: @io::Reader,
-	priv mut chunks	: ~[uint],
+	priv bin		: @io::Reader,
+	priv walk_in	: &static/ fn (&Reader)->Chunk,
+	priv mut chunks	: ~[Chunk],
+}
+
+pub fn enter_dummy( _rd : &Reader )-> Chunk	{
+	fail ~"unexpected chunk read"
+}
+
+pub fn enter_chunk( rd : &Reader )-> Chunk	{
+	let name_bin = rd.get_bytes(8u);
+	let size = rd.get_uint(4u);
+	let name_clean = do name_bin.filter()	|b| {*b != 0u8};
+	Chunk	{
+		name	: str::from_bytes(name_clean),
+		size	: size,
+		finish	: rd.bin.tell() + size,
+	}
 }
 
 
@@ -46,31 +67,46 @@ impl Reader	{
 	}
 
 	fn enter()-> ~str	{
-		let name_bin = self.bin.read_bytes( NAME_SIZE );
-		let size = self.get_uint(4u);
-		self.chunks.push( self.bin.tell() + size );
-		let name_clean = do name_bin.filter()	|b| {*b != 0u8};
-		str::from_bytes(name_clean)
+		let c = self.walk_in(&self);
+		self.chunks.push(copy c);
+		copy c.name
+	}
+
+	fn skip()	{
+		let len = self.chunks.len();
+		let end = self.chunks[len-1u].finish;
+		self.bin.seek( end as int, io::SeekSet );
 	}
 
 	fn leave()	{
-		let end = self.chunks.pop();
-		assert self.bin.tell() == end;
+		let c = self.chunks.pop();
+		assert self.bin.tell() == c.finish;
 	}
 
-	fn has_more()-> bool	{
-		self.bin.tell() < self.chunks.last()
+	fn has_more()-> uint	{
+		let len = self.chunks.len();
+		let end = self.chunks[len-1u].finish;
+		assert self.bin.tell() <= end;
+		end - self.bin.tell()
 	}
 }
 
-
-pub fn create_reader( path : ~str )->Reader	{
+pub fn create_reader_ext( path : ~str, fun : &static/ fn(&Reader)->Chunk )-> Reader	{
 	let p = path::Path( path );
 	match io::file_reader(&p)	{
-		Ok(bin)		=> Reader{ path:path, bin:bin, chunks:~[] },
+		Ok(bin)		=> Reader{ path:path, bin:bin, walk_in:fun, chunks:~[] },
 		Err(msg)	=> fail(fmt!( "Unable to read %s: %s", path, msg ))
 	}
 }
+
+pub fn create_reader_std( path : ~str )-> Reader	{
+	create_reader_ext( path, enter_chunk )
+}
+
+pub fn create_reader( path : ~str )-> Reader	{
+	create_reader_ext( path, enter_dummy )
+}
+
 
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - //
 //		Misc utilities											//
@@ -171,6 +207,11 @@ pub fn read_mesh( br : &Reader, context : &context::Context )-> mesh::Mesh	{
 	mesh
 }
 
+pub fn load_mesh( path : ~str, ct : &context::Context )-> mesh::Mesh	{
+	let rd = create_reader_std( path );
+	read_mesh( &rd, ct )
+}
+
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - //
 //		Armature										//
 
@@ -232,14 +273,14 @@ pub fn read_armature( br : &Reader, root : @space::Node, dual_quat : bool )-> sp
 	}
 	// read actions
 	let mut actions : ~[@space::ArmatureRecord] = ~[];
-	while br.has_more()	{
+	while br.has_more()!=0u	{
 		assert br.enter() == ~"action";
 		let act_name = br.get_string();
 		//final ani.Record rec = a.records[actName] = new ani.Record();
 		let length = br.get_float() as float;
 		io::println(fmt!( "\tAnim '%s' of length %f", act_name, length as float ));
 		let mut curves : ~[space::ArmatureCurve] = ~[];
-		while br.has_more()	{
+		while br.has_more()!=0u	{
 			assert br.enter() == ~"curve";
 			let curve_name = br.get_string();
 			let dimension = br.get_uint(1u);
@@ -302,4 +343,9 @@ pub fn read_armature( br : &Reader, root : @space::Node, dual_quat : bool )-> sp
 		actions	: actions,
 		max_bones	: max,
 	}
+}
+
+pub fn load_armature( path : ~str, root : @space::Node )-> space::Armature	{
+	let rd = create_reader_std( path );
+	read_armature( &rd, root, false )
 }

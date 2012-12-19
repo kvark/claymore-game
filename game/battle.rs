@@ -152,9 +152,7 @@ pub fn make_battle( ct : &engine::context::Context, aspect : float )-> Scene	{
 	let vao = @ct.create_vertex_array();
 	// load battle landscape
 	let battle_land = {
-		let mesh = @engine::load::read_mesh(
-			&engine::load::create_reader(~"data/mesh/battle-test.k3mesh"),
-			ct );
+		let mesh = @engine::load::load_mesh( ~"data/mesh/battle-test.k3mesh", ct );
 		let node = @engine::space::Node{
 			name	: ~"landscape",
 			space	: engine::space::identity(),
@@ -173,18 +171,14 @@ pub fn make_battle( ct : &engine::context::Context, aspect : float )-> Scene	{
 	};
 	// load protagonist
 	let hero =	{
-		let mesh = @engine::load::read_mesh(
-			&engine::load::create_reader(~"data/mesh/character.k3mesh"),
-			ct );
+		let mesh = @engine::load::load_mesh( ~"data/mesh/character.k3mesh", ct );
 		let arm_node = @engine::space::Node{
 			name	: ~"armature",
 			space	: engine::space::identity(),
 			parent	: None,
 			actions	: ~[],
 		};
-		let skel = @engine::load::read_armature(
-			&engine::load::create_reader(~"data/arm/character.k3arm"),
-			arm_node, false );
+		let skel = @engine::load::load_armature( ~"data/arm/character.k3arm", arm_node );
 		let node = @engine::space::Node{
 			name	: ~"hero",
 			space	: engine::space::identity(),
