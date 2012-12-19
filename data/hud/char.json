@@ -65,7 +65,7 @@
 		{
 			"frame"		: "id.text",
 			"content"	: "IDENTIFICATION",
-			"font"		: ["Vera.ttf",30,30],
+			"font"		: ["ObelixPro.ttf",20,20],
 			"color"		: 255,
 			"bound"		: [400,100]
 		}

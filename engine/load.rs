@@ -8,7 +8,7 @@ use io::ReaderUtil;
 
 const NAME_SIZE	:uint = 8;
 
-struct Reader	{
+pub struct Reader	{
 	path	: ~str,
 	bin		: @io::Reader,
 	priv mut chunks	: ~[uint],
@@ -16,8 +16,11 @@ struct Reader	{
 
 
 impl Reader	{
+	fn get_bytes( num : uint )-> ~[u8]	{
+		self.bin.read_bytes(num)
+	}
 	fn get_uint( size : uint )-> uint	{
-		let bytes = self.bin.read_bytes(size);
+		let bytes = self.get_bytes(size);
 		do vec::foldr(bytes,0u) |t,u|	{(u<<8u) + (*t as uint)}
 	}
 

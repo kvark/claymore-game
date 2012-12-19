@@ -35,7 +35,7 @@ vec3 computeNormal(float height)	{
 	return vec3( hx0-hx1, hy0-hy1, 2.0/c_BumpFactor );
 }
 
-vec2 envir_coords(vec3 vOrig)	{
+vec2 envirCoords(vec3 vOrig)	{
 	const float PI = 3.1415926;
 	vec3 R = normalize(vOrig);
 	float u = (atan(R.x/R.z) + PI)/(2.0*PI);
@@ -49,7 +49,7 @@ vec4 initSurface()	{
 	ct.normal = normalize(rawNormal);
 	ct.eye = normalize(v_Eye);
 	vec3 refl_tbn = reflect( -ct.eye, ct.normal );
-	vec2 refl_tc = envir_coords( TBN*refl_tbn );
+	vec2 refl_tc = envirCoords( TBN*refl_tbn );
 	vec4 refl_color = texture(t_Reflection,refl_tc);
 	vec3 reflected = c_ReflectFactor*param.z*refl_color.xyz;
 	ct.albedo = texture(t_DiffuseDirt,v_Tex);

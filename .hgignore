@@ -3,6 +3,7 @@ syntax: glob
 .DS_Store
 build/*
 data/font/*
+data/sound/*
 data/texture/*
 *.k3mesh
 *.k3arm

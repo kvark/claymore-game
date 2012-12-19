@@ -125,6 +125,7 @@ fn make_entry( ct : &engine::context::Context, aspect : float )-> Entry	{
 struct Game	{
 	context		: engine::context::Context,
 	audio		: engine::audio::Context,
+	sound_source: @engine::audio::Source,
 	mut frames	: uint,
 	technique	: engine::draw::Technique,
 	entry		: Entry,
@@ -192,14 +193,14 @@ impl Game	{
 						stencil	:Some( 0u ),
 					}
 				);
-				let envir =	{
+				let _envir =	{
 					let e = &self.entry.envir;
 					let tech = &self.entry.tech_solid;
 					engine::call::CallDraw( tech.fbo, copy tech.pmap,
 						e.vao, e.mesh, e.mesh.get_range(),
 						e.prog, copy e.data, copy e.rast )
 				};
-				let mut queue = ~[c0,envir];
+				let mut queue = ~[c0];
 				if true	{	// update animation
 					let t = engine::anim::get_time() - self.entry.start;
 					let r = self.entry.skel.actions[0];
@@ -207,15 +208,17 @@ impl Game	{
 					let t2 = t - r.duration * (nloops as float);
 					self.entry.skel.set_record( r, t2 );
 					//self.entry.skel.fill_data( self.entry.girl.mut_data() );
-				}/*
-				for self.entry.gr_main.each() |ent|	{
-					queue.push( self.entry.tech_solid.process( ent, &self.context )
-						);
 				}
-				for self.entry.gr_hair.each() |ent|	{
-					queue.push( self.entry.tech_alpha.process( ent, &self.context )
-						);
-				}*/
+				if false	{
+					for self.entry.gr_main.each() |ent|	{
+						queue.push( self.entry.tech_solid.process( ent, &self.context )
+							);
+					}
+					for self.entry.gr_hair.each() |ent|	{
+						queue.push( self.entry.tech_alpha.process( ent, &self.context )
+							);
+					}
+				}
 				let hud_debug = {
 					let mut rast  = engine::rast::make_rast(0,0);
 					rast.prime.poly_mode = engine::rast::map_polygon_fill(2);
@@ -260,7 +263,12 @@ impl Game	{
 fn create_game( wid : uint, het : uint )-> Game	{
 	let ct = engine::context::create( wid, het );
 	assert ct.sync_back();
+	// audio test
 	let ac = engine::audio::create_context();
+	let buf = @engine::audio::load_wav( &ac, ~"data/sound/stereol.wav" );
+	let src = @ac.create_source();
+	src.bind(buf);
+	src.play();
 	// create a forward light technique
 	let tech = {
 		let pmap = engine::call::make_plane_map( ~"o_Color", engine::frame::TarEmpty );
@@ -275,6 +283,7 @@ fn create_game( wid : uint, het : uint )-> Game	{
 	ct.check(~"init");
 	let aspect = (wid as float) / (het as float);
 	Game{ context:ct, audio:ac,
+		sound_source:src,
 		frames:0u, technique:tech,
 		entry:make_entry( &ct, aspect ),
 		battle:battle::make_battle( &ct, aspect ),
