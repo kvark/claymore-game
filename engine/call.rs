@@ -24,12 +24,14 @@ pub struct ClearData	{
 	stencil	: Option<uint>,
 }
 
+pub type DrawInput = (@buf::VertexArray, @mesh::Mesh, mesh::Range);
+pub type DrawOutput = (@frame::Buffer, PlaneMap, rast::State);
 
 pub enum Call	{
 	CallEmpty,
 	CallClear( @frame::Buffer, PlaneMap, ClearData, rast::Scissor, rast::Mask ),
 	CallBlit(),			//FIXME
-	CallDraw( @frame::Buffer, PlaneMap, @buf::VertexArray, @mesh::Mesh, mesh::Range, @shade::Program, shade::DataMap, rast::State ),
+	CallDraw( DrawInput, DrawOutput, @shade::Program, shade::DataMap ),
 	CallTransfrom(),	//FIXME
 }
 
@@ -73,7 +75,8 @@ impl context::Context	{
 					}
 					glcore::glClear( flags );
 				},
-				&CallDraw(fb,pmap,va,mesh,range,prog,data,rast)	=> {
+				&CallDraw(input,output,prog,data)	=> {
+					let &(fb,pmap,rast) = &output;
 					let mut attaches = vec::from_elem( pmap.colors.len(), frame::TarEmpty );
 					for pmap.colors.each() |name,target|	{
 						let loc = prog.find_output( name );
@@ -86,8 +89,9 @@ impl context::Context	{
 						assert attaches.len()!=0 && (*fb.handle==0 || attaches[0]!=frame::TarEmpty);
 					}
 					self.bind_frame_buffer( fb, true, pmap.depth_stencil, attaches );
+					let (_,mesh,_) = input;
 					self.rast.activate( &rast, mesh.get_poly_size() );
-					self.draw_mesh( mesh, &range, va, prog, &data );
+					self.draw_mesh( input, prog, &data );
 				},
 				_	=> fail(~"Unsupported call!")
 			}

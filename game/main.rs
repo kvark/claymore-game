@@ -14,8 +14,7 @@ enum Screen	{
 }
 
 struct Envir	{
-	vao		: @engine::buf::VertexArray,
-	mesh	: @engine::mesh::Mesh,
+	input	: engine::call::DrawInput,
 	prog	: @engine::shade::Program,
 	mut data: engine::shade::DataMap,
 	rast	: engine::rast::State,
@@ -58,11 +57,11 @@ fn make_entry( ct : &engine::context::Context, aspect : float )-> Entry	{
 		//rast.prime.cull = true;	//the cloak is 2-sided
 		let cache = @mut engine::draw::create_cache();
 		let t1 = engine::draw::load_technique( ~"data/code/tech/forward/light",
-			ct.default_frame_buffer, &pmap, rast, cache);
+			(ct.default_frame_buffer, copy pmap, copy rast), cache);
 		rast.prime.cull = true;
 		rast.set_blend( ~"s+d", ~"Sa", ~"1-Sa" );
 		let t2 = engine::draw::load_technique( ~"data/code/tech/forward/light",
-			ct.default_frame_buffer, &pmap, rast, cache);
+			(ct.default_frame_buffer, pmap, rast), cache);
 		(t1,t2)
 	};
 	let arm = scene.armatures.get(&~"Armature.002");
@@ -83,8 +82,7 @@ fn make_entry( ct : &engine::context::Context, aspect : float )-> Entry	{
 		let mut rast = engine::rast::make_rast(0,0);
 		rast.set_depth( ~"<=", false );
 		Envir{
-			vao:vao,
-			mesh:mesh,
+			input:(vao,mesh,mesh.get_range()),
 			prog:prog,
 			data:data,
 			rast:rast,
@@ -94,15 +92,16 @@ fn make_entry( ct : &engine::context::Context, aspect : float )-> Entry	{
 	let fcon = @engine::font::create_context();
 	let hud_screen = hud::load_screen( ~"data/hud/char.json", ct, fcon );
 	hud_screen.root.update();
-	let mut hud_rast = engine::rast::make_rast(0,0);
-	hud_rast.set_blend( ~"s+d", ~"Sa", ~"1-Sa" );
-	let hc = hud::Context{
-		vao		: vao,
-		quad	: @engine::mesh::create_quad(ct),
-		fbo		: ct.default_frame_buffer,
-		pmap	: copy t_solid.pmap,
-		rast	: hud_rast,
-		size	: ct.screen_size,
+	let hc = {
+		let mut hud_rast = engine::rast::make_rast(0,0);
+		hud_rast.set_blend( ~"s+d", ~"Sa", ~"1-Sa" );
+		let quad = @engine::mesh::create_quad(ct);
+		let &(_,pmap,_) = &t_solid.output;
+		hud::Context{
+			input	: (vao,quad,quad.get_range()),
+			output	: (ct.default_frame_buffer, copy pmap, hud_rast),
+			size	: ct.screen_size,
+		}
 	};
 	let hdebug = @engine::load::load_program( ct, ~"data/code/hud/debug" );
 	//arm.set_record( arm.actions[0], 0f );
@@ -196,9 +195,9 @@ impl Game	{
 				let _envir =	{
 					let e = &self.entry.envir;
 					let tech = &self.entry.tech_solid;
-					engine::call::CallDraw( tech.fbo, copy tech.pmap,
-						e.vao, e.mesh, e.mesh.get_range(),
-						e.prog, copy e.data, copy e.rast )
+					engine::call::CallDraw(
+						copy e.input, copy tech.output,
+						e.prog, copy e.data )
 				};
 				let mut queue = ~[c0];
 				if true	{	// update animation
@@ -277,7 +276,7 @@ fn create_game( wid : uint, het : uint )-> Game	{
 		rast.prime.cull = true;
 		let cache = @mut engine::draw::create_cache();
 		engine::draw::load_technique( ~"data/code/tech/forward/light",
-			ct.default_frame_buffer, &pmap, rast, cache)
+			(ct.default_frame_buffer, pmap, rast), cache)
 	};
 	// done
 	ct.check(~"init");

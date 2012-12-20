@@ -40,8 +40,8 @@ impl Grid	{
 
 	pure fn call( fbo : @engine::frame::Buffer, pmap : engine::call::PlaneMap,
 			vao : @engine::buf::VertexArray )-> engine::call::Call	{
-		engine::call::CallDraw( fbo, pmap, vao, self.mesh, self.mesh.get_range(),
-			self.program, copy self.data, copy self.rast )
+		engine::call::CallDraw( (vao, self.mesh, self.mesh.get_range()),
+			(fbo, pmap, copy self.rast), self.program, copy self.data )
 	}
 
 	priv fn upload_all_cells( tb : &engine::texture::Binding )	{

@@ -24,10 +24,8 @@ pub struct Material	{
 pub struct Entity	{
 	node	: @space::Node,
 	//body	: @node::Body,
+	input	: call::DrawInput,
 	mut data: shade::DataMap,
-	vao		: @buf::VertexArray,
-	mesh	: @mesh::Mesh,
-	range	: mesh::Range,
 	modifier: @Mod,
 	material: @Material,
 }
@@ -76,9 +74,7 @@ pub fn create_cache()-> Cache	{
 
 pub struct Technique	{
 	name	: ~str,
-	fbo		: @frame::Buffer,
-	pmap	: call::PlaneMap,
-	rast	: rast::State,
+	output	: call::DrawOutput,
 	meta_vertex		: ~[~str],
 	meta_fragment	: ~[~str],
 	code_vertex		: ~str,
@@ -153,16 +149,15 @@ impl Technique	{
 	}
 
 	fn process( e : &Entity, ct : &context::Context )-> call::Call	{
-		//let mut data = shade::create_data();
 		match self.get_program(e,ct)	{
-			Some(p)	=> call::CallDraw( self.fbo, copy self.pmap,
-				e.vao, e.mesh, e.range, p, copy e.data, self.rast ),
+			Some(p)	=> call::CallDraw( copy e.input, copy self.output, p, copy e.data ),
 			None => call::CallEmpty
 		}
 	}
 
 	pure fn gen_clear( cdata : call::ClearData )-> call::Call	{
-		call::CallClear( self.fbo, copy self.pmap, cdata, self.rast.scissor, self.rast.mask )
+		let &(fbo,pmap,rast) = &self.output;
+		call::CallClear( fbo, copy pmap, cdata, rast.scissor, rast.mask )
 	}
 }
 
@@ -186,12 +181,10 @@ pub fn load_material( path : ~str )-> Material	{
 	}
 }
 
-pub fn load_technique( path : ~str, fbo : @frame::Buffer, pmap : &call::PlaneMap,
-		rast : rast::State, cache : @mut Cache )-> Technique	{
+pub fn load_technique( path : ~str, out : call::DrawOutput, cache : @mut Cache )-> Technique	{
 	let s_vert = load::load_text(path+".glslv");
 	let s_frag = load::load_text(path+".glslf");
-	Technique{ name:path,
-		fbo:fbo, pmap:*pmap, rast:rast,
+	Technique{ name:path, output:out,
 		meta_vertex		:extract_metas(s_vert),
 		meta_fragment	:extract_metas(s_frag),
 		code_vertex		:s_vert,

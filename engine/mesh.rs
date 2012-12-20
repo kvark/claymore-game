@@ -184,7 +184,8 @@ impl context::Context	{
 		}
 	}
 
-	fn draw_mesh( m : &Mesh, range : &Range, va : &buf::VertexArray, prog : &shade::Program, data : &shade::DataMap )-> bool	{
+	fn draw_mesh( input : call::DrawInput, prog : &shade::Program, data : &shade::DataMap )-> bool	{
+		let &(va,m,range) = &input;
 		assert *va.handle as int != 0;
 		// check black list
 		if m.black_list.contains( &prog.handle )	{

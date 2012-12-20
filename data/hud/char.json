@@ -11,7 +11,7 @@
 			"name"	: "id.table",
 			"size"	: [10,10],
 			"align"	: "top-left=tail.bot-left",
-			"margin"	: [30,10,10],
+			"margin"	: [10,10,10],
 			"children"	:[
 				{
 					"name"	: "id.text",
@@ -40,17 +40,17 @@
 	"images":[
 		{
 			"frame"		: "id.table",
-			"path"		: "hud/frame_rich2.png",
+			"path"		: "hud/frame_rich3.png",
 			"center"	: [0.5,0.5]
 		},
 		{
 			"frame"		: "id.tilde1",
-			"path"		: "hud/tilde-left.png",
+			"path"		: "hud/tilde-left2.png",
 			"center"	: [0,0]
 		},
 		{
 			"frame"		: "id.tilde2",
-			"path"		: "hud/tilde-right.png",
+			"path"		: "hud/tilde-right2.png",
 			"center"	: [0,0]
 		}
 	],
@@ -65,7 +65,7 @@
 		{
 			"frame"		: "id.text",
 			"content"	: "IDENTIFICATION",
-			"font"		: ["ObelixPro.ttf",20,20],
+			"font"		: ["ObelixPro.ttf",10,20],
 			"color"		: 255,
 			"bound"		: [400,100]
 		}

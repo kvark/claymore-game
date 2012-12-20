@@ -403,19 +403,20 @@ pub fn load_scene( path : ~str, gc : &engine::context::Context,
 			imat.fill_data( &mut d, &tex_cache );
 			d
 		};
+		let vao = match opt_vao	{
+			Some(v) => v,
+			None	=> @gc.create_vertex_array(),
+		};
+		let mesh = map_mesh.get( &ient.mesh );
 		let (r_min,r_max) = ient.range;
+		let range = engine::mesh::Range{
+			start	:r_min,
+			num		:r_max-r_min,
+		};
 		let ent = engine::draw::Entity{
 			node	: root,
+			input	: (vao,mesh,range),
 			data	: data,
-			vao		: match opt_vao	{
-					Some(v) => v,
-					None	=> @gc.create_vertex_array(),
-				},
-			mesh	: map_mesh.get( &ient.mesh ),
-			range	: engine::mesh::Range{
-				start	:r_min,
-				num		:r_max-r_min,
-				},
 			modifier: skel,
 			material: mat,
 		};

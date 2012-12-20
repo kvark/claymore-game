@@ -92,7 +92,9 @@ impl Scene	{
 		}
 		let c_land = tech.process( &self.land, ct );
 		let c_hero = tech.process( &self.hero.entity, ct );
-		let c_grid = self.grid.call( tech.fbo, copy tech.pmap, self.land.vao );
+		let &(fbo,pmap,_) = &tech.output;
+		let &(vao,_,_) = &self.land.input;
+		let c_grid = self.grid.call( fbo, copy pmap, vao );
 		ct.flush( ~[c_land,c_hero,c_grid] );
 	}
 	pub fn debug_move( _rot : bool, _x : int, _y : int )	{
@@ -161,10 +163,8 @@ pub fn make_battle( ct : &engine::context::Context, aspect : float )-> Scene	{
 		};
 		engine::draw::Entity{
 			node	: node,
+			input	: (vao, mesh, mesh.get_range()),
 			data	: engine::shade::make_data(),
-			vao		: vao,
-			mesh	: mesh,
-			range	: mesh.get_range(),
 			modifier: @() as @engine::draw::Mod,
 			material: mat,
 		}
@@ -187,10 +187,8 @@ pub fn make_battle( ct : &engine::context::Context, aspect : float )-> Scene	{
 		};
 		let ent = engine::draw::Entity{
 			node	: node,
+			input	: (vao,mesh,mesh.get_range()),
 			data	: engine::shade::make_data(),
-			vao		: vao,
-			mesh	: mesh,
-			range	: mesh.get_range(),
 			modifier: skel as @engine::draw::Mod,
 			material: mat,
 		};

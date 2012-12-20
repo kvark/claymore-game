@@ -88,25 +88,20 @@ impl Rect	{
 
 
 pub struct Context	{
-	vao		: @engine::buf::VertexArray,
-	quad	: @engine::mesh::Mesh,
-	fbo		: @engine::frame::Buffer,
-	pmap	: engine::call::PlaneMap,
-	rast	: engine::rast::State,
+	input	: engine::call::DrawInput,
+	output	: engine::call::DrawOutput,
 	size	: (uint,uint),
 }
 
 impl Context	{
 	fn call( prog : @engine::shade::Program, data : engine::shade::DataMap,
 		rast_override : Option<&engine::rast::State> )-> engine::call::Call	{
+		let &(fbo,pmap,rast_orig) = &self.output;
 		let r = copy match rast_override	{
 			Some(ro)	=> *ro,
-			None		=> self.rast,
+			None		=> rast_orig,
 		};
-		engine::call::CallDraw(
-			self.fbo, copy self.pmap,
-			self.vao, self.quad, self.quad.get_range(),
-			prog, data, r)
+		engine::call::CallDraw( copy self.input, (fbo,pmap,r), prog, data )
 	}
 	pure fn transform( r : &Rect )-> engine::shade::Uniform	{
 		let (tx,ty) = self.size, (bx,by) = r.base, (sx,sy) = r.size;
