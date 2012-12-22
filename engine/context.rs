@@ -125,7 +125,7 @@ impl Context	{
 				if code	== glcore::GL_INVALID_OPERATION	{~"(operation)"}else
 				if code	== glcore::GL_OUT_OF_MEMORY		{~"(memory)"}	else
 				{~"(unknown)"};
-			fail( fmt!("%s: GL Error: %d %s",where,code as int,decode) );
+			fail fmt!("%s: GL Error: %d %s",where,code as int,decode)
 		}
 	}
 	fn cleanup()	{

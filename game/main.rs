@@ -267,7 +267,7 @@ fn create_game( wid : uint, het : uint )-> Game	{
 	let buf = @engine::audio::load_wav( &ac, ~"data/sound/stereol.wav" );
 	let src = @ac.create_source();
 	src.bind(buf);
-	src.play();
+	//src.play();
 	// create a forward light technique
 	let tech = {
 		let pmap = engine::call::make_plane_map( ~"o_Color", engine::frame::TarEmpty );

@@ -125,6 +125,7 @@ impl Font	{
 		let mut prev_index = 0 as freetype::FT_UInt;	// font char index
 		const BIG	:int = 999999;
 		const BORDER:int = 1;
+		const ALIGN	:int = 3;
 		let mut max_x = -BIG, max_y = -BIG, min_x = BIG, min_y = BIG;	// in font units
 		let mut start_word = 0u;
 		let width_capacity = limit_x as int << SHIFT;
@@ -162,11 +163,11 @@ impl Font	{
 				min_y = int::min( min_y, cy );
 				let mut ex = cx + glyph.metrics.width	as int;
 				let mut ey = cy + glyph.metrics.height	as int;
-				let e_border = ex - min_x + (2*BORDER<<SHIFT);
-				if e_border > width_capacity	{
+				let e_border = (ex - min_x + (2*BORDER<<SHIFT)) | (((ALIGN+1)<<SHIFT)-1);
+				if e_border >= width_capacity	{
 					io::println(fmt!( "\tMoving the word: %u-%u", start_word, pos_array.len() ));
 					let word_offset = pos_array[start_word].x - min_x;
-					if e_border - word_offset > width_capacity	{
+					if e_border - word_offset >= width_capacity	{
 						fail fmt!( "Text exceeds horisontal bound: %s", s )
 					}
 					io::println(fmt!( "\tHor:%d Ver:%d", -word_offset, line_gap ));
@@ -191,8 +192,8 @@ impl Font	{
 			}
 		}
 		// add border and align to 4 bytes
-		let width = ((((SHIFT+max_x-min_x)>>SHIFT)+3+2*BORDER) & !3) as uint;
-		let height= ((((SHIFT+max_y-min_y)>>SHIFT)+3+2*BORDER) & !3) as uint;
+		let width = ((((SHIFT+max_x-min_x)>>SHIFT)+ALIGN+2*BORDER) & !ALIGN) as uint;
+		let height= ((((SHIFT+max_y-min_y)>>SHIFT)+ALIGN+2*BORDER) & !ALIGN) as uint;
 		min_x -= BORDER<<SHIFT; min_y -= BORDER<<SHIFT; 
 		io::println(fmt!( "\tBox at (%d,%d) of size %ux%u", min_x, min_y, width, height ));
 		assert width<=limit_x && height<=limit_y;
