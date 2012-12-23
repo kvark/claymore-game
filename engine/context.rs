@@ -1,5 +1,8 @@
 extern mod glcore;
 
+use core::io::WriterUtil;
+
+
 pub trait State	{
 	// query all
 	fn sync_back()->bool;
@@ -172,3 +175,24 @@ impl Context : State	{
 		was_ok
 	}
 }
+
+
+pub struct Log	{
+	depth		: uint,
+	priv wr		: io::Writer,
+}
+impl Log	{
+	fn add( message : ~str )	{
+		let d = str::find(message,char::is_alphanumeric).expect(~"Bad log record");
+		if d<self.depth	{
+			self.wr.write_line(message)
+		}
+	}
+}
+pub fn create_log( path : ~str, depth : uint )->Log	{
+	match io::file_writer( &path::Path(path), &[io::Create,io::Truncate] )	{
+		Ok(wr)	=> Log{ depth:depth, wr:wr },
+		Err(e)	=> fail e.to_str(),
+	}
+}
+

@@ -212,7 +212,7 @@ impl Program : context::State	{
 }
 
 
-priv fn query_attributes( h : Handle )-> AttriMap	{
+priv fn query_attributes( h : Handle, lg : &context::Log )-> AttriMap	{
 	//assert glcore::glGetError() == 0;
 	let num		= 0 as glcore::GLint;
 	let max_len	= 0 as glcore::GLint;
@@ -220,7 +220,7 @@ priv fn query_attributes( h : Handle )-> AttriMap	{
 	glcore::glGetProgramiv( *h, glcore::GL_ACTIVE_ATTRIBUTE_MAX_LENGTH, ptr::addr_of(&max_len) );
 	let mut info_bytes	= vec::from_elem( max_len as uint, 0 as libc::c_char );
 	let raw_bytes		= unsafe{ vec::raw::to_ptr(info_bytes) };
-	io::println(fmt!( "\tQuerying %d attributes:", num as int ));
+	lg.add(fmt!( "\tQuerying %d attributes:", num as int ));
 	let mut rez		= send_map::linear::linear_map_with_capacity::<~str,Attribute>( num as uint );
 	for uint::range(0u,num as uint) |i|	{
 		let mut length	= 0 as glcore::GLint;
@@ -232,14 +232,14 @@ priv fn query_attributes( h : Handle )-> AttriMap	{
 		let name = unsafe{ str::raw::from_c_str_len( raw_bytes, length as uint ) };
 		info_bytes[length] = 0;
 		let loc = glcore::glGetAttribLocation( *h, raw_bytes );
-		io::println(fmt!( "\t\t[%d] = '%s',\tformat %d", loc as int, name, storage as int ));
+		lg.add(fmt!( "\t\t[%d] = '%s',\tformat %d", loc as int, name, storage as int ));
 		rez.insert( name, Attribute{ loc:loc as uint, storage:storage, size:size as uint } );
 	}
 	rez
 }
 
 
-priv fn query_parameters( h : Handle )-> ParaMap	{
+priv fn query_parameters( h : Handle, lg : &context::Log )-> ParaMap	{
 	//assert glcore::glGetError() == 0;
 	let num		= 0 as glcore::GLint;
 	let max_len	= 0 as glcore::GLint;
@@ -247,7 +247,7 @@ priv fn query_parameters( h : Handle )-> ParaMap	{
 	glcore::glGetProgramiv( *h, glcore::GL_ACTIVE_UNIFORM_MAX_LENGTH, ptr::addr_of(&max_len) );
 	let mut info_bytes	= vec::from_elem( max_len as uint, 0 as libc::c_char );
 	let raw_bytes		= unsafe{ vec::raw::to_ptr(info_bytes) };
-	io::println(fmt!( "\tQuerying %d parameters:", num as int ));
+	lg.add(fmt!( "\tQuerying %d parameters:", num as int ));
 	let mut rez		= send_map::linear::linear_map_with_capacity::<~str,Parameter>( num as uint );
 	for uint::range(0u,num as uint) |i|	{
 		let mut length	= 0 as glcore::GLint;
@@ -259,7 +259,7 @@ priv fn query_parameters( h : Handle )-> ParaMap	{
 		let name = unsafe{ str::raw::from_c_str_len( raw_bytes, length as uint ) };
 		info_bytes[length] = 0;
 		let loc = glcore::glGetUniformLocation( *h, raw_bytes );
-		io::println(fmt!( "\t\t[%d-%d]\t= '%s',\tformat %d", loc as int, ((loc + size) as int) -1, name, storage as int ));
+		lg.add(fmt!( "\t\t[%d-%d]\t= '%s',\tformat %d", loc as int, ((loc + size) as int) -1, name, storage as int ));
 		let p = Parameter{ loc:Location(loc), storage:storage, size:size as uint, value:Unitialized };
 		//p.read( h );	// no need to read them here
 		rez.insert( name, p );
@@ -317,7 +317,7 @@ impl context::Context	{
 		};
 		let ok = (status != (0 as glcore::GLint));
 		if !ok	{
-			io::println( ~"\tShader message: " + message );
+			fail ~"\tGLSL object error: " + message
 		}
 		Object{ handle:h, target:target,
 			alive:ok, info:message,
@@ -325,13 +325,13 @@ impl context::Context	{
 		}
 	}
 	
-	pub fn create_program( shaders : ~[Object] )-> Program	{
+	pub fn create_program( shaders : ~[Object], lg : &context::Log )-> Program	{
 		let h = Handle( glcore::glCreateProgram() );
 		for shaders.each |s| {
 			glcore::glAttachShader( *h, *s.handle );
 		}
 		glcore::glLinkProgram( *h );
-		io::println(fmt!( "Linked program %d", *h as int ));
+		lg.add(fmt!( "Linked program %d", *h as int ));
 		// get info message
 		let mut status = 0 as glcore::GLint;
 		let mut length = 0 as glcore::GLint;
@@ -345,13 +345,13 @@ impl context::Context	{
 		};
 		let ok = (status != (0 as glcore::GLint));
 		if !ok	{
-			io::println( ~"\tMessage: " + message );
+			fail ~"\tGLSL program error: " + message
 		}
 		// done
 		Program{ handle:h,
 			alive:ok, info:message,
-			attribs	:query_attributes(h),
-			params	:query_parameters(h),
+			attribs	:query_attributes(h,lg),
+			params	:query_parameters(h,lg),
 			outputs :~[],
 			pool	:self.shader.pool_programs,
 		}

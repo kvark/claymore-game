@@ -83,7 +83,7 @@ impl Scene	{
 		}
 		self.hero.update() && self.view.update( cam_dir ) && ok
 	}
-	pub fn render( ct : &engine::context::Context, tech : &engine::draw::Technique )	{
+	pub fn render( ct : &engine::context::Context, tech : &engine::draw::Technique, lg : &engine::context::Log )	{
 		{// update matrices
 			let light_pos	= Vec4::new( 4f32, 1f32, 6f32, 1f32 );
 			for [ &self.land, &self.hero.entity ].each |ent|	{
@@ -94,8 +94,8 @@ impl Scene	{
 				d.insert( ~"u_World",		engine::shade::UniMatrix(false,world) );
 			}
 		}
-		let c_land = tech.process( &self.land, ct );
-		let c_hero = tech.process( &self.hero.entity, ct );
+		let c_land = tech.process( &self.land, ct, lg );
+		let c_hero = tech.process( &self.hero.entity, ct, lg );
 		let &(fbo,pmap,_) = &tech.output;
 		let &(vao,_,_) = &self.land.input;
 		let c_grid = self.grid.call( fbo, copy pmap, vao );
@@ -107,7 +107,7 @@ impl Scene	{
 }
 
 
-pub fn make_battle( ct : &engine::context::Context, aspect : float )-> Scene	{
+pub fn make_battle( ct : &engine::context::Context, aspect : float, lg : &engine::context::Log )-> Scene	{
 	// create view
 	let view = 	{
 		// create camera
@@ -159,7 +159,7 @@ pub fn make_battle( ct : &engine::context::Context, aspect : float )-> Scene	{
 	let vao = @ct.create_vertex_array();
 	// load battle landscape
 	let battle_land = {
-		let mesh = @engine::load::load_mesh( ~"data/mesh/battle-test.k3mesh", ct );
+		let mesh = @engine::load::load_mesh( ~"data/mesh/battle-test.k3mesh", ct, lg );
 		let node = @engine::space::Node{
 			name	: ~"landscape",
 			space	: engine::space::identity(),
@@ -176,14 +176,14 @@ pub fn make_battle( ct : &engine::context::Context, aspect : float )-> Scene	{
 	};
 	// load protagonist
 	let hero =	{
-		let mesh = @engine::load::load_mesh( ~"data/mesh/character.k3mesh", ct );
+		let mesh = @engine::load::load_mesh( ~"data/mesh/character.k3mesh", ct, lg );
 		let arm_node = @engine::space::Node{
 			name	: ~"armature",
 			space	: engine::space::identity(),
 			parent	: None,
 			actions	: ~[],
 		};
-		let skel = @engine::load::load_armature( ~"data/arm/character.k3arm", arm_node );
+		let skel = @engine::load::load_armature( ~"data/arm/character.k3arm", arm_node, lg );
 		let node = @engine::space::Node{
 			name	: ~"hero",
 			space	: engine::space::identity(),
@@ -218,7 +218,7 @@ pub fn make_battle( ct : &engine::context::Context, aspect : float )-> Scene	{
 	let utc = Vec4::new(10f32,10f32,0f32,0f32);
 	battle_land.mut_data().insert( ~"u_TexTransform", engine::shade::UniFloatVec(utc) );
 	// create grid
-	let grid = grid::make_grid( ct, 10u );
+	let grid = grid::make_grid( ct, 10u, lg );
 	grid.init( &ct.texture );
 	{	// move hero
 		let sp = hero.entity.node.mut_space();

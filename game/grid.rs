@@ -102,7 +102,7 @@ impl Grid	{
 }
 
 
-pub fn make_grid( ct : &engine::context::Context, segments : uint )-> Grid	{
+pub fn make_grid( ct : &engine::context::Context, segments : uint, lg : &engine::context::Log )-> Grid	{
 	let mut data = engine::shade::make_data();
 	let mut rast = engine::rast::make_rast(0,0);
 	rast.prime.cull = true;
@@ -121,7 +121,7 @@ pub fn make_grid( ct : &engine::context::Context, segments : uint )-> Grid	{
 	data.insert( ~"u_Size",		engine::shade::UniFloatVec(par_size) );
 	Grid{
 		mesh	: @engine::mesh::create_quad( ct ),
-		program	: @engine::load::load_program( ct, ~"data/code-game/grid" ),
+		program	: @engine::load::load_program( ct, ~"data/code-game/grid", lg ),
 		data	: data,
 		rast	: rast,
 		nseg	: segments,

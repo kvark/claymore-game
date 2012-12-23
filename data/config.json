@@ -1,13 +1,18 @@
 {
-	"window": {
+	"window":	{
 		"title"		:"Claymore",
 		"width"		:800,
 		"height"	:600,
 		"samples"	:0,
-		"fullscreen":false },
-	"GL": {
+		"fullscreen":false
+	},
+	"GL":	{
 		"major"	:3,
 		"minor"	:2,
 		"debug"	:true
+	},
+	"journal":	{
+		"path"	: "build/log.txt",
+		"depth"	: 5
 	}
 }

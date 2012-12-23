@@ -13,7 +13,6 @@ use std::serialize::{Decoder,Decodable};
 
 
 pub fn load_config<T:Decodable<json::Decoder>>( path : ~str )-> T	{
-	io::println( ~"Loading config: "+path );
 	let rd = match io::file_reader(&path::Path(path))	{
 		Ok(reader)	=> reader,
 		Err(e)		=> fail e.to_str(),
@@ -317,7 +316,9 @@ pub struct SceneInfo	{
 
 
 pub fn load_scene( path : ~str, gc : &engine::context::Context,
-		opt_vao : Option<@engine::buf::VertexArray>, aspect : float )-> Scene	{
+		opt_vao : Option<@engine::buf::VertexArray>, aspect : float,
+		lg : &engine::context::Log )-> Scene	{
+	lg.add( ~"Loading scene: " + path );
 	let scene = load_config::<SceneInfo>( path + ~".json" );
 	let mat_config = load_config::<~[MaterialInfo]>( path + ~".mat.json" );
 	// materials
@@ -326,7 +327,7 @@ pub fn load_scene( path : ~str, gc : &engine::context::Context,
 	for mat_config.each() |imat|	{
 		let mat = @engine::draw::load_material( copy imat.kind );
 		map_material.insert( copy imat.name, mat );
-		io::println( ~"Custom material: " + imat.name );
+		lg.add( ~"\tCustom material: " + imat.name );
 		for imat.textures.each() |itex|	{
 			if !tex_cache.contains_key( &itex.path )	{
 				let tex = @engine::load::load_texture_2D( gc, &itex.path, true );
@@ -337,7 +338,7 @@ pub fn load_scene( path : ~str, gc : &engine::context::Context,
 	for scene.materials.each() |imat|	{
 		let mat = @engine::draw::load_material( ~"data/code/mat/" + imat.kind );
 		if !map_material.contains_key( &imat.name )	{
-			io::println( ~"Standard material: " + imat.name );
+			lg.add( ~"\tStandard material: " + imat.name );
 			map_material.insert( copy imat.name, mat );
 		}
 		for imat.textures.each() |itex|	{
@@ -362,7 +363,7 @@ pub fn load_scene( path : ~str, gc : &engine::context::Context,
 		while rd.has_more()!=0u	{
 			assert rd.enter() == ~"meta";
 			let name = rd.get_string();
-			let mesh = @engine::load::read_mesh( &rd, gc );
+			let mesh = @engine::load::read_mesh( &rd, gc, lg );
 			map.insert( name, mesh );
 			rd.leave();
 		}
@@ -380,7 +381,7 @@ pub fn load_scene( path : ~str, gc : &engine::context::Context,
 			let node_name = rd.get_string();
 			let dual_quat = rd.get_bool();
 			let root = map_node.get( &node_name );
-			let arm = @engine::load::read_armature( &rd, root, dual_quat );
+			let arm = @engine::load::read_armature( &rd, root, dual_quat, lg );
 			map.insert( name, arm );
 			rd.leave();
 		}

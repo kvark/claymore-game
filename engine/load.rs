@@ -134,11 +134,11 @@ pub fn read_space( br : &Reader )-> space::QuatSpace	{
 	}
 }
 
-pub fn load_program( ct : &context::Context, path : ~str )-> shade::Program	{
-	io::println(fmt!( "Loading program: %s", path ));
+pub fn load_program( ct : &context::Context, path : ~str, lg : &context::Log )-> shade::Program	{
+	lg.add(fmt!( "Loading program: %s", path ));
 	let sv = ct.create_shader( 'v', load_text( path + ~".glslv" ));
 	let sf = ct.create_shader( 'f', load_text( path + ~".glslf" ));
-	ct.create_program(~[sv,sf])
+	ct.create_program( ~[sv,sf], lg )
 }
 
 fn create_texture_2D<T>( ct : &context::Context, image : &stb_image::image::Image<T>, mipmap : bool,
@@ -171,14 +171,14 @@ pub fn load_texture_2D( ct : &context::Context, path : &~str, mipmap : bool )-> 
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - //
 //		Mesh											//
 
-pub fn read_mesh( br : &Reader, context : &context::Context )-> mesh::Mesh	{
+pub fn read_mesh( br : &Reader, context : &context::Context, lg : &context::Log )-> mesh::Mesh	{
 	let signature = br.enter();
 	if signature != ~"k3mesh"	{
 		fail fmt!( "Invalid mesh signature '%s': %s", signature, br.path )
 	}
 	let n_vert	= br.get_uint(4u);
 	let n_ind	= br.get_uint(4u);
-	io::println(fmt!( "Loading mesh of %u vertices and %u indices: %s", n_vert, n_ind, br.path ));
+	lg.add(fmt!( "Loading mesh of %u vertices and %u indices: %s", n_vert, n_ind, br.path ));
 	let mut mesh = context.create_mesh( br.get_string(), ~"3", n_vert, n_ind );
 	let mut num_buffers = br.get_uint(1u);
 	while num_buffers>0u	{
@@ -186,14 +186,14 @@ pub fn read_mesh( br : &Reader, context : &context::Context )-> mesh::Mesh	{
 		let stride = br.get_uint(1u);
 		let mut offset = 0u;
 		let format = br.get_string();
-		io::println(fmt!( "\tbuf: stride:%u,\tformat:%s", stride, format ));
+		lg.add(fmt!( "\tbuf: stride:%u,\tformat:%s", stride, format ));
 		let mut i = 0;
 		while i < format.len()	{
 			let name = ~"a_" + br.get_string();
 			let mut fm = str::substr( format, i, 2 );
 			if br.get_bool()	{ fm += ~"."; }
 			if !br.get_bool()	{ fm += ~"!"; }
-			io::println(fmt!( "\t\tname:%s,\ttype:%s", name, fm ));
+			lg.add(fmt!( "\t\tname:%s,\ttype:%s", name, fm ));
 			let (at,size) = mesh.create_attrib( fm, buffer, stride, offset );
 			if stride == 0u	{
 				assert at.count == 1u;
@@ -214,9 +214,9 @@ pub fn read_mesh( br : &Reader, context : &context::Context )-> mesh::Mesh	{
 	mesh
 }
 
-pub fn load_mesh( path : ~str, ct : &context::Context )-> mesh::Mesh	{
+pub fn load_mesh( path : ~str, ct : &context::Context, lg : &context::Log )-> mesh::Mesh	{
 	let rd = create_reader_std( path );
-	read_mesh( &rd, ct )
+	read_mesh( &rd, ct, lg )
 }
 
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - //
@@ -255,14 +255,14 @@ pub fn read_curve<T : space::Interpolate>( br : &Reader, fkey : &fn(&Reader)->T 
 }
 
 
-pub fn read_armature( br : &Reader, root : @space::Node, dual_quat : bool )-> space::Armature	{
+pub fn read_armature( br : &Reader, root : @space::Node, dual_quat : bool, lg : &context::Log )-> space::Armature	{
 	let signature = br.enter();
 	if signature != ~"k3arm"	{
 		fail fmt!( "Invalid armature signature '%s': %s", signature, br.path )
 	}
 	// read bones
 	let num_bones = br.get_uint(1u);
-	io::println(fmt!( "Loading armature of %u bones: %s", num_bones, br.path ));
+	lg.add(fmt!( "Loading armature of %u bones: %s", num_bones, br.path ));
 	let mut bones : ~[space::Bone] = vec::with_capacity(num_bones);
 	while bones.len()<num_bones	{
 		let name = br.get_string();
@@ -285,13 +285,13 @@ pub fn read_armature( br : &Reader, root : @space::Node, dual_quat : bool )-> sp
 		let act_name = br.get_string();
 		//final ani.Record rec = a.records[actName] = new ani.Record();
 		let length = br.get_float() as float;
-		io::println(fmt!( "\tAnim '%s' of length %f", act_name, length as float ));
+		lg.add(fmt!( "\tAnim '%s' of length %f", act_name, length as float ));
 		let mut curves : ~[space::ArmatureCurve] = ~[];
 		while br.has_more()!=0u	{
 			assert br.enter() == ~"curve";
 			let curve_name = br.get_string();
 			let dimension = br.get_uint(1u);
-			io::println( ~"\t\tCurve" + curve_name );
+			lg.add( ~"\t\tCurve" + curve_name );
 			let split = curve_name.split_char('"');
 			if split.len() == 3u	{
 				assert split[0] == ~"pose.bones[";
@@ -341,7 +341,7 @@ pub fn read_armature( br : &Reader, root : @space::Node, dual_quat : bool )-> sp
 		let split	= shader.slice(start,end).split_char(' ');
 		uint::from_str( split[split.len()-1u] )				.expect(~"Unable to parse int")
 	};
-	io::println(fmt!( "\tDetected %u bones", max ));
+	lg.add(fmt!( "\tDetected %u bones", max ));
 	// finish
 	space::Armature{
 		root	: root,
@@ -352,7 +352,7 @@ pub fn read_armature( br : &Reader, root : @space::Node, dual_quat : bool )-> sp
 	}
 }
 
-pub fn load_armature( path : ~str, root : @space::Node )-> space::Armature	{
+pub fn load_armature( path : ~str, root : @space::Node, lg : &context::Log )-> space::Armature	{
 	let rd = create_reader_std( path );
-	read_armature( &rd, root, false )
+	read_armature( &rd, root, false, lg )
 }

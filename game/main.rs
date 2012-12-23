@@ -50,9 +50,9 @@ impl Entry	{
 	}
 }
 
-fn make_entry( ct : &engine::context::Context, aspect : float )-> Entry	{
+fn make_entry( ct : &engine::context::Context, aspect : float, lg : &engine::context::Log )-> Entry	{
 	let vao = @ct.create_vertex_array();
-	let scene = scene::load_scene( ~"data/claymore-2", ct, Some(vao), aspect );
+	let scene = scene::load_scene( ~"data/claymore-2", ct, Some(vao), aspect, lg );
 	let (t_solid,t_alpha) = {
 		let pmap = engine::call::make_plane_map( ~"o_Color", engine::frame::TarEmpty );
 		let mut rast = engine::rast::make_rast(0,0);
@@ -72,12 +72,12 @@ fn make_entry( ct : &engine::context::Context, aspect : float )-> Entry	{
 	//cam.test();
 	let mut group = scene::divide_group( &mut scene.entities, &~"noTrasnform" );
 	let hair = scene::divide_group( &mut group, &~"Hair_Geo2" );
-	io::println(fmt!( "Group size: %u", group.len() ));
-	io::println(fmt!( "Camera fovx:%f,%f, range:%f-%f",
+	lg.add(fmt!( "Group size: %u", group.len() ));
+	lg.add(fmt!( "Camera fovx:%f,%f, range:%f-%f",
 		cam.proj.fov_x, cam.proj.fov_y, cam.proj.r_near, cam.proj.r_far ));
 	let envir = {
 		let mesh = @engine::mesh::create_quad( ct );
-		let prog = @engine::load::load_program( ct, ~"data/code-game/envir" );
+		let prog = @engine::load::load_program( ct, ~"data/code-game/envir", lg );
 		let tex = scene.textures.get( &~"data/texture/Topanga_Forest_B_3k.hdr" );
 		let samp = engine::texture::make_sampler(3u,1);
 		let mut data = engine::shade::make_data();
@@ -93,8 +93,8 @@ fn make_entry( ct : &engine::context::Context, aspect : float )-> Entry	{
 	};
 	// load char HUD
 	let fcon = @engine::font::create_context();
-	let hud_screen = hud::load_screen( ~"data/hud/char.json", ct, fcon );
-	hud_screen.root.update();
+	let hud_screen = hud::load_screen( ~"data/hud/char.json", ct, fcon, lg );
+	hud_screen.root.update( lg );
 	let hc = {
 		let mut hud_rast = engine::rast::make_rast(0,0);
 		hud_rast.set_blend( ~"s+d", ~"Sa", ~"1-Sa" );
@@ -106,7 +106,7 @@ fn make_entry( ct : &engine::context::Context, aspect : float )-> Entry	{
 			size	: ct.screen_size,
 		}
 	};
-	let hdebug = @engine::load::load_program( ct, ~"data/code/hud/debug" );
+	let hdebug = @engine::load::load_program( ct, ~"data/code/hud/debug", lg );
 	//arm.set_record( arm.actions[0], 0f );
 	Entry	{
 		gr_main	: group,
@@ -127,6 +127,7 @@ fn make_entry( ct : &engine::context::Context, aspect : float )-> Entry	{
 struct Game	{
 	context		: engine::context::Context,
 	audio		: engine::audio::Context,
+	journal		: engine::context::Log,
 	sound_source: @engine::audio::Source,
 	mut frames	: uint,
 	technique	: engine::draw::Technique,
@@ -209,11 +210,11 @@ impl Game	{
 				}
 				if false	{
 					for self.entry.gr_main.each() |ent|	{
-						queue.push( self.entry.tech_solid.process( ent, &self.context )
+						queue.push( self.entry.tech_solid.process( ent, &self.context, &self.journal )
 							);
 					}
 					for self.entry.gr_hair.each() |ent|	{
-						queue.push( self.entry.tech_alpha.process( ent, &self.context )
+						queue.push( self.entry.tech_alpha.process( ent, &self.context, &self.journal )
 							);
 					}
 				}
@@ -242,7 +243,7 @@ impl Game	{
 				);
 				self.context.flush(~[c0]);
 				// draw battle
-				self.battle.render( &self.context, &self.technique );
+				self.battle.render( &self.context, &self.technique, &self.journal );
 			},
 			_ => ()
 		}
@@ -258,12 +259,12 @@ impl Game	{
 }
 
 
-fn create_game( wid : uint, het : uint )-> Game	{
+fn create_game( wid : uint, het : uint, lg : engine::context::Log  )-> Game	{
 	let ct = engine::context::create( wid, het );
 	assert ct.sync_back();
 	// audio test
 	let ac = engine::audio::create_context();
-	let buf = @engine::audio::load_wav( &ac, ~"data/sound/stereol.wav" );
+	let buf = @engine::audio::load_wav( &ac, ~"data/sound/stereol.wav", &lg );
 	let src = @ac.create_source();
 	src.bind(buf);
 	//src.play();
@@ -280,9 +281,9 @@ fn create_game( wid : uint, het : uint )-> Game	{
 	// done
 	ct.check(~"init");
 	let aspect = (wid as float) / (het as float);
-	let entry = make_entry( &ct, aspect );
-	let battle = battle::make_battle( &ct, aspect );
-	Game{ context:ct, audio:ac,
+	let entry = make_entry( &ct, aspect, &lg );
+	let battle = battle::make_battle( &ct, aspect, &lg );
+	Game{ context:ct, audio:ac, journal:lg,
 		sound_source:src,
 		frames:0u, technique:tech,
 		entry:entry, battle:battle,
@@ -308,20 +309,26 @@ struct ConfigGL	{
 	major:uint, minor:uint, debug:bool,
 }
 #[auto_decode]
+struct Log	{
+	path:~str, depth:uint,
+}
+#[auto_decode]
 struct Config	{
 	window	: ConfigWindow,
 	GL		: ConfigGL,
+	journal	: Log,
 }
 
 
 fn main()	{
-	io::println("--- Claymore ---");
 	do task::task().sched_mode(task::PlatformThread).spawn {
 		if (glfw3::init()==0)	{
 			fail_GLFW("Init");
 		}
 
-		let config = scene::load_config::<Config>(~"data/config.json");
+		let config = scene::load_config::<Config>( ~"data/config.json" );
+		let lg = engine::context::create_log( copy config.journal.path, config.journal.depth );
+		lg.add(~"--- Claymore ---");
 
 		glfw3::window_hint( glfw3::WINDOW_RESIZABLE, 0 );
 		glfw3::window_hint( glfw3::OPENGL_DEBUG_CONTEXT, if config.GL.debug {1} else {0} );
@@ -338,7 +345,7 @@ fn main()	{
 		}
 	
 		window.make_context_current();
-		let game = create_game( config.window.width, config.window.height );
+		let game = create_game( config.window.width, config.window.height, lg );
 		
 		loop	{
 			glfw3::poll_events();

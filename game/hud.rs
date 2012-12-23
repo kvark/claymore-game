@@ -169,7 +169,7 @@ impl Frame	{
 		self.area
 	}
 
-	priv fn update_size()-> Point	{
+	priv fn update_size( lg : &engine::context::Log )-> Point	{
 		let (ex,ey) = self.element.get_size();
 		let (cx,cy) = self.get_size((ex,ey));
 		if self.children.is_empty()	{
@@ -181,7 +181,7 @@ impl Frame	{
 		let mut x_min=BIG, y_min=BIG, x_max=-BIG, y_max=-BIG;
 		for uint::range(0,self.children.len()) |i|	{
 			let child = &self.children[i];
-			let size = child.update_size();
+			let size = child.update_size(lg);
 			let Alignment(destination,relation,source) = child.alignment;
 			let (src_x,src_y) = Rect{base:(0,0),size:size}.
 				get_point( destination, &no_margin );
@@ -196,7 +196,7 @@ impl Frame	{
 					fr.area.get_point( source, &no_margin )
 				}
 			};
-			io::println(fmt!( "\tFrame1 '%s' rel (%d,%d) := (%d,%d)", child.name,
+			lg.add(fmt!( "\tFrame1 '%s' rel (%d,%d) := (%d,%d)", child.name,
 				src_x,src_y, dst_x,dst_y ));
 			child.area.base = ( dst_x-src_x, dst_y-src_y );
 			let (x1,y1) = child.area.get_point( ALeftBot, &no_margin );
@@ -204,16 +204,16 @@ impl Frame	{
 			assert x1<=x2 && y1<=y2;
 			x_min = int::min(x_min,x1); y_min = int::min(y_min,y1);
 			x_max = int::max(x_max,x2); y_max = int::max(y_max,y2);
-			io::println(fmt!( "\tUpdated1 '%s' to: %s, (%d,%d),(%d,%d)",
+			lg.add(fmt!( "\tUpdated1 '%s' to: %s, (%d,%d),(%d,%d)",
 				child.name, child.area.to_string(), x1,y1, x2,y2 ));
 		}
 		let content = ( int::max(ex,x_max-x_min), int::max(ey,y_max-y_min) ); 
-		io::println(fmt!( "Frame3 '%s' bounding box is [%d-%d]x[%d-%d]", self.name, x_min, x_max, y_min, y_max ));
+		lg.add(fmt!( "Frame3 '%s' bounding box is [%d-%d]x[%d-%d]", self.name, x_min, x_max, y_min, y_max ));
 		self.area.size = self.get_size(content);
 		self.area.size
 	}
 
-	priv fn update_base()	{
+	priv fn update_base( lg : &engine::context::Log )	{
 		let no_margin = Margin{side:0,bot:0,top:0};
 		for uint::range(0,self.children.len()) |i|	{
 			let child = &self.children[i];
@@ -225,18 +225,18 @@ impl Frame	{
 				RelHead		=> self.children[0+0u].area.get_point( source, &no_margin ),
 				RelTail		=> self.children[i-1u].area.get_point( source, &no_margin ),
 			};
-			io::println(fmt!( "\tFrame2 '%s' rel (%d,%d) := (%d,%d)", child.name,
+			lg.add(fmt!( "\tFrame2 '%s' rel (%d,%d) := (%d,%d)", child.name,
 				src_x,src_y, dst_x,dst_y ));
 			child.area.base = ( dst_x-src_x, dst_y-src_y );
-			child.update_base();
-			io::println(fmt!( "\tUpdated2 '%s' to: %s", child.name, child.area.to_string() ));
+			child.update_base(lg);
+			lg.add(fmt!( "\tUpdated2 '%s' to: %s", child.name, child.area.to_string() ));
 		}
 	}
 
-	fn update()	{
-		self.update_size();
+	fn update( lg : &engine::context::Log )	{
+		self.update_size( lg );
 		assert self.area.size == self.min_size;
-		self.update_base();
+		self.update_base( lg );
 	}
 
 	fn populate( &mut self, name : &~str, elem : @Element )-> bool	{
@@ -389,8 +389,9 @@ pub struct Screen    {
 
 
 pub fn load_screen(path : ~str, ct : &engine::context::Context,
-		ft : @engine::font::Context )-> Screen	{
-	let iscreen = scene::load_config::<ScreenInfo>(path);
+		ft : @engine::font::Context, lg : &engine::context::Log )-> Screen	{
+	lg.add( ~"Loading HUD screen: " + path );
+	let iscreen = scene::load_config::<ScreenInfo>( path );
 	let (wid,het) = ct.screen_size;
 	let size = (wid as int,het as int);
 	let mut root = Frame{
@@ -403,9 +404,9 @@ pub fn load_screen(path : ~str, ct : &engine::context::Context,
 		children	: convert_frames( &iscreen.frames ),
 	};
 	let mut map_texture	= LinearMap::<~str,@engine::texture::Texture>();
-	io::println(fmt!( "\tParsing %u images", iscreen.images.len() ));
+	lg.add(fmt!( "\tParsing %u images", iscreen.images.len() ));
 	let mut map_image = LinearMap::<~str,@Image>();
-	let prog_image = @engine::load::load_program( ct, ~"data/code/hud/image" );
+	let prog_image = @engine::load::load_program( ct, ~"data/code/hud/image", lg );
 	for iscreen.images.each() |iimage|	{
 		let path = ~"data/texture/hud/" + iimage.path;
 		let texture = match map_texture.find(&path)	{
@@ -427,10 +428,10 @@ pub fn load_screen(path : ~str, ct : &engine::context::Context,
 			fail ~"\tImage frame not found: " + iimage.frame
 		}
 	}
-	io::println(fmt!( "\tParsing %u labels", iscreen.labels.len() ));
+	lg.add(fmt!( "\tParsing %u labels", iscreen.labels.len() ));
 	let mut map_font	= LinearMap::<FontInfo,@engine::font::Font>();
 	let mut map_label	= LinearMap::<~str,@Label>();
-	let prog_label = @engine::load::load_program( ct, ~"data/code/hud/text" );
+	let prog_label = @engine::load::load_program( ct, ~"data/code/hud/text", lg );
 	for iscreen.labels.each() |ilabel|	{
 		let font = match map_font.find(&ilabel.font)	{
 			Some(f)	=> f,
@@ -443,7 +444,7 @@ pub fn load_screen(path : ~str, ct : &engine::context::Context,
 			}
 		};
 		let label = @Label{
-			texture	: @font.bake( ct, ilabel.text, ilabel.bound ),
+			texture	: @font.bake( ct, ilabel.text, ilabel.bound, lg ),
 			content	: copy ilabel.text,
 			program	: prog_label,
 			color	: engine::rast::make_color(ilabel.color),
@@ -453,7 +454,7 @@ pub fn load_screen(path : ~str, ct : &engine::context::Context,
 			fail ~"\tText frame not found: " + ilabel.frame
 		}
 	}
-	io::println(~"\tDone");
+	lg.add(~"\tDone");
 	Screen{
 		root	: root,
 		images	: map_image,

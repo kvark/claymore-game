@@ -110,49 +110,49 @@ impl Technique	{
 		], "\n")
 	}
 	
-	fn link( e : &Entity, ct : &context::Context )-> Option<@shade::Program>	{
+	fn link( e : &Entity, ct : &context::Context, lg : &context::Log )-> Option<@shade::Program>	{
 		if !do vec::all(self.meta_vertex)	|m|	{
 			e.material.meta_vertex.contains(m)
 		}||!do vec::all(self.meta_fragment)	|m|	{
 			e.material.meta_fragment.contains(m)
 		}{
-			io::println(fmt!( "Material '%s' rejected by '%s'", e.material.name, self.name ));
+			lg.add(fmt!( "Material '%s' rejected by '%s'", e.material.name, self.name ));
 			return None;
 		}
-		io::println(fmt!( "Linking material '%s' with technique '%s'", e.material.name, self.name ));
+		lg.add(fmt!( "Linking material '%s' with technique '%s'", e.material.name, self.name ));
 		let s_vert = self.make_vertex( e.material, e.modifier );
 		let s_frag = self.make_fragment( e.material );
 		let shaders = if false	{
-			io::println("Compiling vert");
-			io::println(s_vert);
+			lg.add(~"Compiling vert");
+			lg.add(copy s_vert);
 			let sv = ct.create_shader('v',s_vert);
-			io::println("Compiling frag");
-			io::println(s_frag);
+			lg.add(~"Compiling frag");
+			lg.add(copy s_frag);
 			let sf = ct.create_shader('f',s_frag);
-			io::println("Linking");
+			lg.add(~"Linking");
 			~[sv,sf]
 		}else	{
 			~[ ct.create_shader('v',s_vert), ct.create_shader('f',s_frag) ]
 		};
-		Some( @ct.create_program(shaders) )
+		Some( @ct.create_program(shaders,lg) )
 	}
 
-	fn get_program( e : &Entity, ct : &context::Context )-> Option<@shade::Program>	{
+	fn get_program( e : &Entity, ct : &context::Context, lg : &context::Log )-> Option<@shade::Program>	{
 		let ce = CacheEntry{ material:e.material, modifier:e.modifier,
 			technique:~[copy self.code_vertex,copy self.code_fragment]
 		};
 		match self.cache.find(&ce)	{
 			Some(p)	=> p,
 			None =>	{
-				let p = self.link( e, ct );
+				let p = self.link( e, ct, lg );
 				self.cache.insert( ce, p );
 				p
 			}
 		}
 	}
 
-	fn process( e : &Entity, ct : &context::Context )-> call::Call	{
-		match self.get_program(e,ct)	{
+	fn process( e : &Entity, ct : &context::Context, lg : &context::Log )-> call::Call	{
+		match self.get_program(e,ct,lg)	{
 			Some(p)	=> call::CallDraw( copy e.input, copy self.output, p, copy e.data ),
 			None => call::CallEmpty
 		}

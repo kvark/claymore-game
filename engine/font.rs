@@ -111,14 +111,14 @@ impl Font	{
 		}
 	}
 
-	pub fn bake( gr : &context::Context, s : &str, max_size : (uint,uint) )-> texture::Texture	{
+	pub fn bake( gr : &context::Context, s : &str, max_size : (uint,uint), lg : &context::Log )-> texture::Texture	{
 		let (limit_x,limit_y) = max_size;
-		io::println(fmt!( "Font baking text: %s", s ));
+		lg.add(fmt!( "Font baking text: %s", s ));
 		struct Target	{ c:char, x:int, y:int }
 		let face  = unsafe { &*(self.face) };
 		let line_gap = (self.line_offset as int) + (face.height as int);
 		let mut position = 0, baseline = face.ascender as int;	// in font units
-		io::println(fmt!( "\tFace height=%d, up=%d, down=%d", face.height as int,
+		lg.add(fmt!( "\tFace height=%d, up=%d, down=%d", face.height as int,
 			face.ascender as int, face.descender as int ));
 		let mut prev_index = 0 as FT_UInt;	// font char index
 		const BIG	:int = 999999;
@@ -146,7 +146,7 @@ impl Font	{
 					bindgen::FT_Get_Kerning( self.face, prev_index, index,
 						FT_KERNING_DEFAULT, ptr::addr_of(&delta) ).
 						check( "Get_Kerning" );
-					//io::println(fmt!( "\tKerning %d-%d is %d",
+					//lg.add(fmt!( "\tKerning %d-%d is %d",
 					//	prev_index as int, index as int, delta.x as int ));
 					delta.x as int + self.kern_offset
 				};
@@ -162,12 +162,12 @@ impl Font	{
 				let mut ey = cy + glyph.metrics.height	as int;
 				let e_border = (ex - min_x + (2*BORDER<<SHIFT)) | (((ALIGN+1)<<SHIFT)-1);
 				if e_border >= width_capacity	{
-					io::println(fmt!( "\tMoving the word: %u-%u", start_word, pos_array.len() ));
+					lg.add(fmt!( "\tMoving the word: %u-%u", start_word, pos_array.len() ));
 					let word_offset = pos_array[start_word].x - min_x;
 					if e_border - word_offset >= width_capacity	{
 						fail fmt!( "Text exceeds horisontal bound: %s", s )
 					}
-					io::println(fmt!( "\tHor:%d Ver:%d", -word_offset, line_gap ));
+					lg.add(fmt!( "\tHor:%d Ver:%d", -word_offset, line_gap ));
 					prev_index = 0 as FT_UInt;
 					for uint::range( start_word, pos_array.len() ) |i|	{
 						pos_array[i].x -= word_offset;
@@ -180,8 +180,8 @@ impl Font	{
 				}
 				max_x = int::max( max_x, ex );
 				max_y = int::max( max_y, ey );
-				//io::println(fmt!( "\tsymbol:%c cx:%d cy:%d", c, cx, cy ));
-				/*io::println(fmt!( "\tSymbol '%c' (id=%u) at (%u,%u): size=(%d,%d) bearing=(%d,%d)",
+				//lg.add(fmt!( "\tsymbol:%c cx:%d cy:%d", c, cx, cy ));
+				/*lg.add(fmt!( "\tSymbol '%c' (id=%u) at (%u,%u): size=(%d,%d) bearing=(%d,%d)",
 					c, self.get_char_index(c), position, baseline,
 					glyph.metrics.width as int, glyph.metrics.height as int,
 					glyph.metrics.horiBearingX as int, glyph.metrics.horiBearingY as int ));*/
@@ -192,7 +192,7 @@ impl Font	{
 		let width = ((((SHIFT+max_x-min_x)>>SHIFT)+ALIGN+2*BORDER) & !ALIGN) as uint;
 		let height= ((((SHIFT+max_y-min_y)>>SHIFT)+ALIGN+2*BORDER) & !ALIGN) as uint;
 		min_x -= BORDER<<SHIFT; min_y -= BORDER<<SHIFT; 
-		io::println(fmt!( "\tBox at (%d,%d) of size %ux%u", min_x, min_y, width, height ));
+		lg.add(fmt!( "\tBox at (%d,%d) of size %ux%u", min_x, min_y, width, height ));
 		assert width<=limit_x && height<=limit_y;
 		let mut image = vec::from_elem( width*height, 0u8 );
 		for pos_array.each |slice|	{
@@ -209,7 +209,7 @@ impl Font	{
 			assert bh == glyph.metrics.height	as uint >> SHIFT;
 			let x = ((slice.x - min_x) >>SHIFT) as uint;
 			let y = ((slice.y - min_y) >>SHIFT) as uint;
-			//io::println(fmt!( "\tx:%u bw:%u, width:%u, y:%u bh:%u height:%u", x,bw,width, y,bh,height ));
+			//lg.add(fmt!( "\tx:%u bw:%u, width:%u, y:%u bh:%u height:%u", x,bw,width, y,bh,height ));
 			assert x + bw <= width && y + bh <= height;
 			self.draw( bmp, &mut image, y*width + x, width );
 		}

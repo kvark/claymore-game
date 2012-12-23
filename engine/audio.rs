@@ -130,7 +130,7 @@ impl Context	{
 pub fn read_wave_chunk( rd : &load::Reader )-> load::Chunk	{
 	let name = str::from_bytes( rd.get_bytes(4) );
 	let size = rd.get_uint(4);
-	io::println( ~"\tEntering " + name );
+	//lg.add( ~"\tEntering " + name );
 	load::Chunk{
 		name	: name,
 		size	: size,
@@ -138,13 +138,13 @@ pub fn read_wave_chunk( rd : &load::Reader )-> load::Chunk	{
 	}
 }
 
-pub fn load_wav( at : &Context, path : ~str )-> Buffer	{
+pub fn load_wav( at : &Context, path : ~str, lg : &context::Log )-> Buffer	{
 	struct Chunk	{
 		id		: ~str,
 		start	: uint,
 		size	: uint,
 	};
-	io::println( ~"Loading " + path );
+	lg.add( ~"Loading " + path );
 	let rd = load::create_reader_ext( path, read_wave_chunk );
 	assert rd.enter() == ~"RIFF";
 	let s_format = str::from_bytes( rd.get_bytes(4) );
@@ -156,7 +156,7 @@ pub fn load_wav( at : &Context, path : ~str )-> Buffer	{
 	let byte_rate		= rd.get_uint(4);
 	let _byte_align		= rd.get_uint(2);
 	let bits_per_sample	= rd.get_uint(2);
-	io::println(fmt!( "\tformat:%u, channels:%u, sample_rate:%u, byte_rate:%u",
+	lg.add(fmt!( "\tformat:%u, channels:%u, sample_rate:%u, byte_rate:%u",
 		audio_format, channels, sample_rate, byte_rate ));
 	let is_PCM = audio_format == 1u;
 	if !is_PCM	{
