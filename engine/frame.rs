@@ -23,7 +23,6 @@ impl Surface : context::State	{
 	}
 }
 
-
 pub enum Target	{
 	TarEmpty,
 	TarSurface(@Surface),
@@ -32,20 +31,20 @@ pub enum Target	{
 
 impl Target : Copy	{}
 
-//FIXME: remove once auto-generated
 impl Target : cmp::Eq	{
-	pure fn eq( other : &Target )-> bool	{
-		match (&self,other)	{
+	pure fn eq( &self, other : &Target )-> bool	{
+		match (self,other)	{
 			(&TarEmpty,&TarEmpty)					=> true,
 			(&TarSurface(s1),&TarSurface(s2))		=> *s1.handle == *s2.handle,
 			(&TarTexture(t1,l1),&TarTexture(t2,l2))	=> *t1.handle == *t2.handle && l1==l2,
 			(_,_) => false
 		}
 	}
-	pure fn ne( other : &Target)-> bool	{
+	pure fn ne( &self, other : &Target )-> bool	{
 		!self.eq( other )
 	}
 }
+
 
 impl Target	{
 	priv fn attach( root : glcore::GLenum, slot : glcore::GLenum )-> bool	{
@@ -121,7 +120,7 @@ pub pure fn create_binding( value : glcore::GLenum )-> Binding	{
 }
 
 
-
+#[deriving_eq]
 pub struct Rect	{
 	x : uint,
 	y : uint,
@@ -131,15 +130,6 @@ pub struct Rect	{
 
 pub pure fn make_rect( wid : uint, het : uint )-> Rect	{
 	Rect{ x:0u, y:0u, w:wid, h:het }
-}
-
-impl Rect : cmp::Eq	{
-	pure fn eq( other : &Rect )-> bool	{
-		self.x==other.x && self.y==other.y && self.w==other.w && self.h==other.h
-	}
-	pure fn ne( other : &Rect )-> bool	{
-		!self.eq( other )
-	}
 }
 
 impl Rect	{

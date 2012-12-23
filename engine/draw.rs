@@ -1,3 +1,4 @@
+
 pub trait Mod	{
 	pure fn get_name()-> ~str;
 	pure fn get_code()-> ~str;
@@ -11,6 +12,7 @@ vec3 modifyInit  (vec3 p) {return p;}
 vec3 modifyVector(vec3 v) {return v;}"}
 	fn fill_data( _data : &mut shade::DataMap )	{}
 }
+
 
 pub struct Material	{
 	name			: ~str,
@@ -47,24 +49,25 @@ struct CacheEntry	{
 }
 
 impl CacheEntry : cmp::Eq	{
-	pure fn eq( other : &CacheEntry )-> bool	{
+	pure fn eq( &self, other : &CacheEntry )-> bool	{
 		self.material.code_vertex == other.material.code_vertex &&
 		self.material.code_fragment == other.material.code_fragment &&
 		self.modifier.get_code() == other.modifier.get_code();
 		self.technique == other.technique
 	}
-	pure fn ne( other : &CacheEntry )-> bool	{
-		!self.eq( other )
+	pure fn ne( &self, other : &CacheEntry )-> bool	{
+		!self.ne(other)
 	}
 }
 
 impl CacheEntry : to_bytes::IterBytes	{
-	pure fn iter_bytes(lsb0 : bool, f : to_bytes::Cb)	{
+	pure fn iter_bytes( &self, lsb0 : bool, f : to_bytes::Cb )	{
 		self.material.name.iter_bytes( lsb0, f );
 		self.modifier.get_name().iter_bytes( lsb0, f );
 		self.technique.iter_bytes( lsb0, f );
 	}
 }
+
 
 pub type Cache = send_map::linear::LinearMap< CacheEntry, Option<@shade::Program> >;
 pub fn create_cache()-> Cache	{

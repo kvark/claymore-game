@@ -1,11 +1,12 @@
 extern mod glcore;
+use cmp::Eq;
 
 pub struct Range	{
 	start	: uint,
 	num		: uint,
 }
 
-
+#[deriving_eq]
 pub struct Attribute	{
 	// semantics
 	kind			: glcore::GLenum,
@@ -18,18 +19,15 @@ pub struct Attribute	{
 	offset			: uint,
 }
 
-//FIXME: remove once auto-generated
-impl Attribute : cmp::Eq	{
-	pure fn eq( other : &Attribute )-> bool	{
-		self.kind==other.kind && self.count==other.count &&
-		self.normalized==other.normalized && self.interpolated==other.interpolated &&
-		*self.buffer.handle==*other.buffer.handle &&
-		self.stride==other.stride && self.offset==other.offset
+impl buf::Object : cmp::Eq	{
+	pure fn eq( &self, other : &buf::Object )-> bool	{
+		*self.handle == *other.handle
 	}
-	pure fn ne( other : &Attribute )-> bool	{
+	pure fn ne( &self, other : &buf::Object )-> bool	{
 		!self.eq( other )
 	}
 }
+
 
 impl Attribute	{
 	pure fn compatible( at : &shade::Attribute )-> bool	{

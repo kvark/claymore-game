@@ -26,12 +26,15 @@ clean-engine:
 
 
 # external libraries section
-libs: clean-libs lmath glfw3 glcore openal stb-image freetype
+libs: clean-libs numeric lmath glfw3 glcore openal stb-image freetype
 
 clean-libs:
 	(cd lib && rm -Rf liblmath* libglfw3* libglcore* openal* libstb*)
 
-lmath:
+numeric:
+	(cd ../numeric-rs && rustc src/numeric.rc --out-dir ../${DIR}/lib/)
+
+lmath: numeric
 	(cd ../lmath-rs && make clean && make && cp -R lib/* ../${DIR}/lib/)
 	
 glfw3:
@@ -41,7 +44,7 @@ glcore:
 	(cd ../glcore-rs && make clean && make osx-lion && cp -R lib/* ../${DIR}/lib/)
 
 openal:
-	(cd ../openal-rs && rm -Rf *.dylib* && rustc src/openal.rc --out-dir . && cp -R *.dylib* ../${DIR}/lib/)
+	(cd ../openal-rs && rustc src/openal.rc --out-dir ../${DIR}/lib/)
 
 stb-image:
 	(cd ../rust-stb-image && make clean && make && cp -R *.dylib* ../${DIR}/lib/)

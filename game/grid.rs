@@ -1,6 +1,9 @@
 extern mod lmath;
 extern mod engine;
+
 use engine::context::GLType;
+use lmath::vec::vec3::*;
+use lmath::vec::vec4::*;
 
 
 pub struct Grid	{
@@ -12,7 +15,7 @@ pub struct Grid	{
 	priv mut selected	: (uint,uint),
 	priv texture		: @engine::texture::Texture,
 	priv mut cells		: ~[engine::rast::Color],
-	priv v_scale		: lmath::vector::vec4,
+	priv v_scale		: Vec4<f32>,
 }
 
 const CELL_EMPTY 	: uint	= 0x20802000;
@@ -24,10 +27,10 @@ impl Grid	{
 		(2f32*self.v_scale.x / (self.nseg as f32),
 		 2f32*self.v_scale.y / (self.nseg as f32))
 	}
-	pub pure fn get_cell_center( x: uint, y : uint )-> lmath::vector::vec3	{
+	pub pure fn get_cell_center( x: uint, y : uint )-> Vec3<f32>	{
 		let (x_unit,y_unit) = self.get_cell_size();
 		let half = (self.nseg as f32) * 0.5f32;
-		lmath::vector::Vec3::new(
+		Vec3::new(
 			((x as f32)+0.5f32-half)*x_unit,
 			((y as f32)+0.5f32-half)*y_unit,
 			self.v_scale.z )
@@ -62,9 +65,9 @@ impl Grid	{
 	}
 
 	priv fn get_cell_selected( cam : &scene::Camera, nx : float, ny : float )-> (uint,uint)	{
-		let ndc = lmath::vector::Vec3::new( (nx as f32)*2f32-1f32, 1f32-(ny as f32)*2f32, 0f32 );
+		let ndc = Vec3::new( (nx as f32)*2f32-1f32, 1f32-(ny as f32)*2f32, 0f32 );
 		let origin = cam.node.world_space().position;
-		let ray = cam.get_matrix().inverse().transform( &ndc ).sub_v( &origin );
+		let ray = cam.get_matrix().invert().transform( &ndc ).sub_v( &origin );
 		let (x_unit,y_unit) = self.get_cell_size();
 		let k = (self.v_scale.z - origin.z) / ray.z;
 		let x = (origin.x + ray.x*k + self.v_scale.x) / x_unit;
@@ -111,10 +114,10 @@ pub fn make_grid( ct : &engine::context::Context, segments : uint )-> Grid	{
 	let tex = @ct.create_texture( ~"2D", segments, segments, 0u, 0u );
 	let s_opt = Some( engine::texture::make_sampler(1u,0) );
 	data.insert( ~"t_Grid",		engine::shade::UniTexture(0,tex,s_opt) );
-	let par_scale = lmath::vector::Vec4::new( 10f32, 10f32, 0.1f32, 0f32 );
+	let par_scale = Vec4::new( 10f32, 10f32, 0.1f32, 0f32 );
 	data.insert( ~"u_ScaleZ",	engine::shade::UniFloatVec(par_scale) );
 	let oo_seg = 1f32 / (segments as f32);
-	let par_size = lmath::vector::Vec4::new( oo_seg, oo_seg, 0f32, 0f32 );
+	let par_size = Vec4::new( oo_seg, oo_seg, 0f32, 0f32 );
 	data.insert( ~"u_Size",		engine::shade::UniFloatVec(par_size) );
 	Grid{
 		mesh	: @engine::mesh::create_quad( ct ),

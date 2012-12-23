@@ -1,7 +1,10 @@
 extern mod glcore;
 extern mod lmath;
 extern mod stb_image;
+
 use io::ReaderUtil;
+use lmath::vec::vec3::*;
+use lmath::quat::*;
 
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - //
 //		Chunk reader									//
@@ -16,7 +19,7 @@ pub struct Chunk	{
 pub struct Reader	{
 	path	: ~str,
 	priv bin		: @io::Reader,
-	priv walk_in	: &static/ fn (&Reader)->Chunk,
+	priv walk_fun	: @static/ fn (&Reader)->Chunk,
 	priv mut chunks	: ~[Chunk],
 }
 
@@ -31,7 +34,7 @@ pub fn enter_chunk( rd : &Reader )-> Chunk	{
 	Chunk	{
 		name	: str::from_bytes(name_clean),
 		size	: size,
-		finish	: rd.bin.tell() + size,
+		finish	: rd.position() + size,
 	}
 }
 
@@ -66,8 +69,12 @@ impl Reader	{
 		self.get_floats(1u)[0]
 	}
 
+	fn position()-> uint	{
+		self.bin.tell()
+	}
+
 	fn enter()-> ~str	{
-		let c = self.walk_in(&self);
+		let c = (self.walk_fun)(&self);
 		self.chunks.push(copy c);
 		copy c.name
 	}
@@ -91,11 +98,11 @@ impl Reader	{
 	}
 }
 
-pub fn create_reader_ext( path : ~str, fun : &static/ fn(&Reader)->Chunk )-> Reader	{
+pub fn create_reader_ext( path : ~str, fun : @static/ fn(&Reader)->Chunk )-> Reader	{
 	let p = path::Path( path );
 	match io::file_reader(&p)	{
-		Ok(bin)		=> Reader{ path:path, bin:bin, walk_in:fun, chunks:~[] },
-		Err(msg)	=> fail(fmt!( "Unable to read %s: %s", path, msg ))
+		Ok(bin)		=> Reader{ path:path, bin:bin, walk_fun:fun, chunks:~[] },
+		Err(msg)	=> fail fmt!( "Unable to read %s: %s", path, msg )
 	}
 }
 
@@ -114,15 +121,15 @@ pub fn create_reader( path : ~str )-> Reader	{
 pub fn load_text( path : ~str )-> ~str	{
 	match io::read_whole_file_str(&path::Path(path))	{
 		Ok(text) => copy text,
-		Err(msg) => fail(msg)
+		Err(msg) => fail msg
 	}
 }
 
 pub fn read_space( br : &Reader )-> space::QuatSpace	{
 	let d = br.get_floats(8u);
 	space::QuatSpace{
-		position	: lmath::vector::Vec3::new(d[0],d[1],d[2]),
-		orientation	: lmath::quaternion::Quat::new(d[7],d[4],d[5],d[6]),
+		position	: Vec3::new(d[0],d[1],d[2]),
+		orientation	: Quat::new(d[7],d[4],d[5],d[6]),
 		scale		: d[3],
 	}
 }
@@ -167,7 +174,7 @@ pub fn load_texture_2D( ct : &context::Context, path : &~str, mipmap : bool )-> 
 pub fn read_mesh( br : &Reader, context : &context::Context )-> mesh::Mesh	{
 	let signature = br.enter();
 	if signature != ~"k3mesh"	{
-		fail(fmt!( "Invalid mesh signature '%s': %s", signature, br.path ));
+		fail fmt!( "Invalid mesh signature '%s': %s", signature, br.path )
 	}
 	let n_vert	= br.get_uint(4u);
 	let n_ind	= br.get_uint(4u);
@@ -215,13 +222,13 @@ pub fn load_mesh( path : ~str, ct : &context::Context )-> mesh::Mesh	{
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - //
 //		Armature										//
 
-pub fn read_key_position( br : &Reader )-> lmath::vector::vec3	{
+pub fn read_key_position( br : &Reader )-> Vec3<f32>	{
 	let v = br.get_floats(3u);
-	lmath::vector::Vec3::new(v[0],v[1],v[2])
+	Vec3::new(v[0],v[1],v[2])
 }
-pub fn read_key_orientation_quat( br : &Reader )-> lmath::quaternion::quat4	{
+pub fn read_key_orientation_quat( br : &Reader )-> Quat<f32>	{
 	let v = br.get_floats(4u);
-	lmath::quaternion::Quat::new(v[0],v[1],v[2],v[3])
+	Quat::new(v[0],v[1],v[2],v[3])
 }
 pub fn read_key_scale3( br : &Reader )-> f32	{
 	let v = br.get_floats(3u);
@@ -251,7 +258,7 @@ pub fn read_curve<T : space::Interpolate>( br : &Reader, fkey : &fn(&Reader)->T 
 pub fn read_armature( br : &Reader, root : @space::Node, dual_quat : bool )-> space::Armature	{
 	let signature = br.enter();
 	if signature != ~"k3arm"	{
-		fail(fmt!( "Invalid armature signature '%s': %s", signature, br.path ));
+		fail fmt!( "Invalid armature signature '%s': %s", signature, br.path )
 	}
 	// read bones
 	let num_bones = br.get_uint(1u);
@@ -262,7 +269,7 @@ pub fn read_armature( br : &Reader, root : @space::Node, dual_quat : bool )-> sp
 		let pid = br.get_uint(1u);
 		let parent = Some(if pid==0u {root}	else {bones[pid-1u].node});
 		let space = read_space(br);
-		let bind_inv = space.inverse();
+		let bind_inv = space.invert();
 		bones.push(space::Bone{
 			node			: @space::Node{ name:name, space:space, parent:parent, actions:~[] },
 			bind_space		: space,
@@ -313,7 +320,7 @@ pub fn read_armature( br : &Reader, root : @space::Node, dual_quat : bool )-> sp
 					let c = read_curve( br, read_key_scale3 );
 					curves.push( space::ACuScale(bid,c) );
 				}else {
-					fail(fmt!( "Unable to find curve '%s'", split[2] ));
+					fail fmt!( "Unable to find curve '%s'", split[2] )
 				};
 			}
 			br.leave();

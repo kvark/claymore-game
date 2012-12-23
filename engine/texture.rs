@@ -1,4 +1,5 @@
 extern mod glcore;
+use cmp::Eq;
 
 pub type Mode	= glcore::GLenum;
 pub enum Handle	= glcore::GLuint;
@@ -103,24 +104,24 @@ pub pure fn map_pix_format( s : ~str )-> glcore::GLenum	{
 	}
 }
 
-
+//#[deriving_eq]
+//#[deriving_iterbytes]
 pub struct Slot	{
 	unit	: uint,
 	target	: Target
 }
 
-//FIXME: waiting for Rust to do that automatically
 impl Slot : to_bytes::IterBytes	{
-	pure fn iter_bytes( lsb0 : bool, f : to_bytes::Cb)	{
+	pure fn iter_bytes( &self, lsb0 : bool, f : to_bytes::Cb)	{
 		self.unit.iter_bytes( lsb0, f );
 		(*self.target).iter_bytes( lsb0, f );
 	}
 }
 impl Slot : cmp::Eq	{
-	pure fn eq( v : &Slot )->bool	{
+	pure fn eq( &self, v : &Slot )-> bool	{
 		self.unit == v.unit && *self.target == *v.target
 	}
-	pure fn ne( v : &Slot )->bool	{ !self.eq(v) }
+	pure fn ne( &self, v : &Slot )-> bool	{ !self.eq(v) }
 }
 
 

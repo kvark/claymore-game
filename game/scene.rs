@@ -1,28 +1,33 @@
-extern mod lmath;
 extern mod engine;
-
+extern mod lmath;
+extern mod numeric;
 extern mod std;
-use std::json;
+
+use lmath::quat::*;
+use lmath::vec::vec3::*;
+use lmath::vec::vec4::*;
+use numeric::types::*;
 use send_map::linear::LinearMap;
-use std::serialization::{deserialize,Deserializer,Deserializable};
+use std::json;
+use std::serialize::{Decoder,Decodable};
 
 
-pub fn load_config<T:Deserializable>( path : ~str )-> T	{
+pub fn load_config<T:Decodable<json::Decoder>>( path : ~str )-> T	{
 	io::println( ~"Loading config: "+path );
 	let rd = match io::file_reader(&path::Path(path))	{
 		Ok(reader)	=> reader,
 		Err(e)		=> fail e.to_str(),
 	};
-	match json::Deserializer(rd)	{
-		Ok(ref deser)	=> std::serialization::deserialize(deser),
-		Err(e)			=> fail e.to_str(),
+	match json::from_reader(rd)	{
+		Ok(js)	=> Decodable::decode( &json::Decoder(js) ),
+		Err(e)	=> fail e.to_str(),
 	}
 }
 
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -//
 //	Space
 
-#[auto_deserialize]
+#[auto_decode]
 struct SpaceInfo	{
 	position	: (f32,f32,f32),
 	orientation	: (f32,f32,f32,f32),
@@ -34,11 +39,11 @@ impl SpaceInfo	{
 		engine::space::QuatSpace{
 			position : {
 				let (x,y,z) = self.position;
-				lmath::vector::Vec3::new(x,y,z)
+				Vec3::new(x,y,z)
 			},
 			orientation : {
 				let (w,x,y,z) = self.orientation;
-				lmath::quaternion::Quat::new(w,x,y,z)
+				Quat::new(w,x,y,z)
 			},
 			scale : self.scale,
 		}
@@ -51,7 +56,7 @@ impl SpaceInfo	{
 pub type NodeRef = @engine::space::Node;
 pub type NodeMap = LinearMap<~str,NodeRef>;
 
-#[auto_deserialize]
+#[auto_decode]
 struct NodeInfo	{
 	name		: ~str,
 	space		: SpaceInfo,
@@ -75,7 +80,7 @@ pub fn make_nodes( infos : &~[NodeInfo], par : Option<NodeRef>, map : &mut NodeM
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -//
 //	Entity
 
-#[auto_deserialize]
+#[auto_decode]
 struct EntityInfo	{
 	node		: ~str,
 	material	: ~str,
@@ -88,11 +93,11 @@ struct EntityInfo	{
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -//
 //	Material
 
-pure fn color_to_vec(col : &engine::rast::Color)-> lmath::vector::vec4	{
-	lmath::vector::Vec4::new( col.r, col.g, col.b, col.a )
+pure fn color_to_vec(col : &engine::rast::Color)-> lmath::gltypes::vec4	{
+	Vec4::new( col.r, col.g, col.b, col.a )
 }
 
-#[auto_deserialize]
+#[auto_decode]
 struct TextureInfo	{
 	name	: ~str,
 	path	: ~str,
@@ -106,24 +111,24 @@ pub struct ShaderParam	{
 	name	: ~str,
 	value	: engine::shade::Uniform,
 }
-impl ShaderParam : Deserializable	{
-	static fn deserialize<D:Deserializer>( &self, d : &D )-> ShaderParam	{
+impl<D:Decoder> ShaderParam : Decodable<D>	{
+	static fn decode( &self, d : &D )-> ShaderParam	{
 		do d.read_rec()	{
-			let name : ~str		= d.read_field(~"name",		0u, || {deserialize(d)} );
-			let kind : ~str		= d.read_field(~"type",		1u, || {deserialize(d)} );
+			let name : ~str		= d.read_field(~"name",		0u, || {Decodable::decode(d)} );
+			let kind : ~str		= d.read_field(~"type",		1u, || {Decodable::decode(d)} );
 			let value = if kind==~"scalar"	{
-				let v : float	= d.read_field(~"value",	2u, || {deserialize(d)} );
+				let v : float	= d.read_field(~"value",	2u, || {Decodable::decode(d)} );
 				engine::shade::UniFloat(v)
 			}else		if kind==~"color"	{
-				let c : uint	= d.read_field(~"value",	2u, || {deserialize(d)} );
+				let c : uint	= d.read_field(~"value",	2u, || {Decodable::decode(d)} );
 				let v = color_to_vec( &engine::rast::make_color(c) );
 				engine::shade::UniFloatVec(v)
 			}else		if kind==~"vec3"	{
-				let (x,y,z) : (f32,f32,f32) = d.read_field(~"value", 2u, || {deserialize(d)} );
-				engine::shade::UniFloatVec( lmath::vector::Vec4::new(x,y,z,0f32) )
+				let (x,y,z) : (f32,f32,f32) = d.read_field(~"value", 2u, || {Decodable::decode(d)} );
+				engine::shade::UniFloatVec( Vec4::new(x,y,z,0f32) )
 			}else		if kind==~"vec4"	{
-				let (x,y,z,w) : (f32,f32,f32,f32) = d.read_field(~"value", 2u, || {deserialize(d)} );
-				engine::shade::UniFloatVec( lmath::vector::Vec4::new(x,y,z,w) )
+				let (x,y,z,w) : (f32,f32,f32,f32) = d.read_field(~"value", 2u, || {Decodable::decode(d)} );
+				engine::shade::UniFloatVec( Vec4::new(x,y,z,w) )
 			}else	{fail ~"Unknown type: "+kind};
 			ShaderParam{
 				name	: name,
@@ -134,7 +139,7 @@ impl ShaderParam : Deserializable	{
 }
 
 
-#[auto_deserialize]
+#[auto_decode]
 struct MaterialInfo	{
 	name	: ~str,
 	kind	: ~str,
@@ -153,7 +158,7 @@ impl MaterialInfo	{
 			let s_opt = Some(engine::texture::make_sampler( tinfo.filter, tinfo.wrap ));
 			data.insert( ~"t_"+tinfo.name, engine::shade::UniTexture(0,tex,s_opt) );
 			let (sx,sy) = tinfo.scale, (ox,oy) = tinfo.offset;
-			let u_transform = lmath::vector::Vec4::new(sx,sy,ox,oy);
+			let u_transform = Vec4::new(sx,sy,ox,oy);
 			data.insert( fmt!("u_Tex%uTransform",i), engine::shade::UniFloatVec(u_transform) );
 		}
 	}
@@ -170,15 +175,15 @@ pub struct Projector	{
 }
 
 impl Projector	{
-	pure fn to_matrix() -> lmath::matrix::mat4	{
-		lmath::funs::projection::perspective::<f32>(
-			self.fov_y,
-			self.fov_x / self.fov_y,
-			self.r_near, self.r_far )
+	pure fn to_matrix() -> lmath::gltypes::mat4	{
+		lmath::funs::projection::perspective(
+			angle::Degrees(self.fov_y as f32),
+			self.fov_x / self.fov_y as f32,
+			self.r_near as f32, self.r_far as f32 )
 	}
 }
 
-#[auto_deserialize]
+#[auto_decode]
 pub struct ProjectorInfo	{
 	fov		: float,
 	range	: (float,float),
@@ -187,7 +192,7 @@ pub struct ProjectorInfo	{
 impl ProjectorInfo	{
 	pure fn spawn( aspect : float )-> Projector	{
 		let (near,far) = self.range;
-		let fov = self.fov * 180f / float::consts::pi;
+		let fov = self.fov * 180f / core::float::consts::pi;
 		Projector{
 			fov_x	: aspect * fov,
 			fov_y	: fov,
@@ -207,20 +212,20 @@ pub struct Camera	{
 }
 
 impl Camera	{
-	pure fn get_matrix()-> lmath::matrix::mat4	{
+	pure fn get_matrix()-> lmath::gltypes::mat4	{
 		let proj = self.proj.to_matrix();
-		proj * self.node.world_space().inverse().to_matrix()
+		proj * self.node.world_space().invert().to_matrix()
 	}
-	pure fn get_view_vector()-> lmath::vector::vec3	{
-		let v = lmath::vector::Vec3::new( 0f32,0f32,-1f32 );
+	pure fn get_view_vector()-> lmath::gltypes::vec3	{
+		let v = Vec3::new( 0f32,0f32,-1f32 );
 		self.node.world_space().orientation.mul_v( &v )
 	}
-	pure fn get_up_vector()-> lmath::vector::vec3	{
-		let v = lmath::vector::Vec3::new( 0f32,1f32,0f32 );
+	pure fn get_up_vector()-> lmath::gltypes::vec3	{
+		let v = Vec3::new( 0f32,1f32,0f32 );
 		self.node.world_space().orientation.mul_v( &v )
 	}
-	pure fn get_side_vector()-> lmath::vector::vec3	{
-		let v = lmath::vector::Vec3::new( 1f32,0f32,0f32 );
+	pure fn get_side_vector()-> lmath::gltypes::vec3	{
+		let v = Vec3::new( 1f32,0f32,0f32 );
 		self.node.world_space().orientation.mul_v( &v )
 	}
 	pub fn fill_data( data : &mut engine::shade::DataMap )	{
@@ -231,16 +236,16 @@ impl Camera	{
 	}
 	pub fn test()	{
 		let m_vp = self.get_matrix();
-		let m_vp_inv = m_vp.inverse();
-		let v_z1 = lmath::vector::Vec3::new(0f32,0f32,1f32);
+		let m_vp_inv = m_vp.invert();
+		let v_z1 = Vec3::new(0f32,0f32,1f32);
 		let v_z2 = m_vp_inv.rotate(&v_z1);
 		let v_z3 = self.get_view_vector();
 		io::println(fmt!("** Vz2=%s, Vz3=%s **",v_z2.to_string(),v_z3.to_string()));
-		let v_y1 = lmath::vector::Vec3::new(0f32,1f32,0f32);
+		let v_y1 = Vec3::new(0f32,1f32,0f32);
 		let v_y2 = m_vp_inv.rotate(&v_y1);
 		let v_y3 = self.get_up_vector();
 		io::println(fmt!("** Vy2=%s, Vy3=%s **",v_y2.to_string(),v_y3.to_string()));
-		let v_x1 = lmath::vector::Vec3::new(1f32,0f32,0f32);
+		let v_x1 = Vec3::new(1f32,0f32,0f32);
 		let v_x2 = m_vp_inv.rotate(&v_x1);
 		let v_x3 = self.get_side_vector();
 		io::println(fmt!("** Vx2=%s, Vx3=%s **",v_x2.to_string(),v_x3.to_string()));
@@ -253,7 +258,7 @@ impl Camera	{
 	}
 }
 
-#[auto_deserialize]
+#[auto_decode]
 pub struct CameraInfo	{
 	node	: ~str,
 	proj	: ProjectorInfo,
@@ -267,7 +272,7 @@ pub struct Light	{
 	proj	: Projector,
 }
 
-#[auto_deserialize]
+#[auto_decode]
 pub struct LightInfo	{
 	node	: ~str,
 	proj	: ProjectorInfo,
@@ -301,7 +306,7 @@ pub struct Scene	{
 	lights		: LinearMap<~str,Light>,
 }
 
-#[auto_deserialize]
+#[auto_decode]
 pub struct SceneInfo	{
 	materials	: ~[MaterialInfo],
 	nodes		: ~[NodeInfo],

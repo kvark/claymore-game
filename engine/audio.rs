@@ -134,7 +134,7 @@ pub fn read_wave_chunk( rd : &load::Reader )-> load::Chunk	{
 	load::Chunk{
 		name	: name,
 		size	: size,
-		finish	: rd.bin.tell()+size,
+		finish	: rd.position()+size,
 	}
 }
 

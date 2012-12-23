@@ -2,7 +2,15 @@
        vers = "0.1", 
        author = "Dzmitry Malyshau",
        url = "http://code.google.com/p/claymore-game/")];
+
+#[comment = "Claymore game"];
+#[license = "MIT"];
 #[crate_type = "bin"];
+
+extern mod engine;
+extern mod lmath;
+extern mod numeric;
+extern mod std;
 
 mod battle;
 mod grid;

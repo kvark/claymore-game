@@ -1,7 +1,14 @@
 #[link(name = "engine", 
        vers = "0.1", 
        author = "Dzmitry Malyshau")];
+
+#[comment = "Graphics engine for Claymore game"];
+#[license = "MIT"];
 #[crate_type = "lib"];
+
+extern mod freetype;
+extern mod lmath;
+extern mod openal;
 
 pub mod anim;
 pub mod audio;

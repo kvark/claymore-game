@@ -1,15 +1,12 @@
 extern mod glcore;
 extern mod lmath;
+
 use send_map::linear::LinearMap;
+use lmath::gltypes::*;
 
-
+#[deriving_eq]
 pub enum Handle		= glcore::GLuint;
 pub enum Location	= glcore::GLint;
-
-impl Handle : cmp::Eq	{
-	pure fn eq( h : &Handle )-> bool	{ self == *h }
-	pure fn ne( h : &Handle )-> bool	{ !self.eq(h) }
-}
 
 
 pub struct Binding	{
@@ -39,29 +36,28 @@ pub enum Uniform	{
 	Unitialized,
 	UniFloat(float),
 	UniInt(int),
-	UniFloatVec(lmath::vector::vec4),
-	UniIntVec(lmath::vector::ivec4),
-	UniFloatVecArray(~[lmath::vector::vec4]),
-	UniMatrix(bool,lmath::matrix::mat4),
+	UniFloatVec(vec4),
+	UniIntVec(ivec4),
+	UniFloatVecArray(~[vec4]),
+	UniMatrix(bool,mat4),
 	UniTexture(uint,@texture::Texture,Option<texture::Sampler>),
 }
 
 impl Uniform : cmp::Eq	{
-	pure fn eq( v : &Uniform )-> bool	{
-		match (&self,v)	{
+	pure fn eq( &self, v : &Uniform )-> bool	{
+		match (self,v)	{
 			(&Unitialized,&Unitialized)						=> true,
 			(&UniFloat(f1),&UniFloat(f2))					=> f1==f2,
 			(&UniInt(i1),&UniInt(i2))						=> i1==i2,
 			(&UniFloatVec(fv1),&UniFloatVec(fv2))			=> fv1==fv2,
-			//FIXME: waiting for lmath to cover that
-			//(&UniIntVec(fi1),&UniIntVec(fi2))				=> fi1==fi2,
-			(&UniFloatVecArray(fa1),&UniFloatVecArray(fa2))	=> fa1==fa2,
+			(&UniIntVec(fi1),&UniIntVec(fi2))				=> fi1==fi2,
+			(&UniFloatVecArray(ref fa1),&UniFloatVecArray(ref fa2))	=> fa1==fa2,
 			(&UniMatrix(b1,m1),&UniMatrix(b2,m2))			=> b1==b2 && m1==m2,
 			(&UniTexture(u1,_,_),&UniTexture(u2,_,_))		=> u1==u2,
 			(_,_)											=> false
 		}
 	}
-	pure fn ne( v : &Uniform )-> bool	{ !self.eq(v) }
+	pure fn ne( &self, v : &Uniform )-> bool	{ !self.eq(v) }
 }
 
 pub struct Attribute	{
@@ -113,17 +109,17 @@ impl Parameter	{
 			self.value = UniInt(v as int);
 		}else
 		if t == glcore::GL_FLOAT_VEC4	{
-			let mut v = lmath::vector::Vec4::zero::<f32>();
+			let mut v = vec4::zero();
 			glcore::glGetUniformfv( *h, loc, v.to_ptr() );
 			self.value = UniFloatVec(v);
 		}else
 		if t == glcore::GL_INT_VEC4	{
-			let mut v = lmath::vector::Vec4::zero::<i32>();
+			let mut v = ivec4::zero();
 			glcore::glGetUniformiv( *h, loc, v.to_ptr() );
 			self.value = UniIntVec(v);
 		}else
 		if t == glcore::GL_FLOAT_MAT4	{
-			let mut v = lmath::matrix::Mat4::zero::<f32>();
+			let mut v = mat4::zero();
 			glcore::glGetUniformfv( *h, loc, ptr::addr_of(&v.x.x) );
 			self.value = UniMatrix(false,v);
 		}else	{return false;}

@@ -1,6 +1,7 @@
 extern mod glcore;
 
 
+#[deriving_eq]
 pub struct Color	{
 	r:f32, g:f32, b:f32, a:f32,
 }
@@ -12,15 +13,6 @@ pub pure fn make_color( hex : uint )-> Color	{
 		g : (((hex>>16)&0xFF) as f32) * k,
 		b : (((hex>> 8)&0xFF) as f32) * k,
 		a : (((hex>> 0)&0xFF) as f32) * k,
-	}
-}
-
-impl Color : cmp::Eq	{
-	pure fn eq( other : &Color )-> bool	{
-		self.r==other.r && self.g==other.g && self.b==other.b && self.a==other.a
-	}
-	pure fn ne( other : &Color )-> bool	{
-		!self.eq( other )
 	}
 }
 
@@ -218,6 +210,7 @@ impl Multisample : Stage	{
 }
 
 
+#[deriving_eq]
 pub struct StencilSide	{
 	function		: glcore::GLenum,
 	ref_value		: int,
@@ -227,19 +220,6 @@ pub struct StencilSide	{
 	op_pass			: glcore::GLenum,
 }
 
-impl StencilSide : cmp::Eq	{
-	pure fn eq( other : &StencilSide )-> bool	{
-		self.function == other.function &&
-		self.ref_value == other.ref_value &&
-		self.read_mask == other.read_mask &&
-		self.op_fail == other.op_fail &&
-		self.op_depth_fail == other.op_depth_fail &&
-		self.op_pass == other.op_pass
-	}
-	pure fn ne( other : &StencilSide )-> bool	{
-		!self.eq( other )
-	}
-}
 
 impl StencilSide	{
 	fn activate( &mut self, new : &StencilSide, side : glcore::GLenum )	{

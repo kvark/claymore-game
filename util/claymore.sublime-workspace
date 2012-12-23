@@ -1,0 +1,1000 @@
+{
+	"auto_complete":
+	{
+		"selected_items":
+		[
+			[
+				"ARig",
+				"ARightBot"
+			],
+			[
+				"cle",
+				"cleanup"
+			],
+			[
+				"enter_",
+				"enter_chunk"
+			],
+			[
+				"create_",
+				"create_reader"
+			],
+			[
+				"AL_",
+				"AL_FORMAT_MONO16"
+			],
+			[
+				"get",
+				"get_uint"
+			],
+			[
+				"sou",
+				"sound_source"
+			],
+			[
+				"get_",
+				"get_bytes"
+			],
+			[
+				"cre",
+				"create_buffer"
+			],
+			[
+				"open",
+				"open_chunk"
+			],
+			[
+				"co",
+				"content"
+			],
+			[
+				"y_",
+				"y_max"
+			],
+			[
+				"up",
+				"update_base"
+			],
+			[
+				"ch",
+				"child"
+			],
+			[
+				"y_m",
+				"y_max"
+			],
+			[
+				"Frame",
+				"Frame"
+			],
+			[
+				"ATo",
+				"ATopMid"
+			],
+			[
+				"Font",
+				"FontInfo"
+			],
+			[
+				"glco",
+				"glcore"
+			],
+			[
+				"wrap",
+				"wrap_modes"
+			],
+			[
+				"test-",
+				"test-image"
+			],
+			[
+				"parse_a",
+				"parse_anchor"
+			],
+			[
+				"min",
+				"min_size"
+			],
+			[
+				"Re",
+				"Relation"
+			],
+			[
+				"ali",
+				"align"
+			],
+			[
+				"Rel",
+				"RelParent"
+			],
+			[
+				"A",
+				"ACenter"
+			],
+			[
+				"hud_",
+				"hud_context"
+			],
+			[
+				"c",
+				"content"
+			],
+			[
+				"to_",
+				"to_matrix"
+			],
+			[
+				"po",
+				"point"
+			],
+			[
+				"Ve",
+				"Vec4"
+			],
+			[
+				"en",
+				"envir"
+			],
+			[
+				"ent",
+				"entry"
+			],
+			[
+				"chi",
+				"children"
+			],
+			[
+				"tech",
+				"techSolid"
+			],
+			[
+				"w",
+				"width"
+			],
+			[
+				"b",
+				"bytes"
+			],
+			[
+				"di",
+				"divide_group"
+			],
+			[
+				"pri",
+				"prime"
+			],
+			[
+				"mate",
+				"materials"
+			],
+			[
+				"mater",
+				"material"
+			],
+			[
+				"mat",
+				"material"
+			],
+			[
+				"Materia",
+				"MaterialInfo"
+			],
+			[
+				"rotate",
+				"rotate_camera"
+			],
+			[
+				"expo",
+				"export_meshes"
+			],
+			[
+				"export_",
+				"export_meshes"
+			],
+			[
+				"proper",
+				"properties"
+			],
+			[
+				"read_key_ori",
+				"read_key_orientation_euler"
+			],
+			[
+				"make_",
+				"make_nodes"
+			],
+			[
+				"face",
+				"face_num"
+			],
+			[
+				"UniFlo",
+				"UniFloatVec"
+			],
+			[
+				"Te",
+				"Texture"
+			],
+			[
+				"Text",
+				"TextureCache"
+			],
+			[
+				"tex",
+				"tex_unit"
+			],
+			[
+				"f",
+				"filter"
+			],
+			[
+				"map_ma",
+				"map_matererial_data"
+			],
+			[
+				"De",
+				"Deserializer"
+			],
+			[
+				"dese",
+				"deserialize"
+			],
+			[
+				"creat",
+				"create_data"
+			],
+			[
+				"Mat",
+				"Material"
+			],
+			[
+				"Mater",
+				"MaterialInfo"
+			],
+			[
+				"Ent",
+				"EntityGroup"
+			],
+			[
+				"Entit",
+				"EntityGroup"
+			],
+			[
+				"spa",
+				"spawn"
+			],
+			[
+				"ma",
+				"map_node"
+			],
+			[
+				"du",
+				"dual_quat"
+			],
+			[
+				"Node",
+				"NodeInfo"
+			],
+			[
+				"Came",
+				"Camera"
+			],
+			[
+				"Camer",
+				"CameraInfo"
+			],
+			[
+				"Li",
+				"LinearMap"
+			],
+			[
+				"fo",
+				"fov"
+			],
+			[
+				"Proje",
+				"ProjectorInfo"
+			],
+			[
+				"Light",
+				"LightInfo"
+			],
+			[
+				"fov",
+				"fov_y"
+			],
+			[
+				"Pro",
+				"Projector"
+			],
+			[
+				"Cam",
+				"CameraInfo"
+			],
+			[
+				"No",
+				"NodeInfo"
+			],
+			[
+				"load_",
+				"load_config"
+			],
+			[
+				"min_",
+				"min_y"
+			],
+			[
+				"line",
+				"line_gap"
+			],
+			[
+				"line_",
+				"line_number"
+			],
+			[
+				"he",
+				"height"
+			],
+			[
+				"t_",
+				"t_bubble"
+			],
+			[
+				"pos",
+				"pos_x"
+			],
+			[
+				"Bubb",
+				"Bubble"
+			],
+			[
+				"Bubble",
+				"BubbleManager"
+			],
+			[
+				"Bubbl",
+				"BubbleManager"
+			],
+			[
+				"bubble",
+				"bubble_param"
+			],
+			[
+				"bub",
+				"bubble_param"
+			],
+			[
+				"windo",
+				"window_size"
+			],
+			[
+				"debug_",
+				"debug_graphics"
+			],
+			[
+				"wid",
+				"width_capacity"
+			],
+			[
+				"ba",
+				"backup"
+			],
+			[
+				"as",
+				"ascender"
+			],
+			[
+				"yp",
+				"ypix"
+			],
+			[
+				"mu",
+				"mut_data"
+			],
+			[
+				"sp",
+				"space"
+			],
+			[
+				"dei",
+				"destination"
+			],
+			[
+				"Quat",
+				"QuatSpace"
+			],
+			[
+				"stencil",
+				"stencil_front"
+			],
+			[
+				"stencil_",
+				"stencil_back"
+			],
+			[
+				"GL_TEXT",
+				"GL_TEXTURE_2D"
+			],
+			[
+				"GL_UN",
+				"GL_UNSIGNED_INT"
+			],
+			[
+				"GL_UNSI",
+				"GL_UNSIGNED_BYTE"
+			],
+			[
+				"is_in",
+				"is_integer"
+			],
+			[
+				"world",
+				"world_space"
+			],
+			[
+				"wor",
+				"world_space"
+			],
+			[
+				"to",
+				"to_string"
+			],
+			[
+				"create",
+				"create_reader"
+			],
+			[
+				"Qua",
+				"Quaternion"
+			],
+			[
+				"getFlo",
+				"get_float"
+			],
+			[
+				"Tech",
+				"technique"
+			],
+			[
+				"fro",
+				"from_elem"
+			],
+			[
+				"gl",
+				"glcore"
+			],
+			[
+				"BlenD",
+				"BlendChannel"
+			],
+			[
+				"de",
+				"destination"
+			],
+			[
+				"eq",
+				"equation"
+			],
+			[
+				"Blend",
+				"BlendChannel"
+			],
+			[
+				"glGet",
+				"glGetBooleanv"
+			],
+			[
+				"Tar",
+				"TarEmpty"
+			],
+			[
+				"Verte",
+				"VertexData"
+			],
+			[
+				"frame",
+				"framebuffer_draw"
+			],
+			[
+				"GL",
+				"GL_RENDERBUFFER_BINDING"
+			],
+			[
+				"unbind",
+				"unbind_vertex_array"
+			],
+			[
+				"Vertex",
+				"VertexArray"
+			],
+			[
+				"pool",
+				"pool_programs"
+			],
+			[
+				"pool_",
+				"pool_objects"
+			]
+		]
+	},
+	"buffers":
+	[
+		{
+			"file": "/Users/kvark/Code/rust/claymore-game/game/battle.rs",
+			"settings":
+			{
+				"buffer_size": 6794,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "claymore",
+			"settings":
+			{
+				"buffer_size": 648,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "/Users/kvark/Code/rust/claymore-game/Makefile",
+			"settings":
+			{
+				"buffer_size": 1375,
+				"line_ending": "Unix"
+			}
+		}
+	],
+	"build_system": "",
+	"command_palette":
+	{
+		"height": 392.0,
+		"selected_items":
+		[
+			[
+				"",
+				"Build: Build"
+			],
+			[
+				"Package Control: ",
+				"Package Control: Install Package"
+			]
+		],
+		"width": 449.0
+	},
+	"console":
+	{
+		"height": 125.0
+	},
+	"distraction_free":
+	{
+		"menu_visible": true,
+		"show_minimap": false,
+		"show_open_files": false,
+		"show_tabs": false,
+		"side_bar_visible": false,
+		"status_bar_visible": false
+	},
+	"file_history":
+	[
+		"/Users/kvark/Code/rust/claymore-game/engine/load.rs",
+		"/Users/kvark/Code/rust/claymore-game/game/scene.rs",
+		"/Users/kvark/Code/rust/claymore-game/engine/call.rs",
+		"/Users/kvark/Code/rust/claymore-game/engine/draw.rs",
+		"/Users/kvark/Code/rust/claymore-game/engine/mesh.rs",
+		"/Users/kvark/Code/rust/claymore-game/game/grid.rs",
+		"/Users/kvark/Code/rust/claymore-game/game/hud.rs",
+		"/Users/kvark/Code/rust/claymore-game/game/main.rs",
+		"/Users/kvark/Code/rust/claymore-game/data/hud/char.json",
+		"/Users/kvark/Code/rust/claymore-game/engine/context.rs",
+		"/Users/kvark/Code/rust/claymore-game/engine/shade.rs",
+		"/Users/kvark/Code/rust/claymore-game/data/hud/char-orig.json",
+		"/Users/kvark/Code/rust/claymore-game/engine/font.rs",
+		"/Users/kvark/Code/rust/claymore-game/data/config.json",
+		"/Users/kvark/Code/rust/lmath-rs/src/angle.rs",
+		"/Users/kvark/Code/rust/claymore-game/data/code-game/char/armor.glslv",
+		"/Users/kvark/Code/rust/claymore-game/engine/audio.rs",
+		"/Users/kvark/Code/rust/claymore-game/data/sound/stereol.wav",
+		"/Users/kvark/Code/rust/claymore-game/data/sound/panther.wav",
+		"/Users/kvark/Code/rust/claymore-game/data/code-game/char/armor.glslf",
+		"/Users/kvark/Code/rust/claymore-game/.hgignore",
+		"/Users/kvark/Code/rust/claymore-game/data/code/hud/image.glslv",
+		"/Users/kvark/Code/rust/claymore-game/data/code/hud/image.glslf",
+		"/Users/kvark/Code/rust/claymore-game/data/code/hud/debug.glslv",
+		"/Users/kvark/Code/rust/claymore-game/data/code/hud/debug.glslf",
+		"/Users/kvark/Code/rust/claymore-game/engine/texture.rs",
+		"/Users/kvark/Code/rust/claymore-game/data/code-game/envir.glslf",
+		"/Users/kvark/Code/rust/claymore-game/engine/rast.rs",
+		"/Users/kvark/Code/rust/claymore-game/data/code-game/envir.glslv",
+		"/Users/kvark/Code/rust/claymore-game/game/claymore.rc",
+		"/Users/kvark/Code/rust/claymore-game/engine/space.rs",
+		"/Users/kvark/Code/rust/claymore-game/data/claymore-2.json",
+		"/Users/kvark/Code/rust/claymore-game/data/claymore-2.mat.json",
+		"/Users/kvark/Code/rust/rust-stb-image/image.rs",
+		"/Users/kvark/Code/rust/claymore-game/data/code-game/char/envir.glslf",
+		"/Users/kvark/Code/rust/claymore-game/game/battle.rs",
+		"/Users/kvark/Code/rust/claymore-game/data/code-game/char/skin.glslv",
+		"/Users/kvark/Code/rust/claymore-game/data/code-game/char/skin.glslf",
+		"/Users/kvark/Code/rust/claymore-game/data/code-game/char/hair.glslv",
+		"/Users/kvark/Code/rust/claymore-game/data/code-game/char/hair.glslf",
+		"/Users/kvark/Code/rust/claymore-game/data/code/mat/test.glslv",
+		"/Users/kvark/Code/rust/claymore-game/data/code-game/char-armor.glslf",
+		"/Users/kvark/Code/rust/claymore-game/data/code-game/char-armor.glslv",
+		"/Users/kvark/Code/rust/claymore-game/data/code/mat/phong_tangent.glslv",
+		"/Users/kvark/Code/rust/claymore-game/data/code-game/char-skin.glslv",
+		"/Users/kvark/Code/rust/claymore-game/util/blender/io_kri_scene/scene.py",
+		"/Users/kvark/Code/rust/claymore-game/util/blender/io_kri_mesh/mesh.py",
+		"/Users/kvark/Code/rust/claymore-game/data/code-game/char-skin.glslf",
+		"/Users/kvark/Code/rust/claymore-game/data/code/mat/flat.glslv",
+		"/Users/kvark/Code/rust/claymore-game/data/code/mat/flat.glslf",
+		"/Users/kvark/Code/rust/claymore-game/data/code/../claymore-2.mat.json",
+		"/Users/kvark/Code/rust/claymore-game/util/blender/io_kri_scene/__init__.py",
+		"/Users/kvark/Code/rust/claymore-game/util/blender/io_kri/action.py",
+		"/Users/kvark/Code/rust/claymore-game/util/blender/io_kri/common.py",
+		"/Users/kvark/Code/rust/claymore-game/util/blender/io_kri_arm/__init__.py",
+		"/Users/kvark/Code/rust/claymore-game/util/blender/io_kri_mesh/__init__.py",
+		"/Users/kvark/Code/rust/claymore-game/util/blender/io_kri_arm/arm.py",
+		"/Users/kvark/Code/rust/claymore-game/data/object/scene.json",
+		"/Users/kvark/Code/rust/claymore-game/data/code/mat/phong.glslv",
+		"/Users/kvark/Code/rust/claymore-game/test.rs",
+		"/Users/kvark/Code/rust/claymore-game/data/object",
+		"/Users/kvark/Code/rust/claymore-game/engine/engine.rc",
+		"/Users/kvark/Code/rust/openal-rs/src/al.rs",
+		"/Users/kvark/Code/rust/openal-rs/src/alc.rs",
+		"/Users/kvark/Code/rust/claymore-game/engine/buf.rs",
+		"/Users/kvark/Code/rust/claymore-game/engine/frame.rs",
+		"/Users/kvark/Code/rust/openal-rs/src/openal.rc",
+		"/Users/kvark/Code/rust/claymore-game/sample/demo05-text.rs",
+		"/Users/kvark/Code/rust/claymore-game/data/code/hud/text_bubble.glslf",
+		"/Users/kvark/Code/rust/claymore-game/data/code/hud/text_bubble.glslv",
+		"/Users/kvark/Code/rust/claymore-game/data/code/hud/text.glslf",
+		"/Users/kvark/Code/rust/claymore-game/data/code/hud/text.glslv",
+		"/Users/kvark/Code/rust/claymore-game/Makefile",
+		"/Users/kvark/Code/rust/claymore-game/data/code/hud",
+		"/Users/kvark/Code/rust/claymore-game/data/code-game/grid.glslf",
+		"/Users/kvark/Library/Application Support/Sublime Text 2/Packages/User/Preferences.sublime-settings",
+		"/Users/kvark/Code/rust/claymore-game/data/code-game/grid.glslv",
+		"/Users/kvark/Code/rust/claymore-game/data/code/tech/forward/sub.glslv",
+		"/Users/kvark/Code/rust/claymore-game/data/code/tech/forward/sun.glslf",
+		"/Users/kvark/Code/rust/claymore-game/data/code/tech/forward/sun.glslv",
+		"/Users/kvark/Code/rust/claymore-game/data/code/tech/forward/light.glslf",
+		"/Users/kvark/Code/rust/claymore-game/data/code/tech/forward/light.glslv",
+		"/Users/kvark/Code/rust/claymore-game/sample/demo04-skeleton.rs",
+		"/Users/kvark/Code/rust/claymore-game/data/code/mat/fresnel.glslv",
+		"/Users/kvark/Code/claymore-game/game/main.rs",
+		"/Users/kvark/Code/claymore-game/engine/space.rs",
+		"/Users/kvark/Code/claymore-game/engine/load.rs",
+		"/Users/kvark/Code/claymore-game/data/code/mod/arm.glslv",
+		"/Users/kvark/Code/claymore-game/data/code/tech/omni1.glslf",
+		"/Users/kvark/Code/claymore-game/data/code/mat/phong.glslf",
+		"/Users/kvark/Code/claymore-game/data/code/mat/phong.glslv",
+		"/Users/kvark/Code/claymore-game/engine/shade.rs",
+		"/Users/kvark/Code/claymore-game/Makefile",
+		"/Users/kvark/Code/claymore-game/data/code/mod/arm_dualquat.glslv",
+		"/Users/kvark/Code/claymore-game/engine/draw.rs",
+		"/Users/kvark/Code/claymore-game/data/code/mat/fresnel.glslv",
+		"/Users/kvark/Code/claymore-game/data/code/mat/phong_tangent.glslv",
+		"/Users/kvark/Code/claymore-game/data/code/mat/test.glslv",
+		"/Users/kvark/Code/claymore-game/engine/anim.rs",
+		"/Users/kvark/Code/claymore-game/engine/rast.rs",
+		"/Users/kvark/Code/claymore-game/engine/frame.rs",
+		"/Users/kvark/Code/claymore-game/sample",
+		"/Users/kvark/Code/claymore-game/engine/mesh.rs",
+		"/Users/kvark/Code/claymore-game/engine/buf.rs",
+		"/Users/kvark/Code/claymore-game/game/demo03-materials.rs",
+		"/Users/kvark/Code/claymore-game/data/code/mat/phong_tangent.glslf",
+		"/Users/kvark/Code/claymore-game/data/code/mat/fresnel.glslf",
+		"/Users/kvark/Code/claymore-game/misc/io_kri_mesh/mesh.py",
+		"/Users/kvark/Code/claymore-game/data/code/tech/omni1.glslv",
+		"/Users/kvark/Code/claymore-game/data/code/tech/test.glslf",
+		"/Users/kvark/Code/claymore-game/data/code/tech/test.glslv",
+		"/Users/kvark/Code/claymore-game/data/code/mat/test.glslf",
+		"/Users/kvark/Code/claymore-game/data/code/test.glslf",
+		"/Users/kvark/Code/claymore-game/game/brick.rs",
+		"/Users/kvark/Code/claymore-game/data/code/test.glslv",
+		"/Users/kvark/Code/claymore-game/.hgignore",
+		"/Users/kvark/Code/claymore-game/data/code/mat/phong_fresnel.glslv",
+		"/Users/kvark/Code/kri-web/proj/draw.dart",
+		"/Users/kvark/Code/claymore-game/engine/engine.rc",
+		"/Users/kvark/Code/claymore-game/engine/call.rs",
+		"/Users/kvark/Code/claymore-game/data/code/tech/main.glslv",
+		"/Users/kvark/Code/claymore-game/data/code/tech/main.glslf",
+		"/Users/kvark/Code/kri-web/proj/rast.dart",
+		"/Users/kvark/Code/claymore-game/engine/texture.rs",
+		"/Users/kvark/Code/claymore-game/engine/context.rs",
+		"/Users/kvark/Code/claymore-game/game/test.rs",
+		"/Users/kvark/Library/Application Support/Sublime Text 2/Packages/Makefile/Make.sublime-build",
+		"/Users/kvark/Library/Application Support/Sublime Text 2/Packages/Makefile/Miscellaneous.tmPreferences"
+	],
+	"find":
+	{
+		"height": 35.0
+	},
+	"find_in_files":
+	{
+		"height": 93.0,
+		"where_history":
+		[
+			""
+		]
+	},
+	"find_state":
+	{
+		"case_sensitive": false,
+		"find_history":
+		[
+			"center",
+			"not a list",
+			"\"not a list\"",
+			"not a list",
+			"create_reader",
+			"NAME_SIZE",
+			"alBuffer",
+			"0u",
+			"iter_bytes",
+			"margin",
+			"&(",
+			"get_corner",
+			"Camera",
+			"    ",
+			"load_technique",
+			"u_CameraPos",
+			"Pi",
+			"Unable to find meta",
+			"groups",
+			"Unable to find curve",
+			"face_num",
+			"out.stop",
+			"out.log",
+			"save_matrix",
+			"save_color",
+			"out = Writer.inst = Writer(filename)",
+			"inst",
+			"extens",
+			"Writer.inst",
+			"mesh",
+			"to_vec",
+			"spawn",
+			"@engine::draw::load_material( copy imat.code_path );",
+			"unsafe",
+			"{\n",
+			"unsafe",
+			"fail",
+			"unsafe",
+			"\n		",
+			"unsafe",
+			"addr_of",
+			"add_of",
+			"unsafe",
+			"kFrameSec",
+			"framerate",
+			"kFrameSec",
+			"min_x",
+			"max_x",
+			"face.offset",
+			"face.off",
+			"fail",
+			"64f",
+			"vt",
+			"fail",
+			"debug",
+			"fail",
+			"6u",
+			"a_Vertex",
+			"unsafe",
+			"as @",
+			"filepath",
+			"save_me",
+			"int\ncreate_stencil",
+			"int",
+			" \n",
+			"make_rect",
+			"trait",
+			"glcore",
+			"View vector",
+			"create_mesh",
+			"LinearMap",
+			"range",
+			"bind_pose",
+			"lerp",
+			"glCreateShader",
+			"sync_back",
+			"));",
+			"lmath",
+			"self.node",
+			"a_Normal",
+			"used_meta",
+			"u_PosCam",
+			"substr",
+			"iter_bytes",
+			"GLint",
+			"cache.",
+			"self",
+			",\n",
+			"to_ptr",
+			"Vec3",
+			"==",
+			"*handle",
+			");\n",
+			"HashMap",
+			"LinearMap",
+			"my_val",
+			"size_of",
+			"sizeof"
+		],
+		"highlight": true,
+		"in_selection": false,
+		"preserve_case": false,
+		"regex": false,
+		"replace_history":
+		[
+			"log.stop",
+			"log.log",
+			"self.",
+			"new"
+		],
+		"reverse": false,
+		"show_context": true,
+		"use_buffer2": true,
+		"whole_word": true,
+		"wrap": true
+	},
+	"groups":
+	[
+		{
+			"selected": 1,
+			"sheets":
+			[
+				{
+					"buffer": 0,
+					"file": "/Users/kvark/Code/rust/claymore-game/game/battle.rs",
+					"settings":
+					{
+						"buffer_size": 6794,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								6705,
+								6705
+							]
+						],
+						"settings":
+						{
+							"glsv_configured": true,
+							"glsv_enabled": 1.0,
+							"glsv_spec": 0.0,
+							"syntax": "Packages/Rust/Rust.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 3111.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 1,
+					"file": "claymore",
+					"settings":
+					{
+						"buffer_size": 648,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								648,
+								648
+							]
+						],
+						"settings":
+						{
+							"glsv_configured": true,
+							"glsv_enabled": 1.0,
+							"glsv_spec": 0.0,
+							"syntax": "Packages/Makefile/Makefile.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 2,
+					"file": "/Users/kvark/Code/rust/claymore-game/Makefile",
+					"settings":
+					{
+						"buffer_size": 1375,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								709,
+								709
+							]
+						],
+						"settings":
+						{
+							"glsv_configured": true,
+							"glsv_enabled": 1.0,
+							"glsv_spec": 0.0,
+							"syntax": "Packages/Makefile/Makefile.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 190.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				}
+			]
+		}
+	],
+	"incremental_find":
+	{
+		"height": 0.0
+	},
+	"input":
+	{
+		"height": 31.0
+	},
+	"layout":
+	{
+		"cells":
+		[
+			[
+				0,
+				0,
+				1,
+				1
+			]
+		],
+		"cols":
+		[
+			0.0,
+			1.0
+		],
+		"rows":
+		[
+			0.0,
+			1.0
+		]
+	},
+	"menu_visible": true,
+	"output.exec":
+	{
+		"height": 163.0
+	},
+	"replace":
+	{
+		"height": 64.0
+	},
+	"save_all_on_build": true,
+	"select_file":
+	{
+		"height": 0.0,
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_project":
+	{
+		"height": 0.0,
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"show_minimap": true,
+	"show_open_files": false,
+	"show_tabs": true,
+	"side_bar_visible": true,
+	"side_bar_width": 216.0,
+	"status_bar_visible": true
+}

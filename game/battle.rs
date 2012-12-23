@@ -1,6 +1,10 @@
 extern mod lmath;
 extern mod engine;
 
+use lmath::quat::*;
+use lmath::vec::vec3::*;
+use lmath::vec::vec4::*;
+
 
 pub struct Character	{
 	entity		: engine::draw::Entity,
@@ -75,13 +79,13 @@ impl Scene	{
 			let sp = self.hero.entity.node.mut_space();
 			sp.position = self.grid.get_cell_center(i,j);
 			sp.position.z = 1.3f32;
-			sp.orientation = lmath::quaternion::Quat::new( 0.707f32, 0f32, 0f32, 0.707f32 );
+			sp.orientation = Quat::new( 0.707f32, 0f32, 0f32, 0.707f32 );
 		}
 		self.hero.update() && self.view.update( cam_dir ) && ok
 	}
 	pub fn render( ct : &engine::context::Context, tech : &engine::draw::Technique )	{
 		{// update matrices
-			let light_pos	= lmath::vector::Vec4::new( 4f32, 1f32, 6f32, 1f32 );
+			let light_pos	= Vec4::new( 4f32, 1f32, 6f32, 1f32 );
 			for [ &self.land, &self.hero.entity ].each |ent|	{
 				let d = ent.mut_data();
 				self.view.cam.fill_data( d );
@@ -109,8 +113,8 @@ pub fn make_battle( ct : &engine::context::Context, aspect : float )-> Scene	{
 		// create camera
 		let cam =	{
 			let cam_space = engine::space::QuatSpace{
-				position 	: lmath::vector::Vec3::new( 10f32, -10f32, 5f32 ),
-				orientation	: lmath::quaternion::Quat::new( 0.802f32, 0.447f32, 0.198f32, 0.343f32 ),
+				position 	: Vec3::new( 10f32, -10f32, 5f32 ),
+				orientation	: Quat::new( 0.802f32, 0.447f32, 0.198f32, 0.343f32 ),
 				scale		: 1f32
 			};
 			let cam_node = @engine::space::Node{
@@ -132,8 +136,9 @@ pub fn make_battle( ct : &engine::context::Context, aspect : float )-> Scene	{
 			}
 		};
 		let points = do vec::from_fn(4) |i|	{
+			//FIXME: use new quat constructors
 			let angle = (i as f32) * 0.25f32 * f32::consts::pi;
-			let q = lmath::quaternion::Quat::new( f32::cos(angle), 0f32, 0f32, f32::sin(angle) );
+			let q = Quat::new( f32::cos(angle), 0f32, 0f32, f32::sin(angle) );
 			engine::space::QuatSpace{
 				position	: q.mul_v( &cam.node.space.position ),
 				orientation	: q.mul_q( &cam.node.space.orientation ),
@@ -196,7 +201,7 @@ pub fn make_battle( ct : &engine::context::Context, aspect : float )-> Scene	{
 		let tex = @engine::load::load_texture_2D( ct, &~"data/texture/diffuse.jpg", true );
 		let s_opt = Some( engine::texture::make_sampler(3u,1) );
 		ent.mut_data().insert( ~"t_Main", engine::shade::UniTexture(0u,tex,s_opt) );
-		let utc = lmath::vector::Vec4::new(1f32,1f32,0f32,0f32);
+		let utc = Vec4::new(1f32,1f32,0f32,0f32);
 		ent.mut_data().insert( ~"u_TexTransform", engine::shade::UniFloatVec(utc) );
 		// done
 		Character{
@@ -210,7 +215,7 @@ pub fn make_battle( ct : &engine::context::Context, aspect : float )-> Scene	{
 	let tex = @engine::load::load_texture_2D( ct, &~"data/texture/SoilCracked0103_2_S.jpg", true );
 	let s_opt = Some( engine::texture::make_sampler(3u,1) );
 	battle_land.mut_data().insert( ~"t_Main", engine::shade::UniTexture(0u,tex,s_opt) );
-	let utc = lmath::vector::Vec4::new(10f32,10f32,0f32,0f32);
+	let utc = Vec4::new(10f32,10f32,0f32,0f32);
 	battle_land.mut_data().insert( ~"u_TexTransform", engine::shade::UniFloatVec(utc) );
 	// create grid
 	let grid = grid::make_grid( ct, 10u );
@@ -219,7 +224,7 @@ pub fn make_battle( ct : &engine::context::Context, aspect : float )-> Scene	{
 		let sp = hero.entity.node.mut_space();
 		sp.position = grid.get_cell_center(7u,2u);
 		sp.position.z = 1.3f32;
-		sp.orientation = lmath::quaternion::Quat::new( 0.707f32, 0f32, 0f32, 0.707f32 );
+		sp.orientation = Quat::new( 0.707f32, 0f32, 0f32, 0.707f32 );
 	}
 	// done
 	Scene{

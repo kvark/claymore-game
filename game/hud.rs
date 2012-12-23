@@ -2,9 +2,10 @@ extern mod engine;
 extern mod lmath;
 extern mod std;
 
+use lmath::vec::vec4::*;
 use send_map::linear::LinearMap;
 use std::json;
-use std::serialization::{deserialize,Deserializer,Deserializable};
+use std::serialize::{Decoder,Decodable};
 
 
 pub enum Anchor	{
@@ -23,7 +24,7 @@ pub enum Relation	{
 	RelTail,
 }
 
-pub type Alignment = (Anchor,Relation,Anchor);
+pub struct Alignment(Anchor,Relation,Anchor);
 pub type Point = (int,int);
 
 
@@ -50,7 +51,7 @@ pure fn parse_relation( s : &str )-> Relation	{
 pure fn parse_alignment( expression : &str )-> Alignment	{
 	let s = do str::split(expression) |c|	{c=='=' || c=='.'};
 	assert s.len() == 3u;
-	(parse_anchor(&s[0]), parse_relation(s[1]), parse_anchor(&s[2]))
+	Alignment(parse_anchor(&s[0]), parse_relation(s[1]), parse_anchor(&s[2]))
 }
 
 
@@ -115,7 +116,7 @@ impl Context	{
 		let (tx,ty) = self.size, (bx,by) = r.base, (sx,sy) = r.size;
 		let dx = 2f32 / (tx as f32);
 		let dy = 2f32 / (ty as f32);
-		let vt = lmath::vector::Vec4::new(
+		let vt = Vec4::new(
 			dx * (sx as f32),
 			dy * (sy as f32),
 			dx * (bx as f32) - 1f32,
@@ -137,11 +138,6 @@ impl () : Element	{
 	}
 }
 
-impl @Element : Deserializable {
-	static fn deserialize<D:Deserializer>( &self, d : &D )-> @Element {
-		@deserialize::<(),D>(d) as @Element
-	}
-}
 
 
 pub struct Frame	{
@@ -186,7 +182,7 @@ impl Frame	{
 		for uint::range(0,self.children.len()) |i|	{
 			let child = &self.children[i];
 			let size = child.update_size();
-			let (destination,relation,source) = child.alignment;
+			let Alignment(destination,relation,source) = child.alignment;
 			let (src_x,src_y) = Rect{base:(0,0),size:size}.
 				get_point( destination, &no_margin );
 			let (dst_x,dst_y) = match relation	{
@@ -221,7 +217,7 @@ impl Frame	{
 		let no_margin = Margin{side:0,bot:0,top:0};
 		for uint::range(0,self.children.len()) |i|	{
 			let child = &self.children[i];
-			let (destination,relation,source) = child.alignment;
+			let Alignment(destination,relation,source) = child.alignment;
 			let (src_x,src_y) = Rect{base:(0,0),size:child.area.size}.
 				get_point( destination, &Margin{side:0,bot:0,top:0} );
 			let (dst_x,dst_y) = match relation	{
@@ -279,7 +275,7 @@ impl Frame	{
 }
 
 
-#[auto_deserialize]
+#[auto_decode]
 pub struct FrameInfo	{
 	name	: ~str,
 	size	: Point,
@@ -305,7 +301,7 @@ pub fn convert_frames( fi_array : &~[FrameInfo] )-> ~[Frame]	{
 
 
 
-#[auto_deserialize]
+#[auto_decode]
 struct ImageInfo	{
 	frame	: ~str,
 	path	: ~str,
@@ -328,7 +324,7 @@ impl Image : Element	{
 		data.insert( ~"t_Image",	engine::shade::UniTexture(
 			0, self.texture, Some(self.sampler) ));
 		let (cx,cy) = self.center, (sx,sy) = rect.size;
-		let vc = lmath::vector::Vec4::new( cx, cy,
+		let vc = Vec4::new( cx, cy,
 			(sx as f32)/(self.texture.width as f32),
 			(sy as f32)/(self.texture.height as f32)
 			);
@@ -340,16 +336,8 @@ impl Image : Element	{
 }
 
 pub type FontInfo = (~str,uint,uint);
-impl FontInfo : to_bytes::IterBytes	{
-	pure fn iter_bytes(lsb0 : bool, f : to_bytes::Cb)	{
-		let &(name,sx,sy) = &self;
-		name.iter_bytes(lsb0,f);
-		sx.iter_bytes(lsb0,f);
-		sy.iter_bytes(lsb0,f);
-	}
-}
 
-#[auto_deserialize]
+#[auto_decode]
 struct LabelInfo	{
 	frame		: ~str,
 	text		: ~str,
@@ -374,7 +362,7 @@ impl Label : Element	{
 		let mut data = engine::shade::make_data();
 		let sm = engine::texture::make_sampler(1u,0);
 		data.insert( ~"t_Text",	engine::shade::UniTexture(0,self.texture,Some(sm)) );
-		let vc = lmath::vector::Vec4::new( self.color.r, self.color.g, self.color.b, self.color.a );
+		let vc = Vec4::new( self.color.r, self.color.g, self.color.b, self.color.a );
 		data.insert( ~"u_Color",	engine::shade::UniFloatVec(vc) );
 		let dr = Rect{ base:rect.base, size:self.get_size() };
 		data.insert( ~"u_Transform", hc.transform(&dr) );
@@ -384,7 +372,7 @@ impl Label : Element	{
 }
 
 
-#[auto_deserialize]
+#[auto_decode]
 struct ScreenInfo	{
 	frames	: ~[FrameInfo],
 	images	: ~[ImageInfo],
@@ -409,7 +397,7 @@ pub fn load_screen(path : ~str, ct : &engine::context::Context,
 		name		: ~"root",
 		min_size	: size,
 		area		: Rect{ base:(0,0), size:size },
-		alignment	: (ACenter,RelParent,ACenter),
+		alignment	: Alignment(ACenter,RelParent,ACenter),
 		element		: @() as @Element,
 		margin		: Margin{side:0,bot:0,top:0},
 		children	: convert_frames( &iscreen.frames ),
@@ -456,7 +444,7 @@ pub fn load_screen(path : ~str, ct : &engine::context::Context,
 		};
 		let label = @Label{
 			texture	: @font.bake( ct, ilabel.text, ilabel.bound ),
-			content	: ilabel.text,
+			content	: copy ilabel.text,
 			program	: prog_label,
 			color	: engine::rast::make_color(ilabel.color),
 		};

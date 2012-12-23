@@ -1,8 +1,10 @@
 extern mod glfw3;
 extern mod lmath;
 extern mod engine;
-
 extern mod std;
+
+use lmath::quat::*;
+use lmath::vec::vec3::*;
 use std::json;
 
 
@@ -37,10 +39,11 @@ struct Entry	{
 impl Entry	{
 	fn rotate_camera( dir : f32 )	{
 		let angle = dir * 0.01f32;
-		let q = lmath::quaternion::Quat::new( f32::cos(angle),
+		//FIXME: use new interface
+		let q = Quat::new( f32::cos(angle),
 			0f32, 0f32, f32::sin(angle) );
 		let s = engine::space::QuatSpace{
-			position : lmath::vector::Vec3::zero::<f32>(),
+			position : Vec3::new(0f32,0f32,0f32),
 			orientation : q, scale : 1f32 };
 		let n = self.cam.node;
 		*n.mut_space() = s * n.space;
@@ -132,10 +135,6 @@ struct Game	{
 	mut screen	: Screen,
 }
 
-pure fn vec3_to_vec4( v : &lmath::vector::vec3 )-> lmath::vector::vec4	{
-	lmath::vector::Vec4::new( v.x, v.y, v.z, 0f32 )
-}
-
 impl Game	{
 	fn update( nx : float, ny : float, mouse_hit : bool, cam_dir : int )-> bool	{
 		match self.screen	{
@@ -154,7 +153,7 @@ impl Game	{
 						self.entry.rotate_camera(1f32);
 					}
 				}
-				let lit_pos	= lmath::vector::Vec4::new( 3f32, 3f32, 3f32, 0f32 );
+				let lit_pos	= lmath::gltypes::vec4::new( 3f32, 3f32, 3f32, 0f32 );
 				for self.entry.gr_main.each() |ent|	{
 					ent.update_world();
 					let gd = ent.mut_data();
@@ -169,7 +168,7 @@ impl Game	{
 					self.entry.cam.fill_data( gd );
 					//self.entry.skel.fill_data( gd );
 				}
-				let vpi = self.entry.cam.get_matrix().inverse();
+				let vpi = self.entry.cam.get_matrix().invert();
 				//self.entry.cam.fill_data( &mut self.entry.envir.data );
 				self.entry.envir.data.insert( ~"u_ViewProjInverse",
 					engine::shade::UniMatrix(false,vpi) );
@@ -222,7 +221,7 @@ impl Game	{
 					let mut rast  = engine::rast::make_rast(0,0);
 					rast.prime.poly_mode = engine::rast::map_polygon_fill(2);
 					let mut data = engine::shade::make_data();
-					let vc = lmath::vector::Vec4::new(1f32,0f32,0f32,1f32);
+					let vc = lmath::gltypes::vec4::new(1f32,0f32,0f32,1f32);
 					data.insert( ~"u_Color", engine::shade::UniFloatVec(vc) );
 					self.entry.hud_screen.root.draw_debug( &self.entry.hud_context,
 						self.entry.hud_debug, &mut data, &rast )
@@ -281,11 +280,12 @@ fn create_game( wid : uint, het : uint )-> Game	{
 	// done
 	ct.check(~"init");
 	let aspect = (wid as float) / (het as float);
+	let entry = make_entry( &ct, aspect );
+	let battle = battle::make_battle( &ct, aspect );
 	Game{ context:ct, audio:ac,
 		sound_source:src,
 		frames:0u, technique:tech,
-		entry:make_entry( &ct, aspect ),
-		battle:battle::make_battle( &ct, aspect ),
+		entry:entry, battle:battle,
 		screen:ScreenEntry,
 	}
 }
@@ -299,15 +299,15 @@ fn fail_GLFW( where: &static/str ) -> !	{
 }
 
 
-#[auto_deserialize]
+#[auto_decode]
 struct ConfigWindow	{
 	title:~str, width:uint, height:uint, samples:uint, fullscreen:bool,
 }
-#[auto_deserialize]
+#[auto_decode]
 struct ConfigGL	{
 	major:uint, minor:uint, debug:bool,
 }
-#[auto_deserialize]
+#[auto_decode]
 struct Config	{
 	window	: ConfigWindow,
 	GL		: ConfigGL,

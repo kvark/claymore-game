@@ -38,10 +38,10 @@ pub enum Call	{
 
 impl context::Context	{
 	fn flush( queue	: ~[Call] )	{
-		for queue.each()	|call|	{
+		for vec::each_const(queue)	|&call|	{
 			match call	{
-				&CallEmpty => {},
-				&CallClear(fb,pmap,data,scissor,mask)	=> {
+				CallEmpty => {},
+				CallClear(fb,pmap,data,scissor,mask)	=> {
 					let mut colors : ~[frame::Target] = ~[];
 					for pmap.colors.each_value() |target|	{
 						colors.push( *target );
@@ -75,7 +75,7 @@ impl context::Context	{
 					}
 					glcore::glClear( flags );
 				},
-				&CallDraw(input,output,prog,data)	=> {
+				CallDraw(input,output,prog,data)	=> {
 					let &(fb,pmap,rast) = &output;
 					let mut attaches = vec::from_elem( pmap.colors.len(), frame::TarEmpty );
 					for pmap.colors.each() |name,target|	{
@@ -93,7 +93,7 @@ impl context::Context	{
 					self.rast.activate( &rast, mesh.get_poly_size() );
 					self.draw_mesh( input, prog, &data );
 				},
-				_	=> fail(~"Unsupported call!")
+				_	=> fail ~"Unsupported call!"
 			}
 		}
 	}

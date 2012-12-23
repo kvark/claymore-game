@@ -1,7 +1,13 @@
 extern mod lmath;
-pub type Matrix = lmath::matrix::mat4;
-pub type Vector = lmath::vector::vec3;
-pub type Quaternion = lmath::quaternion::quat4;
+
+use lmath::vec::vec3::*;
+use lmath::vec::vec4::*;
+use lmath::quat::*;
+use lmath::mat::mat4::*;
+
+pub type Matrix = Mat4<f32>;
+pub type Vector = Vec3<f32>;
+pub type Quaternion = Quat<f32>;
 pub type Scale = f32;
 
 
@@ -12,42 +18,27 @@ pub trait Space	{
 	pure fn transform( point : &Vector )-> Vector;
 	pure fn rotate( vector : &Vector )-> Vector;
 	pure fn mul( other : &self )-> self;
-	pure fn inverse()-> self;
+	pure fn invert()-> self;
 	pure fn to_matrix()-> Matrix;
 }
 
-//todo: remove this
-impl f32 : cmp::Ord	{
-	pure fn lt( other : &f32 )-> bool	{
-		self < *other
-	}
-	pure fn le( other : &f32 )-> bool	{
-		self <= *other
-	}
-	pure fn gt( other : &f32 )-> bool	{
-		self > *other
-	}
-	pure fn ge( other : &f32 )-> bool	{
-		self >= *other
-	}
-}
 
 impl Matrix : Space	{
 	pure fn transform( point : &Vector )-> Vector	{
-		let v4 = lmath::vector::Vec4::new( point.x, point.y, point.z, 1f32 );
+		let v4 = Vec4::new( point.x, point.y, point.z, 1f32 );
 		let vt = self.mul_v(&v4);
-		lmath::vector::Vec3::new( vt.x/vt.w, vt.y/vt.w, vt.z/vt.w )
+		Vec3::new( vt.x/vt.w, vt.y/vt.w, vt.z/vt.w )
 	}
 	pure fn rotate( vector : &Vector )-> Vector	{
-		let v4 = lmath::vector::Vec4::new( vector.x, vector.y, vector.z, 0f32 );
+		let v4 = Vec4::new( vector.x, vector.y, vector.z, 0f32 );
 		let vt = self.mul_v(&v4);
-		lmath::vector::Vec3::new( vt.x, vt.y, vt.z ).normalize()
+		Vec3::new( vt.x, vt.y, vt.z ).normalize()
 	}
 	pure fn mul( other : &Matrix )-> Matrix	{
 		self.mul_m(other)
 	}
-	pure fn inverse()-> Matrix	{
-		self.invert().expect( ~"Unable to invert matrix" )
+	pure fn invert()-> Matrix	{
+		self.inverse().expect( ~"Unable to invert matrix" )
 	}
 	pure fn to_matrix()-> Matrix	{self}
 }
@@ -73,7 +64,7 @@ impl QuatSpace : Space	{
 			scale		: self.scale * other.scale
 		}
 	}
-	pure fn inverse()-> QuatSpace	{
+	pure fn invert()-> QuatSpace	{
 		let q = self.orientation.conjugate();
 		let s = 1f32 / self.scale;
 		let p = q.mul_v(&self.position).mul_t(-s);
@@ -81,27 +72,30 @@ impl QuatSpace : Space	{
 	}
 	pure fn to_matrix()-> Matrix	{
 		//FIXME: remove transpose
-		let m3 = self.orientation.to_Mat3().transpose();
-		let mut m4 = m3.mul_t(self.scale).to_Mat4();
+		let m3 = self.orientation.to_mat3().transpose();
+		let mut m4 = m3.mul_t(self.scale).to_mat4();
 		m4.w.x = self.position.x;
 		m4.w.y = self.position.y;
 		m4.w.z = self.position.z;
 		m4
 	}
-	pure fn get_pos_scale()-> lmath::vector::vec4	{
-		lmath::vector::Vec4::new( self.position.x, self.position.y, self.position.z, self.scale )
+}
+
+impl QuatSpace	{
+	pure fn get_pos_scale()-> lmath::gltypes::vec4	{
+		Vec4::new( self.position.x, self.position.y, self.position.z, self.scale )
 	}
-	pure fn get_orientation()-> lmath::vector::vec4	{
-		lmath::vector::Vec4::new(
-			self.orientation.x, self.orientation.y,
-			self.orientation.z, self.orientation.w )	
+	pure fn get_orientation()-> lmath::gltypes::vec4	{
+		Vec4::new(
+			self.orientation.v.x, self.orientation.v.y,
+			self.orientation.v.z, self.orientation.s )	
 	}
 }
 
 pub pure fn identity()-> QuatSpace	{
 	QuatSpace{
-		position	: lmath::vector::Vec3::new(0f32,0f32,0f32),
-		orientation	: lmath::quaternion::Quat::new(1f32,0f32,0f32,0f32),
+		position	: Vec3::new(0f32,0f32,0f32),
+		orientation	: Quat::identity::<f32>(),
 		scale		: 1f32,
 	}
 }
@@ -132,7 +126,7 @@ impl Quaternion : Interpolate	{
 impl Scale : Interpolate	{
 	pure fn interpolate( other : &Scale, t : float )-> Scale	{
 		let t1  = (1f-t) as f32, t2 = t as f32;
-		self*t1 + other*t2
+		self*t1 + (*other)*t2
 	}
 }
 
@@ -151,19 +145,19 @@ pub trait Pretty	{
 	pure fn to_string()-> ~str;
 }
 
-impl Vector : Pretty	{
+impl Vec3<f32> : Pretty	{
 	pure fn to_string()-> ~str	{
 		fmt!( "(%f,%f,%f)", self.x as float, self.y as float, self.z as float )
 	}
 }
-impl lmath::vector::vec4 : Pretty	{
+impl Vec4<f32> : Pretty	{
 	pure fn to_string()-> ~str	{
 		fmt!( "(%f,%f,%f,%f)", self.x as float, self.y as float, self.z as float, self.w as float )
 	}	
 }
-impl Quaternion : Pretty	{
+impl Quat<f32> : Pretty	{
 	pure fn to_string()-> ~str	{
-		fmt!( "(%f,%f,%f,%f)", self.x as float, self.y as float, self.z as float, self.w as float )
+		fmt!( "(%f,%f,%f,%f)", self.s as float, self.v.x as float, self.v.y as float, self.v.z as float )
 	}
 }
 impl QuatSpace : Pretty	{
@@ -280,9 +274,9 @@ impl Armature : draw::Mod	{
 	fn fill_data( data : &mut shade::DataMap )	{
 		assert self.bones.len() < self.max_bones;
 		let id = identity();
-		let mut pos = vec::with_capacity::<lmath::vector::vec4>( self.max_bones );
-		let mut rot = vec::with_capacity::<lmath::vector::vec4>( self.max_bones );
-		let parent_inv = self.root.world_space().inverse();
+		let mut pos = vec::with_capacity::<lmath::gltypes::vec4>( self.max_bones );
+		let mut rot = vec::with_capacity::<lmath::gltypes::vec4>( self.max_bones );
+		let parent_inv = self.root.world_space().invert();
 		while pos.len() < self.max_bones	{
 			let space = if pos.len()>0u && pos.len()<self.bones.len()	{
 					let b = &self.bones[pos.len()-1u];
@@ -299,7 +293,7 @@ impl Armature : draw::Mod	{
 
 pure fn is_same_node( a: Option<@Node>, b : Option<@Node> )-> bool	{
 	match (a,b)	{
-		(Some(na),Some(nb))	=> box::ptr_eq(na,nb),
+		(Some(na),Some(nb))	=> managed::ptr_eq(na,nb),
 		(None,None)	=> true,
 		(_,_)		=> false,
 	}
