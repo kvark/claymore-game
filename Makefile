@@ -26,7 +26,7 @@ clean-engine:
 
 
 # external libraries section
-libs: clean-libs numeric lmath glfw3 glcore openal stb-image freetype
+libs: clean-libs numeric lmath cgmath glfw3 glcore openal stb-image freetype
 
 clean-libs:
 	(cd lib && rm -Rf liblmath* libglfw3* libglcore* openal* libstb*)
@@ -34,8 +34,11 @@ clean-libs:
 numeric:
 	(cd ../numeric-rs && rustc src/numeric.rc --out-dir ../${DIR}/lib/)
 
-lmath: numeric
+lmath:
 	(cd ../lmath-rs && make clean && make && cp -R lib/* ../${DIR}/lib/)
+
+cgmath:
+	(cd ../cgmath-rs && rustc src/cgmath.rc -L ../${DIR}/lib/ --out-dir ../${DIR}/lib/)
 	
 glfw3:
 	(cd ../glfw3-rs && make clean && make && cp -R lib/* ../${DIR}/lib/)

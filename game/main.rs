@@ -38,10 +38,11 @@ struct Entry	{
 
 impl Entry	{
 	fn rotate_camera( dir : f32 )	{
-		let angle = dir * 0.01f32;
-		//FIXME: use new interface
-		let q = Quat::new( f32::cos(angle),
-			0f32, 0f32, f32::sin(angle) );
+		let angle = dir * 0.03f32;
+		let q = Quat::from_axis_angle(
+			&Vec3::new(0f32,0f32,1f32),
+			numeric::types::Radians(angle)
+			);
 		let s = engine::space::QuatSpace{
 			position : Vec3::new(0f32,0f32,0f32),
 			orientation : q, scale : 1f32 };
@@ -73,8 +74,12 @@ fn make_entry( ct : &engine::context::Context, aspect : float, lg : &engine::con
 	let mut group = scene::divide_group( &mut scene.entities, &~"noTrasnform" );
 	let hair = scene::divide_group( &mut group, &~"Hair_Geo2" );
 	lg.add(fmt!( "Group size: %u", group.len() ));
-	lg.add(fmt!( "Camera fovx:%f,%f, range:%f-%f",
-		cam.proj.fov_x, cam.proj.fov_y, cam.proj.r_near, cam.proj.r_far ));
+	lg.add(fmt!( "Camera fov:%f, aspect:%f, range:%f-%f",
+		*cam.proj.vfov as float,
+		cam.proj.aspect as float,
+		cam.proj.near as float,
+		cam.proj.far as float ));
+	lg.add( ~"\tWorld :" + cam.node.world_space().to_string() );
 	let envir = {
 		let mesh = @engine::mesh::create_quad( ct );
 		let prog = @engine::load::load_program( ct, ~"data/code-game/envir", lg );
@@ -136,6 +141,14 @@ struct Game	{
 	mut screen	: Screen,
 }
 
+#[auto_decode]
+struct Elements	{
+	character	: bool,
+	environment	: bool,
+	hud			: bool,
+	hud_debug	: bool,
+}
+
 impl Game	{
 	fn update( nx : float, ny : float, mouse_hit : bool, cam_dir : int )-> bool	{
 		match self.screen	{
@@ -181,25 +194,27 @@ impl Game	{
 			_ => true
 		}
 	}
-	fn render()-> bool	{
+	fn render( el : &Elements )-> bool	{
 		match self.screen	{
 			ScreenEntry => {
 				// clear screen
 				let c0 = self.technique.gen_clear(
 					engine::call::ClearData{
-						color	:Some( engine::rast::make_color(0x8080FFFF) ),
+						color	:Some( engine::rast::make_color(0xFFFFFFFF) ),
 						depth	:Some( 1f ),
 						stencil	:Some( 0u ),
 					}
 				);
-				let _envir =	{
-					let e = &self.entry.envir;
-					let tech = &self.entry.tech_solid;
-					engine::call::CallDraw(
-						copy e.input, copy tech.output,
-						e.prog, copy e.data )
-				};
 				let mut queue = ~[c0];
+				if el.environment	{
+					queue.push({
+						let e = &self.entry.envir;
+						let tech = &self.entry.tech_solid;
+						engine::call::CallDraw(
+							copy e.input, copy tech.output,
+							e.prog, copy e.data )
+					});
+				}
 				if true	{	// update animation
 					let t = engine::anim::get_time() - self.entry.start;
 					let r = self.entry.skel.actions[0];
@@ -208,7 +223,7 @@ impl Game	{
 					self.entry.skel.set_record( r, t2 );
 					//self.entry.skel.fill_data( self.entry.girl.mut_data() );
 				}
-				if false	{
+				if el.character	{
 					for self.entry.gr_main.each() |ent|	{
 						queue.push( self.entry.tech_solid.process( ent, &self.context, &self.journal )
 							);
@@ -218,18 +233,22 @@ impl Game	{
 							);
 					}
 				}
-				let hud_debug = {
-					let mut rast  = engine::rast::make_rast(0,0);
-					rast.prime.poly_mode = engine::rast::map_polygon_fill(2);
-					let mut data = engine::shade::make_data();
-					let vc = lmath::gltypes::vec4::new(1f32,0f32,0f32,1f32);
-					data.insert( ~"u_Color", engine::shade::UniFloatVec(vc) );
-					self.entry.hud_screen.root.draw_debug( &self.entry.hud_context,
-						self.entry.hud_debug, &mut data, &rast )
-				};
-				let hud_calls = self.entry.hud_screen.root.draw_all( &self.entry.hud_context );
-				queue.push_all_move( hud_debug );
-				queue.push_all_move( hud_calls );
+				if el.hud	{
+					queue.push_all_move(
+						self.entry.hud_screen.root.draw_all( &self.entry.hud_context )
+						);
+				}
+				if el.hud_debug	{
+					queue.push_all_move({
+						let mut rast  = engine::rast::make_rast(0,0);
+						rast.prime.poly_mode = engine::rast::map_polygon_fill(2);
+						let mut data = engine::shade::make_data();
+						let vc = lmath::gltypes::vec4::new(1f32,0f32,0f32,1f32);
+						data.insert( ~"u_Color", engine::shade::UniFloatVec(vc) );
+						self.entry.hud_screen.root.draw_debug( &self.entry.hud_context,
+							self.entry.hud_debug, &mut data, &rast )
+					});
+				}
 				self.context.flush(queue);
 			},
 			ScreenBattle => {
@@ -317,6 +336,7 @@ struct Config	{
 	window	: ConfigWindow,
 	GL		: ConfigGL,
 	journal	: Log,
+	elements: Elements,
 }
 
 
@@ -379,7 +399,7 @@ fn main()	{
 			if !game.update(nx,ny,mouse_hit,cam_dir)	{
 				break
 			}
-			if !game.render()	{
+			if !game.render( &config.elements )	{
 				break;
 			}
 			window.swap_buffers();

@@ -1,8 +1,10 @@
+extern mod cgmath;
 extern mod engine;
 extern mod lmath;
 extern mod numeric;
 extern mod std;
 
+use cgmath::projection::*;
 use lmath::quat::*;
 use lmath::vec::vec3::*;
 use lmath::vec::vec4::*;
@@ -42,7 +44,7 @@ impl SpaceInfo	{
 			},
 			orientation : {
 				let (w,x,y,z) = self.orientation;
-				Quat::new(w,x,y,z)
+				Quat::new(w,x,y,z).normalize()
 			},
 			scale : self.scale,
 		}
@@ -166,21 +168,7 @@ impl MaterialInfo	{
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -//
 //	Projector
 
-pub struct Projector	{
-	fov_x	: float,
-	fov_y	: float,
-	r_near	: float,
-	r_far	: float,
-}
-
-impl Projector	{
-	pure fn to_matrix() -> lmath::gltypes::mat4	{
-		lmath::funs::projection::perspective(
-			angle::Degrees(self.fov_y as f32),
-			self.fov_x / self.fov_y as f32,
-			self.r_near as f32, self.r_far as f32 )
-	}
-}
+pub type Projector = PerspectiveSym<f32,Degrees<f32>>;
 
 #[auto_decode]
 pub struct ProjectorInfo	{
@@ -190,13 +178,13 @@ pub struct ProjectorInfo	{
 
 impl ProjectorInfo	{
 	pure fn spawn( aspect : float )-> Projector	{
-		let (near,far) = self.range;
-		let fov = self.fov * 180f / core::float::consts::pi;
-		Projector{
-			fov_x	: aspect * fov,
-			fov_y	: fov,
-			r_near	: near,
-			r_far	: far,
+		let (r0,r1) = self.range;
+		let vfov = Radians( self.fov as f32 );
+		PerspectiveSym{
+			vfov	: vfov.to_degrees(),
+			aspect	: aspect as f32,
+			near	: r0 as f32,
+			far		: r1 as f32,
 		}
 	}
 }
@@ -212,7 +200,10 @@ pub struct Camera	{
 
 impl Camera	{
 	pure fn get_matrix()-> lmath::gltypes::mat4	{
-		let proj = self.proj.to_matrix();
+		let proj = match self.proj.to_mat4()	{
+			Ok(m)	=> m,
+			Err(e)	=> fail ~"Camera projection fail: " + e.to_str()
+		};
 		proj * self.node.world_space().invert().to_matrix()
 	}
 	pure fn get_view_vector()-> lmath::gltypes::vec3	{
@@ -232,28 +223,6 @@ impl Camera	{
 		data.insert( ~"u_ViewProj",		engine::shade::UniMatrix(false,self.get_matrix()) );
 		data.insert( ~"u_CameraPos",	engine::shade::UniFloatVec(sw.get_pos_scale()) );
 		data.insert( ~"u_CameraRot",	engine::shade::UniFloatVec(sw.get_orientation()) );
-	}
-	pub fn test()	{
-		let m_vp = self.get_matrix();
-		let m_vp_inv = m_vp.invert();
-		let v_z1 = Vec3::new(0f32,0f32,1f32);
-		let v_z2 = m_vp_inv.rotate(&v_z1);
-		let v_z3 = self.get_view_vector();
-		io::println(fmt!("** Vz2=%s, Vz3=%s **",v_z2.to_string(),v_z3.to_string()));
-		let v_y1 = Vec3::new(0f32,1f32,0f32);
-		let v_y2 = m_vp_inv.rotate(&v_y1);
-		let v_y3 = self.get_up_vector();
-		io::println(fmt!("** Vy2=%s, Vy3=%s **",v_y2.to_string(),v_y3.to_string()));
-		let v_x1 = Vec3::new(1f32,0f32,0f32);
-		let v_x2 = m_vp_inv.rotate(&v_x1);
-		let v_x3 = self.get_side_vector();
-		io::println(fmt!("** Vx2=%s, Vx3=%s **",v_x2.to_string(),v_x3.to_string()));
-		let v_d2 = v_x2.cross(&v_y2);
-		let v_d3 = v_x3.cross(&v_y3);
-		io::println(fmt!("** Vd2=%s, Vd3=%s **",v_d2.to_string(),v_d3.to_string()));
-		io::println(m_vp.to_string());
-		io::println(m_vp_inv.to_string());
-		assert v_x2 == v_x3 && v_y2 == v_y3 && v_z2 == v_z3;
 	}
 }
 

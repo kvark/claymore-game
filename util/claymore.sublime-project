@@ -15,6 +15,9 @@
 		},
 		{
 			"path": "/Users/kvark/Code/rust/numeric-rs"
+		},
+		{
+			"path": "/Users/kvark/Code/rust/cgmath-rs"
 		}
 	]
 }

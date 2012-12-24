@@ -71,8 +71,7 @@ impl QuatSpace : Space	{
 		QuatSpace{ position:p, orientation:q, scale:s }
 	}
 	pure fn to_matrix()-> Matrix	{
-		//FIXME: remove transpose
-		let m3 = self.orientation.to_mat3().transpose();
+		let m3 = self.orientation.to_mat3();
 		let mut m4 = m3.mul_t(self.scale).to_mat4();
 		m4.w.x = self.position.x;
 		m4.w.y = self.position.y;

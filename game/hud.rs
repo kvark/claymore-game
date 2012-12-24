@@ -70,7 +70,7 @@ impl Rect : engine::space::Pretty	{
 	pure fn to_string()-> ~str	{
 		let (bx,by) = self.base;
 		let (sx,sy) = self.size;
-		fmt!( "[%d-%d)x[%d-%d)", bx, bx+sx, by, by+sy )
+		fmt!( "[%d:%d)x[%d:%d)", bx, bx+sx, by, by+sy )
 	}
 }
 
@@ -208,7 +208,7 @@ impl Frame	{
 				child.name, child.area.to_string(), x1,y1, x2,y2 ));
 		}
 		let content = ( int::max(ex,x_max-x_min), int::max(ey,y_max-y_min) ); 
-		lg.add(fmt!( "Frame3 '%s' bounding box is [%d-%d]x[%d-%d]", self.name, x_min, x_max, y_min, y_max ));
+		lg.add(fmt!( "\tFrame3 '%s' bounding box is [%d-%d]x[%d-%d]", self.name, x_min, x_max, y_min, y_max ));
 		self.area.size = self.get_size(content);
 		self.area.size
 	}
@@ -234,6 +234,7 @@ impl Frame	{
 	}
 
 	fn update( lg : &engine::context::Log )	{
+		lg.add( ~"Updating HUD: " + self.name );
 		self.update_size( lg );
 		assert self.area.size == self.min_size;
 		self.update_base( lg );

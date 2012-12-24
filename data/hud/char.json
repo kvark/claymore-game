@@ -13,13 +13,6 @@
 					"margin": [0,0,0],
 					"children": [
 						{
-							"name"	: "id.caption.left",
-							"size"	: [0,0],
-							"align"	: "left-top=parent.left-top",
-							"margin": [0,0,0],
-							"children": []
-						},
-						{
 							"name"	: "id.caption.text",
 							"size"	: [0,0],
 							"align"	: "mid-top=parent.mid-top",
@@ -27,9 +20,16 @@
 							"children": []
 						},
 						{
+							"name"	: "id.caption.left",
+							"size"	: [0,0],
+							"align"	: "right-top=head.left-top",
+							"margin": [0,0,0],
+							"children": []
+						},
+						{
 							"name"	: "id.caption.right",
 							"size"	: [0,0],
-							"align"	: "right-top=parent.right-top",
+							"align"	: "left-top=head.right-top",
 							"margin": [0,0,0],
 							"children": []
 						}
@@ -38,7 +38,7 @@
 				{
 					"name"	: "id.symbol.frame",
 					"size"	: [50,10],
-					"align"	: "left-top=tail.left-top",
+					"align"	: "left-top=tail.left-bot",
 					"margin": [0,0,0],
 					"children":	[
 						{
@@ -51,7 +51,7 @@
 						{
 							"name"	: "id.symbol.pic",
 							"size"	: [0,0],
-							"align"	: "mid-top=parent.mid-top",
+							"align"	: "right-top=parent.right-top",
 							"margin": [0,0,0],
 							"children":	[]
 						}
@@ -59,15 +59,15 @@
 				},
 				{
 					"name"	: "id.pad1",
-					"size"	: [100,0],
-					"align"	: "left-top=tail.left-top",
+					"size"	: [100,1],
+					"align"	: "left-top=tail.left-bot",
 					"margin": [0,0,0],
 					"children":	[]
 				},
 				{
 					"name"	: "id.nick.frame",
 					"size"	: [50,10],
-					"align"	: "left-top=tail.left-top",
+					"align"	: "left-top=tail.left-bot",
 					"margin": [0,0,0],
 					"children":	[
 						{
@@ -80,7 +80,7 @@
 						{
 							"name"	: "id.nick.text",
 							"size"	: [0,0],
-							"align"	: "mid-top=parent.mid-top",
+							"align"	: "right-top=parent.right-top",
 							"margin": [0,0,0],
 							"children":	[]
 						}
@@ -88,15 +88,15 @@
 				},
 				{
 					"name"	: "id.pad2",
-					"size"	: [100,0],
-					"align"	: "left-top=tail.left-top",
+					"size"	: [100,1],
+					"align"	: "left-top=tail.left-bot",
 					"margin": [0,0,0],
 					"children":	[]
 				},
 				{
 					"name"	: "id.name.frame",
 					"size"	: [50,10],
-					"align"	: "left-top=tail.left-top",
+					"align"	: "left-top=tail.left-bot",
 					"margin": [0,0,0],
 					"children":	[
 						{
@@ -109,7 +109,7 @@
 						{
 							"name"	: "id.name.text",
 							"size"	: [0,0],
-							"align"	: "mid-top=parent.mid-top",
+							"align"	: "right-top=parent.right-top",
 							"margin": [0,0,0],
 							"children":	[]
 						}
@@ -117,15 +117,15 @@
 				},
 				{
 					"name"	: "id.pad3",
-					"size"	: [100,0],
-					"align"	: "left-top=tail.left-top",
+					"size"	: [100,1],
+					"align"	: "left-top=tail.left-bot",
 					"margin": [0,0,0],
 					"children":	[]
 				},
 				{
 					"name"	: "id.misc.frame",
 					"size"	: [50,10],
-					"align"	: "left-top=tail.left-top",
+					"align"	: "left-top=tail.left-bot",
 					"margin": [0,0,0],
 					"children":	[
 						{
@@ -143,14 +143,14 @@
 							"children":	[]
 						},
 						{
-							"name"	: "id.arm.entry",
+							"name"	: "id.arm.text",
 							"size"	: [0,0],
 							"align"	: "right-top=parent.right-top",
 							"margin": [0,0,0],
 							"children":	[]
 						},
 						{
-							"name"	: "id.arm.text",
+							"name"	: "id.arm.entry",
 							"size"	: [0,0],
 							"align"	: "right-top=tail.left-top",
 							"margin": [0,0,0],
@@ -160,8 +160,8 @@
 				},
 				{
 					"name"	: "id.pad4",
-					"size"	: [100,0],
-					"align"	: "left-top=tail.left-top",
+					"size"	: [100,1],
+					"align"	: "left-top=tail.left-bot",
 					"margin": [0,0,0],
 					"children":	[]
 				}
@@ -169,14 +169,14 @@
 		},
 		{
 			"name"	: "app.frame",
-			"size"	: [200,400],
-			"align"	: "left-top=tail.left-top",
+			"size"	: [200,250],
+			"align"	: "left-top=tail.left-bot",
 			"margin": [10,10,10],
 			"children": []
 		},
 		{
 			"name"	: "eval.frame",
-			"size"	: [200,200],
+			"size"	: [200,100],
 			"align"	: "mid-bot=parent.mid-bot",
 			"margin": [10,10,10],
 			"children": [
@@ -187,13 +187,6 @@
 					"margin": [0,0,0],
 					"children": [
 						{
-							"name"	: "eval.caption.left",
-							"size"	: [0,0],
-							"align"	: "left-top=parent.left-top",
-							"margin": [0,0,0],
-							"children": []
-						},
-						{
 							"name"	: "eval.caption.text",
 							"size"	: [0,0],
 							"align"	: "mid-top=parent.mid-top",
@@ -201,9 +194,16 @@
 							"children": []
 						},
 						{
+							"name"	: "eval.caption.left",
+							"size"	: [0,0],
+							"align"	: "right-top=head.left-top",
+							"margin": [0,0,0],
+							"children": []
+						},
+						{
 							"name"	: "eval.caption.right",
 							"size"	: [0,0],
-							"align"	: "right-top=parent.right-top",
+							"align"	: "left-top=head.right-top",
 							"margin": [0,0,0],
 							"children": []
 						}
@@ -211,8 +211,8 @@
 				},
 				{
 					"name"	: "eval.text",
-					"size"	: [100,100],
-					"align"	: "mid-top=tail.mid-top",
+					"size"	: [100,50],
+					"align"	: "mid-top=tail.mid-bot",
 					"margin": [0,0,0],
 					"children"	: []
 				}
@@ -220,7 +220,7 @@
 		},
 		{
 			"name"	: "cap.frame",
-			"size"	: [200,400],
+			"size"	: [200,250],
 			"align"	: "right-top=parent.right-top",
 			"margin": [10,10,10],
 			"children": []		
@@ -228,7 +228,7 @@
 		{
 			"name"	: "tech.frame",
 			"size"	: [200,150],
-			"align"	: "right-top=tail.right-top",
+			"align"	: "right-top=tail.right-bot",
 			"margin": [10,10,10],
 			"children": [
 				{
@@ -238,13 +238,6 @@
 					"margin": [0,0,0],
 					"children": [
 						{
-							"name"	: "tech.caption.left",
-							"size"	: [0,0],
-							"align"	: "left-top=parent.left-top",
-							"margin": [0,0,0],
-							"children": []
-						},
-						{
 							"name"	: "tech.caption.text",
 							"size"	: [0,0],
 							"align"	: "mid-top=parent.mid-top",
@@ -252,9 +245,16 @@
 							"children": []
 						},
 						{
+							"name"	: "tech.caption.left",
+							"size"	: [0,0],
+							"align"	: "right-top=head.left-top",
+							"margin": [0,0,0],
+							"children": []
+						},
+						{
 							"name"	: "tech.caption.right",
 							"size"	: [0,0],
-							"align"	: "right-top=parent.right-top",
+							"align"	: "left-top=head.right-top",
 							"margin": [0,0,0],
 							"children": []
 						}
@@ -263,7 +263,7 @@
 				{
 					"name"	: "tech.name.frame",
 					"size"	: [50,10],
-					"align"	: "mid-top=tail.mid-top",
+					"align"	: "mid-top=tail.mid-bot",
 					"margin": [20,0,0],
 					"children": [
 						{
@@ -278,14 +278,14 @@
 				{
 					"name"	: "tech.description",
 					"size"	: [100,50],
-					"align"	: "right-top=tail.mid-top",
+					"align"	: "left-bot=parent.left-bot",
 					"margin": [0,0,0],
 					"children": []
 				},
 				{
 					"name"	: "tech.picture",
 					"size"	: [50,50],
-					"align"	: "left-top=tail.right-top",
+					"align"	: "right-bot=parent.right-bot",
 					"margin": [0,0,0],
 					"children": []
 				}
@@ -306,7 +306,7 @@
 		{
 			"frame"	: "id.caption.right",
 			"path"	: "tilde-right.png",
-			"center": [1.0,0.0]
+			"center": [0.0,0.0]
 		},
 		{
 			"frame"	: "id.symbol.pic",
@@ -334,31 +334,6 @@
 			"center": [0.0,0.0]
 		},
 		{
-			"frame"	: "tech.frame",
-			"path"	: "frame-rich.png",
-			"center": [0.5,0.5]
-		},
-		{
-			"frame"	: "tech.caption.left",
-			"path"	: "tilde-left.png",
-			"center": [0.0,0.0]
-		},
-		{
-			"frame"	: "tech.caption.right",
-			"path"	: "tilde-right.png",
-			"center": [1.0,0.0]
-		},
-		{
-			"frame"	: "tech.name.frame",
-			"path"	: "frame-side.png",
-			"center": [0.5,0]
-		},
-		{
-			"frame"	: "tech.picture",
-			"path"	: "tech/flash-sword.png",
-			"center": [0,0]
-		},
-		{
 			"frame"	: "eval.frame",
 			"path"	: "frame-rich.png",
 			"center": [0.5,0.5]
@@ -371,14 +346,39 @@
 		{
 			"frame"	: "eval.caption.right",
 			"path"	: "tilde-right.png",
-			"center": [1.0,0.0]
+			"center": [0.0,0.0]
+		},
+		{
+			"frame"	: "tech.frame",
+			"path"	: "frame-rich.png",
+			"center": [0.5,0.5]
+		},
+		{
+			"frame"	: "tech.caption.left",
+			"path"	: "tilde-left.png",
+			"center": [0.0,0.0]
+		},
+		{
+			"frame"	: "tech.caption.right",
+			"path"	: "tilde-right.png",
+			"center": [0.0,0.0]
+		},
+		{
+			"frame"	: "tech.name.frame",
+			"path"	: "frame-side.png",
+			"center": [0.5,0.0]
+		},
+		{
+			"frame"	: "tech.picture",
+			"path"	: "tech/flash-sword.png",
+			"center": [0,0]
 		}
 	],
 	"labels":[
 		{
 			"frame"	: "id.caption.text",
 			"text"	: "IDENTIFICATION",
-			"font"	: ["Arial.ttf",15,15],
+			"font"	: ["Vera.ttf",20,20],
 			"kern"	: [0,-10],
 			"color"	: 255,
 			"bound"	: [200,50]
@@ -386,7 +386,7 @@
 		{
 			"frame"	: "id.symbol.entry",
 			"text"	: "Symbol:",
-			"font"	: ["Arial.ttf",10,10],
+			"font"	: ["Vera.ttf",10,10],
 			"kern"	: [0,-10],
 			"color"	: 255,
 			"bound"	: [200,50]
@@ -394,7 +394,7 @@
 		{
 			"frame"	: "id.nick.entry",
 			"text"	: "Nick:",
-			"font"	: ["Arial.ttf",10,10],
+			"font"	: ["Vera.ttf",10,10],
 			"kern"	: [0,-10],
 			"color"	: 255,
 			"bound"	: [200,50]
@@ -410,7 +410,7 @@
 		{
 			"frame"	: "id.name.entry",
 			"text"	: "Name:",
-			"font"	: ["Arial.ttf",10,10],
+			"font"	: ["Vera.ttf",10,10],
 			"kern"	: [0,-10],
 			"color"	: 255,
 			"bound"	: [200,50]
@@ -426,7 +426,7 @@
 		{
 			"frame"	: "id.height.entry",
 			"text"	: "Height:",
-			"font"	: ["Arial.ttf",10,10],
+			"font"	: ["Vera.ttf",10,10],
 			"kern"	: [0,-10],
 			"color"	: 255,
 			"bound"	: [200,50]
@@ -442,7 +442,7 @@
 		{
 			"frame"	: "id.arm.entry",
 			"text"	: "Dominant Arm:",
-			"font"	: ["Arial.ttf",10,10],
+			"font"	: ["Vera.ttf",10,10],
 			"kern"	: [0,-10],
 			"color"	: 255,
 			"bound"	: [100,50]
@@ -456,25 +456,9 @@
 			"bound"	: [200,50]
 		},
 		{
-			"frame"	: "tech.caption.text",
-			"text"	: "TECHNIQUE",
-			"font"	: ["Arial.ttf",20,20],
-			"kern"	: [0,-10],
-			"color"	: 255,
-			"bound"	: [200,50]
-		},
-		{
-			"frame"	: "tech.description",
-			"text"	: "She can release the youma energy in her right arm and slash her oppopents to pieces with the former #2's technique. It's not something that should normally be controllable, but Number 47 can control it by synchronizing her youki.",
-			"font"	: ["Arial.ttf",8,8],
-			"kern"	: [0,-30],
-			"color"	: 255,
-			"bound"	: [250,150]
-		},
-		{
 			"frame"	: "eval.caption.text",
 			"text"	: "EVALUATION",
-			"font"	: ["Arial.ttf",20,20],
+			"font"	: ["Vera.ttf",20,20],
 			"kern"	: [0,-30],
 			"color"	: 255,
 			"bound"	: [200,50]
@@ -482,10 +466,34 @@
 		{
 			"frame"	: "eval.text",
 			"text"	: "Ability-wise, her prospects are slim, she is the lowest-ranked warrior. Her Perception is 'C+', which is probably because she became a soldier by taking in the flash and blood of the former #1, Teresa. She acts calm on the surface, but he has acted individualistically during missions on many occasions, in addition not showing satisfactory results from the ability inheritance experiment. She has shown warning signs of awakening. ",
-			"font"	: ["Arial.ttf",8,8],
+			"font"	: ["Vera.ttf",8,8],
 			"kern"	: [0,-30],
 			"color"	: 255,
 			"bound"	: [250,150]
+		},
+		{
+			"frame"	: "tech.caption.text",
+			"text"	: "TECHNIQUE",
+			"font"	: ["Vera.ttf",20,20],
+			"kern"	: [0,-10],
+			"color"	: 255,
+			"bound"	: [200,50]
+		},
+		{
+			"frame"	: "tech.name.text",
+			"text"	: "Flash Sword",
+			"font"	: ["Vera.ttf",15,15],
+			"kern"	: [0,-10],
+			"color"	: 255,
+			"bound"	: [200,50]
+		},
+		{
+			"frame"	: "tech.description",
+			"text"	: "She can release the youma energy in her right arm and slash her oppopents to pieces with the former #2's technique. It's not something that should normally be controllable, but Number 47 can control it by synchronizing her youki.",
+			"font"	: ["Vera.ttf",8,8],
+			"kern"	: [0,-30],
+			"color"	: 255,
+			"bound"	: [150,200]
 		}
 	]
 }

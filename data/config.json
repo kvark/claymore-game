@@ -14,5 +14,11 @@
 	"journal":	{
 		"path"	: "build/log.txt",
 		"depth"	: 5
+	},
+	"elements":	{
+		"character"		: true,
+		"environment"	: false,
+		"hud"			: true,
+		"hud_debug"		: false
 	}
 }

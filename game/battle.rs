@@ -123,14 +123,14 @@ pub fn make_battle( ct : &engine::context::Context, aspect : float, lg : &engine
 				parent	: None,
 				actions	: ~[],
 			};
-			let fov = 45f;
+			let fov = numeric::types::Degrees(45f32);
 			scene::Camera{
 				node	: cam_node,
-				proj	: scene::Projector{
-					fov_x	: aspect*fov,
-					fov_y	: fov,
-					r_near	: 1f,
-					r_far	: 25f,
+				proj	: cgmath::projection::PerspectiveSym{
+					vfov	: fov,
+					aspect	: aspect as f32,
+					near	: 1f32,
+					far		: 25f32,
 				},
 				ear		: engine::audio::Listener{ volume:0f },
 			}
