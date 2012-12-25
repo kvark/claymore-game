@@ -44,14 +44,14 @@
 						{
 							"name"	: "id.symbol.entry",
 							"size"	: [0,0],
-							"align"	: "left-top=parent.left-top",
+							"align"	: "left-mid=parent.left-mid",
 							"margin": [0,0,0],
 							"children":	[]
 						},
 						{
 							"name"	: "id.symbol.pic",
 							"size"	: [0,0],
-							"align"	: "right-top=parent.right-top",
+							"align"	: "right-mid=parent.right-mid",
 							"margin": [0,0,0],
 							"children":	[]
 						}

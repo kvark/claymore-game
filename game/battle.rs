@@ -107,7 +107,7 @@ impl Scene	{
 }
 
 
-pub fn make_battle( ct : &engine::context::Context, aspect : float, lg : &engine::context::Log )-> Scene	{
+pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine::context::Log )-> Scene	{
 	// create view
 	let view = 	{
 		// create camera

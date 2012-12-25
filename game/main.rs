@@ -15,119 +15,6 @@ enum Screen	{
 	ScreenDeath,
 }
 
-struct Envir	{
-	input	: engine::call::DrawInput,
-	prog	: @engine::shade::Program,
-	mut data: engine::shade::DataMap,
-	rast	: engine::rast::State,
-}
-
-struct Entry	{
-	gr_main	: scene::EntityGroup,
-	gr_hair	: scene::EntityGroup,
-	skel	: @engine::space::Armature,
-	cam		: scene::Camera,
-	envir	: Envir,
-	tech_solid	: engine::draw::Technique,
-	tech_alpha	: engine::draw::Technique,
-	start	: float,
-	hud_screen	: hud::Screen,
-	hud_context	: hud::Context,
-	hud_debug	: @engine::shade::Program,
-}
-
-impl Entry	{
-	fn rotate_camera( dir : f32 )	{
-		let angle = dir * 0.03f32;
-		let q = Quat::from_axis_angle(
-			&Vec3::new(0f32,0f32,1f32),
-			numeric::types::Radians(angle)
-			);
-		let s = engine::space::QuatSpace{
-			position : Vec3::new(0f32,0f32,0f32),
-			orientation : q, scale : 1f32 };
-		let n = self.cam.node;
-		*n.mut_space() = s * n.space;
-	}
-}
-
-fn make_entry( ct : &engine::context::Context, aspect : float, lg : &engine::context::Log )-> Entry	{
-	let vao = @ct.create_vertex_array();
-	let scene = scene::load_scene( ~"data/claymore-2", ct, Some(vao), aspect, lg );
-	let (t_solid,t_alpha) = {
-		let pmap = engine::call::make_plane_map( ~"o_Color", engine::frame::TarEmpty );
-		let mut rast = engine::rast::make_rast(0,0);
-		rast.depth.test = true;
-		//rast.prime.cull = true;	//the cloak is 2-sided
-		let cache = @mut engine::draw::create_cache();
-		let t1 = engine::draw::load_technique( ~"data/code/tech/forward/light",
-			(ct.default_frame_buffer, copy pmap, copy rast), cache);
-		rast.prime.cull = true;
-		rast.set_blend( ~"s+d", ~"Sa", ~"1-Sa" );
-		let t2 = engine::draw::load_technique( ~"data/code/tech/forward/light",
-			(ct.default_frame_buffer, pmap, rast), cache);
-		(t1,t2)
-	};
-	let arm = scene.armatures.get(&~"Armature.002");
-	let cam = scene.cameras.get(&~"Camera");
-	//cam.test();
-	let mut group = scene::divide_group( &mut scene.entities, &~"noTrasnform" );
-	let hair = scene::divide_group( &mut group, &~"Hair_Geo2" );
-	lg.add(fmt!( "Group size: %u", group.len() ));
-	lg.add(fmt!( "Camera fov:%f, aspect:%f, range:%f-%f",
-		*cam.proj.vfov as float,
-		cam.proj.aspect as float,
-		cam.proj.near as float,
-		cam.proj.far as float ));
-	lg.add( ~"\tWorld :" + cam.node.world_space().to_string() );
-	let envir = {
-		let mesh = @engine::mesh::create_quad( ct );
-		let prog = @engine::load::load_program( ct, ~"data/code-game/envir", lg );
-		let tex = scene.textures.get( &~"data/texture/Topanga_Forest_B_3k.hdr" );
-		let samp = engine::texture::make_sampler(3u,1);
-		let mut data = engine::shade::make_data();
-		data.insert( ~"t_Environment",		engine::shade::UniTexture(0,tex,Some(samp)) );
-		let mut rast = engine::rast::make_rast(0,0);
-		rast.set_depth( ~"<=", false );
-		Envir{
-			input:(vao,mesh,mesh.get_range()),
-			prog:prog,
-			data:data,
-			rast:rast,
-		}		
-	};
-	// load char HUD
-	let fcon = @engine::font::create_context();
-	let hud_screen = hud::load_screen( ~"data/hud/char.json", ct, fcon, lg );
-	hud_screen.root.update( lg );
-	let hc = {
-		let mut hud_rast = engine::rast::make_rast(0,0);
-		hud_rast.set_blend( ~"s+d", ~"Sa", ~"1-Sa" );
-		let quad = @engine::mesh::create_quad(ct);
-		let &(_,pmap,_) = &t_solid.output;
-		hud::Context{
-			input	: (vao,quad,quad.get_range()),
-			output	: (ct.default_frame_buffer, copy pmap, hud_rast),
-			size	: ct.screen_size,
-		}
-	};
-	let hdebug = @engine::load::load_program( ct, ~"data/code/hud/debug", lg );
-	//arm.set_record( arm.actions[0], 0f );
-	Entry	{
-		gr_main	: group,
-		gr_hair	: hair,
-		skel	: arm,
-		cam		: cam,
-		envir	: envir,
-		tech_solid	: t_solid,
-		tech_alpha	: t_alpha,
-		start	: engine::anim::get_time(),
-		hud_screen	: hud_screen,
-		hud_context : hc,
-		hud_debug	: hdebug,
-	}
-}
-
 
 struct Game	{
 	context		: engine::context::Context,
@@ -136,13 +23,13 @@ struct Game	{
 	sound_source: @engine::audio::Source,
 	mut frames	: uint,
 	technique	: engine::draw::Technique,
-	entry		: Entry,
+	editor		: chared::Scene,
 	battle		: battle::Scene,
 	mut screen	: Screen,
 }
 
 #[auto_decode]
-struct Elements	{
+pub struct Elements	{
 	character	: bool,
 	environment	: bool,
 	hud			: bool,
@@ -152,105 +39,14 @@ struct Elements	{
 impl Game	{
 	fn update( nx : float, ny : float, mouse_hit : bool, cam_dir : int )-> bool	{
 		match self.screen	{
-			ScreenEntry => {
-				if nx>=0f && nx<=1f && ny>=0f && ny<=1f	{
-					if nx<0.1f	{
-						self.entry.rotate_camera(-2f32);
-					}else
-					if nx<0.25f	{
-						self.entry.rotate_camera(-1f32);
-					}else
-					if nx>0.9f	{
-						self.entry.rotate_camera(2f32);
-					}else
-					if nx>0.75f	{
-						self.entry.rotate_camera(1f32);
-					}
-				}
-				let lit_pos	= lmath::gltypes::vec4::new( 3f32, 3f32, 3f32, 0f32 );
-				for self.entry.gr_main.each() |ent|	{
-					ent.update_world();
-					let gd = ent.mut_data();
-					gd.insert( ~"u_LightPos",	engine::shade::UniFloatVec(lit_pos) );
-					self.entry.cam.fill_data( gd );
-					//self.entry.skel.fill_data( gd );
-				}
-				for self.entry.gr_hair.each() |ent|	{
-					ent.update_world();
-					let gd = ent.mut_data();
-					gd.insert( ~"u_LightPos",	engine::shade::UniFloatVec(lit_pos) );
-					self.entry.cam.fill_data( gd );
-					//self.entry.skel.fill_data( gd );
-				}
-				let vpi = self.entry.cam.get_matrix().invert();
-				//self.entry.cam.fill_data( &mut self.entry.envir.data );
-				self.entry.envir.data.insert( ~"u_ViewProjInverse",
-					engine::shade::UniMatrix(false,vpi) );
-				true
-			},
-			ScreenBattle => {
-				self.battle.update( &self.context.texture, nx, ny, mouse_hit, cam_dir )
-			},
+			ScreenEntry		=> self.editor.update( nx,ny ),
+			ScreenBattle	=> self.battle.update( &self.context.texture, nx, ny, mouse_hit, cam_dir ),
 			_ => true
 		}
 	}
 	fn render( el : &Elements )-> bool	{
 		match self.screen	{
-			ScreenEntry => {
-				// clear screen
-				let c0 = self.technique.gen_clear(
-					engine::call::ClearData{
-						color	:Some( engine::rast::make_color(0xFFFFFFFF) ),
-						depth	:Some( 1f ),
-						stencil	:Some( 0u ),
-					}
-				);
-				let mut queue = ~[c0];
-				if el.environment	{
-					queue.push({
-						let e = &self.entry.envir;
-						let tech = &self.entry.tech_solid;
-						engine::call::CallDraw(
-							copy e.input, copy tech.output,
-							e.prog, copy e.data )
-					});
-				}
-				if true	{	// update animation
-					let t = engine::anim::get_time() - self.entry.start;
-					let r = self.entry.skel.actions[0];
-					let nloops = (t / r.duration) as uint;
-					let t2 = t - r.duration * (nloops as float);
-					self.entry.skel.set_record( r, t2 );
-					//self.entry.skel.fill_data( self.entry.girl.mut_data() );
-				}
-				if el.character	{
-					for self.entry.gr_main.each() |ent|	{
-						queue.push( self.entry.tech_solid.process( ent, &self.context, &self.journal )
-							);
-					}
-					for self.entry.gr_hair.each() |ent|	{
-						queue.push( self.entry.tech_alpha.process( ent, &self.context, &self.journal )
-							);
-					}
-				}
-				if el.hud	{
-					queue.push_all_move(
-						self.entry.hud_screen.root.draw_all( &self.entry.hud_context )
-						);
-				}
-				if el.hud_debug	{
-					queue.push_all_move({
-						let mut rast  = engine::rast::make_rast(0,0);
-						rast.prime.poly_mode = engine::rast::map_polygon_fill(2);
-						let mut data = engine::shade::make_data();
-						let vc = lmath::gltypes::vec4::new(1f32,0f32,0f32,1f32);
-						data.insert( ~"u_Color", engine::shade::UniFloatVec(vc) );
-						self.entry.hud_screen.root.draw_debug( &self.entry.hud_context,
-							self.entry.hud_debug, &mut data, &rast )
-					});
-				}
-				self.context.flush(queue);
-			},
+			ScreenEntry => self.editor.render( el , &self.context, &self.journal ),
 			ScreenBattle => {
 				// clear screen
 				let c0 = self.technique.gen_clear(
@@ -300,12 +96,12 @@ fn create_game( wid : uint, het : uint, lg : engine::context::Log  )-> Game	{
 	// done
 	ct.check(~"init");
 	let aspect = (wid as float) / (het as float);
-	let entry = make_entry( &ct, aspect, &lg );
-	let battle = battle::make_battle( &ct, aspect, &lg );
+	let editor = chared::make_scene( &ct, aspect, &lg );
+	let battle = battle::make_scene( &ct, aspect, &lg );
 	Game{ context:ct, audio:ac, journal:lg,
 		sound_source:src,
 		frames:0u, technique:tech,
-		entry:entry, battle:battle,
+		editor:editor, battle:battle,
 		screen:ScreenEntry,
 	}
 }

@@ -12,10 +12,12 @@ pub enum Anchor	{
 	ALeftTop,
 	AMidTop,
 	ARightTop,
+	ALeftMid,
+	ACenter,
+	ARightMid,
 	ALeftBot,
 	AMidBot,
 	ARightBot,
-	ACenter,
 }
 
 pub enum Relation	{
@@ -33,10 +35,12 @@ pure fn parse_anchor( s : &~str )-> Anchor	{
 		~"left-top"	=> ALeftTop,
 		~"mid-top"	=> AMidTop,
 		~"right-top"=> ARightTop,
+		~"left-mid"	=> ALeftMid,
+		~"center"	=> ACenter,
+		~"right-mid"=> ARightMid,
 		~"left-bot"	=> ALeftBot,
 		~"mid-bot"	=> AMidBot,
 		~"right-bot"=> ARightBot,
-		~"center"	=> ACenter,
 		_	=> fail ~"Unknown anchor: " + *s
 	}
 }
@@ -87,10 +91,12 @@ impl Rect	{
 			ALeftTop	=> (bx+m.side,					by+sy-m.top),
 			AMidTop		=> (bx+(m.side+sx-m.side)/2,	by+sy-m.top),
 			ARightTop	=> (bx+sx-m.side,				by+sy-m.top),
+			ALeftMid	=> (bx+m.side,					by+(m.bot+sy-m.top)/2),
+			ACenter		=> (bx+(m.side+sx-m.side)/2,	by+(m.bot+sy-m.top)/2),
+			ARightMid	=> (bx+sx-m.side,				by+(m.bot+sy-m.top)/2),
 			ALeftBot	=> (bx+m.side,					by+m.bot),
 			AMidBot		=> (bx+(m.side+sx-m.side)/2,	by+m.bot),
 			ARightBot	=> (bx+sx-m.side,				by+m.bot),
-			ACenter		=> (bx+(m.side+sx-m.side)/2,	by+(m.bot+sy-m.top)/2),
 		}
 	}
 }
