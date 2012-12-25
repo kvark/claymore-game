@@ -246,6 +246,17 @@ impl Frame	{
 		self.update_base( lg );
 	}
 
+	fn trace( x : int, y : int, lg : &engine::context::Log )-> ~str	{
+		for self.children.each() |child|	{
+			let (bx,by) = child.area.base;
+			let (sx,sy) = child.area.size;
+			if bx<=x && bx+sx>x && by<=y && by+sy>y	{
+				return child.trace( x, y, lg )
+			}
+		}
+		return copy self.name
+	}
+
 	fn populate( &mut self, name : &~str, elem : @Element )-> bool	{
 		if self.name == *name	{
 			self.element = elem;

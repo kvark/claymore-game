@@ -18,6 +18,9 @@
 		},
 		{
 			"path": "/Users/kvark/Code/rust/cgmath-rs"
+		},
+		{
+			"path": "/Users/kvark/Code/rust/glfw3-rs"
 		}
 	]
 }

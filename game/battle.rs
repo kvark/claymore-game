@@ -73,7 +73,8 @@ pub struct Scene	{
 }
 
 impl Scene	{
-	pub fn update( tb : &engine::texture::Binding, nx : float, ny : float, mouse_hit : bool, cam_dir : int )-> bool	{
+	pub fn update( tb : &engine::texture::Binding, nx : float, ny : float, mouse_hit : bool)-> bool	{
+		let cam_dir = 0;
 		let (i,j,ok) = self.grid.update( tb, &self.view.cam, nx, ny );
 		if mouse_hit && self.grid.get_rectangle().contains(i,j)	{
 			let sp = self.hero.entity.node.mut_space();

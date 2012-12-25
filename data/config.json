@@ -17,7 +17,7 @@
 	},
 	"elements":	{
 		"character"		: true,
-		"environment"	: false,
+		"environment"	: true,
 		"hud"			: true,
 		"hud_debug"		: false
 	}

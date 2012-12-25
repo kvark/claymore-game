@@ -1,5 +1,6 @@
 extern mod engine;
 extern mod lmath;
+extern mod numeric;
 
 use lmath::quat::*;
 use lmath::vec::vec3::*;
@@ -12,11 +13,54 @@ struct Envir	{
 	rast	: engine::rast::State,
 }
 
+struct CamControl	{
+	node		: @engine::space::Node,
+	origin		: Vec3<f32>,
+	speed_rot	: f32,
+	speed_zoom	: f32,
+	mut last_scroll	: Option<float>,
+}
+
+pub fn clamp<T:cmp::Ord>( x:T, a:T, b:T )-> T	{
+	if x>a {
+		if x<b	{x}
+		else	{b}
+	}else {a}
+}
+
+impl CamControl	{
+	fn update( dt : float, nx : float, _ny : float, hit : bool, scroll : float )	{
+		// calculate rotation
+		if hit	{
+			let axis = Vec3::new( 0f32, 0f32, if nx>0.5f {1f32} else {-1f32} );
+			let angle = numeric::types::Radians( dt as f32 * self.speed_rot );
+			let qr = Quat::from_axis_angle( &axis, angle );
+			let sq = engine::space::QuatSpace{
+				position : Vec3::new(0f32,0f32,0f32),
+				orientation : qr, scale : 1f32 };
+			*self.node.mut_space() = sq * self.node.space;
+		}
+		// calculate scroll
+		if scroll != 0f	{
+			let v_origin = self.origin.sub_v( &self.node.space.position );
+			let dist_min = 20f32;
+			let dist_max = 100f32;
+			let dist = v_origin.length();
+			let dist_raw = dist - (scroll as f32) * self.speed_zoom;
+			let dist_diff = clamp( dist_raw, dist_min, dist_max ) - dist;
+			let p = self.node.space.position.sub_v( &v_origin.mul_t(dist_diff/dist) );
+			self.node.mut_space().position = p;
+		}
+	}
+}
+
+
 pub struct Scene	{
 	gr_main	: scene::EntityGroup,
 	gr_hair	: scene::EntityGroup,
 	skel	: @engine::space::Armature,
 	cam		: scene::Camera,
+	control	: CamControl,
 	envir	: Envir,
 	tech_solid	: engine::draw::Technique,
 	tech_alpha	: engine::draw::Technique,
@@ -28,33 +72,17 @@ pub struct Scene	{
 
 
 impl Scene	{
-	fn rotate_camera( dir : f32 )	{
-		let angle = dir * 0.03f32;
-		let q = Quat::from_axis_angle(
-			&Vec3::new(0f32,0f32,1f32),
-			numeric::types::Radians(angle)
-			);
-		let s = engine::space::QuatSpace{
-			position : Vec3::new(0f32,0f32,0f32),
-			orientation : q, scale : 1f32 };
-		let n = self.cam.node;
-		*n.mut_space() = s * n.space;
-	}
-	fn update( nx : float, ny : float )-> bool	{
-		if nx>=0f && nx<=1f && ny>=0f && ny<=1f	{
-			if nx<0.1f	{
-				self.rotate_camera(-2f32);
-			}else
-			if nx<0.25f	{
-				self.rotate_camera(-1f32);
-			}else
-			if nx>0.9f	{
-				self.rotate_camera(2f32);
-			}else
-			if nx>0.75f	{
-				self.rotate_camera(1f32);
-			}
+	fn update( nx : float, ny : float, hit : bool, scroll : float, lg : &engine::context::Log )-> bool	{
+		if hit	{
+			let root = &self.hud_screen.root;
+			let (mx,my) = root.min_size;
+			let x = ((0f+nx) * (mx as float)) as int;
+			let y = ((1f-ny) * (my as float)) as int;
+			let name = root.trace( x, y, lg );
+			io::println( ~"Click: " + name );
 		}
+		let dt = 1f/30f;
+		self.control.update( dt, nx, ny, hit, scroll );
 		let lit_pos	= lmath::gltypes::vec4::new( 3f32, 3f32, 3f32, 0f32 );
 		for self.gr_main.each() |ent|	{
 			ent.update_world();
@@ -194,12 +222,20 @@ pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine:
 		}
 	};
 	let hdebug = @engine::load::load_program( ct, ~"data/code/hud/debug", lg );
+	let control = CamControl{
+		node	:cam.node,
+		origin	:Vec3::new(0f32,0f32,78f32),
+		speed_rot	:1.5f32,
+		speed_zoom	:15f32,
+		last_scroll	: None,
+	};
 	//arm.set_record( arm.actions[0], 0f );
 	Scene	{
 		gr_main	: group,
 		gr_hair	: hair,
 		skel	: arm,
 		cam		: cam,
+		control	: control,
 		envir	: envir,
 		tech_solid	: t_solid,
 		tech_alpha	: t_alpha,

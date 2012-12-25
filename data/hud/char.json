@@ -8,7 +8,7 @@
 			"children": [
 				{
 					"name"	: "id.caption.frame",
-					"size"	: [50,10],
+					"size"	: [200,10],
 					"align"	: "left-top=parent.left-top",
 					"margin": [0,0,0],
 					"children": [
@@ -37,7 +37,7 @@
 				},
 				{
 					"name"	: "id.symbol.frame",
-					"size"	: [50,10],
+					"size"	: [200,10],
 					"align"	: "left-top=tail.left-bot",
 					"margin": [0,0,0],
 					"children":	[
@@ -59,28 +59,28 @@
 				},
 				{
 					"name"	: "id.pad1",
-					"size"	: [100,1],
+					"size"	: [200,1],
 					"align"	: "left-top=tail.left-bot",
 					"margin": [0,0,0],
 					"children":	[]
 				},
 				{
 					"name"	: "id.nick.frame",
-					"size"	: [50,10],
+					"size"	: [200,10],
 					"align"	: "left-top=tail.left-bot",
 					"margin": [0,0,0],
 					"children":	[
 						{
 							"name"	: "id.nick.entry",
 							"size"	: [0,0],
-							"align"	: "left-top=parent.left-top",
+							"align"	: "left-mid=parent.left-mid",
 							"margin": [0,0,0],
 							"children":	[]
 						},
 						{
 							"name"	: "id.nick.text",
 							"size"	: [0,0],
-							"align"	: "right-top=parent.right-top",
+							"align"	: "right-mid=parent.right-mid",
 							"margin": [0,0,0],
 							"children":	[]
 						}
@@ -88,28 +88,28 @@
 				},
 				{
 					"name"	: "id.pad2",
-					"size"	: [100,1],
+					"size"	: [200,1],
 					"align"	: "left-top=tail.left-bot",
 					"margin": [0,0,0],
 					"children":	[]
 				},
 				{
 					"name"	: "id.name.frame",
-					"size"	: [50,10],
+					"size"	: [200,10],
 					"align"	: "left-top=tail.left-bot",
 					"margin": [0,0,0],
 					"children":	[
 						{
 							"name"	: "id.name.entry",
 							"size"	: [0,0],
-							"align"	: "left-top=parent.left-top",
+							"align"	: "left-mid=parent.left-mid",
 							"margin": [0,0,0],
 							"children":	[]
 						},
 						{
 							"name"	: "id.name.text",
 							"size"	: [0,0],
-							"align"	: "right-top=parent.right-top",
+							"align"	: "right-mid=parent.right-mid",
 							"margin": [0,0,0],
 							"children":	[]
 						}
@@ -117,42 +117,42 @@
 				},
 				{
 					"name"	: "id.pad3",
-					"size"	: [100,1],
+					"size"	: [200,1],
 					"align"	: "left-top=tail.left-bot",
 					"margin": [0,0,0],
 					"children":	[]
 				},
 				{
 					"name"	: "id.misc.frame",
-					"size"	: [50,10],
+					"size"	: [200,10],
 					"align"	: "left-top=tail.left-bot",
 					"margin": [0,0,0],
 					"children":	[
 						{
 							"name"	: "id.height.entry",
 							"size"	: [0,0],
-							"align"	: "left-top=parent.left-top",
+							"align"	: "left-mid=parent.left-mid",
 							"margin": [0,0,0],
 							"children":	[]
 						},
 						{
 							"name"	: "id.height.text",
 							"size"	: [0,0],
-							"align"	: "left-top=tail.right-top",
+							"align"	: "left-mid=tail.right-mid",
 							"margin": [0,0,0],
 							"children":	[]
 						},
 						{
 							"name"	: "id.arm.text",
 							"size"	: [0,0],
-							"align"	: "right-top=parent.right-top",
+							"align"	: "right-mid=parent.right-mid",
 							"margin": [0,0,0],
 							"children":	[]
 						},
 						{
 							"name"	: "id.arm.entry",
 							"size"	: [0,0],
-							"align"	: "right-top=tail.left-top",
+							"align"	: "right-mid=tail.left-mid",
 							"margin": [0,0,0],
 							"children":	[]
 						}
@@ -160,7 +160,7 @@
 				},
 				{
 					"name"	: "id.pad4",
-					"size"	: [100,1],
+					"size"	: [200,1],
 					"align"	: "left-top=tail.left-bot",
 					"margin": [0,0,0],
 					"children":	[]

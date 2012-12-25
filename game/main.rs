@@ -37,10 +37,10 @@ pub struct Elements	{
 }
 
 impl Game	{
-	fn update( nx : float, ny : float, mouse_hit : bool, cam_dir : int )-> bool	{
+	fn update( nx : float, ny : float, mouse_hit : bool, scroll : float )-> bool	{
 		match self.screen	{
-			ScreenEntry		=> self.editor.update( nx,ny ),
-			ScreenBattle	=> self.battle.update( &self.context.texture, nx, ny, mouse_hit, cam_dir ),
+			ScreenEntry		=> self.editor.update( nx, ny, mouse_hit, scroll, &self.journal ),
+			ScreenBattle	=> self.battle.update( &self.context.texture, nx, ny, mouse_hit ),
 			_ => true
 		}
 	}
@@ -170,6 +170,7 @@ fn main()	{
 				glfw3::destroy_window(&mut window);
 				break;
 			}
+			let (_,scroll_y) = window.get_scroll_offset();
 			let shift = window.get_key(glfw3::KEY_LEFT_SHIFT)!=0;
 			// debug keys
 			if window.get_key(glfw3::KEY_LEFT)!=0	{
@@ -187,12 +188,12 @@ fn main()	{
 			// mouse buttons
 			let mouse_hit = window.get_mouse_button( glfw3::MOUSE_BUTTON_LEFT )!=0;
 			// camera rotation
-			let cam_dir = (window.get_key(glfw3::KEY_E) - window.get_key(glfw3::KEY_Q)) as int;
+			let _cam_dir = (window.get_key(glfw3::KEY_E) - window.get_key(glfw3::KEY_Q)) as int;
 			// render
 			let (cx,cy) = window.get_cursor_pos();
 			let nx = (cx as float)/(config.window.width as float);
 			let ny = (cy as float)/(config.window.height as float);
-			if !game.update(nx,ny,mouse_hit,cam_dir)	{
+			if !game.update( nx, ny, mouse_hit, scroll_y as float )	{
 				break
 			}
 			if !game.render( &config.elements )	{
