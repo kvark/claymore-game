@@ -1,4 +1,4 @@
-//%meta initMaterial cookVector 
+//%meta initMatPure initMatRich cookVector 
 
 uniform mat4 u_World;
 uniform vec4 u_Tex0Transform;
@@ -14,21 +14,25 @@ out vec2	v_Tex;
 out mat3	TBN;
 
 
+vec3 initMatPure()	{
+	vec3 pos = modifyInit( a_Position );
+	return (u_World * vec4(pos,1.0)).xyz;
+}
+
 vec3 cookVector(vec3 v)	{
 	return v * TBN;
 }
 
-vec3 initMaterial()	{
-	vec3 pos = modifyInit( a_Position );
+vec3 initMatRich()	{
 	vec3 nor = modifyVector( a_Normal.xyz );
 	vec3 tan = modifyVector( a_Tangent.xyz );
 	mat3 m3w = mat3( u_World );
-	vec3 wp = m3w*pos + u_World[3].xyz;
 	vec3 normal		= normalize( m3w * nor );
 	vec3 tangent	= normalize( m3w * tan );
 	vec3 bit = cross(normal,tangent) * a_Tangent.w;
 	vec3 bitangent	= normalize( bit );
 	TBN = mat3(tangent,bitangent,normal);
+	vec3 wp	= initMatPure();
 	v_Eye = cookVector( u_CameraPos.xyz - wp );
 	v_NormalWorld = normal;
 	vec2 tc = vec2( a_Tex0.x, 1.0-a_Tex0.y );
