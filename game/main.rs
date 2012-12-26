@@ -9,7 +9,7 @@ use std::json;
 
 
 enum Screen	{
-	ScreenEntry,
+	ScreenChar,
 	ScreenBattle,
 	ScreenWorld,
 	ScreenDeath,
@@ -39,14 +39,14 @@ pub struct Elements	{
 impl Game	{
 	fn update( nx : float, ny : float, mouse_hit : bool, scroll : float )-> bool	{
 		match self.screen	{
-			ScreenEntry		=> self.editor.update( nx, ny, mouse_hit, scroll, &self.journal ),
+			ScreenChar		=> self.editor.update( nx, ny, mouse_hit, scroll, &self.journal ),
 			ScreenBattle	=> self.battle.update( &self.context.texture, nx, ny, mouse_hit ),
 			_ => true
 		}
 	}
 	fn render( el : &Elements )-> bool	{
 		match self.screen	{
-			ScreenEntry => self.editor.render( el , &self.context, &self.journal ),
+			ScreenChar => self.editor.render( el , &self.context, &self.journal ),
 			ScreenBattle => {
 				// clear screen
 				let c0 = self.technique.gen_clear(
@@ -102,7 +102,7 @@ fn create_game( wid : uint, het : uint, lg : engine::context::Log  )-> Game	{
 		sound_source:src,
 		frames:0u, technique:tech,
 		editor:editor, battle:battle,
-		screen:ScreenEntry,
+		screen:ScreenChar,
 	}
 }
 

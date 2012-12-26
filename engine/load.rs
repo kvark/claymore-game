@@ -143,6 +143,7 @@ pub fn load_program( ct : &context::Context, path : ~str, lg : &context::Log )->
 
 fn create_texture_2D<T>( ct : &context::Context, image : &stb_image::image::Image<T>, mipmap : bool,
 	int_format : glcore::GLenum, pix_type : glcore::GLenum )-> texture::Texture	{
+	assert (image.width | image.height) & 3u == 0u;
 	let format = match image.depth	{
 		4u	=> glcore::GL_RGBA,
 		3u	=> glcore::GL_RGB,

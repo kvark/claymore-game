@@ -1,7 +1,7 @@
 {
 	"window":	{
 		"title"		:"Claymore",
-		"width"		:800,
+		"width"		:1000,
 		"height"	:600,
 		"samples"	:0,
 		"fullscreen":false

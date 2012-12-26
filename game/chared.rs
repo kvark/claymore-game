@@ -44,7 +44,7 @@ impl CamControl	{
 		if scroll != 0f	{
 			let v_origin = self.origin.sub_v( &self.node.space.position );
 			let dist_min = 20f32;
-			let dist_max = 100f32;
+			let dist_max = 200f32;
 			let dist = v_origin.length();
 			let dist_raw = dist - (scroll as f32) * self.speed_zoom;
 			let dist_diff = clamp( dist_raw, dist_min, dist_max ) - dist;
@@ -108,21 +108,21 @@ impl Scene	{
 		// clear screen
 		let c0 = self.tech_solid.gen_clear(
 			engine::call::ClearData{
-				color	:Some( engine::rast::make_color(0xFFFFFFFF) ),
+				color	:Some( engine::rast::make_color(0x8080FFFF) ),
 				depth	:Some( 1f ),
 				stencil	:Some( 0u ),
 			}
 		);
-		let mut queue = ~[c0];
-		if el.environment	{
-			queue.push({
-				let e = &self.envir;
-				let tech = &self.tech_solid;
-				engine::call::CallDraw(
-					copy e.input, copy tech.output,
-					e.prog, copy e.data )
-			});
-		}
+		let c1 = if el.environment	{
+			let e = &self.envir;
+			let &(pmap,fbo,_) = &self.tech_solid.output;
+			engine::call::CallDraw(
+				copy e.input, (copy pmap,fbo,copy e.rast),
+				e.prog, copy e.data )
+		}else	{
+			engine::call::CallEmpty
+		};
+		let mut queue = ~[c0,c1];
 		if true	{	// update animation
 			let t = engine::anim::get_time() - self.start;
 			let r = self.skel.actions[0];
@@ -192,13 +192,17 @@ pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine:
 	lg.add( ~"\tWorld :" + cam.node.world_space().to_string() );
 	let envir = {
 		let mesh = @engine::mesh::create_quad( ct );
-		let prog = @engine::load::load_program( ct, ~"data/code-game/envir", lg );
-		let tex = scene.textures.get( &~"data/texture/Topanga_Forest_B_3k.hdr" );
+		//let prog = @engine::load::load_program( ct, ~"data/code-game/envir", lg );
+		//let tex = scene.textures.get( &~"data/texture/Topanga_Forest_B_3k.hdr" );
+		//let samp = engine::texture::make_sampler(3u,1);
+		let prog = @engine::load::load_program( ct, ~"data/code-game/copy", lg );
+		let tex = @engine::load::load_texture_2D( ct, &~"data/texture/bg2.jpg", true );
 		let samp = engine::texture::make_sampler(3u,1);
 		let mut data = engine::shade::make_data();
-		data.insert( ~"t_Environment",		engine::shade::UniTexture(0,tex,Some(samp)) );
+		//data.insert( ~"t_Environment",		engine::shade::UniTexture(0,tex,Some(samp)) );
+		data.insert( ~"t_Image",		engine::shade::UniTexture(0,tex,Some(samp)) );
 		let mut rast = engine::rast::make_rast(0,0);
-		rast.set_depth( ~"<=", false );
+		//rast.set_depth( ~"<=", false );
 		Envir{
 			input:(vao,mesh,mesh.get_range()),
 			prog:prog,
@@ -224,7 +228,7 @@ pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine:
 	let hdebug = @engine::load::load_program( ct, ~"data/code/hud/debug", lg );
 	let control = CamControl{
 		node	:cam.node,
-		origin	:Vec3::new(0f32,0f32,78f32),
+		origin	:Vec3::new(0f32,0f32,75f32),
 		speed_rot	:1.5f32,
 		speed_zoom	:15f32,
 		last_scroll	: None,

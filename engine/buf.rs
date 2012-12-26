@@ -172,13 +172,13 @@ impl context::Context	{
 
 	fn allocate_buffer( obj : &Object, size : uint, dynamic : bool )	{
 		self.bind_buffer( obj );
-		let usage = if dynamic {glcore::GL_STATIC_DRAW} else {glcore::GL_DYNAMIC_DRAW};
+		let usage = if dynamic {glcore::GL_DYNAMIC_DRAW} else {glcore::GL_STATIC_DRAW};
 		glcore::glBufferData( *self.array_buffer.target, size as glcore::GLsizeiptr, ptr::null(), usage );
 	}
 
 	fn load_buffer<T>( obj : &Object, data : &[T], dynamic : bool )	{
 		self.bind_buffer( obj );
-		let usage = if dynamic {glcore::GL_STATIC_DRAW} else {glcore::GL_DYNAMIC_DRAW};
+		let usage = if dynamic {glcore::GL_DYNAMIC_DRAW} else {glcore::GL_STATIC_DRAW};
 		let size = data.len() * sys::size_of::<T>() as glcore::GLsizeiptr;
 		let raw = unsafe{vec::raw::to_ptr(data)} as *glcore::GLvoid;
 		glcore::glBufferData( *self.array_buffer.target, size, raw, usage );
