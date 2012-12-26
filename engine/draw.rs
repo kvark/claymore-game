@@ -88,6 +88,19 @@ pub struct Technique	{
 
 impl Technique	{
 	pure fn get_header()-> ~str	{~"#version 150 core"}
+
+	fn clone( name : ~str, rast : rast::State )-> Technique	{
+		let &(pmap,fbo,_) = &self.output;
+		Technique{
+			name	: name,
+			output	: (copy pmap,fbo,rast),
+			meta_vertex		: copy self.meta_vertex,
+			meta_fragment	: copy self.meta_fragment,
+			code_vertex		: copy self.code_vertex,
+			code_fragment	: copy self.code_fragment,
+			cache			: self.cache,
+		}
+	}
 	
 	fn make_vertex( material : @Material, modifier : @Mod )-> ~str	{
 		str::connect([
@@ -184,10 +197,10 @@ pub fn load_material( path : ~str )-> Material	{
 	}
 }
 
-pub fn load_technique( path : ~str, out : call::DrawOutput, cache : @mut Cache )-> Technique	{
+pub fn load_technique( name : ~str, path : ~str, out : call::DrawOutput, cache : @mut Cache )-> Technique	{
 	let s_vert = load::load_text(path+".glslv");
 	let s_frag = load::load_text(path+".glslf");
-	Technique{ name:path, output:out,
+	Technique{ name:name, output:out,
 		meta_vertex		:extract_metas(s_vert),
 		meta_fragment	:extract_metas(s_frag),
 		code_vertex		:s_vert,

@@ -93,7 +93,7 @@ fn create_game( wid : uint, het : uint, lg : engine::context::Log  )-> Game	{
 		rast.set_depth(~"<=",true);
 		rast.prime.cull = true;
 		let cache = @mut engine::draw::create_cache();
-		engine::draw::load_technique( ~"data/code/tech/forward/light",
+		engine::draw::load_technique( ~"main", ~"data/code/tech/forward/light",
 			(ct.default_frame_buffer, pmap, rast), cache)
 	};
 	// done

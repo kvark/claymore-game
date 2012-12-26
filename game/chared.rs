@@ -57,12 +57,14 @@ impl CamControl	{
 
 pub struct Scene	{
 	gr_main	: scene::EntityGroup,
+	gr_cape	: scene::EntityGroup,
 	gr_hair	: scene::EntityGroup,
 	skel	: @engine::space::Armature,
 	cam		: scene::Camera,
 	control	: CamControl,
 	envir	: Envir,
 	tech_solid	: engine::draw::Technique,
+	tech_cloak	: engine::draw::Technique,
 	tech_alpha	: engine::draw::Technique,
 	start	: float,
 	hud_screen	: hud::Screen,
@@ -85,19 +87,14 @@ impl Scene	{
 		}
 		self.control.update( dt, nx, ny, hit, scroll );
 		let lit_pos	= lmath::gltypes::vec4::new( 3f32, 3f32, 3f32, 0f32 );
-		for self.gr_main.each() |ent|	{
-			ent.update_world();
-			let gd = ent.mut_data();
-			gd.insert( ~"u_LightPos",	engine::shade::UniFloatVec(lit_pos) );
-			self.cam.fill_data( gd );
-			//self.skel.fill_data( gd );
-		}
-		for self.gr_hair.each() |ent|	{
-			ent.update_world();
-			let gd = ent.mut_data();
-			gd.insert( ~"u_LightPos",	engine::shade::UniFloatVec(lit_pos) );
-			self.cam.fill_data( gd );
-			//self.skel.fill_data( gd );
+		for [&self.gr_main, &self.gr_cape, &self.gr_hair].each() |group|	{
+			for group.each() |ent|	{
+				ent.update_world();
+				let gd = ent.mut_data();
+				gd.insert( ~"u_LightPos",	engine::shade::UniFloatVec(lit_pos) );
+				self.cam.fill_data( gd );
+				//self.skel.fill_data( gd );
+			}	
 		}
 		let vpi = self.cam.get_matrix().invert();
 		//self.cam.fill_data( &mut self.envir.data );
@@ -134,12 +131,13 @@ impl Scene	{
 		}
 		if el.character	{
 			for self.gr_main.each() |ent|	{
-				queue.push( self.tech_solid.process( ent, ct, lg )
-					);
+				queue.push( self.tech_solid.process( ent, ct, lg ) );
+			}
+			for self.gr_cape.each() |ent|	{
+				queue.push( self.tech_cloak.process( ent, ct, lg ) );	
 			}
 			for self.gr_hair.each() |ent|	{
-				queue.push( self.tech_alpha.process( ent, ct, lg )
-					);
+				queue.push( self.tech_alpha.process( ent, ct, lg ) );
 			}
 		}
 		if el.hud	{
@@ -178,24 +176,26 @@ impl Scene	{
 pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine::context::Log )-> Scene	{
 	let vao = @ct.create_vertex_array();
 	let scene = scene::load_scene( ~"data/claymore-2", ct, Some(vao), aspect, lg );
-	let (t_solid,t_alpha) = {
+	let (t_solid,t_cloak,t_alpha) = {
 		let pmap = engine::call::make_plane_map( ~"o_Color", engine::frame::TarEmpty );
 		let mut rast = engine::rast::make_rast(0,0);
 		rast.depth.test = true;
-		//rast.prime.cull = true;	//the cloak is 2-sided
-		let cache = @mut engine::draw::create_cache();
-		let t1 = engine::draw::load_technique( ~"data/code/tech/forward/light",
-			(ct.default_frame_buffer, copy pmap, copy rast), cache);
+		rast.prime.cull = true;
+		let t1 = engine::draw::load_technique( ~"solid", ~"data/code/tech/forward/light",
+			(ct.default_frame_buffer, pmap, copy rast),
+			@mut engine::draw::create_cache() );
+		rast.prime.cull = false;
+		let t2 = t1.clone( ~"2sided", copy rast );
 		rast.prime.cull = true;
 		rast.set_blend( ~"s+d", ~"Sa", ~"1-Sa" );
-		let t2 = engine::draw::load_technique( ~"data/code/tech/forward/light",
-			(ct.default_frame_buffer, pmap, rast), cache);
-		(t1,t2)
+		let t3 = t1.clone( ~"alpha", rast );
+		(t1,t2,t3)
 	};
 	let arm = scene.armatures.get(&~"Armature.002");
 	let cam = scene.cameras.get(&~"Camera");
 	//cam.test();
 	let mut group = scene::divide_group( &mut scene.entities, &~"noTrasnform" );
+	let cape = scene::divide_group( &mut group, &~"polySurface172" );
 	let hair = scene::divide_group( &mut group, &~"Hair_Geo2" );
 	lg.add(fmt!( "Group size: %u", group.len() ));
 	lg.add(fmt!( "Camera fov:%f, aspect:%f, range:%f-%f",
@@ -250,12 +250,14 @@ pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine:
 	//arm.set_record( arm.actions[0], 0f );
 	Scene	{
 		gr_main	: group,
+		gr_cape	: cape,
 		gr_hair	: hair,
 		skel	: arm,
 		cam		: cam,
 		control	: control,
 		envir	: envir,
 		tech_solid	: t_solid,
+		tech_cloak	: t_cloak,
 		tech_alpha	: t_alpha,
 		start	: engine::anim::get_time(),
 		hud_screen	: hud_screen,
