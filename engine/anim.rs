@@ -108,7 +108,6 @@ pub struct Action<C>	{
 	start	: float,
 }
 
-//FIXME: can't use on Rust-0.4
 pub fn make_action<C>( p : @Player<C>, name : ~str )-> Option<Action<C>>	{
 	match p.find_record(name)	{
 		Some(r)	=> Some(Action	{
@@ -123,11 +122,9 @@ pub fn make_action<C>( p : @Player<C>, name : ~str )-> Option<Action<C>>	{
 impl<C> Action<C> : Act	{
 	fn update()-> bool	{
 		let t = get_time() - self.start;
-		if t<0f || t>self.record.duration	{
-			false
-		}else	{
+		if t>=0f && t<=self.record.duration	{
 			self.player.set_record( self.record, t );
 			true
-		}
+		}else	{false}
 	}
 }

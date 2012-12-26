@@ -218,6 +218,7 @@ impl Binding	{
 	fn load_2D<T>(	t : &Texture, level : uint, int_format : glcore::GLint,
 			pix_format : glcore::GLenum, pix_type : glcore::GLenum, data : &const ~[T])	{
 		self.bind( t );
+		glcore::glPixelStorei( glcore::GL_UNPACK_ALIGNMENT, 1 as glcore::GLint );
 		assert t.width>0 && t.height>0 && t.samples==0u;
 		assert t.levels >= level;
 		if t.levels==level	{ t.levels+=1; }

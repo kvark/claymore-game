@@ -68,20 +68,21 @@ pub struct Scene	{
 	hud_screen	: hud::Screen,
 	hud_context	: hud::Context,
 	hud_debug	: @engine::shade::Program,
+	mut mouse	: (int,int),
 }
 
 
 impl Scene	{
-	fn update( nx : float, ny : float, hit : bool, scroll : float, lg : &engine::context::Log )-> bool	{
-		if hit	{
+	fn update( dt : float, nx : float, ny : float, hit : bool, scroll : float, _lg : &engine::context::Log )-> bool	{
+		if true || hit	{
 			let root = &self.hud_screen.root;
 			let (mx,my) = root.min_size;
 			let x = ((0f+nx) * (mx as float)) as int;
 			let y = ((1f-ny) * (my as float)) as int;
-			let name = root.trace( x, y, lg );
-			io::println( ~"Click: " + name );
+			self.mouse = (x,y);
+			//let name = root.trace( x, y, lg );
+			//io::println( ~"Click: " + name );
 		}
-		let dt = 1f/30f;
 		self.control.update( dt, nx, ny, hit, scroll );
 		let lit_pos	= lmath::gltypes::vec4::new( 3f32, 3f32, 3f32, 0f32 );
 		for self.gr_main.each() |ent|	{
@@ -145,6 +146,19 @@ impl Scene	{
 			queue.push_all_move(
 				self.hud_screen.root.draw_all( &self.hud_context )
 				);
+			let (x,y) = self.mouse;
+			let mut rast  = engine::rast::make_rast(0,0);
+			rast.prime.poly_mode = engine::rast::map_polygon_fill(2);
+			let mut data = engine::shade::make_data();
+			let vc = lmath::gltypes::vec4::new(1f32,0f32,0f32,1f32);
+			data.insert( ~"u_Color", engine::shade::UniFloatVec(vc) );
+			do self.hud_screen.root.trace(x,y)	|frame,depth| {
+				if depth==0u && frame.element.get_size()!=(0,0)	{
+					let call = frame.draw_debug( &self.hud_context,
+							self.hud_debug, &mut data, &rast );
+					queue.push(call);
+				}
+			};
 		}
 		if el.hud_debug	{
 			queue.push_all_move({
@@ -153,7 +167,7 @@ impl Scene	{
 				let mut data = engine::shade::make_data();
 				let vc = lmath::gltypes::vec4::new(1f32,0f32,0f32,1f32);
 				data.insert( ~"u_Color", engine::shade::UniFloatVec(vc) );
-				self.hud_screen.root.draw_debug( &self.hud_context,
+				self.hud_screen.root.draw_debug_all( &self.hud_context,
 					self.hud_debug, &mut data, &rast )
 			});
 		}
@@ -247,5 +261,6 @@ pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine:
 		hud_screen	: hud_screen,
 		hud_context : hc,
 		hud_debug	: hdebug,
+		mouse	: (0,0),
 	}
 }

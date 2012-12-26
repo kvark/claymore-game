@@ -132,7 +132,7 @@ impl Context	{
 	}
 }
 
-trait Element	{
+pub trait Element	{
 	pure fn get_size()-> Point;
 	fn draw( &Context, &Rect )-> engine::call::Call;
 }
@@ -246,15 +246,18 @@ impl Frame	{
 		self.update_base( lg );
 	}
 
-	fn trace( x : int, y : int, lg : &engine::context::Log )-> ~str	{
+	fn trace( &self, x : int, y : int, fun : &fn(&Frame,uint) )-> uint	{
 		for self.children.each() |child|	{
 			let (bx,by) = child.area.base;
 			let (sx,sy) = child.area.size;
 			if bx<=x && bx+sx>x && by<=y && by+sy>y	{
-				return child.trace( x, y, lg )
+				let d = child.trace( x, y, fun ) + 1u;
+				fun(self,d);
+				return d
 			}
 		}
-		return copy self.name
+		fun(self,0);
+		0u
 	}
 
 	fn populate( &mut self, name : &~str, elem : @Element )-> bool	{
@@ -281,12 +284,17 @@ impl Frame	{
 	}
 
 	fn draw_debug( hc : &Context, prog : @engine::shade::Program,
-		data : &mut engine::shade::DataMap, rast : &engine::rast::State )-> ~[engine::call::Call]	{
+		data : &mut engine::shade::DataMap, rast : &engine::rast::State )-> engine::call::Call	{
 		data.insert( ~"u_Transform", hc.transform(&self.area) );
-		let c0 = hc.call( prog, copy *data, Some(rast) );
+		hc.call( prog, copy *data, Some(rast) )
+	}
+
+	fn draw_debug_all( hc : &Context, prog : @engine::shade::Program,
+		data : &mut engine::shade::DataMap, rast : &engine::rast::State )-> ~[engine::call::Call]	{
+		let c0 = self.draw_debug(hc,prog,data,rast);
 		let mut queue = ~[c0];
 		for self.children.each() |child|	{
-			queue.push_all_move( child.draw_debug(hc,prog,data,rast) );
+			queue.push_all_move( child.draw_debug_all(hc,prog,data,rast) );
 		}
 		queue
 	}

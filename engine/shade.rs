@@ -403,44 +403,6 @@ impl context::Context	{
 				}
 			}
 		}
-/*		for data.each |name,value|	{
-			io::println( ~"Looking for " + *name );
-			match p.params.find(name)	{
-				Some(par) =>	{
-					io::println(~"Found");
-					let mut val = copy *value;	//FIXME: no copy
-					match *value	{
-						UniTexture(_,t,s_opt)	=>	{
-							check_sampler( *t.target, par.storage );
-							match s_opt	{
-								Some(ref s) => self.texture.bind_to( tex_unit, t, s ),
-								None	=>	{
-									self.texture.switch(tex_unit);
-									self.texture.bind(t);
-								}
-							}
-							val = UniTexture( tex_unit, t, s_opt );
-							tex_unit += 1;
-						},
-						_	=> ()
-					}
-					if par.value != val	{
-						//io::println(fmt!( "Uploading val '%s'", *name ));
-						par.value = val;
-						par.write();
-					}
-				},
-				None => {io::println(~"Not found");}
-			}
-		}
-		for p.params.each_value() |par|	{
-			match par.value	{
-				Unitialized => fail fmt!(
-					"Program %d has non-initialized parameter %d",
-					*p.handle as int, *par.loc as int ),
-				_ => (),
-			}
-		}*/
 		true
 	}
 

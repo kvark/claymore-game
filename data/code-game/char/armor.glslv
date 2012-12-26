@@ -11,16 +11,11 @@ in	vec2	a_Tex0;
 
 out vec3	v_Eye,v_NormalWorld;
 out vec2	v_Tex;
+out mat3	TBN;
 
-
-out mat3 TBN;
 
 vec3 cookVector(vec3 v)	{
 	return v * TBN;
-}
-
-vec3 normalizeAlt(vec3 v)	{
-	return v*(1.5 - 0.5*dot(v,v));
 }
 
 vec3 initMaterial()	{
@@ -29,10 +24,10 @@ vec3 initMaterial()	{
 	vec3 tan = modifyVector( a_Tangent.xyz );
 	mat3 m3w = mat3( u_World );
 	vec3 wp = m3w*pos + u_World[3].xyz;
-	vec3 normal		= normalizeAlt( m3w * nor );
-	vec3 tangent	= normalizeAlt( m3w * tan );
+	vec3 normal		= normalize( m3w * nor );
+	vec3 tangent	= normalize( m3w * tan );
 	vec3 bit = cross(normal,tangent) * a_Tangent.w;
-	vec3 bitangent	= normalizeAlt( bit );
+	vec3 bitangent	= normalize( bit );
 	TBN = mat3(tangent,bitangent,normal);
 	v_Eye = cookVector( u_CameraPos.xyz - wp );
 	v_NormalWorld = normal;

@@ -26,6 +26,7 @@ struct Game	{
 	editor		: chared::Scene,
 	battle		: battle::Scene,
 	mut screen	: Screen,
+	mut time	: float,
 }
 
 #[auto_decode]
@@ -38,8 +39,10 @@ pub struct Elements	{
 
 impl Game	{
 	fn update( nx : float, ny : float, mouse_hit : bool, scroll : float )-> bool	{
+		let dt = engine::anim::get_time() - self.time;
+		self.time += dt;
 		match self.screen	{
-			ScreenChar		=> self.editor.update( nx, ny, mouse_hit, scroll, &self.journal ),
+			ScreenChar		=> self.editor.update( dt, nx, ny, mouse_hit, scroll, &self.journal ),
 			ScreenBattle	=> self.battle.update( &self.context.texture, nx, ny, mouse_hit ),
 			_ => true
 		}
@@ -102,7 +105,7 @@ fn create_game( wid : uint, het : uint, lg : engine::context::Log  )-> Game	{
 		sound_source:src,
 		frames:0u, technique:tech,
 		editor:editor, battle:battle,
-		screen:ScreenChar,
+		screen:ScreenChar, time:0f,
 	}
 }
 
