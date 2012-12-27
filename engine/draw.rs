@@ -171,6 +171,16 @@ impl Technique	{
 		}
 	}
 
+	fn process_to( pmap : frame::PlaneMap, e : &Entity, ct : &context::Context, lg : &context::Log )	{
+		match self.get_program(e,ct,lg)	{
+			Some(p)	=>	{
+				let &(_,fbo,rast) = self.output;
+				call::CallDraw( copy e.input, (pmap,fbo,copy rast), p, copy e.data )
+			},
+			None	=> call::CallEmpty,
+		}
+	}
+
 	pure fn gen_clear( cdata : call::ClearData )-> call::Call	{
 		let &(fbo,pmap,rast) = &self.output;
 		call::CallClear( fbo, copy pmap, cdata, rast.scissor, rast.mask )

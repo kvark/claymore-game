@@ -66,6 +66,7 @@ pub struct Scene	{
 	tech_solid	: engine::draw::Technique,
 	tech_cloak	: engine::draw::Technique,
 	tech_alpha	: engine::draw::Technique,
+	tech_shadow	: engine::draw::Technique,
 	start	: float,
 	hud_screen	: hud::Screen,
 	hud_context	: hud::Context,

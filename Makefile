@@ -35,7 +35,7 @@ numeric:
 	(cd ../numeric-rs && rustc src/numeric.rc --out-dir ../${DIR}/lib/)
 
 lmath:
-	(cd ../lmath-rs && make clean && make && cp -R lib/* ../${DIR}/lib/)
+	(cd ../lmath-rs && rustc src/lmath.rc -L ../${DIR}/lib/ --out-dir ../${DIR}/lib/)
 
 cgmath:
 	(cd ../cgmath-rs && rustc src/cgmath.rc -L ../${DIR}/lib/ --out-dir ../${DIR}/lib/)

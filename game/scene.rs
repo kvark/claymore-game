@@ -238,6 +238,7 @@ pub struct CameraInfo	{
 pub struct Light	{
 	node	: NodeRef,
 	proj	: Projector,
+	mut shadow	: Option<@engine::texture::Texture>,
 }
 
 #[auto_decode]
@@ -401,18 +402,23 @@ pub fn load_scene( path : ~str, gc : &engine::context::Context,
 	let mut map_camera = LinearMap::<~str,Camera>();
 	for scene.cameras.each() |icam|	{
 		let root = map_node.get( &icam.node );
-		map_camera.insert( copy root.name, Camera{
-			node:root, proj:icam.proj.spawn(aspect),
-			ear:engine::audio::Listener{ volume:0f },
-		});
+		map_camera.insert( copy root.name,
+			Camera{ node:root,
+				proj:icam.proj.spawn(aspect),
+				ear:engine::audio::Listener{ volume:0f },
+			}
+		);
 	}
 	// lights
 	let mut map_light = LinearMap::<~str,Light>();
 	for scene.lights.each() |ilight|	{
 		let root = map_node.get( &ilight.node );
-		map_light.insert( copy root.name, Light{
-			node:root, proj:ilight.proj.spawn(1f),
-		});
+		map_light.insert( copy root.name,
+			Light{ node:root,
+				proj:ilight.proj.spawn(1f),
+				shadow:None,
+			}
+		);
 	}
 	// done
 	Scene{

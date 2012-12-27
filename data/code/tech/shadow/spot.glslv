@@ -6,6 +6,6 @@ out	vec4 v_Light;
 
 
 void main()	{
-	vec3 wp = initMatRich();
+	vec3 wp = initMatPure();
 	v_Light = u_LightProj * vec4(wp,1.0);
 }
