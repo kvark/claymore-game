@@ -17,6 +17,7 @@
 	},
 	"elements":	{
 		"character"		: true,
+		"shadow"		: true,
 		"environment"	: true,
 		"hud"			: true,
 		"hud_debug"		: false

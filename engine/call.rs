@@ -2,19 +2,23 @@ extern mod glcore;
 
 
 pub struct PlaneMap	{
-	depth_stencil	: frame::Target,
-	colors			: send_map::linear::LinearMap<~str,frame::Target>,
+	stencil	: frame::Target,
+	depth	: frame::Target,
+	colors	: send_map::linear::LinearMap<~str,frame::Target>,
 }
 
 impl PlaneMap : Copy	{}
-
-pub fn make_plane_map( name : ~str, col : frame::Target )-> PlaneMap	{
-	let mut pmap = PlaneMap	{
-		depth_stencil : frame::TarEmpty,
-		colors : send_map::linear::LinearMap::<~str,frame::Target>(),
-	};
-	pmap.colors.insert( name, col );
-	pmap
+pub fn make_pmap_empty()-> PlaneMap	{
+	PlaneMap	{
+		stencil	: frame::TarEmpty,
+		depth	: frame::TarEmpty,
+		colors	: send_map::linear::LinearMap::<~str,frame::Target>(),
+	}
+}
+pub fn make_pmap_simple( name : ~str, col : frame::Target )-> PlaneMap	{
+	let mut pm = make_pmap_empty();
+	pm.colors.insert( name, col );
+	pm
 }
 
 
@@ -47,7 +51,7 @@ impl context::Context	{
 						colors.push( *target );
 					}
 					let has_color = colors.len()!=0 && (*fb.handle==0 || colors[0]!=frame::TarEmpty);
-					self.bind_frame_buffer( fb, true, pmap.depth_stencil, colors );
+					self.bind_frame_buffer( fb, true, pmap.stencil, pmap.depth, colors );
 					self.rast.scissor.activate( &scissor, 0 );
 					self.rast.mask.activate( &mask, 0 );
 					let mut flags = 0 as glcore::GLenum;
@@ -61,14 +65,14 @@ impl context::Context	{
 					}
 					match data.depth	{
 						Some(d) => 	{
-							assert *fb.handle==0 || pmap.depth_stencil!=frame::TarEmpty;
+							assert *fb.handle==0 || pmap.depth!=frame::TarEmpty;
 							flags |= glcore::GL_DEPTH_BUFFER_BIT;
 							self.set_clear_depth( d );
 						},None	=> 	{}
 					}
 					match data.stencil	{
 						Some(s)	=>	{
-							assert *fb.handle==0 || pmap.depth_stencil!=frame::TarEmpty;
+							assert *fb.handle==0 || pmap.stencil!=frame::TarEmpty;
 							flags |= glcore::GL_STENCIL_BUFFER_BIT;
 							self.set_clear_stencil( s );
 						},None	=>	{}
@@ -82,15 +86,21 @@ impl context::Context	{
 						let loc = prog.find_output( name );
 						attaches[loc] = *target;
 					}
-					if rast.depth.test || rast.stencil.test	{
-						assert *fb.handle==0 || pmap.depth_stencil!=frame::TarEmpty;
-					}
-					if rast.blend.on	{
-						assert attaches.len()!=0 && (*fb.handle==0 || attaches[0]!=frame::TarEmpty);
-					}
-					self.bind_frame_buffer( fb, true, pmap.depth_stencil, attaches );
+					// check & activate raster
+					let rect = if *fb.handle != 0	{
+						assert !rast.stencil.test	|| pmap.stencil	!=frame::TarEmpty;
+						assert !rast.depth.test		|| pmap.depth	!=frame::TarEmpty;
+						assert !rast.blend.on		|| attaches[0]	!= frame::TarEmpty;
+						let (wid,het,_sam) = fb.check_size();
+						frame::make_rect(wid,het)
+					}else	{
+						*self.default_rast.view
+					};
 					let (_,mesh,_) = input;
 					self.rast.activate( &rast, mesh.get_poly_size() );
+					assert *self.rast.view == rect;
+					// draw
+					self.bind_frame_buffer( fb, true, pmap.stencil, pmap.depth, attaches );
 					self.draw_mesh( input, prog, &data );
 				},
 				_	=> fail ~"Unsupported call!"

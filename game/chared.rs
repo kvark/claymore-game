@@ -66,7 +66,7 @@ pub struct Scene	{
 	tech_solid	: engine::draw::Technique,
 	tech_cloak	: engine::draw::Technique,
 	tech_alpha	: engine::draw::Technique,
-	tech_shadow	: engine::draw::Technique,
+	shadow	: shadow::Data,
 	start	: float,
 	hud_screen	: hud::Screen,
 	hud_context	: hud::Context,
@@ -87,20 +87,6 @@ impl Scene	{
 			//io::println( ~"Click: " + name );
 		}
 		self.control.update( dt, nx, ny, hit, scroll );
-		let lit_pos	= lmath::gltypes::vec4::new( 3f32, 3f32, 3f32, 0f32 );
-		for [&self.gr_main, &self.gr_cape, &self.gr_hair].each() |group|	{
-			for group.each() |ent|	{
-				ent.update_world();
-				let gd = ent.mut_data();
-				gd.insert( ~"u_LightPos",	engine::shade::UniFloatVec(lit_pos) );
-				self.cam.fill_data( gd );
-				//self.skel.fill_data( gd );
-			}	
-		}
-		let vpi = self.cam.get_matrix().invert();
-		//self.cam.fill_data( &mut self.envir.data );
-		self.envir.data.insert( ~"u_ViewProjInverse",
-			engine::shade::UniMatrix(false,vpi) );
 		true
 	}
 	fn render( el : &main::Elements, ct : &engine::context::Context, lg : &engine::context::Log  )	{
@@ -112,6 +98,12 @@ impl Scene	{
 				stencil	:Some( 0u ),
 			}
 		);
+		if el.environment	{
+			let vpi = self.cam.get_matrix().invert();
+			//self.cam.fill_data( &mut self.envir.data );
+			self.envir.data.insert( ~"u_ViewProjInverse",
+				engine::shade::UniMatrix(false,vpi) );
+		}
 		let c1 = if el.environment	{
 			let e = &self.envir;
 			let &(pmap,fbo,_) = &self.tech_solid.output;
@@ -131,6 +123,28 @@ impl Scene	{
 			//self.skel.fill_data( self.girl.mut_data() );
 		}
 		if el.character	{
+			for [&self.gr_main, &self.gr_cape, &self.gr_hair].each() |group|	{
+				for group.each() |ent|	{
+					ent.update_world();
+					let gd = ent.mut_data();
+					self.shadow.light.fill_data( gd );
+					gd.insert( ~"t_Shadow", copy self.shadow.par_shadow );
+					self.cam.fill_data( gd );
+					//self.skel.fill_data( gd );
+				}	
+			}
+		}
+		if el.shadow	{
+			queue.push( copy self.shadow.call_clear );
+			if el.character	{
+				for [&self.gr_main,&self.gr_cape].each() |group|	{
+					for group.each() |ent|	{
+						queue.push( self.shadow.tech_bake.process( ent, ct, lg ));
+					}
+				}
+			}
+		}
+		if el.character	{
 			for self.gr_main.each() |ent|	{
 				queue.push( self.tech_solid.process( ent, ct, lg ) );
 			}
@@ -146,7 +160,7 @@ impl Scene	{
 				self.hud_screen.root.draw_all( &self.hud_context )
 				);
 			let (x,y) = self.mouse;
-			let mut rast  = engine::rast::make_rast(0,0);
+			let mut rast  = copy ct.default_rast;
 			rast.prime.poly_mode = engine::rast::map_polygon_fill(2);
 			let mut data = engine::shade::make_data();
 			let vc = lmath::gltypes::vec4::new(1f32,0f32,0f32,1f32);
@@ -161,7 +175,7 @@ impl Scene	{
 		}
 		if el.hud_debug	{
 			queue.push_all_move({
-				let mut rast  = engine::rast::make_rast(0,0);
+				let mut rast  = copy ct.default_rast;
 				rast.prime.poly_mode = engine::rast::map_polygon_fill(2);
 				let mut data = engine::shade::make_data();
 				let vc = lmath::gltypes::vec4::new(1f32,0f32,0f32,1f32);
@@ -178,8 +192,8 @@ pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine:
 	let vao = @ct.create_vertex_array();
 	let scene = scene::load_scene( ~"data/claymore-2", ct, Some(vao), aspect, lg );
 	let (t_solid,t_cloak,t_alpha) = {
-		let pmap = engine::call::make_plane_map( ~"o_Color", engine::frame::TarEmpty );
-		let mut rast = engine::rast::make_rast(0,0);
+		let pmap = engine::call::make_pmap_simple( ~"o_Color", engine::frame::TarEmpty );
+		let mut rast = copy ct.default_rast;
 		rast.depth.test = true;
 		rast.prime.cull = true;
 		let t1 = engine::draw::load_technique( ~"solid", ~"data/code/tech/forward/light",
@@ -216,7 +230,7 @@ pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine:
 		let mut data = engine::shade::make_data();
 		//data.insert( ~"t_Environment",		engine::shade::UniTexture(0,tex,Some(samp)) );
 		data.insert( ~"t_Image",		engine::shade::UniTexture(0,tex,Some(samp)) );
-		let mut rast = engine::rast::make_rast(0,0);
+		let mut rast = copy ct.default_rast;
 		//rast.set_depth( ~"<=", false );
 		Envir{
 			input:(vao,mesh,mesh.get_range()),
@@ -230,7 +244,7 @@ pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine:
 	let hud_screen = hud::load_screen( ~"data/hud/char.json", ct, fcon, lg );
 	hud_screen.root.update( lg );
 	let hc = {
-		let mut hud_rast = engine::rast::make_rast(0,0);
+		let mut hud_rast = copy ct.default_rast;
 		hud_rast.set_blend( ~"s+d", ~"Sa", ~"1-Sa" );
 		let quad = @engine::mesh::create_quad(ct);
 		let &(_,pmap,_) = &t_solid.output;
@@ -248,6 +262,9 @@ pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine:
 		speed_zoom	:15f32,
 		last_scroll	: None,
 	};
+	let shadow = shadow::create_data( ct,
+		@mut engine::draw::create_cache(),
+		scene.lights.get(&~"Lamp"),	0x400u );
 	//arm.set_record( arm.actions[0], 0f );
 	Scene	{
 		gr_main	: group,
@@ -260,6 +277,7 @@ pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine:
 		tech_solid	: t_solid,
 		tech_cloak	: t_cloak,
 		tech_alpha	: t_alpha,
+		shadow	: shadow,
 		start	: engine::anim::get_time(),
 		hud_screen	: hud_screen,
 		hud_context : hc,

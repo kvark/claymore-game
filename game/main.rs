@@ -32,6 +32,7 @@ struct Game	{
 #[auto_decode]
 pub struct Elements	{
 	character	: bool,
+	shadow		: bool,
 	environment	: bool,
 	hud			: bool,
 	hud_debug	: bool,
@@ -88,8 +89,8 @@ fn create_game( wid : uint, het : uint, lg : engine::context::Log  )-> Game	{
 	//src.play();
 	// create a forward light technique
 	let tech = {
-		let pmap = engine::call::make_plane_map( ~"o_Color", engine::frame::TarEmpty );
-		let mut rast = engine::rast::make_rast(0,0);
+		let pmap = engine::call::make_pmap_simple( ~"o_Color", engine::frame::TarEmpty );
+		let mut rast = copy ct.default_rast;
 		rast.set_depth(~"<=",true);
 		rast.prime.cull = true;
 		let cache = @mut engine::draw::create_cache();

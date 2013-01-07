@@ -238,7 +238,24 @@ pub struct CameraInfo	{
 pub struct Light	{
 	node	: NodeRef,
 	proj	: Projector,
-	mut shadow	: Option<@engine::texture::Texture>,
+	infinite: bool,
+}
+
+impl Light	{
+	pub fn get_matrix()-> lmath::gltypes::mat4	{
+		let proj = match self.proj.to_mat4()	{
+			Ok(m)	=> m,
+			Err(e)	=> fail ~"Light projection fail: " + e.to_str()
+		};
+		proj * self.node.world_space().invert().to_matrix()	
+	}
+	pub fn fill_data( data : &mut engine::shade::DataMap )	{
+		let sw = self.node.world_space();
+		let pos = Vec4::new( sw.position.x, sw.position.y, sw.position.z,
+			if self.infinite {0f32} else {1f32} );
+		data.insert( ~"u_LightProj",	engine::shade::UniMatrix(false,self.get_matrix()) );
+		data.insert( ~"u_LightPos",		engine::shade::UniFloatVec(pos) );
+	}	
 }
 
 #[auto_decode]
@@ -416,7 +433,7 @@ pub fn load_scene( path : ~str, gc : &engine::context::Context,
 		map_light.insert( copy root.name,
 			Light{ node:root,
 				proj:ilight.proj.spawn(1f),
-				shadow:None,
+				infinite:false,
 			}
 		);
 	}

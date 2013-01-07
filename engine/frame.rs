@@ -54,6 +54,7 @@ impl Target	{
 				glcore::glFramebufferRenderbuffer( root, slot, s.target, *s.handle );
 			},
 			TarTexture(tex,lev)	=> {
+				assert tex.get_levels() > lev;
 				glcore::glFramebufferTexture( root, slot, *tex.handle, lev as glcore::GLint );
 			}
 		}
@@ -86,6 +87,14 @@ impl RenBinding : context::State	{
 	}
 }
 
+pub pure fn make_ren_binding()-> RenBinding	{
+	RenBinding{
+		target:glcore::GL_RENDERBUFFER,
+		active:Handle(0), pool:@mut ~[],
+	}
+}
+
+
 impl Binding : context::State	{
 	fn sync_back()->bool	{
 		let mut hid = 0 as glcore::GLint;
@@ -105,15 +114,20 @@ impl Binding	{
 			new.attach( self.target, slot )
 		}else	{true}
 	}
-}
-
-pub pure fn create_ren_binding()-> RenBinding	{
-	RenBinding{
-		target:glcore::GL_RENDERBUFFER,
-		active:Handle(0), pool:@mut ~[],
+	priv fn check()	{
+		let code = glcore::glCheckFramebufferStatus( self.target );
+		if code == glcore::GL_FRAMEBUFFER_COMPLETE	{return};
+		let message =
+			if code == glcore::GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT			{~"format"}		else
+			//if code == glcore::GL_FRAMEBUFFER_INCOMPLETE_DIMENSIONS		{~"dimensions"}	else
+			if code == glcore::GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT	{~"missing"}	else
+			if code == glcore::GL_FRAMEBUFFER_UNSUPPORTED					{~"hardware"}	else
+			{~"unknown"};
+		fail fmt!("FBO %d is incomplete: %s", *self.active as int, message)
 	}
 }
-pub pure fn create_binding( value : glcore::GLenum )-> Binding	{
+
+pub pure fn make_binding( value : glcore::GLenum )-> Binding	{
 	Binding{
 		target:value, active:Handle(0), pool:@mut ~[],
 	}
@@ -145,10 +159,10 @@ impl Rect	{
 
 pub struct Buffer	{
 	handle				: Handle,
-	priv mut viewport	: Rect,
 	priv mut draw_mask	: uint,
 	priv mut read_id	: Option<uint>,
-	mut depth_stencil	: Target,
+	mut stencil			: Target,
+	mut depth			: Target,
 	mut colors			: ~[Target],
 	priv mut pool		: @mut ~[Handle],
 
@@ -161,7 +175,7 @@ pub struct Buffer	{
 impl Buffer	{
 	pure fn check_size()->(uint,uint,uint)	{
 		let mut wid = 0u, het = 0u, sam = 0u;
-		for (~[self.depth_stencil] + self.colors).each |target|	{
+		for (~[self.stencil,self.depth] + self.colors).each |target|	{
 			match *target	{
 				TarEmpty => {},
 				TarSurface(sf) => 	{
@@ -186,14 +200,13 @@ impl Buffer : context::State	{
 	}
 }
 
-
-pub fn default_frame_buffer( wid : uint, het : uint )-> Buffer	{
+pub fn default_frame_buffer()-> Buffer	{
 	Buffer{
 		handle:Handle(0),
-		viewport		:Rect{x:0u,y:0u,w:wid,h:het},
 		draw_mask		:0u,
 		read_id			:None,
-		depth_stencil	:TarEmpty,
+		stencil			:TarEmpty,
+		depth			:TarEmpty,
 		colors			:~[TarEmpty],
 		pool			:@mut ~[],
 	}
@@ -227,11 +240,10 @@ impl context::Context	{
 	fn create_frame_buffer()-> Buffer	{
 		let mut hid = 0 as glcore::GLuint;
 		glcore::glGenFramebuffers( 1, ptr::addr_of(&hid) );
-		Buffer{ handle:Handle(hid), viewport:Rect{x:0u,y:0u,w:0u,h:0u},
-			draw_mask:0u, read_id:None,
-			depth_stencil	: TarEmpty,
-			colors			: vec::from_elem( self.caps.max_color_attachments, TarEmpty ),
-			pool			: self.frame_buffer_draw.pool,
+		Buffer{ handle:Handle(hid), draw_mask:1u, read_id:None,
+			stencil:TarEmpty, depth:TarEmpty,
+			colors	: vec::from_elem( self.caps.max_color_attachments, TarEmpty ),
+			pool	: self.frame_buffer_draw.pool,
 		}
 	}
 
@@ -242,7 +254,8 @@ impl context::Context	{
 		}
 	}
 
-	fn bind_frame_buffer( fb : &Buffer, draw : bool, depth_stencil : Target, colors : ~[Target] )	{
+	fn bind_frame_buffer( fb : &Buffer, draw : bool,
+			stencil : Target, depth : Target, colors : ~[Target] )	{
 		let binding = if draw {&self.frame_buffer_draw} else {&self.frame_buffer_read};
 		self._bind_frame_buffer( binding, fb.handle );
 		// work around main framebuffer
@@ -269,7 +282,8 @@ impl context::Context	{
 			glcore::GL_COLOR_ATTACHMENT0 + (index as glcore::GLenum)
 		};
 		// attach planes
-		binding.attach_target( depth_stencil, &mut fb.depth_stencil, glcore::GL_DEPTH_STENCIL_ATTACHMENT );
+		binding.attach_target( stencil,	&mut fb.stencil,	glcore::GL_STENCIL_ATTACHMENT );
+		binding.attach_target( depth,	&mut fb.depth,		glcore::GL_DEPTH_ATTACHMENT );
 		for colors.eachi() |i,target|	{
 			let mut val = fb.colors[i];	//FIXME
 			binding.attach_target( *target, &mut val, get_color(i) );
@@ -315,16 +329,8 @@ impl context::Context	{
 					unsafe{vec::raw::to_ptr(list)} );
 			}
 		}
-		// update the viewport
-		let r = {
-			let (wid,het,_sam) = fb.check_size();
-			Rect{ x:0u, y:0u, w:wid, h:het }
-		};
-		if fb.viewport != r	{
-			fb.viewport = r;
-			glcore::glViewport( r.x as glcore::GLint, r.y as glcore::GLint,
-				r.w as glcore::GLsizei, r.h as glcore::GLsizei );
-		}
+		// check completeness
+		binding.check();	//FIXME: debug only
 	}
 
 	/*fn unbind_frame_buffers()	{

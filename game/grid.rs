@@ -104,7 +104,7 @@ impl Grid	{
 
 pub fn make_grid( ct : &engine::context::Context, segments : uint, lg : &engine::context::Log )-> Grid	{
 	let mut data = engine::shade::make_data();
-	let mut rast = engine::rast::make_rast(0,0);
+	let mut rast = copy ct.default_rast;
 	rast.prime.cull = true;
 	rast.set_depth( ~"<=", false );
 	rast.set_blend( ~"s+d", ~"Sa", ~"1" );

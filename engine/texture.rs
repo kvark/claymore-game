@@ -50,6 +50,9 @@ pub struct Texture	{
 }
 
 impl Texture	{
+	pure fn get_levels()-> uint	{
+		return self.levels;
+	}
 	pure fn get_level_size( lev : uint )-> (uint,uint)	{
 		assert self.width>0u && self.height>0u;
 		(uint::max(1u,self.width>>lev),uint::max(1u,self.height>>lev))
@@ -215,6 +218,16 @@ impl Binding	{
 		}
 	}
 
+	fn init_2D_shadow( t : &Texture, stencil : bool )	{
+		self.bind( t );
+		assert t.samples == 0u;
+		let fm = if stencil {glcore::GL_DEPTH_STENCIL} else {glcore::GL_DEPTH_COMPONENT};
+		glcore::glTexImage2D( *t.target, 0, fm as glcore::GLint,
+			t.width as glcore::GLsizei, t.height as glcore::GLsizei, 0,
+			fm, glcore::GL_UNSIGNED_BYTE, ptr::null() );
+		t.levels = 1;
+	}
+
 	fn load_2D<T>(	t : &Texture, level : uint, int_format : glcore::GLint,
 			pix_format : glcore::GLenum, pix_type : glcore::GLenum, data : &const ~[T])	{
 		self.bind( t );
@@ -297,7 +310,7 @@ impl Binding : context::State	{
 }
 
 
-pub fn create_binding()-> Binding	{
+pub fn make_binding()-> Binding	{
 	let slots	= send_map::linear::LinearMap::<texture::Slot,texture::Handle>();
 	Binding{ active_unit:0u, active:slots, pool:@mut ~[] }
 }

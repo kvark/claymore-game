@@ -27,7 +27,7 @@ impl Binding : context::State	{
 	}
 }
 
-pub pure fn create_binding()-> Binding	{
+pub pure fn make_binding()-> Binding	{
 	Binding{ active_program:Handle(0), pool_objects:@mut ~[], pool_programs:@mut ~[] }
 }
 

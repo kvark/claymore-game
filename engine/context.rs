@@ -68,6 +68,7 @@ pub struct Context	{
 	texture				: texture::Binding,
 	// defaults
 	screen_size			: (uint,uint),
+	default_rast		: rast::State,
 	default_vertex_array: @buf::VertexArray,
 	default_frame_buffer: @frame::Buffer,
 }
@@ -75,25 +76,27 @@ pub struct Context	{
 
 pub fn create( wid : uint, het : uint )-> Context	{
 	// read caps
-	let caps = Capabilities{
+	let caps	= Capabilities{
 		max_color_attachments : read_cap( glcore::GL_MAX_COLOR_ATTACHMENTS ),
 	};
-	let color = rast::Color{r:0f32,g:0f32,b:0f32,a:0f32};
+	let rast	= rast::make_default( wid, het );
+	let color	= rast::Color{r:0f32,g:0f32,b:0f32,a:0f32};
 	// fill up the context
 	Context{
 		caps				: caps,
-		rast				: rast::make_rast(wid,het),
+		rast				: copy rast,
 		clear_data			: ClearData{ color:color, depth:1f, stencil:0u },
-		shader				: shade::create_binding(),
-		vertex_array		: buf::create_va_binding(),
-		array_buffer		: buf::create_binding( glcore::GL_ARRAY_BUFFER ),
-		render_buffer		: frame::create_ren_binding(),
-		frame_buffer_draw	: frame::create_binding( glcore::GL_DRAW_FRAMEBUFFER ),
-		frame_buffer_read	: frame::create_binding( glcore::GL_READ_FRAMEBUFFER ),
-		texture				: texture::create_binding(),
+		shader				: shade::make_binding(),
+		vertex_array		: buf::make_va_binding(),
+		array_buffer		: buf::make_binding( glcore::GL_ARRAY_BUFFER ),
+		render_buffer		: frame::make_ren_binding(),
+		frame_buffer_draw	: frame::make_binding( glcore::GL_DRAW_FRAMEBUFFER ),
+		frame_buffer_read	: frame::make_binding( glcore::GL_READ_FRAMEBUFFER ),
+		texture				: texture::make_binding(),
 		screen_size			: (wid,het),
+		default_rast		: rast,
 		default_vertex_array: @buf::default_vertex_array(),
-		default_frame_buffer: @frame::default_frame_buffer(wid,het),
+		default_frame_buffer: @frame::default_frame_buffer(),
 	}
 }
 
@@ -123,10 +126,11 @@ impl Context	{
 		let code = glcore::glGetError();
 		if code != 0	{
 			let decode =
-				if code	== glcore::GL_INVALID_ENUM		{~"(enum)"}		else
-				if code	== glcore::GL_INVALID_VALUE		{~"(value)"}	else
-				if code	== glcore::GL_INVALID_OPERATION	{~"(operation)"}else
-				if code	== glcore::GL_OUT_OF_MEMORY		{~"(memory)"}	else
+				if code	== glcore::GL_INVALID_ENUM					{~"(enum)"}			else
+				if code	== glcore::GL_INVALID_VALUE					{~"(value)"}		else
+				if code	== glcore::GL_INVALID_OPERATION				{~"(operation)"}	else
+				if code	== glcore::GL_OUT_OF_MEMORY					{~"(memory)"}		else
+				if code == glcore::GL_INVALID_FRAMEBUFFER_OPERATION	{~"(framebuffer)"}	else
 				{~"(unknown)"};
 			fail fmt!("%s: GL Error: %d %s",where,code as int,decode)
 		}

@@ -36,6 +36,29 @@ priv fn ask_state( state : glcore::GLenum )-> bool	{
 }
 
 
+pub enum Viewport = frame::Rect;
+
+impl Viewport : Stage	{
+	fn activate( &mut self, new : &Viewport, _poly : uint )	{
+		if **self == **new 	{return}
+		**self = **new;
+		glcore::glViewport( new.x as glcore::GLint, new.y as glcore::GLint,
+			new.w as glcore::GLsizei, new.h as glcore::GLsizei );
+	}
+	fn verify( &mut self )	{
+		let v = vec::from_elem( 4, 0 as glcore::GLint );
+		unsafe	{
+			glcore::glGetIntegerv( glcore::GL_VIEWPORT, vec::raw::to_ptr(v) );
+		}
+		assert
+			self.x == v[0] as uint &&
+			self.y == v[1] as uint &&
+			self.w == v[2] as uint &&
+			self.h == v[3] as uint;
+	}
+}
+
+
 pub struct Primitive	{
 	poly_mode	: glcore::GLenum,
 	front_cw	: bool,
@@ -475,6 +498,7 @@ impl Mask : Stage	{
 
 
 pub struct State	{
+	view	: Viewport,
 	prime	: Primitive,
 	offset	: Offset,
 	scissor	: Scissor,
@@ -489,6 +513,7 @@ pub struct State	{
 impl State : Stage	{
 	//FIXME
 	fn activate( &mut self, new : &State, poly : uint )	{
+		self.view	.activate( &new.view,		poly );
 		self.prime	.activate( &new.prime,		poly );
 		self.offset	.activate( &new.offset,		poly );
 		self.scissor.activate( &new.scissor,	poly );
@@ -499,6 +524,7 @@ impl State : Stage	{
 		self.mask	.activate( &new.mask,		poly );
 	}
 	fn verify( &mut self )	{
+		self.view	.verify();
 		self.prime	.verify();
 		self.offset	.verify();
 		self.scissor.verify();
@@ -604,8 +630,9 @@ impl State	{
 
 // Creates a default GL context rasterizer state
 // make sure to verify that it matches GL specification
-pub pure fn make_rast( wid : uint, het : uint )-> State	{
+pub pure fn make_default( wid : uint, het : uint )-> State	{
 	State{
+		view : Viewport( frame::make_rect(wid,het) ),
 		prime : Primitive{
 			poly_mode:glcore::GL_FILL, front_cw:false, cull:false,
 			cull_mode:glcore::GL_BACK, line_width:1f32

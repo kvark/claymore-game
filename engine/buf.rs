@@ -91,13 +91,13 @@ impl VaBinding	{
 }
 
 
-pub pure fn create_binding( value : glcore::GLenum )-> Binding	{
+pub pure fn make_binding( value : glcore::GLenum )-> Binding	{
 	Binding{
 		target : Target(value), active : Handle(0), pool : @mut~[]
 	}
 }
 
-pub pure fn create_va_binding()-> VaBinding	{
+pub pure fn make_va_binding()-> VaBinding	{
 	VaBinding{
 		active : Handle(0), pool : @mut~[]
 	}
@@ -117,7 +117,7 @@ priv pure fn _create_zero_data()-> ~[VertexData]	{
 
 pub pure fn default_vertex_array()-> VertexArray	{
 	VertexArray{ handle : Handle(0), data : _create_zero_data(),
-		element	: create_binding( glcore::GL_ELEMENT_ARRAY_BUFFER ),
+		element	: make_binding( glcore::GL_ELEMENT_ARRAY_BUFFER ),
 		pool : @mut ~[],
 	}	
 }
@@ -129,7 +129,7 @@ impl context::Context	{
 		let mut hid = 0 as glcore::GLuint;
 		glcore::glGenVertexArrays( 1, ptr::addr_of(&hid) );
 		VertexArray{ handle : Handle(hid), data : _create_zero_data(),
-			element	: create_binding( glcore::GL_ELEMENT_ARRAY_BUFFER ),
+			element	: make_binding( glcore::GL_ELEMENT_ARRAY_BUFFER ),
 			pool : self.vertex_array.pool,
 		}
 	}
