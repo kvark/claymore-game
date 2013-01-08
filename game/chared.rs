@@ -196,7 +196,7 @@ pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine:
 		let mut rast = copy ct.default_rast;
 		rast.depth.test = true;
 		rast.prime.cull = true;
-		let t1 = engine::draw::load_technique( ~"solid", ~"data/code/tech/forward/light",
+		let t1 = engine::draw::load_technique( ~"solid", ~"data/code/tech/forward/spot-shadow",
 			(ct.default_frame_buffer, pmap, copy rast),
 			@mut engine::draw::create_cache() );
 		rast.prime.cull = false;
@@ -207,18 +207,10 @@ pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine:
 		(t1,t2,t3)
 	};
 	let arm = scene.armatures.get(&~"Armature.002");
-	let cam = scene.cameras.get(&~"Camera");
-	//cam.test();
 	let mut group = scene::divide_group( &mut scene.entities, &~"noTrasnform" );
 	let cape = scene::divide_group( &mut group, &~"polySurface172" );
 	let hair = scene::divide_group( &mut group, &~"Hair_Geo2" );
 	lg.add(fmt!( "Group size: %u", group.len() ));
-	lg.add(fmt!( "Camera fov:%f, aspect:%f, range:%f-%f",
-		*cam.proj.vfov as float,
-		cam.proj.aspect as float,
-		cam.proj.near as float,
-		cam.proj.far as float ));
-	lg.add( ~"\tWorld :" + cam.node.world_space().to_string() );
 	let envir = {
 		let mesh = @engine::mesh::create_quad( ct );
 		//let prog = @engine::load::load_program( ct, ~"data/code-game/envir", lg );
@@ -255,6 +247,20 @@ pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine:
 		}
 	};
 	let hdebug = @engine::load::load_program( ct, ~"data/code/hud/debug", lg );
+	//arm.set_record( arm.actions[0], 0f );
+	let shadow = shadow::create_data( ct,
+		@mut engine::draw::create_cache(),
+		scene.lights.get(&~"Lamp"),	0x400u );
+	// load camera
+	let cam = scene.cameras.get(&~"Camera");
+	//cam.proj = copy shadow.light.proj;
+	//cam.node = shadow.light.node;
+	lg.add(fmt!( "Camera fov:%f, aspect:%f, range:%f-%f",
+		*cam.proj.vfov as float,
+		cam.proj.aspect as float,
+		cam.proj.near as float,
+		cam.proj.far as float ));
+	lg.add( ~"\tWorld :" + cam.node.world_space().to_string() );
 	let control = CamControl{
 		node	:cam.node,
 		origin	:Vec3::new(0f32,0f32,75f32),
@@ -262,10 +268,6 @@ pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine:
 		speed_zoom	:15f32,
 		last_scroll	: None,
 	};
-	let shadow = shadow::create_data( ct,
-		@mut engine::draw::create_cache(),
-		scene.lights.get(&~"Lamp"),	0x400u );
-	//arm.set_record( arm.actions[0], 0f );
 	Scene	{
 		gr_main	: group,
 		gr_cape	: cape,

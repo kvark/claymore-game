@@ -9,6 +9,7 @@ pub enum Target	= glcore::GLenum;
 pub struct Sampler	{
 	filter	: [glcore::GLint * 2],
 	wrap	: [glcore::GLint * 3],
+	compare	: Option<glcore::GLenum>,
 }
 
 pub pure fn make_sampler( filter : uint, wrap : int )-> Sampler	{
@@ -27,6 +28,7 @@ pub pure fn make_sampler( filter : uint, wrap : int )-> Sampler	{
 	Sampler{
 		filter	: [min_filter,mag_filter],
 		wrap	: [wr,wr,wr],
+		compare	: None,
 	}
 }
 
@@ -169,6 +171,21 @@ impl Binding	{
 		for [0,1,2].each() |i|	{
 			if t.sampler.wrap[*i] != s.wrap[*i]	{
 				glcore::glTexParameteri( *t.target, wrap_modes[*i], s.wrap[*i] );
+			}
+		}
+		if t.sampler.compare != s.compare	{
+			let e_mode = glcore::GL_TEXTURE_COMPARE_MODE;
+			let e_func = glcore::GL_TEXTURE_COMPARE_FUNC;
+			match s.compare	{
+				Some(mode)	=>	{
+					glcore::glTexParameteri( *t.target, e_mode,
+						glcore::GL_COMPARE_REF_TO_TEXTURE as glcore::GLint );
+					glcore::glTexParameteri( *t.target, e_func, mode as glcore::GLint );
+				},
+				None	=>	{
+					glcore::glTexParameteri( *t.target, e_mode,
+						glcore::GL_NONE as glcore::GLint );
+				}
 			}
 		}
 		t.sampler = *s;

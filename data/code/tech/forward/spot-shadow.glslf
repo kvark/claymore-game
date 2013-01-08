@@ -13,7 +13,7 @@ out	vec4 o_Color;
 
 
 void main()	{
-	float shadow = textureProj(t_Shadow,v_LightShadow).r;
+	float shadow = textureProj(t_Shadow,v_LightShadow);
 	o_Color = initSurface();
 	vec3 vl = normalize( v_LightMaterial );
 	float reflect = c_Reflect * shadow;

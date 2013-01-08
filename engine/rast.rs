@@ -119,8 +119,8 @@ pub struct Offset	{
 	on_fill	: bool,
 	on_line : bool,
 	on_point: bool,
-	factor	: f32,
-	units	: f32,
+	factor	: float,
+	units	: float,
 }
 
 impl Offset : Stage	{
@@ -141,7 +141,9 @@ impl Offset : Stage	{
 		if on && (self.factor!=new.factor || self.units!=new.units)	{
 			self.factor = new.factor;
 			self.units = new.units;
-			glcore::glPolygonOffset( new.factor, new.units );
+			glcore::glPolygonOffset(
+				new.factor	as glcore::GLfloat,
+				new.units	as glcore::GLfloat );
 		}
 	}
 	fn verify( &mut self )	{
@@ -155,7 +157,7 @@ impl Offset : Stage	{
 			self.on_fill	== ask_state( glcore::GL_POLYGON_OFFSET_FILL ) &&
 			self.on_line	== ask_state( glcore::GL_POLYGON_OFFSET_LINE ) &&
 			self.on_point	== ask_state( glcore::GL_POLYGON_OFFSET_POINT ) &&
-			self.factor	== f as f32 && self.units == u as f32;
+			self.factor	== f as float && self.units == u as float;
 	}
 }
 
@@ -603,6 +605,13 @@ pub pure fn map_factor( s : ~str )-> glcore::GLenum	{
 
 
 impl State	{
+	pub fn set_offset( &mut self, value : float )	{
+		self.offset.on_fill	= true;
+		self.offset.on_line	= true;
+		self.offset.on_point= true;
+		self.offset.factor	= value;
+		self.offset.units	= value;
+	}
 	pub fn set_stencil( &mut self, fun : ~str, cf : char, cdf : char, cp : char, mask : int )	{
 		self.stencil.test = true;
 		self.stencil.front.function			= map_comparison(fun);
@@ -638,7 +647,7 @@ pub pure fn make_default( wid : uint, het : uint )-> State	{
 			cull_mode:glcore::GL_BACK, line_width:1f32
 		},
 		offset : Offset{
-			on_fill:false, on_line:false, on_point:false, factor:0f32, units:0f32
+			on_fill:false, on_line:false, on_point:false, factor:0f, units:0f
 		},
 		scissor : Scissor{
 			test:false, area:frame::make_rect(wid,het)

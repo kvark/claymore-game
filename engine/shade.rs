@@ -273,7 +273,7 @@ pure fn check_sampler( target : glcore::GLenum, storage : glcore::GLenum )	{
 		assert [glcore::GL_SAMPLER_1D]		.contains( &storage );
 	}else
 	if target == glcore::GL_TEXTURE_2D	{
-		assert [glcore::GL_SAMPLER_2D]		.contains( &storage );
+		assert [glcore::GL_SAMPLER_2D,glcore::GL_SAMPLER_2D_SHADOW].contains( &storage );
 	}else
 	if target == glcore::GL_TEXTURE_RECTANGLE	{
 		assert [glcore::GL_SAMPLER_2D_RECT]	.contains( &storage );

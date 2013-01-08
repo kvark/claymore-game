@@ -20,6 +20,8 @@ pub fn create_data( ct : &engine::context::Context, cache : @mut engine::draw::C
 	let mut rast = copy ct.default_rast;
 	rast.view = engine::rast::Viewport( engine::frame::make_rect(size,size) );
 	rast.set_depth( ~"<", true );
+	rast.prime.cull = true;
+	rast.set_offset(2f);
 	let cdata = engine::call::ClearData{
 		color	: None,
 		depth	: Some(1f),
@@ -28,7 +30,8 @@ pub fn create_data( ct : &engine::context::Context, cache : @mut engine::draw::C
 	let call = engine::call::CallClear( fbo, copy pmap, cdata, rast.scissor, rast.mask );
 	let tech = engine::draw::load_technique(~"shadow-spot",
 		~"data/code/tech/shadow/spot", (fbo,pmap,rast), cache );
-	let samp = engine::texture::make_sampler( 1u, 0 );
+	let mut samp = engine::texture::make_sampler( 2u, 0 );
+	samp.compare = Some( engine::rast::map_comparison(~"<") );
 	let par = engine::shade::UniTexture( 0u, shadow, Some(samp) );
 	Data{
 		light		: light,
