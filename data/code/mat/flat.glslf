@@ -10,6 +10,11 @@ vec4 getColor()	{
 	return c_Color;
 }
 
+
+bool initAlpha()	{
+	return getColor().a > 0.1;
+}
+
 vec4 initSurface()	{
 	return c_Color;
 }

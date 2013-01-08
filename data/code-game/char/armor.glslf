@@ -20,6 +20,11 @@ vec4 getColor()	{
 	return texture(t_DiffuseDirt,v_Tex);
 }
 
+bool initAlpha()	{
+	return true;
+}
+
+
 struct Context	{
 	vec3 normal,eye;
 	vec4 albedo;

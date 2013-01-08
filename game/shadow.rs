@@ -6,7 +6,8 @@ extern mod lmath;
 pub struct Data	{
 	light		: scene::Light,
 	call_clear	: engine::call::Call,
-	tech_bake	: engine::draw::Technique,
+	tech_solid	: engine::draw::Technique,
+	tech_alpha	: engine::draw::Technique,
 	par_shadow	: engine::shade::Uniform,
 }
 
@@ -28,15 +29,18 @@ pub fn create_data( ct : &engine::context::Context, cache : @mut engine::draw::C
 		stencil	: None,
 	};
 	let call = engine::call::CallClear( fbo, copy pmap, cdata, rast.scissor, rast.mask );
-	let tech = engine::draw::load_technique(~"shadow-spot",
-		~"data/code/tech/shadow/spot", (fbo,pmap,rast), cache );
+	let t0 = engine::draw::load_technique(~"shadow-spot-solid",
+		~"data/code/tech/shadow/spot", (fbo,copy pmap,copy rast), cache );
+	let t1 = engine::draw::load_technique(~"shadow-spot-alpha",
+		~"data/code/tech/shadow/spot-alpha", (fbo,pmap,rast), cache );
 	let mut samp = engine::texture::make_sampler( 2u, 0 );
 	samp.compare = Some( engine::rast::map_comparison(~"<") );
 	let par = engine::shade::UniTexture( 0u, shadow, Some(samp) );
 	Data{
 		light		: light,
 		call_clear	: call,
-		tech_bake	: tech,
+		tech_solid	: t0,
+		tech_alpha	: t1,
 		par_shadow	: par,
 	}
 }

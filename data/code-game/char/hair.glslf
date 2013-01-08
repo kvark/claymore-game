@@ -9,7 +9,7 @@ in vec2 v_Tex;
 const vec3	c_ColorDiffuse	= vec3(0.1);
 const vec3	c_ColorSpecular	= vec3(1.0);
 const vec2	c_Anisotropic	= vec2(1.0,1.0);
-
+const float	c_MinAlpha		= 0.4;
 
 vec3 getWorldNormal()	{
 	return normalize( v_NormalWorld );
@@ -18,6 +18,11 @@ vec3 getWorldNormal()	{
 vec4 getColor()	{
 	return vec4(0.0);
 }
+
+bool initAlpha()	{
+	return texture(t_SpecAlphaRefl,v_Tex).y > c_MinAlpha;
+}
+
 
 struct Context	{
 	vec3 normal,eye;

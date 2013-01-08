@@ -1,4 +1,4 @@
-//%meta initSurface computeLight getWorldNormal getColor
+//%meta initSurface initAlpha computeLight getWorldNormal getColor
 
 uniform sampler2D	t_Main;
 
@@ -22,6 +22,11 @@ struct Context	{
 	vec3 normal,eye;
 	vec4 albedo;
 }ct;
+
+
+bool initAlpha()	{
+	return getColor().a > 0.1;
+}
 
 vec4 initSurface()	{
 	ct.normal = getWorldNormal();

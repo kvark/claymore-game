@@ -30,6 +30,11 @@ struct Context	{
 	vec4 albedo;
 }ct;
 
+
+bool initAlpha()	{
+	return getColor().a > 0.1;
+}
+
 vec4 initSurface()	{
 	ct.normal = getWorldNormal();
 	ct.eye = normalize(v_Eye);

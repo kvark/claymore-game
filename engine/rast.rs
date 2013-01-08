@@ -67,6 +67,15 @@ pub struct Primitive	{
 	line_width	: f32,
 }
 
+impl Primitive	{
+	pure fn get_poly_size()-> uint	{
+		if self.poly_mode == glcore::GL_FILL	{3u} else
+		if self.poly_mode == glcore::GL_LINE	{2u} else
+		if self.poly_mode == glcore::GL_POINT	{1u} else
+		{fail fmt!( "Unknown poly mode: %d", self.poly_mode as int )}
+	}
+}
+
 impl Primitive : Stage	{
 	fn activate( &mut self, new : &Primitive, poly : uint )	{
 		if poly == 3u	{
@@ -88,11 +97,9 @@ impl Primitive : Stage	{
 				glcore::glCullFace( new.cull_mode );
 			}
 		}else
-		if poly == 2u	{
-			if self.line_width != new.line_width	{
-				self.line_width = new.line_width;
-				glcore::glLineWidth( new.line_width );
-			}
+		if self.line_width != new.line_width	{
+			self.line_width = new.line_width;
+			glcore::glLineWidth( new.line_width );
 		}
 	}
 	fn verify( &mut self )	{
@@ -124,20 +131,20 @@ pub struct Offset	{
 }
 
 impl Offset : Stage	{
-	fn activate( &mut self, new : &Offset, _poly : uint )	{
-		if self.on_fill != new.on_fill 	{
+	fn activate( &mut self, new : &Offset, poly : uint )	{
+		if poly == 3u && self.on_fill != new.on_fill 	{
 			self.on_fill = new.on_fill;
 			set_state( glcore::GL_POLYGON_OFFSET_FILL, new.on_fill )
 		}
-		if self.on_line != new.on_line	{
+		if poly == 2u && self.on_line != new.on_line	{
 			self.on_line = new.on_line;
 			set_state( glcore::GL_POLYGON_OFFSET_LINE, new.on_line )
 		}
-		if self.on_point != new.on_point	{
+		if poly == 1u && self.on_point != new.on_point	{
 			self.on_point = new.on_point;
 			set_state( glcore::GL_POLYGON_OFFSET_POINT, new.on_point )
 		}
-		let on = new.on_fill || new.on_line || new.on_point;
+		let on = [new.on_point,new.on_line,new.on_fill][ poly-1u ];
 		if on && (self.factor!=new.factor || self.units!=new.units)	{
 			self.factor = new.factor;
 			self.units = new.units;
@@ -514,16 +521,19 @@ pub struct State	{
 
 impl State : Stage	{
 	//FIXME
-	fn activate( &mut self, new : &State, poly : uint )	{
-		self.view	.activate( &new.view,		poly );
-		self.prime	.activate( &new.prime,		poly );
-		self.offset	.activate( &new.offset,		poly );
-		self.scissor.activate( &new.scissor,	poly );
-		self.multi	.activate( &new.multi, 		poly );
-		self.stencil.activate( &new.stencil,	poly );
-		self.depth	.activate( &new.depth,		poly );
-		self.blend	.activate( &new.blend,		poly );
-		self.mask	.activate( &new.mask,		poly );
+	fn activate( &mut self, new : &State, p0 : uint )	{
+		self.view	.activate( &new.view,		p0 );
+		self.prime	.activate( &new.prime,		p0 );
+		let p1 = if p0==3u	{
+			new.prime.get_poly_size()
+		}else	{p0};
+		self.offset	.activate( &new.offset,		p1 );
+		self.scissor.activate( &new.scissor,	p1 );
+		self.multi	.activate( &new.multi, 		p1 );
+		self.stencil.activate( &new.stencil,	p1 );
+		self.depth	.activate( &new.depth,		p1 );
+		self.blend	.activate( &new.blend,		p1 );
+		self.mask	.activate( &new.mask,		p1 );
 	}
 	fn verify( &mut self )	{
 		self.view	.verify();

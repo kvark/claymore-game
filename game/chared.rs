@@ -139,7 +139,12 @@ impl Scene	{
 			if el.character	{
 				for [&self.gr_main,&self.gr_cape].each() |group|	{
 					for group.each() |ent|	{
-						queue.push( self.shadow.tech_bake.process( ent, ct, lg ));
+						queue.push( self.shadow.tech_solid.process( ent, ct, lg ));
+					}
+				}
+				for [&self.gr_hair].each() |group|	{
+					for group.each() |ent|	{
+						queue.push( self.shadow.tech_alpha.process( ent, ct, lg ));
 					}
 				}
 			}
@@ -250,7 +255,7 @@ pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine:
 	//arm.set_record( arm.actions[0], 0f );
 	let shadow = shadow::create_data( ct,
 		@mut engine::draw::create_cache(),
-		scene.lights.get(&~"Lamp"),	0x400u );
+		scene.lights.get(&~"Lamp"),	0x200u );
 	// load camera
 	let cam = scene.cameras.get(&~"Camera");
 	//cam.proj = copy shadow.light.proj;

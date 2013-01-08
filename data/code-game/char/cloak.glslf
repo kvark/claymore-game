@@ -18,6 +18,11 @@ vec4 getColor()	{
 	return vec4(c_ColorDiffuse,1.0);
 }
 
+bool initAlpha()	{
+	return true;
+}
+
+
 struct Context	{
 	vec3 normal,eye;
 	vec4 albedo;

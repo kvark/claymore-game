@@ -23,6 +23,8 @@ vec3 qirot(vec4 q, vec3 v)	{
 
 
 vec3 initMatPure()	{
+	vec2 tc = vec2( a_Tex0.x, 1.0-a_Tex0.y );
+	v_Tex = u_Tex0Transform.xy*tc + u_Tex0Transform.zw;
 	vec3 pos = modifyInit( a_Position );
 	return (u_World * vec4(pos,1.0)).xyz;
 }
@@ -44,7 +46,5 @@ vec3 initMatRich()	{
 	vec3 wp = initMatPure();
 	v_Eye = cookVector( u_CameraPos.xyz - wp );
 	v_NormalWorld = normal;
-	vec2 tc = vec2( a_Tex0.x, 1.0-a_Tex0.y );
-	v_Tex = u_Tex0Transform.xy*tc + u_Tex0Transform.zw;
 	return wp;
 }

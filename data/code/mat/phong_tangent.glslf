@@ -24,6 +24,10 @@ struct Context	{
 }ct;
 
 
+bool initAlpha()	{
+	return getColor().a > 0.1;
+}
+
 vec4 initSurface()	{
 	vec3 rawNormal = texture(t_Normal,v_Tex).xyz * 2.0 - 1.0;
 	ct.normal = normalize(rawNormal);
