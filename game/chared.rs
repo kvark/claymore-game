@@ -59,6 +59,7 @@ pub struct Scene	{
 	gr_main	: scene::EntityGroup,
 	gr_cape	: scene::EntityGroup,
 	gr_hair	: scene::EntityGroup,
+	gr_other: scene::EntityGroup,
 	skel	: @engine::space::Armature,
 	cam		: scene::Camera,
 	control	: CamControl,
@@ -123,7 +124,7 @@ impl Scene	{
 			//self.skel.fill_data( self.girl.mut_data() );
 		}
 		if el.character	{
-			for [&self.gr_main, &self.gr_cape, &self.gr_hair].each() |group|	{
+			for [&self.gr_main, &self.gr_cape, &self.gr_hair, &self.gr_other].each() |group|	{
 				for group.each() |ent|	{
 					ent.update_world();
 					let gd = ent.mut_data();
@@ -158,6 +159,11 @@ impl Scene	{
 			}
 			for self.gr_hair.each() |ent|	{
 				queue.push( self.tech_alpha.process( ent, ct, lg ) );
+			}
+		}
+		if el.shadow	{
+			for self.gr_other.each() |ent|	{
+				queue.push( self.tech_solid.process( ent, ct, lg ) );
 			}
 		}
 		if el.hud	{
@@ -212,9 +218,9 @@ pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine:
 		(t1,t2,t3)
 	};
 	let arm = scene.armatures.get(&~"Armature.002");
-	let mut group = scene::divide_group( &mut scene.entities, &~"noTrasnform" );
-	let cape = scene::divide_group( &mut group, &~"polySurface172" );
-	let hair = scene::divide_group( &mut group, &~"Hair_Geo2" );
+	let mut group = scene.entities.divide( &~"noTrasnform" );
+	let cape = group.divide( &~"polySurface172" );
+	let hair = group.divide( &~"Hair_Geo2" );
 	lg.add(fmt!( "Group size: %u", group.len() ));
 	let envir = {
 		let mesh = @engine::mesh::create_quad( ct );
@@ -277,6 +283,7 @@ pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine:
 		gr_main	: group,
 		gr_cape	: cape,
 		gr_hair	: hair,
+		gr_other: copy scene.entities,
 		skel	: arm,
 		cam		: cam,
 		control	: control,

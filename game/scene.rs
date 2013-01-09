@@ -267,19 +267,22 @@ pub struct LightInfo	{
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -//
 //	Scene
 
-pub type EntityGroup = ~[engine::draw::Entity];
-pub fn divide_group( group : &mut EntityGroup, name : &~str )->EntityGroup	{
-	let mut i = 0u;
-	let mut rez : EntityGroup = ~[];
-	while i<group.len()	{
-		if group[i].node.is_under(name)	{
-			rez.push( group.swap_remove(i) );
-		}else	{
-			i += 1u;
+pub enum EntityGroup = ~[engine::draw::Entity];
+impl EntityGroup	{
+	pub fn divide( &mut self, name : &~str )-> EntityGroup	{
+		let mut i = 0u;
+		let mut rez = EntityGroup(~[]);
+		while i<self.len()	{
+			if self[i].node.is_under(name)	{
+				rez.push( self.swap_remove(i) );
+			}else	{
+				i += 1u;
+			}
 		}
+		rez	
 	}
-	rez
 }
+
 
 pub struct Scene	{
 	materials	: LinearMap<~str,@engine::draw::Material>,
@@ -376,7 +379,7 @@ pub fn load_scene( path : ~str, gc : &engine::context::Context,
 		map
 	};
 	// entities
-	let mut entity_group : EntityGroup = ~[];
+	let mut entity_group = EntityGroup(~[]);
 	for scene.entities.each() |ient|	{
 		let root = map_node.get( &ient.node );
 		let mat = map_material.get( &ient.material );
