@@ -3,6 +3,7 @@ __bpydoc__ = 'Scene module of Claymore exporter.'
 
 import mathutils
 import json
+import math
 from io_kri.common	import *
 from io_kri.action	import *
 from io_kri_arm.arm		import *
@@ -81,12 +82,6 @@ def cook_camera_proj(cam,log):
 	return {	#todo: ortho
 		'fov'	: cam.angle,
 		'range'	: (cam.clip_start,cam.clip_end)
-	}
-
-def cook_light_proj(lamp,log):
-	return {	#todo: non-spot
-		'fov'	: lamp.spot_size if lamp.type=='SPOT' else 0,
-		'range'	: (1,2*lamp.distance),
 	}
 
 
@@ -178,9 +173,25 @@ def save_scene(filename,context,export_meshes,export_armatures,precision):
 				'proj'	: cook_camera_proj(ob.data,log)
 				})
 		elif ob.type == 'LAMP':
+			lamp = ob.data
+			attenu = [lamp.linear_attenuation,lamp.quadratic_attenuation]
+			params = []
+			sphere = False
+			if lamp.type in ('SPOT','POINT'):
+				sphere = lamp.use_sphere
+			if lamp.type == 'SPOT':
+				params = [lamp.spot_size,lamp.spot_blend]
+			elif lamp.type == 'AREA':
+				params = [lamp.size,lamp.size_y,0.1]
 			lights.append({
 				'node'	: ob.name,
-				'proj'	: cook_light_proj(ob.data,log)
+				'color'	: tuple(lamp.color),
+				'distance'	: lamp.distance,
+				'energy': lamp.energy,
+				'attenu': attenu,
+				'sphere': sphere,
+				'kind'	: lamp.type,
+				'params': params,
 				})
 	if out_mesh != None:
 		out_mesh.end()

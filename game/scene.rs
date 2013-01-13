@@ -6,8 +6,10 @@ extern mod std;
 
 use cgmath::projection::*;
 use lmath::quat::*;
+use lmath::vec::vec2::*;
 use lmath::vec::vec3::*;
 use lmath::vec::vec4::*;
+use lmath::mat::mat4::Mat4;
 use numeric::types::*;
 use send_map::linear::LinearMap;
 use std::json;
@@ -235,33 +237,93 @@ pub struct CameraInfo	{
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -//
 //	Light
 
-pub struct Light	{
-	node	: NodeRef,
-	proj	: Projector,
-	infinite: bool,
+pub enum LightKind	{
+	LiPoint,
+	LiHemi,
+	LiSun,
+	LiSpot(angle::Degrees<f32>,float),
+	LiArea(Vec2<f32>,float),
 }
 
+pub struct Light	{
+	node	: NodeRef,
+	color	: engine::rast::Color,
+	attenu	: Vec4<f32>,
+	kind	: LightKind,
+}
+
+pub type ProjectorBlend = (@Projection<f32>,float);
+
 impl Light	{
-	pub fn get_matrix()-> lmath::gltypes::mat4	{
-		let proj = match self.proj.to_mat4()	{
-			Ok(m)	=> m,
-			Err(e)	=> fail ~"Light projection fail: " + e.to_str()
-		};
-		proj * self.node.world_space().invert().to_matrix()	
+	pub pure fn get_far_distance( threshold : f32 )-> f32	{
+		assert self.attenu.w == 0f32;
+		let E = self.attenu.x, a1 = self.attenu.y, a2 = self.attenu.z;
+		if a2>0f32 {
+			assert a1>=0f32;
+			let D = a1*a1 - 4f32*a2*(1f32 - E/threshold);
+			if D>=0f32	{
+				0.5f32 * (core::f32::sqrt(D) - a1) / a2
+			}else	{fail ~"Bad attenuation: " + self.attenu.to_string()}
+		}else if a1>0f32	{
+			assert a2==0f32;
+			(E/threshold - 1f32) / a1
+		}else	{
+			0f32
+		}
 	}
-	pub fn fill_data( data : &mut engine::shade::DataMap )	{
+	pub fn get_proj_blend( near:f32, far:f32 )-> Option<(Result<Mat4<f32>,~str>,float)>	{
+		match self.kind	{
+			LiSpot(angle,blend)	=>	{
+				let proj = PerspectiveSym{ vfov:angle, aspect:1f32, near:near, far:far };
+				Some((proj.to_mat4(),blend))
+			},
+			LiArea(v2,blend)	=>	{
+				let proj = Ortho{ left:-v2.x, right:v2.x,
+					bottom:-v2.y, top:v2.y,
+					near:near, far:far };
+				Some((proj.to_mat4(),blend))
+			},
+			_	=> None
+		}
+	}
+	pub fn fill_data( data : &mut engine::shade::DataMap, near : f32, far : f32 )	{
 		let sw = self.node.world_space();
-		let pos = Vec4::new( sw.position.x, sw.position.y, sw.position.z,
-			if self.infinite {0f32} else {1f32} );
-		data.insert( ~"u_LightProj",	engine::shade::UniMatrix(false,self.get_matrix()) );
-		data.insert( ~"u_LightPos",		engine::shade::UniFloatVec(pos) );
+		let mut pos = Vec4::new( sw.position.x, sw.position.y, sw.position.z, 1f32 );
+		let col = Vec4::new( self.color.r, self.color.g, self.color.b, self.color.a );
+		//io::println(fmt!("Light near:%f far:%f",near as float,far as float));
+		match self.kind	{
+			LiSun	=>	{ pos.w = 0f32; },
+			_	=> ()
+		}
+		match self.get_proj_blend(near,far)	{
+			Some(ref pair)	=>	{
+				let &(opt_mp,blend) = pair;
+				let mp = match opt_mp	{
+					Ok(m)	=> m,
+					Err(e)	=> fail ~"Light projection fail: " + e.to_str()
+				};
+				let ml = mp * self.node.world_space().invert().to_matrix();
+				data.insert( ~"u_LightProj",	engine::shade::UniMatrix(false,ml) );
+				data.insert( ~"u_LightBlend",	engine::shade::UniFloat(blend) );
+			},
+			None	=> ()
+		}
+		data.insert( ~"u_LightPos",			engine::shade::UniFloatVec(pos) );
+		data.insert( ~"u_LightColor",		engine::shade::UniFloatVec(col) );
+		data.insert( ~"u_LightAttenuation",	engine::shade::UniFloatVec(self.attenu) );
 	}	
 }
 
 #[auto_decode]
 pub struct LightInfo	{
 	node	: ~str,
-	proj	: ProjectorInfo,
+	kind	: ~str,
+	color	: (f32,f32,f32),
+	distance: float,
+	energy	: float,
+	attenu	: (float,float),
+	sphere	: bool,
+	params	: ~[float],
 }
 
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -//
@@ -433,10 +495,30 @@ pub fn load_scene( path : ~str, gc : &engine::context::Context,
 	let mut map_light = LinearMap::<~str,Light>();
 	for scene.lights.each() |ilight|	{
 		let root = map_node.get( &ilight.node );
+		let (cr,cg,cb) = ilight.color;
+		let col = engine::rast::Color{ r:cr, g:cg, b:cb, a:1f32 };
+		let data = match ilight.kind	{
+			~"POINT"=> LiPoint,
+			~"SUN"	=> LiSun,
+			~"SPOT"	=> LiSpot( angle::Radians(ilight.params[0] as f32).to_degrees(),
+				ilight.params[1] ),
+			~"HEMI"	=> LiHemi,
+			~"AREA"	=> LiArea( Vec2::new(ilight.params[0] as f32, ilight.params[1] as f32),
+				ilight.params[2] ),
+			_	=> fail ~"Unknown light type: " + ilight.kind
+		};
+		let (a1,a2) = ilight.attenu;
+		assert ilight.distance>0f;
+		let kd = 1f / ilight.distance;
+		let attenu = Vec4::new( ilight.energy as f32,
+			a1*kd as f32, a2*kd*kd as f32,
+			if ilight.sphere {kd as f32} else {0f32}
+			);
 		map_light.insert( copy root.name,
 			Light{ node:root,
-				proj:ilight.proj.spawn(1f),
-				infinite:false,
+				color:col,
+				attenu:attenu,
+				kind:data,
 			}
 		);
 	}

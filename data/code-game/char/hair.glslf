@@ -6,7 +6,7 @@ uniform	vec4		u_SpecularParams;
 in vec3 v_Eye, v_NormalWorld;
 in vec2 v_Tex;
 
-const vec3	c_ColorDiffuse	= vec3(0.1);
+const vec3	c_ColorDiffuse	= vec3(0.08*0.8);
 const vec3	c_ColorSpecular	= vec3(1.0);
 const vec2	c_Anisotropic	= vec2(1.0,1.0);
 const float	c_MinAlpha		= 0.4;
@@ -36,6 +36,8 @@ vec4 initSurface()	{
 	ct.eye = normalize(v_Eye);
 	vec4 params = texture(t_SpecAlphaRefl,v_Tex);
 	ct.specular = params.x;
+	if (params.y<c_MinAlpha)
+		discard;
 	return vec4( vec3(0.0), params.y );
 }
 

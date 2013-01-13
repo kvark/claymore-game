@@ -128,7 +128,7 @@ impl Scene	{
 				for group.each() |ent|	{
 					ent.update_world();
 					let gd = ent.mut_data();
-					self.shadow.light.fill_data( gd );
+					self.shadow.light.fill_data( gd, 1f32, 200f32 );
 					gd.insert( ~"t_Shadow", copy self.shadow.par_shadow );
 					self.cam.fill_data( gd );
 					//self.skel.fill_data( gd );
@@ -138,16 +138,16 @@ impl Scene	{
 		if el.shadow	{
 			queue.push( copy self.shadow.call_clear );
 			if el.character	{
-				for [&self.gr_main,&self.gr_cape].each() |group|	{
+				for [&self.gr_main,&self.gr_cape,&self.gr_hair].each() |group|	{
 					for group.each() |ent|	{
 						queue.push( self.shadow.tech_solid.process( ent, ct, lg ));
 					}
 				}
-				for [&self.gr_hair].each() |group|	{
+				/*for [&self.gr_hair].each() |group|	{
 					for group.each() |ent|	{
 						queue.push( self.shadow.tech_alpha.process( ent, ct, lg ));
 					}
-				}
+				}*/
 			}
 		}
 		if el.character	{
@@ -267,7 +267,7 @@ pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine:
 	//cam.proj = copy shadow.light.proj;
 	//cam.node = shadow.light.node;
 	lg.add(fmt!( "Camera fov:%f, aspect:%f, range:%f-%f",
-		*cam.proj.vfov as float,
+		*cam.proj.vfov.to_degrees() as float,
 		cam.proj.aspect as float,
 		cam.proj.near as float,
 		cam.proj.far as float ));

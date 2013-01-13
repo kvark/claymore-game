@@ -1,6 +1,7 @@
 NAME=claymore
 DIR=${NAME}-game
-RUST=/usr/local/bin/rustc
+#RUST=RUST_LOG=rustc=1,::rt::backtrace rustc
+RUST=rustc
 
 # game/engine/demos code
 all: engine-code game-code

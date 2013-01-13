@@ -8,8 +8,8 @@ in vec2 v_Tex;
 in mat3 TBN;
 
 const float	c_BumpFactor	= 2.0;
-const float c_ReflectFactor	= 0.1;
-const vec3	c_ColorDiffuse	= vec3(1.0);
+const float c_ReflectFactor	= 0.03;
+const vec3	c_ColorDiffuse	= vec3(0.8*0.8);
 const vec3	c_ColorSpecular	= vec3(1.0);
 
 vec3 getWorldNormal()	{

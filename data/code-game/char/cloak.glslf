@@ -5,7 +5,7 @@ uniform vec4		u_SpecularParams;
 in	vec3 v_Normal, v_Eye;
 in	vec2 v_Tex;
 
-const vec3	c_ColorDiffuse	= vec3(1.0);
+const vec3	c_ColorDiffuse	= vec3(0.8*0.8);
 const vec3	c_ColorSpecular	= vec3(1.0);
 const vec2	c_Anisotropic	= vec2(1.0,1.0);
 
