@@ -201,7 +201,7 @@ impl Scene	{
 
 pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine::context::Log )-> Scene	{
 	let vao = @ct.create_vertex_array();
-	let scene = scene::load_scene( ~"data/claymore-2", ct, Some(vao), aspect, lg );
+	let mut scene = scene::load_scene( ~"data/claymore-2a", ct, Some(vao), aspect, lg );
 	let (t_solid,t_cloak,t_alpha) = {
 		let pmap = engine::call::make_pmap_simple( ~"o_Color", engine::frame::TarEmpty );
 		let mut rast = copy ct.default_rast;
@@ -217,7 +217,7 @@ pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine:
 		let t3 = t1.clone( ~"alpha", rast );
 		(t1,t2,t3)
 	};
-	let arm = scene.armatures.get(&~"Armature.002");
+	let arm = scene.context.armatures.get(&~"Armature.002");
 	let mut group = scene.entities.divide( &~"noTrasnform" );
 	let cape = group.divide( &~"polySurface172" );
 	let hair = group.divide( &~"Hair_Geo2" );

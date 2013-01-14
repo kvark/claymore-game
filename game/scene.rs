@@ -343,19 +343,71 @@ impl EntityGroup	{
 		}
 		rez	
 	}
+	pub fn change_detail( &mut self, name : &~str, detail : engine::draw::Entity )-> Option<engine::draw::Entity>	{
+		let position = do self.position() |ent|	{ent.node.name == *name};
+		self.push( detail );
+		match position	{
+			Some(pos)	=> Some( self.swap_remove(pos) ),
+			None		=> None,
+		}
+	}
 }
 
+pub type Dict<T>		= LinearMap<~str,T>;
+
+pub struct SceneContext	{
+	materials	: Dict<@engine::draw::Material>,
+	mat_data	: Dict<engine::shade::DataMap>,
+	textures	: Dict<@engine::texture::Texture>,
+	nodes		: Dict<NodeRef>,
+	meshes		: Dict<@engine::mesh::Mesh>,
+	armatures	: Dict<@engine::space::Armature>,
+}
+
+impl SceneContext	{
+	pub fn parse_group( info_array : &[EntityInfo],
+			gc			: &engine::context::Context,
+			opt_vao		: Option<@engine::buf::VertexArray>
+			)-> EntityGroup	{
+		let mut group = EntityGroup(~[]);
+		for info_array.each() |ient|	{
+			let root = self.nodes.get( &ient.node );
+			let mat = self.materials.get( &ient.material );
+			let skel = match self.armatures.find(&ient.armature)	{
+				Some(arm)	=> arm	as @engine::draw::Mod,
+				None		=> ()	as @engine::draw::Mod,
+			};
+			let data = copy *self.mat_data.get_ref( &ient.material );
+			let vao = match opt_vao	{
+				Some(v) => v,
+				None	=> @gc.create_vertex_array(),
+			};
+			let mesh = self.meshes.get( &ient.mesh );
+			let (r_min,r_max) = ient.range;
+			let range = engine::mesh::Range{
+				start	:r_min,
+				num		:r_max-r_min,
+			};
+			let ent = engine::draw::Entity{
+				node	: root,
+				input	: (vao,mesh,range),
+				data	: data,
+				modifier: skel,
+				material: mat,
+			};
+			group.push(ent);
+		}
+		group
+	}
+}
 
 pub struct Scene	{
-	materials	: LinearMap<~str,@engine::draw::Material>,
-	textures	: LinearMap<~str,@engine::texture::Texture>,
-	nodes		: LinearMap<~str,NodeRef>,
-	meshes		: LinearMap<~str,@engine::mesh::Mesh>,
-	armatures	: LinearMap<~str,@engine::space::Armature>,
-	mut entities: EntityGroup,
-	cameras		: LinearMap<~str,Camera>,
-	lights		: LinearMap<~str,Light>,
+	context		: SceneContext,
+	entities	: EntityGroup,
+	cameras		: Dict<Camera>,
+	lights		: Dict<Light>,
 }
+
 
 #[auto_decode]
 pub struct SceneInfo	{
@@ -376,17 +428,7 @@ pub fn load_scene( path : ~str, gc : &engine::context::Context,
 	// materials
 	let mut tex_cache		= LinearMap::<~str,@engine::texture::Texture>();
 	let mut map_material	= LinearMap::<~str,@engine::draw::Material>();
-	for mat_config.each() |imat|	{
-		let mat = @engine::draw::load_material( copy imat.kind );
-		map_material.insert( copy imat.name, mat );
-		lg.add( ~"\tCustom material: " + imat.name );
-		for imat.textures.each() |itex|	{
-			if !tex_cache.contains_key( &itex.path )	{
-				let tex = @engine::load::load_texture_2D( gc, &itex.path, true );
-				tex_cache.insert( copy itex.path, tex );
-			}
-		}
-	}
+	let mut map_data		= LinearMap::<~str,engine::shade::DataMap>();
 	for scene.materials.each() |imat|	{
 		let mat = @engine::draw::load_material( ~"data/code/mat/" + imat.kind );
 		if !map_material.contains_key( &imat.name )	{
@@ -403,6 +445,23 @@ pub fn load_scene( path : ~str, gc : &engine::context::Context,
 				tex_cache.insert( copy itex.path, tex );
 			}
 		}
+		let mut data = engine::shade::make_data();
+		imat.fill_data( &mut data, &tex_cache );
+		map_data.insert( copy imat.name, data );
+	}
+	for mat_config.each() |imat|	{
+		let mat = @engine::draw::load_material( copy imat.kind );
+		map_material.insert( copy imat.name, mat );
+		lg.add( ~"\tCustom material: " + imat.name );
+		for imat.textures.each() |itex|	{
+			if !tex_cache.contains_key( &itex.path )	{
+				let tex = @engine::load::load_texture_2D( gc, &itex.path, true );
+				tex_cache.insert( copy itex.path, tex );
+			}
+		}
+		let mut data = engine::shade::make_data();
+		imat.fill_data( &mut data, &tex_cache );
+		map_data.insert( copy imat.name, data );
 	}
 	// nodes
 	let mut map_node = LinearMap::<~str,@engine::space::Node>();
@@ -440,50 +499,21 @@ pub fn load_scene( path : ~str, gc : &engine::context::Context,
 		rd.leave();
 		map
 	};
+	// context
+	let context = SceneContext{
+		materials	: map_material,
+		mat_data	: map_data,
+		textures	: tex_cache,
+		nodes		: map_node,
+		meshes		: map_mesh,
+		armatures	: map_armature,
+	};
 	// entities
-	let mut entity_group = EntityGroup(~[]);
-	for scene.entities.each() |ient|	{
-		let root = map_node.get( &ient.node );
-		let mat = map_material.get( &ient.material );
-		let skel = match map_armature.find(&ient.armature)	{
-			Some(arm)	=> arm	as @engine::draw::Mod,
-			None		=> ()	as @engine::draw::Mod,
-		};
-		let data = {
-			let o1 = do vec::position(mat_config)		|mi|	{ mi.name==ient.material };
-			let o2 = do vec::position(scene.materials)	|mi|	{ mi.name==ient.material };
-			let imat = match (o1,o2)	{
-				(Some(p1),_)	=> &mat_config[p1],
-				(None,Some(p2))	=> &scene.materials[p2],
-				_	=> fail ~"Entity material not found: " + ient.material
-			};
-			let mut d = engine::shade::make_data();
-			imat.fill_data( &mut d, &tex_cache );
-			d
-		};
-		let vao = match opt_vao	{
-			Some(v) => v,
-			None	=> @gc.create_vertex_array(),
-		};
-		let mesh = map_mesh.get( &ient.mesh );
-		let (r_min,r_max) = ient.range;
-		let range = engine::mesh::Range{
-			start	:r_min,
-			num		:r_max-r_min,
-		};
-		let ent = engine::draw::Entity{
-			node	: root,
-			input	: (vao,mesh,range),
-			data	: data,
-			modifier: skel,
-			material: mat,
-		};
-		entity_group.push(ent)
-	}
+	let entity_group = context.parse_group( scene.entities, gc, opt_vao );
 	// cameras
 	let mut map_camera = LinearMap::<~str,Camera>();
 	for scene.cameras.each() |icam|	{
-		let root = map_node.get( &icam.node );
+		let root = context.nodes.get( &icam.node );
 		map_camera.insert( copy root.name,
 			Camera{ node:root,
 				proj:icam.proj.spawn(aspect),
@@ -494,7 +524,7 @@ pub fn load_scene( path : ~str, gc : &engine::context::Context,
 	// lights
 	let mut map_light = LinearMap::<~str,Light>();
 	for scene.lights.each() |ilight|	{
-		let root = map_node.get( &ilight.node );
+		let root = context.nodes.get( &ilight.node );
 		let (cr,cg,cb) = ilight.color;
 		let col = engine::rast::Color{ r:cr, g:cg, b:cb, a:1f32 };
 		let data = match ilight.kind	{
@@ -524,11 +554,7 @@ pub fn load_scene( path : ~str, gc : &engine::context::Context,
 	}
 	// done
 	Scene{
-		materials	: map_material,
-		textures	: tex_cache,
-		nodes		: map_node,
-		meshes		: map_mesh,
-		armatures	: map_armature,
+		context		: context,
 		entities	: entity_group,
 		cameras		: map_camera,
 		lights		: map_light,
