@@ -155,7 +155,7 @@ def save_scene(filename,context,export_meshes,export_armatures,precision):
 				entities.append({
 					'node'		: ob.name,
 					'material'	: s,
-					'mesh'		: ob.data.name,
+					'mesh'		: ob.data.name + '@',
 					'range'		: (3*offset,3*(offset+fn)),
 					'armature'	: arm_name
 					})

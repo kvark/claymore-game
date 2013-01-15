@@ -60,6 +60,7 @@ pub struct Scene	{
 	gr_cape	: scene::EntityGroup,
 	gr_hair	: scene::EntityGroup,
 	gr_other: scene::EntityGroup,
+	details	: scene::EntityGroup,
 	skel	: @engine::space::Armature,
 	cam		: scene::Camera,
 	control	: CamControl,
@@ -202,6 +203,9 @@ impl Scene	{
 pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine::context::Log )-> Scene	{
 	let vao = @ct.create_vertex_array();
 	let mut scene = scene::load_scene( ~"data/claymore-2a", ct, Some(vao), aspect, lg );
+	let detail_info = scene::load_config::<~[scene::EntityInfo]>( ~"data/details.json" );
+	let details = scene.context.parse_group( detail_info, ct, Some(vao), lg );
+	// techniques
 	let (t_solid,t_cloak,t_alpha) = {
 		let pmap = engine::call::make_pmap_simple( ~"o_Color", engine::frame::TarEmpty );
 		let mut rast = copy ct.default_rast;
@@ -284,6 +288,7 @@ pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine:
 		gr_cape	: cape,
 		gr_hair	: hair,
 		gr_other: copy scene.entities,
+		details	: details,
 		skel	: arm,
 		cam		: cam,
 		control	: control,

@@ -84,7 +84,7 @@ pub fn make_nodes( infos : &~[NodeInfo], par : Option<NodeRef>, map : &mut NodeM
 //	Entity
 
 #[auto_decode]
-struct EntityInfo	{
+pub struct EntityInfo	{
 	node		: ~str,
 	material	: ~str,
 	mesh		: ~str,
@@ -343,8 +343,8 @@ impl EntityGroup	{
 		}
 		rez	
 	}
-	pub fn change_detail( &mut self, name : &~str, detail : engine::draw::Entity )-> Option<engine::draw::Entity>	{
-		let position = do self.position() |ent|	{ent.node.name == *name};
+	pub fn change_detail( &mut self, detail : engine::draw::Entity )-> Option<engine::draw::Entity>	{
+		let position = do self.position() |ent|	{managed::ptr_eq(ent.node,detail.node)};
 		self.push( detail );
 		match position	{
 			Some(pos)	=> Some( self.swap_remove(pos) ),
@@ -356,6 +356,7 @@ impl EntityGroup	{
 pub type Dict<T>		= LinearMap<~str,T>;
 
 pub struct SceneContext	{
+	prefix		: ~str,
 	materials	: Dict<@engine::draw::Material>,
 	mat_data	: Dict<engine::shade::DataMap>,
 	textures	: Dict<@engine::texture::Texture>,
@@ -365,24 +366,54 @@ pub struct SceneContext	{
 }
 
 impl SceneContext	{
-	pub fn parse_group( info_array : &[EntityInfo],
+	pub fn query_mesh( &mut self, mesh_name : &~str, gc : &engine::context::Context,
+			lg : &engine::context::Log )-> @engine::mesh::Mesh	{
+		if !self.meshes.contains_key(mesh_name)	{
+			let split = mesh_name.split_char('@');
+			let path = self.prefix + split[split.len()-1u] + ".k3mesh";
+			let rd = engine::load::create_reader_std( path );
+			if split.len() > 1	{
+				assert rd.enter() == ~"*mesh";
+				while rd.has_more()!=0u	{
+					assert rd.enter() == ~"meta";
+					let name = rd.get_string();
+					let mesh = @engine::load::read_mesh( &rd, gc, lg );
+					rd.leave();
+					let full_name = fmt!( "%s@%s", name, split[1] );
+					self.meshes.insert( full_name, mesh );
+				}
+				rd.leave();
+			}else	{
+				let mesh = @engine::load::read_mesh( &rd, gc, lg );
+				self.meshes.insert( copy *mesh_name, mesh );
+				return mesh
+			}
+		}
+		self.meshes.get(mesh_name)
+	}
+	pub fn parse_group( &mut self, info_array : &[EntityInfo],
 			gc			: &engine::context::Context,
-			opt_vao		: Option<@engine::buf::VertexArray>
+			opt_vao		: Option<@engine::buf::VertexArray>,
+			lg			: &engine::context::Log
 			)-> EntityGroup	{
 		let mut group = EntityGroup(~[]);
 		for info_array.each() |ient|	{
 			let root = self.nodes.get( &ient.node );
-			let mat = self.materials.get( &ient.material );
-			let skel = match self.armatures.find(&ient.armature)	{
-				Some(arm)	=> arm	as @engine::draw::Mod,
-				None		=> ()	as @engine::draw::Mod,
+			let data = match self.mat_data.find_ref( &ient.material )	{
+				Some(d)	=> copy *d,
+				None	=> fail ~"Material data not found: " + ient.material
 			};
-			let data = copy *self.mat_data.get_ref( &ient.material );
+			let mat = self.materials.get( &ient.material );
+			let skel = if ient.armature.is_empty()	{
+				()	as @engine::draw::Mod
+			}else	{
+				self.armatures.get(&ient.armature)	as @engine::draw::Mod
+			};
 			let vao = match opt_vao	{
 				Some(v) => v,
 				None	=> @gc.create_vertex_array(),
 			};
-			let mesh = self.meshes.get( &ient.mesh );
+			let mesh = self.query_mesh( &ient.mesh, gc, lg );
 			let (r_min,r_max) = ient.range;
 			let range = engine::mesh::Range{
 				start	:r_min,
@@ -466,21 +497,6 @@ pub fn load_scene( path : ~str, gc : &engine::context::Context,
 	// nodes
 	let mut map_node = LinearMap::<~str,@engine::space::Node>();
 	make_nodes( &scene.nodes, None, &mut map_node );
-	// meshes
-	let mut map_mesh = {
-		let mut map = LinearMap::<~str,@engine::mesh::Mesh>();
-		let rd = engine::load::create_reader_std( path+".k3mesh" );
-		assert rd.enter() == ~"*mesh";
-		while rd.has_more()!=0u	{
-			assert rd.enter() == ~"meta";
-			let name = rd.get_string();
-			let mesh = @engine::load::read_mesh( &rd, gc, lg );
-			map.insert( name, mesh );
-			rd.leave();
-		}
-		rd.leave();
-		map
-	};
 	// armatures
 	let mut map_armature = {
 		let mut map = LinearMap::<~str,@engine::space::Armature>();
@@ -500,16 +516,17 @@ pub fn load_scene( path : ~str, gc : &engine::context::Context,
 		map
 	};
 	// context
-	let context = SceneContext{
+	let mut context = SceneContext{
+		prefix		: copy path,
 		materials	: map_material,
 		mat_data	: map_data,
 		textures	: tex_cache,
 		nodes		: map_node,
-		meshes		: map_mesh,
+		meshes		: LinearMap::<~str,@engine::mesh::Mesh>(),
 		armatures	: map_armature,
 	};
 	// entities
-	let entity_group = context.parse_group( scene.entities, gc, opt_vao );
+	let entity_group = context.parse_group( scene.entities, gc, opt_vao, lg );
 	// cameras
 	let mut map_camera = LinearMap::<~str,Camera>();
 	for scene.cameras.each() |icam|	{
