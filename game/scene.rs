@@ -343,13 +343,26 @@ impl EntityGroup	{
 		}
 		rez	
 	}
+	/*pub fn with<T>( &mut self, name : &~str, fun : fn(&mut engine::draw::Entity)->T )-> Option<T>	{
+		let opt_pos = do self.position() |ent|	{ent.node.name == *name};
+		match opt_pos	{
+			Some(p)	=> Some( fun(&mut self[p]) ),
+			None	=> None,
+		}
+	}*/
 	pub fn change_detail( &mut self, detail : engine::draw::Entity )-> Option<engine::draw::Entity>	{
-		let position = do self.position() |ent|	{managed::ptr_eq(ent.node,detail.node)};
+		let opt_pos = do self.position() |ent|	{managed::ptr_eq(ent.node,detail.node)};
 		self.push( detail );
-		match position	{
+		match opt_pos	{
 			Some(pos)	=> Some( self.swap_remove(pos) ),
 			None		=> None,
 		}
+	}
+	pub fn swap_entity( &mut self, name : &~str, other : &mut EntityGroup )	{
+		let opt_pos = do other.position() |ent|	{ent.node.name == *name};
+		let e1 = other.swap_remove( opt_pos.expect(~"Remote entity not found: " + *name) );
+		let e2 = self.change_detail( e1 ).expect(	~"Local entity not found: " + *name);
+		other.push(e2);
 	}
 }
 

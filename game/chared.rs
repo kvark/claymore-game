@@ -153,7 +153,7 @@ impl Scene	{
 		}
 		if el.character	{
 			for self.gr_main.each() |ent|	{
-				queue.push( self.tech_solid.process( ent, ct, lg ) );
+				queue.push( self.tech_alpha.process( ent, ct, lg ) );
 			}
 			for self.gr_cape.each() |ent|	{
 				queue.push( self.tech_cloak.process( ent, ct, lg ) );	
@@ -204,7 +204,7 @@ pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine:
 	let vao = @ct.create_vertex_array();
 	let mut scene = scene::load_scene( ~"data/claymore-2a", ct, Some(vao), aspect, lg );
 	let detail_info = scene::load_config::<~[scene::EntityInfo]>( ~"data/details.json" );
-	let details = scene.context.parse_group( detail_info, ct, Some(vao), lg );
+	let mut details = scene.context.parse_group( detail_info, ct, Some(vao), lg );
 	// techniques
 	let (t_solid,t_cloak,t_alpha) = {
 		let pmap = engine::call::make_pmap_simple( ~"o_Color", engine::frame::TarEmpty );
@@ -223,6 +223,7 @@ pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine:
 	};
 	let arm = scene.context.armatures.get(&~"Armature.002");
 	let mut group = scene.entities.divide( &~"noTrasnform" );
+	group.swap_entity( &~"boots", &mut details );
 	let cape = group.divide( &~"polySurface172" );
 	let hair = group.divide( &~"Hair_Geo2" );
 	lg.add(fmt!( "Group size: %u", group.len() ));
