@@ -260,18 +260,23 @@ impl Frame	{
 		0u
 	}
 
-	fn populate( &mut self, name : &~str, elem : @Element )-> bool	{
+	fn with_frame_mut<T>( &mut self, name :&~str, fun : &fn(&mut Frame)->T )-> Option<T>	{
 		if self.name == *name	{
-			self.element = elem;
-			return true
+			return Some( fun(self) )
 		}
 		for uint::range(0,self.children.len())	|i|	{
-			//TODO: remove unsafe on Rust-0.5
-			if unsafe{self.children[i].populate(name,elem)}	{
-				return true
+			//TODO: remove unsafe on Rust-0.6
+			let res = unsafe{ self.children[i].with_frame_mut(name,fun) };
+			if res.is_some()	{
+				return res
 			}
 		}
-		false
+		None
+	}
+
+	fn populate( &mut self, name : &~str, elem : @Element )-> bool	{
+		let res = do self.with_frame_mut(name) |fr|	{fr.element=elem;};
+		res.is_some()
 	}
 
 	fn draw_all( hc : &Context )-> ~[engine::call::Call]	{
@@ -378,6 +383,7 @@ pub struct Label	{
 	content	: ~str,
 	program	: @engine::shade::Program,
 	color	: engine::rast::Color,
+	font	: @engine::font::Font,
 }
 impl Label : Element	{
 	pure fn get_size()-> Point	{
@@ -407,8 +413,8 @@ struct ScreenInfo	{
 
 pub struct Screen    {
 	root	: Frame,
-	images	: LinearMap<~str,@Image>,
-	labels	: LinearMap<~str,@Label>,
+	images	: LinearMap<~str,@mut Image>,
+	labels	: LinearMap<~str,@mut Label>,
 	textures: LinearMap<~str,@engine::texture::Texture>,
 	fonts	: LinearMap<FontInfo,@engine::font::Font>,
 }
@@ -431,7 +437,7 @@ pub fn load_screen(path : ~str, ct : &engine::context::Context,
 	};
 	let mut map_texture	= LinearMap::<~str,@engine::texture::Texture>();
 	lg.add(fmt!( "\tParsing %u images", iscreen.images.len() ));
-	let mut map_image = LinearMap::<~str,@Image>();
+	let mut map_image = LinearMap::<~str,@mut Image>();
 	let prog_image = @engine::load::load_program( ct, ~"data/code/hud/image", lg );
 	for iscreen.images.each() |iimage|	{
 		let path = ~"data/texture/hud/" + iimage.path;
@@ -443,7 +449,7 @@ pub fn load_screen(path : ~str, ct : &engine::context::Context,
 				t
 			}
 		};
-		let image = @Image	{
+		let image = @mut Image	{
 			texture	: texture,
 			sampler	: engine::texture::make_sampler(1u,0),
 			program	: prog_image,
@@ -456,7 +462,7 @@ pub fn load_screen(path : ~str, ct : &engine::context::Context,
 	}
 	lg.add(fmt!( "\tParsing %u labels", iscreen.labels.len() ));
 	let mut map_font	= LinearMap::<FontInfo,@engine::font::Font>();
-	let mut map_label	= LinearMap::<~str,@Label>();
+	let mut map_label	= LinearMap::<~str,@mut Label>();
 	let prog_label = @engine::load::load_program( ct, ~"data/code/hud/text", lg );
 	for iscreen.labels.each() |ilabel|	{
 		let font = match map_font.find(&ilabel.font)	{
@@ -469,11 +475,12 @@ pub fn load_screen(path : ~str, ct : &engine::context::Context,
 				f
 			}
 		};
-		let label = @Label{
+		let label = @mut Label{
 			texture	: @font.bake( ct, ilabel.text, ilabel.bound, lg ),
 			content	: copy ilabel.text,
 			program	: prog_label,
 			color	: engine::rast::make_color(ilabel.color),
+			font	: font,
 		};
 		map_label.insert( copy ilabel.frame, label );
 		if !root.populate( &ilabel.frame, label as @Element )	{
@@ -487,5 +494,67 @@ pub fn load_screen(path : ~str, ct : &engine::context::Context,
 		labels	: map_label,
 		textures: map_texture,
 		fonts	: map_font,
+	}
+}
+
+
+struct Blink<T>	{
+	element	: @mut T,
+	visible	: bool,
+}
+
+impl<T:Element> Blink<T>	: Element	{
+	pure fn get_size()-> Point	{
+		self.element.get_size()
+	}
+	fn draw( ft : &Context, r : &Rect )-> engine::call::Call	{
+		if self.visible	{
+			self.draw(ft,r)
+		}else	{
+			engine::call::CallEmpty
+		}
+	}
+}
+
+struct EditLabel	{
+	text	: @mut Label,
+	size	: (uint,uint),
+	cursor	: @mut Blink<Image>,
+	mut active	: bool,
+}
+
+pub type KeyInput = ();
+
+impl EditLabel	{
+	static pub fn obtain( screen : &mut Screen, base_name : ~str )-> EditLabel	{
+		let cursor_name = base_name + ~"_cursor";
+		let blink = @mut Blink	{
+			element	: screen.images.get(&cursor_name),
+			visible	: false,
+		};
+		let (sx,sy) = do screen.root.with_frame_mut( &cursor_name ) |fr|	{
+			fr.element = blink as @Element;
+			fr.area.size
+		}.expect( ~"Frame not found: " + base_name );
+		EditLabel{
+			text	: screen.labels.get(&base_name),
+			size	: (sx as uint, sy as uint),
+			cursor	: blink,
+			active	: false,
+		}
+	}
+
+	pub fn change( &self, key : char, ct : &engine::context::Context, lg : &engine::context::Log )	{
+		let text = self.text.content + str::from_char(key);
+		self.text.texture = @self.text.font.bake( ct, text, self.size, lg );
+		self.text.content = text;
+	}
+}
+
+impl EditLabel : engine::anim::Act	{
+	fn update()-> bool	{
+		let time_ms = (engine::anim::get_time() * 1000f) as uint;
+		self.cursor.visible = self.active && (time_ms % 1000u < 500u);
+		true
 	}
 }
