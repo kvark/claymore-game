@@ -413,7 +413,7 @@ struct ScreenInfo	{
 
 pub struct Screen    {
 	root	: Frame,
-	images	: LinearMap<~str,@mut Image>,
+	images	: LinearMap<~str,@Image>,
 	labels	: LinearMap<~str,@mut Label>,
 	textures: LinearMap<~str,@engine::texture::Texture>,
 	fonts	: LinearMap<FontInfo,@engine::font::Font>,
@@ -437,7 +437,7 @@ pub fn load_screen(path : ~str, ct : &engine::context::Context,
 	};
 	let mut map_texture	= LinearMap::<~str,@engine::texture::Texture>();
 	lg.add(fmt!( "\tParsing %u images", iscreen.images.len() ));
-	let mut map_image = LinearMap::<~str,@mut Image>();
+	let mut map_image = LinearMap::<~str,@Image>();
 	let prog_image = @engine::load::load_program( ct, ~"data/code/hud/image", lg );
 	for iscreen.images.each() |iimage|	{
 		let path = ~"data/texture/hud/" + iimage.path;
@@ -449,7 +449,7 @@ pub fn load_screen(path : ~str, ct : &engine::context::Context,
 				t
 			}
 		};
-		let image = @mut Image	{
+		let image = @Image	{
 			texture	: texture,
 			sampler	: engine::texture::make_sampler(1u,0),
 			program	: prog_image,
@@ -498,8 +498,8 @@ pub fn load_screen(path : ~str, ct : &engine::context::Context,
 }
 
 
-struct Blink<T>	{
-	element	: @mut T,
+pub struct Blink<T>	{
+	element	: @T,
 	visible	: bool,
 }
 
@@ -507,16 +507,16 @@ impl<T:Element> Blink<T>	: Element	{
 	pure fn get_size()-> Point	{
 		self.element.get_size()
 	}
-	fn draw( ft : &Context, r : &Rect )-> engine::call::Call	{
+	fn draw( ct : &Context, r : &Rect )-> engine::call::Call	{
 		if self.visible	{
-			self.draw(ft,r)
+			self.element.draw(ct,r)
 		}else	{
 			engine::call::CallEmpty
 		}
 	}
 }
 
-struct EditLabel	{
+pub struct EditLabel	{
 	text	: @mut Label,
 	size	: (uint,uint),
 	cursor	: @mut Blink<Image>,
@@ -525,9 +525,9 @@ struct EditLabel	{
 
 pub type KeyInput = ();
 
-impl EditLabel	{
+pub impl EditLabel	{
 	static pub fn obtain( screen : &mut Screen, base_name : ~str )-> EditLabel	{
-		let cursor_name = base_name + ~"_cursor";
+		let cursor_name = base_name + ~".cursor";
 		let blink = @mut Blink	{
 			element	: screen.images.get(&cursor_name),
 			visible	: false,
@@ -546,7 +546,7 @@ impl EditLabel	{
 
 	pub fn change( &self, key : char, ct : &engine::context::Context, lg : &engine::context::Log )	{
 		let text = self.text.content + str::from_char(key);
-		self.text.texture = @self.text.font.bake( ct, text, self.size, lg );
+		self.text.texture = @self.text.font.bake( ct, text, (1000,100), lg );	//self.size
 		self.text.content = text;
 	}
 }

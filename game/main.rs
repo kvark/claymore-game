@@ -48,9 +48,9 @@ impl Game	{
 			_ => true
 		}
 	}
-	fn render( el : &Elements )-> bool	{
+	fn render( el : &Elements, press_key : Option<char> )-> bool	{
 		match self.screen	{
-			ScreenChar => self.editor.render( el , &self.context, &self.journal ),
+			ScreenChar => self.editor.render( el, press_key, &self.context, &self.journal ),
 			ScreenBattle => {
 				// clear screen
 				let c0 = self.technique.gen_clear(
@@ -193,6 +193,7 @@ fn main()	{
 			let mouse_hit = window.get_mouse_button( glfw3::MOUSE_BUTTON_LEFT )!=0;
 			// camera rotation
 			let _cam_dir = (window.get_key(glfw3::KEY_E) - window.get_key(glfw3::KEY_Q)) as int;
+			let press_key = if window.get_key(glfw3::KEY_E) != 0 {Some('Y')} else {None};
 			// render
 			let (cx,cy) = window.get_cursor_pos();
 			let nx = (cx as float)/(config.window.width as float);
@@ -200,7 +201,7 @@ fn main()	{
 			if !game.update( nx, ny, mouse_hit, scroll_y as float )	{
 				break
 			}
-			if !game.render( &config.elements )	{
+			if !game.render( &config.elements, press_key )	{
 				break;
 			}
 			window.swap_buffers();

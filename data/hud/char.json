@@ -112,6 +112,13 @@
 							"align"	: "right-mid=parent.right-mid",
 							"margin": [0,0,0],
 							"children":	[]
+						},
+						{
+							"name"	: "id.name.text.cursor",
+							"size"	: [0,0],
+							"align"	: "left-mid=tail.right-mid",
+							"margin": [0,0,0],
+							"children": []
 						}
 					]
 				},
@@ -311,6 +318,11 @@
 		{
 			"frame"	: "id.symbol.pic",
 			"path"	: "symbol-n47.png",
+			"center": [0.0,0.0]
+		},
+		{
+			"frame"	: "id.name.text.cursor",
+			"path"	: "cursor.png",
 			"center": [0.0,0.0]
 		},
 		{

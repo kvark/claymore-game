@@ -73,6 +73,7 @@ pub struct Scene	{
 	hud_screen	: hud::Screen,
 	hud_context	: hud::Context,
 	hud_debug	: @engine::shade::Program,
+	edit_label	: @hud::EditLabel,
 	mut mouse	: (int,int),
 }
 
@@ -88,10 +89,11 @@ impl Scene	{
 			//let name = root.trace( x, y, lg );
 			//io::println( ~"Click: " + name );
 		}
+		(self.edit_label as @engine::anim::Act).update();
 		self.control.update( dt, nx, ny, hit, scroll );
 		true
 	}
-	fn render( el : &main::Elements, ct : &engine::context::Context, lg : &engine::context::Log  )	{
+	fn render( el : &main::Elements, press_key : Option<char>, ct : &engine::context::Context, lg : &engine::context::Log  )	{
 		// clear screen
 		let c0 = self.tech_solid.gen_clear(
 			engine::call::ClearData{
@@ -168,6 +170,13 @@ impl Scene	{
 			}
 		}
 		if el.hud	{
+			match press_key	{
+				Some(key)	=> {
+					self.edit_label.change( key, ct, lg );
+					self.hud_screen.root.update( lg );
+				},
+				None		=> ()
+			}
 			queue.push_all_move(
 				self.hud_screen.root.draw_all( &self.hud_context )
 				);
@@ -249,7 +258,7 @@ pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine:
 	};
 	// load char HUD
 	let fcon = @engine::font::create_context();
-	let hud_screen = hud::load_screen( ~"data/hud/char.json", ct, fcon, lg );
+	let mut hud_screen = hud::load_screen( ~"data/hud/char.json", ct, fcon, lg );
 	hud_screen.root.update( lg );
 	let hc = {
 		let mut hud_rast = copy ct.default_rast;
@@ -262,6 +271,8 @@ pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine:
 			size	: ct.screen_size,
 		}
 	};
+	let edit_label = @hud::EditLabel::obtain( &mut hud_screen, ~"id.name.text" );
+	edit_label.active = true;
 	let hdebug = @engine::load::load_program( ct, ~"data/code/hud/debug", lg );
 	//arm.set_record( arm.actions[0], 0f );
 	let shadow = shadow::create_data( ct,
@@ -302,6 +313,7 @@ pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine:
 		hud_screen	: hud_screen,
 		hud_context : hc,
 		hud_debug	: hdebug,
+		edit_label	: edit_label,
 		mouse	: (0,0),
 	}
 }
