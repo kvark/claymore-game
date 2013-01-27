@@ -112,8 +112,8 @@ fn create_game( wid : uint, het : uint, lg : engine::context::Log  )-> Game	{
 
 
 fn fail_GLFW( where: &static/str ) -> !	{
-	let code = glfw3::get_error();
-	io::println(~"GLFW error: " + glfw3::error_string(code));
+	//let code = glfw3::get_error();
+	//io::println(~"GLFW error: " + glfw3::error_string(code));
 	glfw3::terminate();
 	fail fmt!("glfw%s() failed\n",where)
 }
@@ -150,28 +150,34 @@ fn main()	{
 		let lg = engine::context::create_log( copy config.journal.path, config.journal.depth );
 		lg.add(~"--- Claymore ---");
 
-		glfw3::window_hint( glfw3::WINDOW_RESIZABLE, 0 );
+		glfw3::window_hint( glfw3::RESIZABLE, 0 );
 		glfw3::window_hint( glfw3::OPENGL_DEBUG_CONTEXT, if config.GL.debug {1} else {0} );
-		glfw3::window_hint( glfw3::OPENGL_VERSION_MAJOR, config.GL.major as libc::c_int );
-		glfw3::window_hint( glfw3::OPENGL_VERSION_MINOR, config.GL.minor as libc::c_int );
+		glfw3::window_hint( glfw3::CONTEXT_VERSION_MAJOR, config.GL.major as libc::c_int );
+		glfw3::window_hint( glfw3::CONTEXT_VERSION_MINOR, config.GL.minor as libc::c_int );
 		glfw3::window_hint( glfw3::OPENGL_PROFILE, glfw3::OPENGL_CORE_PROFILE );
 		glfw3::window_hint( glfw3::OPENGL_FORWARD_COMPAT, 1 );
 
-		let mut window = glfw3::create_window( config.window.width, config.window.height,
-			if config.window.fullscreen {glfw3::FULLSCREEN} else {glfw3::WINDOWED},
-			config.window.title );
-		if (ptr::is_null(window.ptr))	{
+		let mode = if config.window.fullscreen {
+			glfw3::FullScreen( glfw3::get_primary_monitor() )
+		}else {
+			glfw3::Windowed
+		};
+		let window = glfw3::Window::create(
+			config.window.width, config.window.height,
+			config.window.title, mode );
+		if (window.is_null())	{
 			fail_GLFW("OpenWindow");
 		}
 	
+		window.set_input_mode( glfw3::CURSOR_MODE, glfw3::CURSOR_CAPTURED as int );
 		window.make_context_current();
 		let game = create_game( config.window.width, config.window.height, lg );
 		
 		loop	{
 			glfw3::poll_events();
-			let isClosed = window.get_param(glfw3::CLOSE_REQUESTED)!=0;
+			let isClosed = window.get_param(glfw3::SHOULD_CLOSE)!=0;
 			if window.get_key(glfw3::KEY_ESC)!=0 || isClosed	{
-				glfw3::destroy_window(&mut window);
+				window.destroy();
 				break;
 			}
 			let (_,scroll_y) = window.get_scroll_offset();
