@@ -55,6 +55,11 @@ impl CamControl	{
 }
 
 
+enum ActiveHud	{
+	AhInactive,
+	AhEditName,
+}
+
 pub struct Scene	{
 	gr_main	: scene::EntityGroup,
 	gr_cape	: scene::EntityGroup,
@@ -74,26 +79,51 @@ pub struct Scene	{
 	hud_context	: hud::Context,
 	hud_debug	: @engine::shade::Program,
 	edit_label	: @hud::EditLabel,
-	mut mouse	: (int,int),
+	mut mouse_point	: (int,int),
+	mut input_queue	: ~str,
+	mut hud_active	: ActiveHud,
 }
 
 
 impl Scene	{
+	fn loose_focus()	{
+		self.edit_label.active = false;
+		self.hud_active = AhInactive;
+	}
 	fn update( dt : float, nx : float, ny : float, hit : bool, scroll : float, _lg : &engine::context::Log )-> bool	{
-		if true || hit	{
+		if true	{
 			let root = &self.hud_screen.root;
 			let (mx,my) = root.min_size;
 			let x = ((0f+nx) * (mx as float)) as int;
 			let y = ((1f-ny) * (my as float)) as int;
-			self.mouse = (x,y);
+			self.mouse_point = (x,y);
 			//let name = root.trace( x, y, lg );
 			//io::println( ~"Click: " + name );
+			if hit	{
+				self.loose_focus();	
+				do self.hud_screen.root.trace(x,y)	|frame,depth|	{
+					if depth==0u && frame.name == ~"id.name.text"	{
+						self.edit_label.active = true;
+						self.hud_active = AhEditName;
+					}
+				};
+			}
 		}
 		(self.edit_label as @engine::anim::Act).update();
 		self.control.update( dt, nx, ny, hit, scroll );
 		true
 	}
-	fn render( el : &main::Elements, press_key : Option<char>, ct : &engine::context::Context, lg : &engine::context::Log  )	{
+	fn on_char( &self, key : char )	{
+		str::push_char( &mut self.input_queue, key );
+	}
+	fn on_key_press( &self, key : int )	{
+		match key	{
+			257		=> self.loose_focus(),	//Esc,Enter
+			259		=> str::push_char( &mut self.input_queue, key as char ),
+			_	=> ()
+		}
+	}
+	fn render( el : &main::Elements, ct : &engine::context::Context, lg : &engine::context::Log  )	{
 		// clear screen
 		let c0 = self.tech_solid.gen_clear(
 			engine::call::ClearData{
@@ -170,17 +200,20 @@ impl Scene	{
 			}
 		}
 		if el.hud	{
-			match press_key	{
-				Some(key)	=> {
-					self.edit_label.change( key, ct, lg );
-					self.hud_screen.root.update( lg );
-				},
-				None		=> ()
+			if !self.input_queue.is_empty()	{
+				match self.hud_active	{
+					AhEditName	=> {
+						self.edit_label.change( &copy self.input_queue, ct, lg );
+						self.hud_screen.root.update( lg );
+					},
+					_	=> ()
+				}
+				self.input_queue = ~"";
 			}
 			queue.push_all_move(
 				self.hud_screen.root.draw_all( &self.hud_context )
 				);
-			let (x,y) = self.mouse;
+			let (x,y) = self.mouse_point;
 			let mut rast  = copy ct.default_rast;
 			rast.prime.poly_mode = engine::rast::map_polygon_fill(2);
 			let mut data = engine::shade::make_data();
@@ -272,7 +305,6 @@ pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine:
 		}
 	};
 	let edit_label = @hud::EditLabel::obtain( &mut hud_screen, ~"id.name.text" );
-	edit_label.active = true;
 	let hdebug = @engine::load::load_program( ct, ~"data/code/hud/debug", lg );
 	//arm.set_record( arm.actions[0], 0f );
 	let shadow = shadow::create_data( ct,
@@ -314,6 +346,8 @@ pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine:
 		hud_context : hc,
 		hud_debug	: hdebug,
 		edit_label	: edit_label,
-		mouse	: (0,0),
+		mouse_point	: (0,0),
+		input_queue	: ~"",
+		hud_active	: AhInactive,
 	}
 }

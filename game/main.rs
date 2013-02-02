@@ -39,6 +39,38 @@ pub struct Elements	{
 }
 
 impl Game	{
+	static fn create( wid : uint, het : uint, lg : engine::context::Log  )-> Game	{
+		let ct = engine::context::create( wid, het );
+		assert ct.sync_back();
+		// audio test
+		let ac = engine::audio::create_context();
+		let buf = @engine::audio::load_wav( &ac, ~"data/sound/stereol.wav", &lg );
+		let src = @ac.create_source();
+		src.bind(buf);
+		//src.play();
+		// create a forward light technique
+		let tech = {
+			let pmap = engine::call::make_pmap_simple( ~"o_Color", engine::frame::TarEmpty );
+			let mut rast = copy ct.default_rast;
+			rast.set_depth(~"<=",true);
+			rast.prime.cull = true;
+			let cache = @mut engine::draw::create_cache();
+			engine::draw::load_technique( ~"main", ~"data/code/tech/forward/light",
+				(ct.default_frame_buffer, pmap, rast), cache)
+		};
+		// done
+		ct.check(~"init");
+		let aspect = (wid as float) / (het as float);
+		let editor = chared::make_scene( &ct, aspect, &lg );
+		let battle = battle::make_scene( &ct, aspect, &lg );
+		Game{ context:ct, audio:ac, journal:lg,
+			sound_source:src,
+			frames:0u, technique:tech,
+			editor:editor, battle:battle,
+			screen:ScreenChar, time:0f,
+		}
+	}
+
 	fn update( nx : float, ny : float, mouse_hit : bool, scroll : float )-> bool	{
 		let dt = engine::anim::get_time() - self.time;
 		self.time += dt;
@@ -48,9 +80,24 @@ impl Game	{
 			_ => true
 		}
 	}
-	fn render( el : &Elements, press_key : Option<char> )-> bool	{
+
+	fn on_char( key : char )	{
+		//io::println(fmt!("Char %c", key));
 		match self.screen	{
-			ScreenChar => self.editor.render( el, press_key, &self.context, &self.journal ),
+			ScreenChar	=> self.editor.on_char( key ),
+			_	=> ()
+		}
+	}
+	fn on_key_press( key : int )	{
+		match self.screen	{
+			ScreenChar	=> self.editor.on_key_press( key ),
+			_	=> ()
+		}	
+	}
+	
+	fn render( el : &Elements )-> bool	{
+		match self.screen	{
+			ScreenChar => self.editor.render( el, &self.context, &self.journal ),
 			ScreenBattle => {
 				// clear screen
 				let c0 = self.technique.gen_clear(
@@ -72,41 +119,9 @@ impl Game	{
 		self.context.check(~"render");
 		true
 	}
+	
 	fn debug_move( rot : bool, x : int, y : int )	{
 		self.battle.debug_move( rot, x, y );
-	}
-}
-
-
-fn create_game( wid : uint, het : uint, lg : engine::context::Log  )-> Game	{
-	let ct = engine::context::create( wid, het );
-	assert ct.sync_back();
-	// audio test
-	let ac = engine::audio::create_context();
-	let buf = @engine::audio::load_wav( &ac, ~"data/sound/stereol.wav", &lg );
-	let src = @ac.create_source();
-	src.bind(buf);
-	//src.play();
-	// create a forward light technique
-	let tech = {
-		let pmap = engine::call::make_pmap_simple( ~"o_Color", engine::frame::TarEmpty );
-		let mut rast = copy ct.default_rast;
-		rast.set_depth(~"<=",true);
-		rast.prime.cull = true;
-		let cache = @mut engine::draw::create_cache();
-		engine::draw::load_technique( ~"main", ~"data/code/tech/forward/light",
-			(ct.default_frame_buffer, pmap, rast), cache)
-	};
-	// done
-	ct.check(~"init");
-	let aspect = (wid as float) / (het as float);
-	let editor = chared::make_scene( &ct, aspect, &lg );
-	let battle = battle::make_scene( &ct, aspect, &lg );
-	Game{ context:ct, audio:ac, journal:lg,
-		sound_source:src,
-		frames:0u, technique:tech,
-		editor:editor, battle:battle,
-		screen:ScreenChar, time:0f,
 	}
 }
 
@@ -169,9 +184,17 @@ fn main()	{
 			fail_GLFW("OpenWindow");
 		}
 	
-		window.set_input_mode( glfw3::CURSOR_MODE, glfw3::CURSOR_CAPTURED as int );
+		//window.set_input_mode( glfw3::CURSOR_MODE, glfw3::CURSOR_CAPTURED as int );
 		window.make_context_current();
-		let game = create_game( config.window.width, config.window.height, lg );
+		let game = @Game::create( config.window.width, config.window.height, lg );
+		do window.set_char_callback()	|_win,key|	{
+			game.on_char( key as char );
+		}
+		do window.set_key_callback() |_win,key,action|	{
+			if action == glfw3::PRESS	{
+				game.on_key_press( key as int );
+			}
+		};
 		
 		loop	{
 			glfw3::poll_events();
@@ -199,7 +222,6 @@ fn main()	{
 			let mouse_hit = window.get_mouse_button( glfw3::MOUSE_BUTTON_LEFT )!=0;
 			// camera rotation
 			let _cam_dir = (window.get_key(glfw3::KEY_E) - window.get_key(glfw3::KEY_Q)) as int;
-			let press_key = if window.get_key(glfw3::KEY_E) != 0 {Some('Y')} else {None};
 			// render
 			let (cx,cy) = window.get_cursor_pos();
 			let nx = (cx as float)/(config.window.width as float);
@@ -207,7 +229,7 @@ fn main()	{
 			if !game.update( nx, ny, mouse_hit, scroll_y as float )	{
 				break
 			}
-			if !game.render( &config.elements, press_key )	{
+			if !game.render( &config.elements )	{
 				break;
 			}
 			window.swap_buffers();

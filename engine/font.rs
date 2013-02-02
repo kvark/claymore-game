@@ -112,9 +112,16 @@ impl Font	{
 	}
 
 	pub fn bake( gr : &context::Context, s : &str, max_size : (uint,uint), lg : &context::Log )-> texture::Texture	{
-		let (limit_x,limit_y) = max_size;
 		lg.add(fmt!( "Font baking text: %s", s ));
+		if s.is_empty()	{
+			let tex = gr.create_texture( ~"2D", 1u, 1u, 1u, 0u );
+			let mut image = vec::from_elem( 1u, 0u8 );
+			gr.texture.load_2D( &tex, 0u, texture::map_int_format(~"r8"),
+				texture::map_pix_format(~"red"), image[0].to_gl_type(), &image );
+			return tex
+		}
 		struct Target	{ c:char, x:int, y:int }
+		let (limit_x,limit_y) = max_size;
 		let face  = unsafe { &*(self.face) };
 		let line_gap = (self.line_offset as int) + (face.height as int);
 		let mut position = 0, baseline = face.ascender as int;	// in font units

@@ -526,7 +526,7 @@ pub struct EditLabel	{
 pub type KeyInput = ();
 
 pub impl EditLabel	{
-	static pub fn obtain( screen : &mut Screen, base_name : ~str )-> EditLabel	{
+	static fn obtain( screen : &mut Screen, base_name : ~str )-> EditLabel	{
 		let cursor_name = base_name + ~".cursor";
 		let blink = @mut Blink	{
 			element	: screen.images.get(&cursor_name),
@@ -544,8 +544,17 @@ pub impl EditLabel	{
 		}
 	}
 
-	pub fn change( &self, key : char, ct : &engine::context::Context, lg : &engine::context::Log )	{
-		let text = self.text.content + str::from_char(key);
+	fn change( &self, input : &~str, ct : &engine::context::Context, lg : &engine::context::Log )	{
+		let mut text = copy self.text.content;
+		for input.each_char() |key|	{
+			if key == (259 as char)	{
+				if !text.is_empty()	{
+					str::pop_char( &mut text );
+				}
+			}else	{
+				str::push_char( &mut text, key );
+			};
+		}
 		self.text.texture = @self.text.font.bake( ct, text, (1000,100), lg );	//self.size
 		self.text.content = text;
 	}
