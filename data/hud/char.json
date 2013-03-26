@@ -302,7 +302,7 @@
 	"images":[
 		{
 			"frame"	: "id.frame",
-			"path"	: "frame-rich.png",
+			"path"	: "frame-new1.png",
 			"center": [0.5,0.5]
 		},
 		{
@@ -347,7 +347,7 @@
 		},
 		{
 			"frame"	: "eval.frame",
-			"path"	: "frame-rich.png",
+			"path"	: "frame-new1.png",
 			"center": [0.5,0.5]
 		},
 		{
@@ -362,7 +362,7 @@
 		},
 		{
 			"frame"	: "tech.frame",
-			"path"	: "frame-rich.png",
+			"path"	: "frame-new1.png",
 			"center": [0.5,0.5]
 		},
 		{

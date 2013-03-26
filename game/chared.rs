@@ -73,7 +73,7 @@ pub struct Scene	{
 	tech_solid	: engine::draw::Technique,
 	tech_cloak	: engine::draw::Technique,
 	tech_alpha	: engine::draw::Technique,
-	shadow	: shadow::Data,
+	shadow	: render::shadow::Data,
 	start	: float,
 	hud_screen	: hud::Screen,
 	hud_context	: hud::Context,
@@ -307,7 +307,7 @@ pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine:
 	let edit_label = @hud::EditLabel::obtain( &mut hud_screen, ~"id.name.text" );
 	let hdebug = @engine::load::load_program( ct, ~"data/code/hud/debug", lg );
 	//arm.set_record( arm.actions[0], 0f );
-	let shadow = shadow::create_data( ct,
+	let shadow = render::shadow::create_data( ct,
 		@mut engine::draw::create_cache(),
 		scene.lights.get(&~"Lamp"),	0x200u );
 	// load camera

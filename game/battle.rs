@@ -203,7 +203,7 @@ pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine:
 		let s_opt = Some( engine::texture::make_sampler(3u,1) );
 		ent.mut_data().insert( ~"t_Main", engine::shade::UniTexture(0u,tex,s_opt) );
 		let utc = Vec4::new(1f32,1f32,0f32,0f32);
-		ent.mut_data().insert( ~"u_TexTransform", engine::shade::UniFloatVec(utc) );
+		ent.mut_data().insert( ~"u_Tex0Transform", engine::shade::UniFloatVec(utc) );
 		// done
 		Character{
 			entity		: ent,
@@ -217,7 +217,7 @@ pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine:
 	let s_opt = Some( engine::texture::make_sampler(3u,1) );
 	battle_land.mut_data().insert( ~"t_Main", engine::shade::UniTexture(0u,tex,s_opt) );
 	let utc = Vec4::new(10f32,10f32,0f32,0f32);
-	battle_land.mut_data().insert( ~"u_TexTransform", engine::shade::UniFloatVec(utc) );
+	battle_land.mut_data().insert( ~"u_Tex0Transform", engine::shade::UniFloatVec(utc) );
 	// create grid
 	let grid = grid::make_grid( ct, 10u, lg );
 	grid.init( &ct.texture );

@@ -67,7 +67,7 @@ impl Game	{
 			sound_source:src,
 			frames:0u, technique:tech,
 			editor:editor, battle:battle,
-			screen:ScreenChar, time:0f,
+			screen:ScreenBattle, time:0f,
 		}
 	}
 
@@ -157,7 +157,7 @@ struct Config	{
 
 fn main()	{
 	do task::task().sched_mode(task::PlatformThread).spawn {
-		if (glfw3::init()==0)	{
+		if glfw3::init()==0	{
 			fail_GLFW("Init");
 		}
 

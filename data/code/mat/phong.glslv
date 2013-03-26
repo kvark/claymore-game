@@ -24,7 +24,8 @@ vec3 cookVector(vec3 v)	{
 vec3 initMatRich()	{
 	vec3 nor = modifyVector( a_Normal.xyz );
 	v_Normal = mat3(u_World) * nor;
+	vec3 wp = initMatPure();
 	v_Eye = cookVector( u_CameraPos.xyz - wp );
 	v_Tex = u_Tex0Transform.xy * vec2( a_Tex0.x, 1.0-a_Tex0.y ) + u_Tex0Transform.zw;
-	return initMatPure();
+	return wp;
 }

@@ -4,6 +4,22 @@
 		"selected_items":
 		[
 			[
+				"input",
+				"input_queue"
+			],
+			[
+				"pu",
+				"push_char"
+			],
+			[
+				"Ah",
+				"AhEditName"
+			],
+			[
+				"hud",
+				"hud_active"
+			],
+			[
 				"hud_",
 				"hud_screen"
 			],
@@ -498,22 +514,6 @@
 			[
 				"GL_UN",
 				"GL_UNSIGNED_INT"
-			],
-			[
-				"GL_UNSI",
-				"GL_UNSIGNED_BYTE"
-			],
-			[
-				"is_in",
-				"is_integer"
-			],
-			[
-				"world",
-				"world_space"
-			],
-			[
-				"wor",
-				"world_space"
 			]
 		]
 	},
@@ -531,7 +531,7 @@
 			"file": "/Users/kvark/Code/rust/claymore-game/game/chared.rs",
 			"settings":
 			{
-				"buffer_size": 10108,
+				"buffer_size": 10895,
 				"line_ending": "Unix"
 			}
 		},
@@ -539,7 +539,7 @@
 			"file": "/Users/kvark/Code/rust/claymore-game/game/hud.rs",
 			"settings":
 			{
-				"buffer_size": 15196,
+				"buffer_size": 15371,
 				"line_ending": "Unix"
 			}
 		},
@@ -547,7 +547,7 @@
 			"file": "/Users/kvark/Code/rust/claymore-game/game/main.rs",
 			"settings":
 			{
-				"buffer_size": 6044,
+				"buffer_size": 6341,
 				"line_ending": "Unix"
 			}
 		},
@@ -556,6 +556,38 @@
 			"settings":
 			{
 				"buffer_size": 41948,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "/Users/kvark/Code/rust/claymore-game/engine/font.rs",
+			"settings":
+			{
+				"buffer_size": 8305,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "/Users/kvark/Code/rust/claymore-game/engine/shade.rs",
+			"settings":
+			{
+				"buffer_size": 13162,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "/Users/kvark/Code/rust/claymore-game/data/code/mat/phong.glslv",
+			"settings":
+			{
+				"buffer_size": 627,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "/Users/kvark/Code/rust/claymore-game/game/battle.rs",
+			"settings":
+			{
+				"buffer_size": 6900,
 				"line_ending": "Unix"
 			}
 		}
@@ -727,7 +759,7 @@
 	},
 	"find_in_files":
 	{
-		"height": 93.0,
+		"height": 0.0,
 		"where_history":
 		[
 			""
@@ -738,6 +770,10 @@
 		"case_sensitive": false,
 		"find_history":
 		[
+			"mouse",
+			"KeyFun",
+			"self",
+			"~\"\";\n",
 			"game",
 			"CharFun",
 			"focus",
@@ -861,11 +897,7 @@
 			"a_Normal",
 			"used_meta",
 			"u_PosCam",
-			"substr",
-			"iter_bytes",
-			"GLint",
-			"cache.",
-			"self"
+			"substr"
 		],
 		"highlight": true,
 		"in_selection": false,
@@ -888,7 +920,7 @@
 	"groups":
 	[
 		{
-			"selected": 3,
+			"selected": 8,
 			"sheets":
 			[
 				{
@@ -903,8 +935,8 @@
 						"selection":
 						[
 							[
-								7111,
-								7111
+								7869,
+								7869
 							]
 						],
 						"settings":
@@ -916,7 +948,7 @@
 							"translate_tabs_to_spaces": false
 						},
 						"translation.x": 0.0,
-						"translation.y": 5063.0,
+						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
 					"type": "text"
@@ -926,15 +958,15 @@
 					"file": "/Users/kvark/Code/rust/claymore-game/game/chared.rs",
 					"settings":
 					{
-						"buffer_size": 10108,
+						"buffer_size": 10895,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								2554,
-								2554
+								3121,
+								3121
 							]
 						],
 						"settings":
@@ -946,7 +978,7 @@
 							"translate_tabs_to_spaces": false
 						},
 						"translation.x": 0.0,
-						"translation.y": 1033.0,
+						"translation.y": 1509.0,
 						"zoom_level": 1.0
 					},
 					"type": "text"
@@ -956,15 +988,15 @@
 					"file": "/Users/kvark/Code/rust/claymore-game/game/hud.rs",
 					"settings":
 					{
-						"buffer_size": 15196,
+						"buffer_size": 15371,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								14502,
-								14502
+								14997,
+								14997
 							]
 						],
 						"settings":
@@ -976,7 +1008,7 @@
 							"translate_tabs_to_spaces": false
 						},
 						"translation.x": 0.0,
-						"translation.y": 8724.0,
+						"translation.y": 8825.0,
 						"zoom_level": 1.0
 					},
 					"type": "text"
@@ -986,15 +1018,15 @@
 					"file": "/Users/kvark/Code/rust/claymore-game/game/main.rs",
 					"settings":
 					{
-						"buffer_size": 6044,
+						"buffer_size": 6341,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								4781,
-								4781
+								1774,
+								1774
 							]
 						],
 						"settings":
@@ -1006,7 +1038,7 @@
 							"translate_tabs_to_spaces": false
 						},
 						"translation.x": 0.0,
-						"translation.y": 2586.0,
+						"translation.y": 592.0,
 						"zoom_level": 1.0
 					},
 					"type": "text"
@@ -1023,8 +1055,8 @@
 						"selection":
 						[
 							[
-								34397,
-								34414
+								6185,
+								6188
 							]
 						],
 						"settings":
@@ -1032,10 +1064,131 @@
 							"glsv_configured": true,
 							"glsv_enabled": 1.0,
 							"glsv_spec": 0.0,
-							"syntax": "Packages/Rust/Rust.tmLanguage"
+							"syntax": "Packages/Rust/Rust.tmLanguage",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 14902.0,
+						"translation.y": 2430.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 5,
+					"file": "/Users/kvark/Code/rust/claymore-game/engine/font.rs",
+					"settings":
+					{
+						"buffer_size": 8305,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								3110,
+								3110
+							]
+						],
+						"settings":
+						{
+							"glsv_configured": true,
+							"glsv_enabled": 1.0,
+							"glsv_spec": 0.0,
+							"syntax": "Packages/Rust/Rust.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 1609.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 6,
+					"file": "/Users/kvark/Code/rust/claymore-game/engine/shade.rs",
+					"settings":
+					{
+						"buffer_size": 13162,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								8969,
+								8969
+							]
+						],
+						"settings":
+						{
+							"glsv_configured": true,
+							"glsv_enabled": 1.0,
+							"glsv_spec": 0.0,
+							"syntax": "Packages/Rust/Rust.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 3376.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 7,
+					"file": "/Users/kvark/Code/rust/claymore-game/data/code/mat/phong.glslv",
+					"settings":
+					{
+						"buffer_size": 627,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								624,
+								624
+							]
+						],
+						"settings":
+						{
+							"glsv_configured": true,
+							"glsv_enabled": 1.0,
+							"glsv_spec": 0.0,
+							"syntax": "Packages/Text/Plain text.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 8,
+					"file": "/Users/kvark/Code/rust/claymore-game/game/battle.rs",
+					"settings":
+					{
+						"buffer_size": 6900,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								6483,
+								6483
+							]
+						],
+						"settings":
+						{
+							"glsv_configured": true,
+							"glsv_enabled": 1.0,
+							"glsv_spec": 0.0,
+							"syntax": "Packages/Rust/Rust.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 2954.0,
 						"zoom_level": 1.0
 					},
 					"type": "text"

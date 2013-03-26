@@ -19,4 +19,8 @@ mod grid;
 mod hud;
 mod main;
 mod scene;
-mod shadow;
+
+mod render	{
+	mod shadow;
+	mod llight;
+}

@@ -281,7 +281,7 @@ pure fn check_sampler( target : glcore::GLenum, storage : glcore::GLenum )	{
 	if target == glcore::GL_TEXTURE_3D	{
 		assert [glcore::GL_SAMPLER_3D]		.contains( &storage );
 	}else	{
-		fail(fmt!( "Unknown texture target: %x", target as uint ));
+		fail fmt!( "Unknown texture target: %x", target as uint )
 	}
 }
 
@@ -290,7 +290,7 @@ pure fn map_shader_type( t : char )-> glcore::GLenum	{
 		'v'	=> glcore::GL_VERTEX_SHADER,
 		'g' => glcore::GL_GEOMETRY_SHADER,
 		'f'	=> glcore::GL_FRAGMENT_SHADER,
-		_	=> fail(fmt!( "Unknown shader type: %c", t ))
+		_	=> fail fmt!( "Unknown shader type: %c", t )
 	}
 }
 
@@ -317,7 +317,9 @@ impl context::Context	{
 		};
 		let ok = (status != (0 as glcore::GLint));
 		if !ok	{
-			fail ~"\tGLSL object error: " + message
+			io::println(~"Failed shader code:");
+			io::println(code);
+			fail ~"\tGLSL " + message
 		}
 		Object{ handle:h, target:target,
 			alive:ok, info:message,
@@ -396,8 +398,8 @@ impl context::Context	{
 				None	=>	{
 					match par.value	{
 						Unitialized => fail fmt!(
-							"Program %d has non-initialized parameter %d",
-							*p.handle as int, *par.loc as int ),
+							"Program %d has non-initialized parameter: name=%s, loc=%d",
+							*p.handle as int, *name, *par.loc as int ),
 						_ => (),
 					}
 				}
