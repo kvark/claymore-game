@@ -79,7 +79,7 @@ impl Grid	{
 		// init storage
 		tb.bind( self.texture );
 		let fm_int = engine::texture::map_int_format( ~"rgba8" );
-		tb.init_2D(	self.texture, 1u, fm_int, true );
+		tb.init( self.texture, 1u, fm_int, true );
 		// load data
 		self.upload_all_cells(tb);
 		// set up texture

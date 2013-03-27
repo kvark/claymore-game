@@ -22,5 +22,5 @@ mod scene;
 
 mod render	{
 	mod shadow;
-	mod llight;
+	mod lbuf;
 }

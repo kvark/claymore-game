@@ -216,33 +216,59 @@ impl Binding	{
 		return -1;
 	}
 
-	fn init_2D( t : &Texture, num_levels : uint, int_format : glcore::GLint, alpha_or_fixed_loc : bool )	{
+	fn init( t : &Texture, num_levels : uint, int_format : glcore::GLint, alpha : bool )	{
 		self.bind( t );
-		assert t.samples == 0u || num_levels == 1u;
-		t.levels = 0;
+		assert t.samples == 0u && (t.depth == 0u || num_levels == 1u);
+		t.levels = 0u;
 		while t.levels<num_levels	{
 			let (w,h) = t.get_level_size( t.levels );
-			if t.samples != 0u	{
-				glcore::glTexImage2DMultisample( *t.target, t.samples as glcore::GLsizei, int_format,
-					w as glcore::GLsizei, h as glcore::GLsizei, alpha_or_fixed_loc as glcore::GLboolean );
+			let (wi,hi,di) = ( w as glcore::GLsizei, h as glcore::GLsizei, t.depth as glcore::GLsizei );
+			let pix_format = if alpha {glcore::GL_RGBA} else {glcore::GL_RGB};
+			let data_type = glcore::GL_UNSIGNED_BYTE;
+			let li = t.levels as glcore::GLint;
+			if t.depth != 0u	{
+				glcore::glTexImage3D( *t.target, li, int_format, wi, hi, di,
+					0, pix_format, data_type, ptr::null() );
+			}else if t.height != 0u	{
+				glcore::glTexImage2D( *t.target, li, int_format, wi, hi,
+					0, pix_format, data_type, ptr::null() );
 			}else	{
-				let pix_format = if alpha_or_fixed_loc {glcore::GL_RGBA} else {glcore::GL_RGB};
-				glcore::glTexImage2D( *t.target, t.levels as glcore::GLint, int_format,
-					w as glcore::GLsizei, h as glcore::GLsizei, 0 as glcore::GLint,
-					pix_format, glcore::GL_UNSIGNED_BYTE, ptr::null() );
+				glcore::glTexImage1D( *t.target, li, int_format, wi,
+					0, pix_format, data_type, ptr::null() );
 			}
-			t.levels += 1;
+		t.levels += 1u;
 		}
 	}
 
-	fn init_2D_shadow( t : &Texture, stencil : bool )	{
+	fn init_shadow( t : &Texture, stencil : bool )	{
 		self.bind( t );
-		assert t.samples == 0u;
+		assert t.samples == 0u && t.levels == 0u;
+		let (wi,hi,di) = ( t.width as glcore::GLsizei, t.height	as glcore::GLsizei, t.depth as glcore::GLsizei );
 		let fm = if stencil {glcore::GL_DEPTH_STENCIL} else {glcore::GL_DEPTH_COMPONENT};
-		glcore::glTexImage2D( *t.target, 0, fm as glcore::GLint,
-			t.width as glcore::GLsizei, t.height as glcore::GLsizei, 0,
-			fm, glcore::GL_UNSIGNED_BYTE, ptr::null() );
-		t.levels = 1;
+		let data_type = glcore::GL_UNSIGNED_BYTE;
+		if t.depth != 0u	{
+			glcore::glTexImage3D( *t.target, 0, fm as glcore::GLint, wi, hi, di,
+				0, fm, data_type, ptr::null() );
+		}else	{
+			glcore::glTexImage2D( *t.target, 0, fm as glcore::GLint, wi, hi,
+				0, fm, data_type, ptr::null() );
+		}
+		t.levels = 1u;
+	}
+
+	fn init_multi( t : &Texture, int_format : glcore::GLint, fixed_loc : bool )	{
+		self.bind( t );
+		assert t.samples != 0u && t.levels == 0u;
+		let (wi,hi,di,si) = (
+			t.width as glcore::GLsizei, t.height	as glcore::GLsizei,
+			t.depth as glcore::GLsizei, t.samples	as glcore::GLsizei );
+		let fixed = fixed_loc as glcore::GLboolean;
+		if t.depth != 0u	{
+			glcore::glTexImage3DMultisample( *t.target, si, int_format, wi, hi, di,	fixed );
+		}else {
+			glcore::glTexImage2DMultisample( *t.target, si, int_format, wi, hi,		fixed );
+		}
+		t.levels = 1u;
 	}
 
 	fn load_2D<T>(	t : &Texture, level : uint, int_format : glcore::GLint,
