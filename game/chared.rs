@@ -73,6 +73,7 @@ pub struct Scene	{
 	tech_solid	: engine::draw::Technique,
 	tech_cloak	: engine::draw::Technique,
 	tech_alpha	: engine::draw::Technique,
+	lbuf	: render::lbuf::Context,
 	shadow	: render::shadow::Data,
 	start	: float,
 	hud_screen	: hud::Screen,
@@ -307,6 +308,7 @@ pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine:
 	let edit_label = @hud::EditLabel::obtain( &mut hud_screen, ~"id.name.text" );
 	let hdebug = @engine::load::load_program( ct, ~"data/code/hud/debug", lg );
 	//arm.set_record( arm.actions[0], 0f );
+	let lbuf = render::lbuf::Context::create( ct, 2u, 3u, copy t_solid.output );
 	let shadow = render::shadow::create_data( ct,
 		@mut engine::draw::create_cache(),
 		scene.lights.get(&~"Lamp"),	0x200u );
@@ -340,6 +342,7 @@ pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine:
 		tech_solid	: t_solid,
 		tech_cloak	: t_cloak,
 		tech_alpha	: t_alpha,
+		lbuf		: lbuf,
 		shadow	: shadow,
 		start	: engine::anim::get_time(),
 		hud_screen	: hud_screen,
