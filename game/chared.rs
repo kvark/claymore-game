@@ -321,10 +321,10 @@ pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine:
 		cam.proj.far as float ));
 	lg.add( ~"\tWorld :" + cam.node.world_space().to_string() );
 	let control = CamControl{
-		node	:cam.node,
-		origin	:Vec3::new(0f32,0f32,75f32),
-		speed_rot	:1.5f32,
-		speed_zoom	:15f32,
+		node	: cam.node,
+		origin	: Vec3::new(0f32,0f32,75f32),
+		speed_rot	: 1.5f32,
+		speed_zoom	: 15f32,
 		last_scroll	: None,
 	};
 	Scene	{

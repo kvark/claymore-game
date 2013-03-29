@@ -1,9 +1,28 @@
 extern mod engine;
 
+pub struct LightVolume	{
+	mesh_point	: @engine::mesh::Mesh,
+	mat_point	: @engine::draw::Material,
+}
+
+pub impl LightVolume	{
+	static fn create( gc : &engine::context::Context, lg : &engine::context::Log )->LightVolume	{
+		LightVolume{
+			mesh_point	: @engine::load::load_mesh( ~"data/mesh/cube", gc, lg ),
+			mat_point	: @engine::draw::load_material( ~"data/code/mat/light/point" ),
+		}
+	}
+	pure fn query(_kind : scene::LightKind)-> (@engine::mesh::Mesh,@engine::draw::Material)	{
+		( self.mesh_point, self.mat_point )
+	}
+}
+
+
 pub struct Context	{
+	tech_bake	: engine::draw::Technique,
 	tech_apply	: engine::draw::Technique,
 	fbo			: @engine::frame::Buffer,
-	rast		: engine::rast::State,
+	vao			: @engine::buf::VertexArray,
 	ta_direction: @engine::texture::Texture,
 	ta_color	: @engine::texture::Texture,
 }
@@ -13,22 +32,38 @@ pub impl Context	{
 		let (wid,het) = gc.screen_size;
 		let ta_dir = @gc.create_texture( ~"2DArray", wid/div, het/div, layers, 0u );
 		let ta_col = @gc.create_texture( ~"2DArray", wid/div, het/div, layers, 0u );
-		let technique = engine::draw::load_technique( ~"data/code/tech/lbuf/apply" );
+		let t_bake	= engine::draw::load_technique( ~"data/code/tech/lbuf/bake" );
+		let t_apply	= engine::draw::load_technique( ~"data/code/tech/lbuf/apply" );
 		Context{
-			tech_apply	: technique,
+			tech_bake	: t_bake,
+			tech_apply	: t_apply,
 			fbo			: @gc.create_frame_buffer(),
-			rast		: copy gc.default_rast,
+			vao			: @gc.create_vertex_array(),
 			ta_direction: ta_dir,
 			ta_color	: ta_col,
 		}
 	}
 
-	fn render_layer( layer : uint, _lights : ~[@scene::Light] )->engine::call::DrawOutput	{
+	fn render_layer( layer : uint, lights : ~[@scene::Light], vol : &LightVolume,
+			gc : &engine::context::Context, lg : &engine::context::Log )-> ~[engine::call::Call]	{
 		let mut pmap = engine::call::make_pmap_empty();
 		pmap.colors.insert( ~"o_Dir", engine::frame::TarTextureLayer(self.ta_direction,	layer, 0) );
 		pmap.colors.insert( ~"o_Col", engine::frame::TarTextureLayer(self.ta_color,		layer, 0) );
-		let out = ( self.fbo, pmap, copy self.rast );
-		out
+		let rast = copy gc.default_rast;
+		let output = ( self.fbo, pmap, rast );
+		do vec::map(lights) |lit|	{
+			let (mesh,mat) = vol.query( lit.kind );
+			let mut data = engine::shade::make_data();
+			
+			let e = engine::draw::Entity	{
+				node	: lit.node,
+				input	: (self.vao, mesh, mesh.get_range()),
+				data	: data,
+				modifier: @() as @engine::draw::Mod,
+				material: mat,
+			};
+			self.tech_bake.process( &e, copy output, gc, lg )
+		}
 	}
 
 	fn fill_data( data : &mut engine::shade::DataMap )	{
@@ -36,7 +71,4 @@ pub impl Context	{
 		data.insert( ~"t_LbufDir", engine::shade::UniTexture( 0, self.ta_direction,	sampler ));
 		data.insert( ~"t_LbufCol", engine::shade::UniTexture( 0, self.ta_color,		sampler ));
 	}
-}
-
-pub struct Layer	{
 }

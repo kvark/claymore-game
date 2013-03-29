@@ -70,7 +70,7 @@ impl CacheEntry : to_bytes::IterBytes	{
 
 
 pub type Cache = send_map::linear::LinearMap< CacheEntry, Option<@shade::Program> >;
-pub fn create_cache()-> Cache	{
+pub fn make_cache()-> Cache	{
 	send_map::linear::LinearMap::< CacheEntry, Option<@shade::Program> >()
 }
 
@@ -186,6 +186,6 @@ pub fn load_technique( path : ~str )-> Technique	{
 		meta_fragment	:extract_metas(s_frag),
 		code_vertex		:s_vert,
 		code_fragment	:s_frag,
-		cache : create_cache(),
+		cache : make_cache(),
 	}
 }
