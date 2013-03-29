@@ -178,7 +178,6 @@ pub struct Buffer	{
 	}
 }
 
-
 impl Buffer	{
 	pure fn check_size()->(uint,uint,uint,uint)	{
 		let mut actual = (0u,0u,0u,0u);
@@ -195,9 +194,12 @@ impl Buffer	{
 					(w,h,1,tex.samples)
 				}
 			};
-			let (wid,0,0,0) = actual;
-			if wid==0u	{ actual = current; }
-			else	{ assert actual == current; }
+			let (w,h,d,s) = actual;
+			if w==0u	{ actual = current; }
+			else	{
+				let (w2,h2,d2,s2) = current;
+				assert w==w2 && h==h2 && d==d2 && s==s2;
+			}
 		}
 		actual
 	}

@@ -49,12 +49,13 @@ pub impl Context	{
 		let mut pmap = engine::call::make_pmap_empty();
 		pmap.colors.insert( ~"o_Dir", engine::frame::TarTextureLayer(self.ta_direction,	layer, 0) );
 		pmap.colors.insert( ~"o_Col", engine::frame::TarTextureLayer(self.ta_color,		layer, 0) );
-		let rast = copy gc.default_rast;
+		let mut rast = copy gc.default_rast;
+		rast.set_blend( ~"s+d", ~"1", ~"1" );
 		let output = ( self.fbo, pmap, rast );
 		do vec::map(lights) |lit|	{
 			let (mesh,mat) = vol.query( lit.kind );
 			let mut data = engine::shade::make_data();
-			
+			//fill data
 			let e = engine::draw::Entity	{
 				node	: lit.node,
 				input	: (self.vao, mesh, mesh.get_range()),

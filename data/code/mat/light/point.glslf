@@ -1,12 +1,9 @@
-//%meta getIntencity getColor
-
-uniform	mat4	u_ViewInverse;
-uniform	vec4	c_LightPos;
+//%meta getIntensity getColor
 
 const	vec4	c_Color		= vec4(1.0,1.0,1.0,1.0);
 
 
-float getIntencity(vec3 wp)	{
+float getIntensity(vec3 dir)	{
 	return 1.0;
 }
 
