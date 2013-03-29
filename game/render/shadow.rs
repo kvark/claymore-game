@@ -8,11 +8,11 @@ pub struct Data	{
 	call_clear	: engine::call::Call,
 	tech_solid	: engine::draw::Technique,
 	tech_alpha	: engine::draw::Technique,
+	output		: engine::call::DrawOutput,
 	par_shadow	: engine::shade::Uniform,
 }
 
-pub fn create_data( ct : &engine::context::Context, cache : @mut engine::draw::Cache,
-		light : scene::Light, size : uint )-> Data	{
+pub fn create_data( ct : &engine::context::Context, light : scene::Light, size : uint )-> Data	{
 	let shadow = @ct.create_texture( ~"2D", size, size, 0u, 0u );
 	ct.texture.init_shadow( shadow, false );
 	let fbo = @ct.create_frame_buffer();
@@ -28,19 +28,18 @@ pub fn create_data( ct : &engine::context::Context, cache : @mut engine::draw::C
 		depth	: Some(1f),
 		stencil	: None,
 	};
-	let call = engine::call::CallClear( fbo, copy pmap, cdata, rast.scissor, rast.mask );
-	let t0 = engine::draw::load_technique(~"shadow-spot-solid",
-		~"data/code/tech/shadow/spot", (fbo,copy pmap,copy rast), cache );
-	let t1 = engine::draw::load_technique(~"shadow-spot-alpha",
-		~"data/code/tech/shadow/spot-alpha", (fbo,pmap,rast), cache );
+	let t_solid = engine::draw::load_technique( ~"data/code/tech/shadow/spot" );
+	let t_alpha = engine::draw::load_technique( ~"data/code/tech/shadow/spot-alpha" );
 	let mut samp = engine::texture::make_sampler( 2u, 0 );
 	samp.compare = Some( engine::rast::map_comparison(~"<") );
 	let par = engine::shade::UniTexture( 0u, shadow, Some(samp) );
+	let out = (fbo,pmap,rast);
 	Data{
 		light		: light,
-		call_clear	: call,
-		tech_solid	: t0,
-		tech_alpha	: t1,
+		call_clear	: cdata.genCall( copy out ),
+		tech_solid	: t_solid,
+		tech_alpha	: t_alpha,
+		output		: out,
 		par_shadow	: par,
 	}
 }

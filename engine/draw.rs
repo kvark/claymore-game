@@ -77,30 +77,16 @@ pub fn create_cache()-> Cache	{
 
 pub struct Technique	{
 	name	: ~str,
-	output	: call::DrawOutput,
 	meta_vertex		: ~[~str],
 	meta_fragment	: ~[~str],
 	code_vertex		: ~str,
 	code_fragment	: ~str,
-	priv cache	: @mut Cache,
+	priv mut cache	: Cache,
 }
 
 
 impl Technique	{
 	pure fn get_header()-> ~str	{~"#version 150 core"}
-
-	fn clone( name : ~str, rast : rast::State )-> Technique	{
-		let &(pmap,fbo,_) = &self.output;
-		Technique{
-			name	: name,
-			output	: (copy pmap,fbo,rast),
-			meta_vertex		: copy self.meta_vertex,
-			meta_fragment	: copy self.meta_fragment,
-			code_vertex		: copy self.code_vertex,
-			code_fragment	: copy self.code_fragment,
-			cache			: self.cache,
-		}
-	}
 	
 	fn make_vertex( material : @Material, modifier : @Mod )-> ~str	{
 		str::connect([
@@ -164,16 +150,11 @@ impl Technique	{
 		}
 	}
 
-	fn process( e : &Entity, ct : &context::Context, lg : &context::Log )-> call::Call	{
+	fn process( e : &Entity, output	: call::DrawOutput, ct : &context::Context, lg : &context::Log )-> call::Call	{
 		match self.get_program(e,ct,lg)	{
-			Some(p)	=> call::CallDraw( copy e.input, copy self.output, p, copy e.data ),
+			Some(p)	=> call::CallDraw( copy e.input, output, p, copy e.data ),
 			None => call::CallEmpty
 		}
-	}
-
-	pure fn gen_clear( cdata : call::ClearData )-> call::Call	{
-		let &(fbo,pmap,rast) = &self.output;
-		call::CallClear( fbo, copy pmap, cdata, rast.scissor, rast.mask )
 	}
 }
 
@@ -187,8 +168,8 @@ pub pure fn extract_metas( code : &str )->~[~str]	{
 }
 
 pub fn load_material( path : ~str )-> Material	{
-	let s_vert = load::load_text(path+".glslv");
-	let s_frag = load::load_text(path+".glslf");
+	let s_vert = load::load_text( path + ".glslv" );
+	let s_frag = load::load_text( path + ".glslf" );
 	Material{ name:path,
 		meta_vertex		:extract_metas(s_vert),
 		meta_fragment	:extract_metas(s_frag),
@@ -197,14 +178,14 @@ pub fn load_material( path : ~str )-> Material	{
 	}
 }
 
-pub fn load_technique( name : ~str, path : ~str, out : call::DrawOutput, cache : @mut Cache )-> Technique	{
-	let s_vert = load::load_text(path+".glslv");
-	let s_frag = load::load_text(path+".glslf");
-	Technique{ name:name, output:out,
+pub fn load_technique( path : ~str )-> Technique	{
+	let s_vert = load::load_text( path + ".glslv" );
+	let s_frag = load::load_text( path + ".glslf" );
+	Technique{ name:path,
 		meta_vertex		:extract_metas(s_vert),
 		meta_fragment	:extract_metas(s_frag),
 		code_vertex		:s_vert,
 		code_fragment	:s_frag,
-		cache:cache,
+		cache : create_cache(),
 	}
 }

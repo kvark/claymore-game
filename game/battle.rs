@@ -84,7 +84,7 @@ impl Scene	{
 		}
 		self.hero.update() && self.view.update( cam_dir ) && ok
 	}
-	pub fn render( ct : &engine::context::Context, tech : &engine::draw::Technique, lg : &engine::context::Log )	{
+	pub fn render( ct : &engine::context::Context, tech : &engine::draw::Technique, output : engine::call::DrawOutput, lg : &engine::context::Log )	{
 		{// update matrices
 			let light_pos	= Vec4::new( 4f32, 1f32, 6f32, 1f32 );
 			for [ &self.land, &self.hero.entity ].each |ent|	{
@@ -95,9 +95,9 @@ impl Scene	{
 				d.insert( ~"u_World",		engine::shade::UniMatrix(false,world) );
 			}
 		}
-		let c_land = tech.process( &self.land, ct, lg );
-		let c_hero = tech.process( &self.hero.entity, ct, lg );
-		let &(fbo,pmap,_) = &tech.output;
+		let c_land = tech.process( &self.land, copy output, ct, lg );
+		let c_hero = tech.process( &self.hero.entity, copy output, ct, lg );
+		let (fbo,pmap,_) = output;
 		let &(vao,_,_) = &self.land.input;
 		let c_grid = self.grid.call( fbo, copy pmap, vao );
 		ct.flush( ~[c_land,c_hero,c_grid] );

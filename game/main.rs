@@ -23,6 +23,7 @@ struct Game	{
 	sound_source: @engine::audio::Source,
 	mut frames	: uint,
 	technique	: engine::draw::Technique,
+	output		: engine::call::DrawOutput,
 	editor		: chared::Scene,
 	battle		: battle::Scene,
 	mut screen	: Screen,
@@ -49,14 +50,13 @@ impl Game	{
 		src.bind(buf);
 		//src.play();
 		// create a forward light technique
-		let tech = {
+		let tech = engine::draw::load_technique( ~"data/code/tech/forward/light" );
+		let out = {
 			let pmap = engine::call::make_pmap_simple( ~"o_Color", engine::frame::TarEmpty );
 			let mut rast = copy ct.default_rast;
 			rast.set_depth(~"<=",true);
 			rast.prime.cull = true;
-			let cache = @mut engine::draw::create_cache();
-			engine::draw::load_technique( ~"main", ~"data/code/tech/forward/light",
-				(ct.default_frame_buffer, pmap, rast), cache)
+			(ct.default_frame_buffer, pmap, rast)
 		};
 		// done
 		ct.check(~"init");
@@ -64,8 +64,8 @@ impl Game	{
 		let editor = chared::make_scene( &ct, aspect, &lg );
 		let battle = battle::make_scene( &ct, aspect, &lg );
 		Game{ context:ct, audio:ac, journal:lg,
-			sound_source:src,
-			frames:0u, technique:tech,
+			sound_source:src, frames:0u,
+			technique:tech, output:out,
 			editor:editor, battle:battle,
 			screen:ScreenBattle, time:0f,
 		}
@@ -100,16 +100,15 @@ impl Game	{
 			ScreenChar => self.editor.render( el, &self.context, &self.journal ),
 			ScreenBattle => {
 				// clear screen
-				let c0 = self.technique.gen_clear(
+				let c0 =
 					engine::call::ClearData{
 						color	:Some( engine::rast::make_color(0x8080FFFF) ),
 						depth	:Some( 1f ),
 						stencil	:Some( 0u ),
-					}
-				);
+					}.genCall( copy self.output );
 				self.context.flush(~[c0]);
 				// draw battle
-				self.battle.render( &self.context, &self.technique, &self.journal );
+				self.battle.render( &self.context, &self.technique, copy self.output, &self.journal );
 			},
 			_ => ()
 		}

@@ -39,6 +39,13 @@ pub enum Call	{
 	CallTransfrom(),	//FIXME
 }
 
+impl ClearData	{
+	pub fn genCall( output : DrawOutput )-> Call	{
+		let (fbo,pmap,rast) = output;
+		CallClear( fbo, pmap, self, rast.scissor, rast.mask )
+	}
+}
+
 
 impl context::Context	{
 	fn flush( queue	: ~[Call] )	{

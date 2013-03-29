@@ -7,8 +7,7 @@ pub struct Context	{
 }
 
 pub impl Context	{
-	static fn create( gc : &engine::context::Context, layers : uint, div : uint,
-			output : engine::call::DrawOutput )-> Context	{
+	static fn create( gc : &engine::context::Context, layers : uint, div : uint )-> Context	{
 		let (wid,het) = gc.screen_size;
 		let ta_dir = @gc.create_texture( ~"2DArray", wid/div, het/div, layers, 0u );
 		let ta_col = @gc.create_texture( ~"2DArray", wid/div, het/div, layers, 0u );
@@ -17,9 +16,7 @@ pub impl Context	{
 		pmap.color.insert( ~"o_Dir", engine::frame:: );
 		pmap.color.insert( ~"o_Col", engine::frame:: );
 		*/
-		let technique = engine::draw::load_technique(
-			~"lbuf.apply", ~"data/code/tech/lbuf/apply",
-			output, @mut engine::draw::create_cache() );
+		let technique = engine::draw::load_technique( ~"data/code/tech/lbuf/apply" );
 		Context{
 			tech_apply	: technique,
 			ta_direction: ta_dir,

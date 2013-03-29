@@ -70,9 +70,10 @@ pub struct Scene	{
 	cam		: scene::Camera,
 	control	: CamControl,
 	envir	: Envir,
-	tech_solid	: engine::draw::Technique,
-	tech_cloak	: engine::draw::Technique,
-	tech_alpha	: engine::draw::Technique,
+	technique	: engine::draw::Technique,
+	rast_solid	: engine::rast::State,
+	rast_cloak	: engine::rast::State,
+	rast_alpha	: engine::rast::State,
 	lbuf	: render::lbuf::Context,
 	shadow	: render::shadow::Data,
 	start	: float,
@@ -126,13 +127,15 @@ impl Scene	{
 	}
 	fn render( el : &main::Elements, ct : &engine::context::Context, lg : &engine::context::Log  )	{
 		// clear screen
-		let c0 = self.tech_solid.gen_clear(
+		let fbo = ct.default_frame_buffer;
+		let pmap = engine::call::make_pmap_simple( ~"o_Color", engine::frame::TarEmpty );
+		let out_solid = (fbo, copy pmap, self.rast_solid);
+		let c0 =
 			engine::call::ClearData{
 				color	:Some( engine::rast::make_color(0x8080FFFF) ),
 				depth	:Some( 1f ),
 				stencil	:Some( 0u ),
-			}
-		);
+			}.genCall( copy out_solid );
 		if el.environment	{
 			let vpi = self.cam.get_matrix().invert();
 			//self.cam.fill_data( &mut self.envir.data );
@@ -141,9 +144,8 @@ impl Scene	{
 		}
 		let c1 = if el.environment	{
 			let e = &self.envir;
-			let &(pmap,fbo,_) = &self.tech_solid.output;
 			engine::call::CallDraw(
-				copy e.input, (copy pmap,fbo,copy e.rast),
+				copy e.input, (fbo,copy pmap,copy e.rast),
 				e.prog, copy e.data )
 		}else	{
 			engine::call::CallEmpty
@@ -174,7 +176,7 @@ impl Scene	{
 			if el.character	{
 				for [&self.gr_main,&self.gr_cape,&self.gr_hair].each() |group|	{
 					for group.each() |ent|	{
-						queue.push( self.shadow.tech_solid.process( ent, ct, lg ));
+						queue.push( self.shadow.tech_solid.process( ent, copy self.shadow.output, ct, lg ));
 					}
 				}
 				/*for [&self.gr_hair].each() |group|	{
@@ -186,18 +188,20 @@ impl Scene	{
 		}
 		if el.character	{
 			for self.gr_main.each() |ent|	{
-				queue.push( self.tech_alpha.process( ent, ct, lg ) );
+				queue.push( self.technique.process( ent, copy out_solid, ct, lg ) );
 			}
 			for self.gr_cape.each() |ent|	{
-				queue.push( self.tech_cloak.process( ent, ct, lg ) );	
+				let out = (fbo, copy pmap, copy self.rast_cloak );
+				queue.push( self.technique.process( ent, out, ct, lg ) );	
 			}
 			for self.gr_hair.each() |ent|	{
-				queue.push( self.tech_alpha.process( ent, ct, lg ) );
+				let out = (fbo, copy pmap, copy self.rast_alpha );
+				queue.push( self.technique.process( ent, out, ct, lg ) );
 			}
 		}
 		if el.shadow	{
 			for self.gr_other.each() |ent|	{
-				queue.push( self.tech_solid.process( ent, ct, lg ) );
+				queue.push( self.technique.process( ent, copy out_solid, ct, lg ) );
 			}
 		}
 		if el.hud	{
@@ -248,22 +252,19 @@ pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine:
 	let mut scene = scene::load_scene( ~"data/claymore-2a", ct, Some(vao), aspect, lg );
 	let detail_info = scene::load_config::<~[scene::EntityInfo]>( ~"data/details.json" );
 	let mut details = scene.context.parse_group( detail_info, ct, Some(vao), lg );
-	// techniques
-	let (t_solid,t_cloak,t_alpha) = {
-		let pmap = engine::call::make_pmap_simple( ~"o_Color", engine::frame::TarEmpty );
-		let mut rast = copy ct.default_rast;
-		rast.depth.test = true;
-		rast.prime.cull = true;
-		let t1 = engine::draw::load_technique( ~"solid", ~"data/code/tech/forward/spot-shadow",
-			(ct.default_frame_buffer, pmap, copy rast),
-			@mut engine::draw::create_cache() );
-		rast.prime.cull = false;
-		let t2 = t1.clone( ~"2sided", copy rast );
-		rast.prime.cull = true;
-		rast.set_blend( ~"s+d", ~"Sa", ~"1-Sa" );
-		let t3 = t1.clone( ~"alpha", rast );
-		(t1,t2,t3)
-	};
+	// techniques & rast states
+	let tech = engine::draw::load_technique( ~"data/code/tech/forward/spot-shadow" );
+	let pmap = engine::call::make_pmap_simple( ~"o_Color", engine::frame::TarEmpty );
+	let mut rast = copy ct.default_rast;
+	rast.depth.test = true;
+	rast.prime.cull = true;
+	let r_solid = copy rast;
+	rast.prime.cull = false;
+	let r_cloak = copy rast;
+	rast.prime.cull = true;
+	rast.set_blend( ~"s+d", ~"Sa", ~"1-Sa" );
+	let r_alpha = copy rast;
+	// armature
 	let arm = scene.context.armatures.get(&~"Armature.002");
 	let mut group = scene.entities.divide( &~"noTrasnform" );
 	group.swap_entity( &~"boots", &mut details );
@@ -298,7 +299,6 @@ pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine:
 		let mut hud_rast = copy ct.default_rast;
 		hud_rast.set_blend( ~"s+d", ~"Sa", ~"1-Sa" );
 		let quad = @engine::mesh::create_quad(ct);
-		let &(_,pmap,_) = &t_solid.output;
 		hud::Context{
 			input	: (vao,quad,quad.get_range()),
 			output	: (ct.default_frame_buffer, copy pmap, hud_rast),
@@ -308,10 +308,8 @@ pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine:
 	let edit_label = @hud::EditLabel::obtain( &mut hud_screen, ~"id.name.text" );
 	let hdebug = @engine::load::load_program( ct, ~"data/code/hud/debug", lg );
 	//arm.set_record( arm.actions[0], 0f );
-	let lbuf = render::lbuf::Context::create( ct, 2u, 3u, copy t_solid.output );
-	let shadow = render::shadow::create_data( ct,
-		@mut engine::draw::create_cache(),
-		scene.lights.get(&~"Lamp"),	0x200u );
+	let lbuf = render::lbuf::Context::create( ct, 2u, 3u );
+	let shadow = render::shadow::create_data( ct, scene.lights.get(&~"Lamp"), 0x200u );
 	// load camera
 	let cam = scene.cameras.get(&~"Camera");
 	//cam.proj = copy shadow.light.proj;
@@ -339,9 +337,10 @@ pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine:
 		cam		: cam,
 		control	: control,
 		envir	: envir,
-		tech_solid	: t_solid,
-		tech_cloak	: t_cloak,
-		tech_alpha	: t_alpha,
+		technique	: tech,
+		rast_solid	: r_solid,
+		rast_cloak	: r_cloak,
+		rast_alpha	: r_alpha,
 		lbuf		: lbuf,
 		shadow	: shadow,
 		start	: engine::anim::get_time(),
