@@ -1,4 +1,6 @@
 extern mod engine;
+extern mod lmath;
+
 
 pub struct LightVolume	{
 	mesh_point	: @engine::mesh::Mesh,
@@ -45,6 +47,7 @@ pub impl Context	{
 	}
 
 	fn render_layer( layer : uint, lights : ~[@scene::Light], vol : &LightVolume,
+			depth : @engine::texture::Texture, cam : &scene::Camera,
 			gc : &engine::context::Context, lg : &engine::context::Log )-> ~[engine::call::Call]	{
 		let mut pmap = engine::call::make_pmap_empty();
 		pmap.colors.insert( ~"o_Dir", engine::frame::TarTextureLayer(self.ta_direction,	layer, 0) );
@@ -52,14 +55,27 @@ pub impl Context	{
 		let mut rast = copy gc.default_rast;
 		rast.set_blend( ~"s+d", ~"1", ~"1" );
 		let output = ( self.fbo, pmap, rast );
+		// prepare data
+		let mut data = engine::shade::make_data();
+		let sampler = Some( engine::texture::make_sampler(2u,0) );
+		data.insert( ~"t_Depth", 			engine::shade::UniTexture(0,depth,sampler) );
+		let (wf,hf) = ( self.ta_color.width as f32, self.ta_color.height as f32 );
+		let target_size = lmath::gltypes::vec4::new( wf, hf, 1f32/wf, 1f32/hf );
+		data.insert( ~"u_TargetSize",		engine::shade::UniFloatVec(target_size) );
+		let vpi = cam.get_matrix().invert();
+		cam.fill_data( &mut data );
+		data.insert( ~"u_ViewProjInverse",	engine::shade::UniMatrix(false,vpi) );
+		// map lights
 		do vec::map(lights) |lit|	{
-			let (mesh,mat) = vol.query( lit.kind );
-			let mut data = engine::shade::make_data();
-			//fill data
+			let (mesh,mat) = vol.query( lit.kind );	
+			let pos = lit.node.world_space().get_pos_scale();
+			data.insert( ~"u_LightPos", engine::shade::UniFloatVec(pos) );
+			let mw = lit.node.world_space().to_matrix();
+			data.insert( ~"u_World",	engine::shade::UniMatrix(false,mw) );
 			let e = engine::draw::Entity	{
 				node	: lit.node,
-				input	: (self.vao, mesh, mesh.get_range()),
-				data	: data,
+				input	: ( self.vao, mesh, mesh.get_range() ),
+				data	: copy data,
 				modifier: @() as @engine::draw::Mod,
 				material: mat,
 			};
