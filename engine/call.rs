@@ -98,7 +98,7 @@ impl context::Context	{
 						assert !rast.stencil.test	|| pmap.stencil	!=frame::TarEmpty;
 						assert !rast.depth.test		|| pmap.depth	!=frame::TarEmpty;
 						assert !rast.blend.on		|| attaches[0]	!= frame::TarEmpty;
-						let (wid,het,_sam) = fb.check_size();
+						let (wid,het,_dep,_sam) = fb.check_size();
 						frame::make_rect(wid,het)
 					}else	{
 						*self.default_rast.view

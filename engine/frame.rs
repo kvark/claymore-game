@@ -27,6 +27,7 @@ pub enum Target	{
 	TarEmpty,
 	TarSurface(@Surface),
 	TarTexture(@texture::Texture,uint),
+	TarTextureLayer(@texture::Texture,uint,uint),
 }
 
 impl Target : Copy	{}
@@ -37,6 +38,8 @@ impl Target : cmp::Eq	{
 			(&TarEmpty,&TarEmpty)					=> true,
 			(&TarSurface(s1),&TarSurface(s2))		=> *s1.handle == *s2.handle,
 			(&TarTexture(t1,l1),&TarTexture(t2,l2))	=> *t1.handle == *t2.handle && l1==l2,
+			(&TarTextureLayer(t1,r1,l1),&TarTextureLayer(t2,r2,l2))	=>
+				*t1.handle == *t2.handle && r1==r2 && l1==l2,
 			(_,_) => false
 		}
 	}
@@ -56,7 +59,11 @@ impl Target	{
 			TarTexture(tex,lev)	=> {
 				assert tex.get_levels() > lev;
 				glcore::glFramebufferTexture( root, slot, *tex.handle, lev as glcore::GLint );
-			}
+			},
+			TarTextureLayer(tex,layer,lev) => {
+				assert tex.depth > layer && tex.get_levels() > lev;
+				glcore::glFramebufferTextureLayer( root, slot, *tex.handle, layer as glcore::GLint, lev as glcore::GLint );
+			},
 		}
 		true
 	}
@@ -173,23 +180,26 @@ pub struct Buffer	{
 
 
 impl Buffer	{
-	pure fn check_size()->(uint,uint,uint)	{
-		let mut wid = 0u, het = 0u, sam = 0u;
+	pure fn check_size()->(uint,uint,uint,uint)	{
+		let mut actual = (0u,0u,0u,0u);
 		for (~[self.stencil,self.depth] + self.colors).each |target|	{
-			match *target	{
-				TarEmpty => {},
-				TarSurface(sf) => 	{
-					if wid==0u	{ wid=sf.width; het=sf.height; sam=sf.samples; }
-					else	{ assert wid==sf.width && het==sf.height && sam==sf.samples };
-				},
+			let current = match *target	{
+				TarEmpty => actual,
+				TarSurface(sf) => (sf.width,sf.height,1,sf.samples),
 				TarTexture(tex,lev) =>	{
 					let (w,h) = tex.get_level_size(lev);
-					if wid==0u	{ wid=w; het=h; sam=tex.samples; }
-					else	{ assert wid==w && het==h && sam==tex.samples; }
+					(w,h,tex.depth,tex.samples)
+				},
+				TarTextureLayer(tex,_,lev) =>	{
+					let (w,h) = tex.get_level_size(lev);
+					(w,h,1,tex.samples)
 				}
-			}
+			};
+			let (wid,0,0,0) = actual;
+			if wid==0u	{ actual = current; }
+			else	{ assert actual == current; }
 		}
-		(wid,het,sam)
+		actual
 	}
 }
 
