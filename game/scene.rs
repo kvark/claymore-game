@@ -201,12 +201,19 @@ pub struct Camera	{
 }
 
 impl Camera	{
-	pure fn get_matrix()-> lmath::gltypes::mat4	{
-		let proj = match self.proj.to_mat4()	{
+	pure fn get_proj_matrix()-> lmath::gltypes::mat4	{
+		match self.proj.to_mat4()	{
 			Ok(m)	=> m,
 			Err(e)	=> fail ~"Camera projection fail: " + e.to_str()
-		};
+		}
+	}
+	pure fn get_matrix()-> lmath::gltypes::mat4	{
+		let proj = self.get_proj_matrix();
 		proj * self.node.world_space().invert().to_matrix()
+	}
+	pure fn get_inverse_matrix()-> lmath::gltypes::mat4	{
+		let proj = self.get_proj_matrix();
+		self.node.world_space().to_matrix() * proj.invert()
 	}
 	pure fn get_view_vector()-> lmath::gltypes::vec3	{
 		let v = Vec3::new( 0f32,0f32,-1f32 );
@@ -448,8 +455,8 @@ impl SceneContext	{
 pub struct Scene	{
 	context		: SceneContext,
 	entities	: EntityGroup,
-	cameras		: Dict<Camera>,
-	lights		: Dict<Light>,
+	cameras		: Dict<@Camera>,
+	lights		: Dict<@Light>,
 }
 
 
@@ -541,18 +548,18 @@ pub fn load_scene( path : ~str, gc : &engine::context::Context,
 	// entities
 	let entity_group = context.parse_group( scene.entities, gc, opt_vao, lg );
 	// cameras
-	let mut map_camera = LinearMap::<~str,Camera>();
+	let mut map_camera = LinearMap::<~str,@Camera>();
 	for scene.cameras.each() |icam|	{
 		let root = context.nodes.get( &icam.node );
 		map_camera.insert( copy root.name,
-			Camera{ node:root,
+			@Camera{ node:root,
 				proj:icam.proj.spawn(aspect),
 				ear:engine::audio::Listener{ volume:0f },
 			}
 		);
 	}
 	// lights
-	let mut map_light = LinearMap::<~str,Light>();
+	let mut map_light = LinearMap::<~str,@Light>();
 	for scene.lights.each() |ilight|	{
 		let root = context.nodes.get( &ilight.node );
 		let (cr,cg,cb) = ilight.color;
@@ -575,7 +582,7 @@ pub fn load_scene( path : ~str, gc : &engine::context::Context,
 			if ilight.sphere {kd as f32} else {0f32}
 			);
 		map_light.insert( copy root.name,
-			Light{ node:root,
+			@Light{ node:root,
 				color:col,
 				attenu:attenu,
 				kind:data,

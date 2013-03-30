@@ -135,11 +135,11 @@ impl Context	{
 			fail fmt!("%s: GL Error: %d %s",where,code as int,decode)
 		}
 	}
-	fn cleanup()	{
+	fn cleanup( lg : &Log )	{
 		self.cleanup_shaders();
 		self.cleanup_buffers();
 		self.cleanup_frames();
-		self.cleanup_textures();
+		self.cleanup_textures( lg );
 	}
 	fn set_clear_color( c : &rast::Color )	{
 		if self.clear_data.color != *c	{

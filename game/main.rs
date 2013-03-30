@@ -67,7 +67,7 @@ impl Game	{
 			sound_source:src, frames:0u,
 			technique:tech, output:out,
 			editor:editor, battle:battle,
-			screen:ScreenBattle, time:0f,
+			screen:ScreenChar, time:0f,
 		}
 	}
 
@@ -105,7 +105,7 @@ impl Game	{
 						color	:Some( engine::rast::make_color(0x8080FFFF) ),
 						depth	:Some( 1f ),
 						stencil	:Some( 0u ),
-					}.genCall( copy self.output );
+					}.gen_call( copy self.output );
 				self.context.flush(~[c0]);
 				// draw battle
 				self.battle.render( &self.context, &self.technique, copy self.output, &self.journal );
@@ -114,8 +114,8 @@ impl Game	{
 		}
 		// done
 		self.frames += 1;
-		self.context.cleanup();
-		self.context.check(~"render");
+		self.context.cleanup( &self.journal );
+		self.context.check( ~"render" );
 		true
 	}
 	

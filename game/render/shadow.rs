@@ -4,7 +4,7 @@ extern mod lmath;
 
 
 pub struct Data	{
-	light		: scene::Light,
+	light		: @scene::Light,
 	call_clear	: engine::call::Call,
 	tech_solid	: engine::draw::Technique,
 	tech_alpha	: engine::draw::Technique,
@@ -12,7 +12,7 @@ pub struct Data	{
 	par_shadow	: engine::shade::Uniform,
 }
 
-pub fn create_data( ct : &engine::context::Context, light : scene::Light, size : uint )-> Data	{
+pub fn create_data( ct : &engine::context::Context, light : @scene::Light, size : uint )-> Data	{
 	let shadow = @ct.create_texture( ~"2D", size, size, 0u, 0u );
 	ct.texture.init_shadow( shadow, false );
 	let fbo = @ct.create_frame_buffer();
@@ -36,7 +36,7 @@ pub fn create_data( ct : &engine::context::Context, light : scene::Light, size :
 	let out = (fbo,pmap,rast);
 	Data{
 		light		: light,
-		call_clear	: cdata.genCall( copy out ),
+		call_clear	: cdata.gen_call( copy out ),
 		tech_solid	: t_solid,
 		tech_alpha	: t_alpha,
 		output		: out,

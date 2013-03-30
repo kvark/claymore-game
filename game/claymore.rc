@@ -21,6 +21,7 @@ mod main;
 mod scene;
 
 mod render	{
-	mod shadow;
+	mod depth;
 	mod lbuf;
+	mod shadow;
 }

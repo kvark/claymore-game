@@ -40,7 +40,7 @@ pub enum Call	{
 }
 
 impl ClearData	{
-	pub fn genCall( output : DrawOutput )-> Call	{
+	pub fn gen_call( output : DrawOutput )-> Call	{
 		let (fbo,pmap,rast) = output;
 		CallClear( fbo, pmap, self, rast.scissor, rast.mask )
 	}
@@ -91,12 +91,13 @@ impl context::Context	{
 					let mut attaches = vec::from_elem( pmap.colors.len(), frame::TarEmpty );
 					for pmap.colors.each() |name,target|	{
 						let loc = prog.find_output( name );
+						assert loc < attaches.len() && attaches[loc] == frame::TarEmpty;
 						attaches[loc] = *target;
 					}
 					// check & activate raster
 					let rect = if *fb.handle != 0	{
-						assert !rast.stencil.test	|| pmap.stencil	!=frame::TarEmpty;
-						assert !rast.depth.test		|| pmap.depth	!=frame::TarEmpty;
+						assert !rast.stencil.test	|| pmap.stencil	!= frame::TarEmpty;
+						assert !rast.depth.test		|| pmap.depth	!= frame::TarEmpty;
 						assert !rast.blend.on		|| attaches[0]	!= frame::TarEmpty;
 						let (wid,het,_dep,_sam) = fb.check_size();
 						frame::make_rect(wid,het)

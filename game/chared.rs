@@ -67,14 +67,17 @@ pub struct Scene	{
 	gr_other: scene::EntityGroup,
 	details	: scene::EntityGroup,
 	skel	: @engine::space::Armature,
-	cam		: scene::Camera,
+	cam		: @scene::Camera,
 	control	: CamControl,
+	lights	: ~[@scene::Light],
 	envir	: Envir,
 	technique	: engine::draw::Technique,
 	rast_solid	: engine::rast::State,
 	rast_cloak	: engine::rast::State,
 	rast_alpha	: engine::rast::State,
+	depth	: render::depth::Data,
 	lbuf	: render::lbuf::Context,
+	lvolume	: render::lbuf::LightVolume,
 	shadow	: render::shadow::Data,
 	start	: float,
 	hud_screen	: hud::Screen,
@@ -127,6 +130,7 @@ impl Scene	{
 	}
 	fn render( el : &main::Elements, ct : &engine::context::Context, lg : &engine::context::Log  )	{
 		// clear screen
+		let use_lbuf = true;
 		let fbo = ct.default_frame_buffer;
 		let pmap = engine::call::make_pmap_simple( ~"o_Color", engine::frame::TarEmpty );
 		let out_solid = (fbo, copy pmap, self.rast_solid);
@@ -135,9 +139,9 @@ impl Scene	{
 				color	:Some( engine::rast::make_color(0x8080FFFF) ),
 				depth	:Some( 1f ),
 				stencil	:Some( 0u ),
-			}.genCall( copy out_solid );
+			}.gen_call( copy out_solid );
 		if el.environment	{
-			let vpi = self.cam.get_matrix().invert();
+			let vpi = self.cam.get_inverse_matrix();
 			//self.cam.fill_data( &mut self.envir.data );
 			self.envir.data.insert( ~"u_ViewProjInverse",
 				engine::shade::UniMatrix(false,vpi) );
@@ -170,6 +174,17 @@ impl Scene	{
 					//self.skel.fill_data( gd );
 				}	
 			}
+		}
+		if use_lbuf	&& el.character {
+			queue.push( copy self.depth.call_clear );
+			for [&self.gr_main,&self.gr_cape,&self.gr_hair].each() |group|	{
+				for group.each() |ent|	{
+					queue.push( self.depth.tech_solid.process( ent, copy self.depth.output, ct, lg ));
+				}
+			}
+			queue.push_all_move( self.lbuf.bake_layer(
+				0u, self.lights, &self.lvolume, self.depth.texture, self.cam, ct, lg
+				));
 		}
 		if el.shadow	{
 			queue.push( copy self.shadow.call_clear );
@@ -273,15 +288,18 @@ pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine:
 	lg.add(fmt!( "Group size: %u", group.len() ));
 	let envir = {
 		let mesh = @engine::mesh::create_quad( ct );
-		//let prog = @engine::load::load_program( ct, ~"data/code-game/envir", lg );
-		//let tex = scene.textures.get( &~"data/texture/Topanga_Forest_B_3k.hdr" );
-		//let samp = engine::texture::make_sampler(3u,1);
-		let prog = @engine::load::load_program( ct, ~"data/code-game/copy", lg );
-		let tex = @engine::load::load_texture_2D( ct, &~"data/texture/bg2.jpg", true );
-		let samp = engine::texture::make_sampler(3u,1);
 		let mut data = engine::shade::make_data();
-		//data.insert( ~"t_Environment",		engine::shade::UniTexture(0,tex,Some(samp)) );
-		data.insert( ~"t_Image",		engine::shade::UniTexture(0,tex,Some(samp)) );
+		let samp = engine::texture::make_sampler(3u,1);
+		let use_spherical = false;
+		let prog = if use_spherical	{
+			let tex = scene.context.textures.get( &~"data/texture/Topanga_Forest_B_3k.hdr" );
+			data.insert( ~"t_Environment",		engine::shade::UniTexture(0,tex,Some(samp)) );
+			@engine::load::load_program( ct, ~"data/code-game/envir", lg )
+		}else	{
+			let tex = @engine::load::load_texture_2D( ct, &~"data/texture/bg2.jpg", true );
+			data.insert( ~"t_Image",		engine::shade::UniTexture(0,tex,Some(samp)) );
+			@engine::load::load_program( ct, ~"data/code-game/copy", lg )
+		};
 		let mut rast = copy ct.default_rast;
 		//rast.set_depth( ~"<=", false );
 		Envir{
@@ -308,7 +326,9 @@ pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine:
 	let edit_label = @hud::EditLabel::obtain( &mut hud_screen, ~"id.name.text" );
 	let hdebug = @engine::load::load_program( ct, ~"data/code/hud/debug", lg );
 	//arm.set_record( arm.actions[0], 0f );
+	let depth = render::depth::Data::create( ct );
 	let lbuf = render::lbuf::Context::create( ct, 2u, 3u );
+	let lvolume = render::lbuf::LightVolume::create( ct, lg );
 	let shadow = render::shadow::create_data( ct, scene.lights.get(&~"Lamp"), 0x200u );
 	// load camera
 	let cam = scene.cameras.get(&~"Camera");
@@ -327,6 +347,10 @@ pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine:
 		speed_zoom	: 15f32,
 		last_scroll	: None,
 	};
+	let mut lights : ~[@scene::Light] = ~[];
+	do scene.lights.each_value() |&val|	{
+		lights.push( val ); true
+	};
 	Scene	{
 		gr_main	: group,
 		gr_cape	: cape,
@@ -336,12 +360,15 @@ pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine:
 		skel	: arm,
 		cam		: cam,
 		control	: control,
+		lights	: lights,
 		envir	: envir,
 		technique	: tech,
 		rast_solid	: r_solid,
 		rast_cloak	: r_cloak,
 		rast_alpha	: r_alpha,
+		depth		: depth,
 		lbuf		: lbuf,
+		lvolume		: lvolume,
 		shadow	: shadow,
 		start	: engine::anim::get_time(),
 		hud_screen	: hud_screen,

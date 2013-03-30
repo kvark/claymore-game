@@ -381,7 +381,7 @@ impl context::Context	{
 			level_base:0u, level_max:1000u,
 			pool:self.texture.pool }
 	}
-	fn cleanup_textures()	{
+	fn cleanup_textures( lg : &context::Log )	{
 		while self.texture.pool.len()!=0	{
 			let han = self.texture.pool.pop();
 			assert *han != 0;
@@ -391,6 +391,7 @@ impl context::Context	{
 					self.texture.unbind( s.target );
 				}
 			}
+			lg.add(fmt!( "Deleting texture id %d", *han as int ));
 			glcore::glDeleteTextures( 1, ptr::addr_of(&*han) );
 		}
 	}

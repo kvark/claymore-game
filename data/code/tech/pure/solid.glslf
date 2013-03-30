@@ -1,0 +1,3 @@
+//%meta
+
+void main()	{}

@@ -194,12 +194,14 @@ impl Program	{
 				}
 				assert p >= 0;
 				let pu = p as uint;*/
-				let pu = 0u;
+				/*let pu = 0u;
 				if self.outputs.len() <= pu	{
 					do vec::grow_fn( &mut self.outputs, pu+1u-self.outputs.len()) |_i| {~""};
 				}
 				self.outputs[pu] = copy *name;
-				pu
+				pu*/
+				self.outputs.push( copy *name );
+				self.outputs.len() - 1u
 			}
 		}
 	}
