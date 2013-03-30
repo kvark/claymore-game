@@ -89,8 +89,9 @@ impl Texture : context::State	{
 
 pub pure fn map_int_format( s : ~str )-> glcore::GLint	{
 	(match s	{
-		~"rgba8"	=> glcore::GL_RGBA8,
 		~"r8"		=> glcore::GL_R8,
+		~"rgba8"	=> glcore::GL_RGBA8,
+		~"rgba16f"	=> glcore::GL_RGBA16F,
 		_	=> fail(fmt!( "Can not recognize texture internal format %s",s ))
 	}) as glcore::GLint
 }

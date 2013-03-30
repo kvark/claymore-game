@@ -164,27 +164,21 @@ impl Scene	{
 			//self.skel.fill_data( self.girl.mut_data() );
 		}
 		if el.character	{
+			let (wid,het) = ct.screen_size;
+			let target_size = lmath::gltypes::vec4::new( wid as f32, het as f32,
+  				1f32/(wid as f32), 1f32/(het as f32) );
+			let par_ts = engine::shade::UniFloatVec( target_size );
 			for [&self.gr_main, &self.gr_cape, &self.gr_hair, &self.gr_other].each() |group|	{
 				for group.each() |ent|	{
 					ent.update_world();
 					let gd = ent.mut_data();
 					self.shadow.light.fill_data( gd, 1f32, 200f32 );
 					gd.insert( ~"t_Shadow", copy self.shadow.par_shadow );
+					gd.insert( ~"u_TargetSize",	copy par_ts );
 					self.cam.fill_data( gd );
 					//self.skel.fill_data( gd );
 				}	
 			}
-		}
-		if use_lbuf	&& el.character {
-			queue.push( copy self.depth.call_clear );
-			for [&self.gr_main,&self.gr_cape,&self.gr_hair].each() |group|	{
-				for group.each() |ent|	{
-					queue.push( self.depth.tech_solid.process( ent, copy self.depth.output, ct, lg ));
-				}
-			}
-			queue.push_all_move( self.lbuf.bake_layer(
-				0u, self.lights, &self.lvolume, self.depth.texture, self.cam, ct, lg
-				));
 		}
 		if el.shadow	{
 			queue.push( copy self.shadow.call_clear );
@@ -201,22 +195,35 @@ impl Scene	{
 				}*/
 			}
 		}
+		let tech = if use_lbuf	&& el.character {
+			queue.push( copy self.depth.call_clear );
+			for [&self.gr_main,&self.gr_cape,&self.gr_hair].each() |group|	{
+				for group.each() |ent|	{
+					queue.push( self.depth.tech_solid.process( ent, copy self.depth.output, ct, lg ));
+					self.lbuf.fill_data( ent.mut_data() );
+				}
+			}
+			queue.push_all_move( self.lbuf.bake_layer(
+				0u, self.lights, &self.lvolume, self.depth.texture, self.cam, ct, lg
+				));
+			&self.lbuf.tech_apply
+		}else	{&self.technique};
 		if el.character	{
 			for self.gr_main.each() |ent|	{
-				queue.push( self.technique.process( ent, copy out_solid, ct, lg ) );
+				queue.push( tech.process( ent, copy out_solid, ct, lg ) );
 			}
 			for self.gr_cape.each() |ent|	{
 				let out = (fbo, copy pmap, copy self.rast_cloak );
-				queue.push( self.technique.process( ent, out, ct, lg ) );	
+				queue.push( tech.process( ent, out, ct, lg ) );	
 			}
 			for self.gr_hair.each() |ent|	{
 				let out = (fbo, copy pmap, copy self.rast_alpha );
-				queue.push( self.technique.process( ent, out, ct, lg ) );
+				queue.push( tech.process( ent, out, ct, lg ) );
 			}
 		}
 		if el.shadow	{
 			for self.gr_other.each() |ent|	{
-				queue.push( self.technique.process( ent, copy out_solid, ct, lg ) );
+				queue.push( tech.process( ent, copy out_solid, ct, lg ) );
 			}
 		}
 		if el.hud	{

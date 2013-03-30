@@ -34,8 +34,8 @@ pub impl Context	{
 		let (wid,het) = gc.screen_size;
 		let ta_dir = @gc.create_texture( ~"2DArray", wid/div, het/div, layers, 0u );
 		let ta_col = @gc.create_texture( ~"2DArray", wid/div, het/div, layers, 0u );
-		gc.texture.init( ta_dir, 1u, engine::texture::map_int_format(~"rgba8"), true );
-		gc.texture.init( ta_col, 1u, engine::texture::map_int_format(~"rgba8"), true );
+		gc.texture.init( ta_dir, 1u, engine::texture::map_int_format(~"rgba16f"), true );
+		gc.texture.init( ta_col, 1u, engine::texture::map_int_format(~"rgba16f"), true );
 		let t_bake	= engine::draw::load_technique( ~"data/code/tech/lbuf/bake" );
 		let t_apply	= engine::draw::load_technique( ~"data/code/tech/lbuf/apply" );
 		Context{
