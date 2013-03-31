@@ -297,6 +297,7 @@ impl Light	{
 		let sw = self.node.world_space();
 		let mut pos = Vec4::new( sw.position.x, sw.position.y, sw.position.z, 1f32 );
 		let col = Vec4::new( self.color.r, self.color.g, self.color.b, self.color.a );
+		let range = Vec4::new( near, far, 0f32, 1f32/(far-near) );
 		//io::println(fmt!("Light near:%f far:%f",near as float,far as float));
 		match self.kind	{
 			LiSun	=>	{ pos.w = 0f32; },
@@ -318,6 +319,7 @@ impl Light	{
 		data.insert( ~"u_LightPos",			engine::shade::UniFloatVec(pos) );
 		data.insert( ~"u_LightColor",		engine::shade::UniFloatVec(col) );
 		data.insert( ~"u_LightAttenuation",	engine::shade::UniFloatVec(self.attenu) );
+		data.insert( ~"u_LightRange",		engine::shade::UniFloatVec(range) );
 	}	
 }
 

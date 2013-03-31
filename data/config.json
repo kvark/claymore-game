@@ -18,6 +18,7 @@
 	"elements":	{
 		"character"		: true,
 		"shadow"		: true,
+		"lbuffer"		: 3,
 		"environment"	: true,
 		"hud"			: true,
 		"hud_debug"		: false

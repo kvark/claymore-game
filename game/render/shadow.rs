@@ -14,7 +14,7 @@ pub struct Data	{
 
 pub fn create_data( ct : &engine::context::Context, light : @scene::Light, size : uint )-> Data	{
 	let shadow = @ct.create_texture( ~"2D", size, size, 0u, 0u );
-	ct.texture.init_shadow( shadow, false );
+	ct.texture.init_depth( shadow, false );
 	let fbo = @ct.create_frame_buffer();
 	let mut pmap = engine::call::make_pmap_empty();
 	pmap.depth = engine::frame::TarTexture(shadow,0u);

@@ -216,7 +216,7 @@ pub fn default_frame_buffer()-> Buffer	{
 	Buffer{
 		handle:Handle(0),
 		draw_mask		:0u,
-		read_id			:None,
+		read_id			:None,	// actually, GL_BACK
 		stencil			:TarEmpty,
 		depth			:TarEmpty,
 		colors			:~[TarEmpty],
@@ -252,7 +252,8 @@ impl context::Context	{
 	fn create_frame_buffer()-> Buffer	{
 		let mut hid = 0 as glcore::GLuint;
 		glcore::glGenFramebuffers( 1, ptr::addr_of(&hid) );
-		Buffer{ handle:Handle(hid), draw_mask:1u, read_id:None,
+		Buffer{ handle:Handle(hid),
+			draw_mask:1u, read_id:Some(0u),
 			stencil:TarEmpty, depth:TarEmpty,
 			colors	: vec::from_elem( self.caps.max_color_attachments, TarEmpty ),
 			pool	: self.frame_buffer_draw.pool,
@@ -302,26 +303,8 @@ impl context::Context	{
 			fb.colors[i] = val;
 		}
 		let mask = (1u<<colors.len()) - 1u;
-		// set the read mask
-		if !draw	{
-			assert mask&(mask-1u) == 0;
-			let new_id =
-			if mask != 0u	{
-				let mut i=0u;
-				while mask>>i!=1u	{i+=1u;}
-				Some(i)
-			}else	{ None };
-			if fb.read_id != new_id	{
-				fb.read_id = new_id;
-				match new_id	{
-					Some(id)	=> glcore::glReadBuffer( get_color(id) ),
-					None		=> glcore::glReadBuffer( glcore::GL_NONE ),
-				}
-			}
-			return;
-		}
-		// set the draw mask
-		if fb.draw_mask != mask	{
+		if draw && fb.draw_mask != mask	{
+			// set the draw mask
 			fb.draw_mask = mask;
 			let mut list :~[glcore::GLenum] = ~[];
 			let mut i = 0u;
@@ -331,14 +314,26 @@ impl context::Context	{
 				}
 				i += 1;
 			}
-			if list.len() == 0u	{
-				glcore::glDrawBuffer( glcore::GL_NONE );
-			}else
-			if list.len() == 1u	{
-				glcore::glDrawBuffer( list[0] );
-			}else	{
-				glcore::glDrawBuffers( list.len() as glcore::GLsizei,
-					unsafe{vec::raw::to_ptr(list)} );
+			match list.len()	{
+				0u	=> glcore::glDrawBuffer( glcore::GL_NONE ),
+				1u	=> glcore::glDrawBuffer( list[0] ),
+				_	=> glcore::glDrawBuffers( list.len() as glcore::GLsizei,
+					unsafe{vec::raw::to_ptr(list)} ),
+			}
+		}else if !draw	{
+			// set the read mask
+			assert mask&(mask-1u) == 0;
+			let new_id = if mask != 0u	{
+					let mut i=0u;
+					while mask>>i!=1u	{i+=1u;}
+					Some(i)
+				}else	{ None };
+			if fb.read_id != new_id	{
+				fb.read_id = new_id;
+				match new_id	{
+					Some(id)	=> glcore::glReadBuffer( get_color(id) ),
+					None		=> glcore::glReadBuffer( glcore::GL_NONE ),
+				}
 			}
 		}
 		// check completeness

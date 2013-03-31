@@ -34,13 +34,14 @@ struct Game	{
 pub struct Elements	{
 	character	: bool,
 	shadow		: bool,
+	lbuffer		: uint,
 	environment	: bool,
 	hud			: bool,
 	hud_debug	: bool,
 }
 
 impl Game	{
-	static fn create( wid : uint, het : uint, lg : engine::context::Log  )-> Game	{
+	static fn create( el : &Elements, wid : uint, het : uint, lg : engine::context::Log  )-> Game	{
 		let ct = engine::context::create( wid, het );
 		assert ct.sync_back();
 		// audio test
@@ -61,7 +62,7 @@ impl Game	{
 		// done
 		ct.check(~"init");
 		let aspect = (wid as float) / (het as float);
-		let editor = chared::make_scene( &ct, aspect, &lg );
+		let editor = chared::make_scene( el, &ct, aspect, &lg );
 		let battle = battle::make_scene( &ct, aspect, &lg );
 		Game{ context:ct, audio:ac, journal:lg,
 			sound_source:src, frames:0u,
@@ -185,7 +186,7 @@ fn main()	{
 	
 		//window.set_input_mode( glfw3::CURSOR_MODE, glfw3::CURSOR_CAPTURED as int );
 		window.make_context_current();
-		let game = @Game::create( config.window.width, config.window.height, lg );
+		let game = @Game::create( &config.elements, config.window.width, config.window.height, lg );
 		do window.set_char_callback()	|_win,key|	{
 			game.on_char( key as char );
 		}

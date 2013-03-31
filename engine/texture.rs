@@ -241,7 +241,7 @@ impl Binding	{
 		}
 	}
 
-	fn init_shadow( t : &Texture, stencil : bool )	{
+	fn init_depth( t : &Texture, stencil : bool )	{
 		self.bind( t );
 		assert t.samples == 0u && t.levels == 0u;
 		let (wi,hi,di) = ( t.width as glcore::GLsizei, t.height	as glcore::GLsizei, t.depth as glcore::GLsizei );

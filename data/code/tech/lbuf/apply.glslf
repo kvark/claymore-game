@@ -1,7 +1,9 @@
 //%meta initSurface computeLight
 
+/*
 uniform sampler2DArray	t_LbufDir;
 uniform sampler2DArray	t_LbufCol;
+
 uniform vec4	u_TargetSize;
 
 const float	c_TechAmbient	= 0.1;
@@ -21,4 +23,26 @@ void main()	{
 		o_Color.rgb += (col.rgb/col.w) * computeLight(
 			dir.w-reflected, reflected, dir.xyz/reflected );
 	}
+}
+*/
+
+uniform sampler2D	t_LbufDir;
+uniform sampler2D	t_LbufCol;
+
+uniform vec4	u_TargetSize;
+
+const float	c_TechAmbient	= 0.1;
+const float c_TechReflect	= 1.0;
+
+out	vec4 o_Color;
+
+
+void main()	{
+	vec2 tc = gl_FragCoord.xy * u_TargetSize.zw;
+	o_Color = initSurface();
+	vec4 dir = texture( t_LbufDir, tc );
+	float reflected = length(dir);
+	vec4 col = texture( t_LbufCol, tc );
+	o_Color.rgb += (col.rgb/col.w) * computeLight(
+		dir.w-reflected, reflected, dir.xyz/reflected );
 }

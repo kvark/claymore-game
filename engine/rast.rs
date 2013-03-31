@@ -107,7 +107,7 @@ impl Primitive : Stage	{
 		let mut front	= 0 as glcore::GLint;
 		let mut cmode	= 0 as glcore::GLint;
 		let mut lw		= 0 as glcore::GLfloat;
-		unsafe	{	//crashes on that... (OSX 10.8)
+		unsafe	{	//FIXME: crashes on that... (OSX 10.8)
 			//glcore::glGetIntegerv(	glcore::GL_POLYGON_MODE,	ptr::addr_of(&mode) );
 			glcore::glGetIntegerv(	glcore::GL_FRONT_FACE,		ptr::addr_of(&front) );
 			glcore::glGetIntegerv(	glcore::GL_CULL_FACE_MODE,	ptr::addr_of(&cmode) );
@@ -414,8 +414,8 @@ impl Blend : Stage	{
 				glcore::glBlendEquationSeparate( new.color.equation, new.alpha.equation );
 			}
 		}
-		if    self.color.source!=new.color.source || self.color.destination!=new.color.destination ||
-			  self.alpha.source!=new.alpha.source || self.alpha.destination!=new.alpha.destination	{
+		if	self.color.source!=new.color.source || self.color.destination!=new.color.destination ||
+			self.alpha.source!=new.alpha.source || self.alpha.destination!=new.alpha.destination	{
 			self.color = new.color;
 			self.alpha = new.alpha;
 			if new.color.source==new.alpha.source && new.color.destination==new.alpha.destination	{
@@ -673,7 +673,7 @@ pub pure fn make_default( wid : uint, het : uint )-> State	{
 		},
 		blend : Blend{
 			on:false, color:create_blend(), alpha:create_blend(),
-			value:Color{r:0f32,g:0f32,b:0f32,a:0f32}
+			value:make_color(0)
 		},
 		mask : Mask{
 			stencil_front:-1, stencil_back:-1, depth:true,

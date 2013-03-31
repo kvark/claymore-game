@@ -130,7 +130,6 @@ impl Scene	{
 	}
 	fn render( el : &main::Elements, ct : &engine::context::Context, lg : &engine::context::Log  )	{
 		// clear screen
-		let use_lbuf = true;
 		let fbo = ct.default_frame_buffer;
 		let pmap = engine::call::make_pmap_simple( ~"o_Color", engine::frame::TarEmpty );
 		let out_solid = (fbo, copy pmap, self.rast_solid);
@@ -195,7 +194,7 @@ impl Scene	{
 				}*/
 			}
 		}
-		let tech = if use_lbuf	&& el.character {
+		let tech = if el.lbuffer!=0	&& el.character {
 			queue.push( copy self.depth.call_clear );
 			for [&self.gr_main,&self.gr_cape,&self.gr_hair].each() |group|	{
 				for group.each() |ent|	{
@@ -203,8 +202,9 @@ impl Scene	{
 					self.lbuf.fill_data( ent.mut_data() );
 				}
 			}
+			queue.push( self.lbuf.update_depth( self.depth.texture ));
 			queue.push_all_move( self.lbuf.bake_layer(
-				0u, self.lights, &self.lvolume, self.depth.texture, self.cam, ct, lg
+				0u, self.lights, &self.lvolume, self.cam, ct, lg
 				));
 			&self.lbuf.tech_apply
 		}else	{&self.technique};
@@ -269,7 +269,7 @@ impl Scene	{
 	}
 }
 
-pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine::context::Log )-> Scene	{
+pub fn make_scene( el : &main::Elements, ct : &engine::context::Context, aspect : float, lg : &engine::context::Log )-> Scene	{
 	let vao = @ct.create_vertex_array();
 	let mut scene = scene::load_scene( ~"data/claymore-2a", ct, Some(vao), aspect, lg );
 	let detail_info = scene::load_config::<~[scene::EntityInfo]>( ~"data/details.json" );
@@ -334,7 +334,7 @@ pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine:
 	let hdebug = @engine::load::load_program( ct, ~"data/code/hud/debug", lg );
 	//arm.set_record( arm.actions[0], 0f );
 	let depth = render::depth::Data::create( ct );
-	let lbuf = render::lbuf::Context::create( ct, 2u, 3u );
+	let lbuf = render::lbuf::Context::create( ct, 2u, el.lbuffer );
 	let lvolume = render::lbuf::LightVolume::create( ct, lg );
 	let shadow = render::shadow::create_data( ct, scene.lights.get(&~"Lamp"), 0x200u );
 	// load camera
