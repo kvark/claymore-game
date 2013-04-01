@@ -71,12 +71,12 @@ pub struct Scene	{
 	control	: CamControl,
 	lights	: ~[@scene::Light],
 	envir	: Envir,
-	technique	: engine::draw::Technique,
+	technique	: @engine::draw::Technique,
 	rast_solid	: engine::rast::State,
 	rast_cloak	: engine::rast::State,
 	rast_alpha	: engine::rast::State,
 	depth	: render::depth::Data,
-	lbuf	: render::lbuf::Context,
+	lbuf	: Option<render::lbuf::Context>,
 	lvolume	: render::lbuf::LightVolume,
 	shadow	: render::shadow::Data,
 	start	: float,
@@ -194,20 +194,26 @@ impl Scene	{
 				}*/
 			}
 		}
-		let tech = if el.lbuffer!=0	&& el.character {
-			queue.push( copy self.depth.call_clear );
-			for [&self.gr_main,&self.gr_cape,&self.gr_hair].each() |group|	{
-				for group.each() |ent|	{
-					queue.push( self.depth.tech_solid.process( ent, copy self.depth.output, ct, lg ));
-					self.lbuf.fill_data( ent.mut_data() );
+		let tech = match self.lbuf {
+			Some(ref lbuf)	=>	{
+				queue.push( copy self.depth.call_clear );
+				for [&self.gr_main,&self.gr_cape,&self.gr_hair].each() |group|	{
+					for group.each() |ent|	{
+						queue.push( self.depth.tech_solid.process( ent, copy self.depth.output, ct, lg ));
+						lbuf.fill_data( ent.mut_data() );
+					}
 				}
-			}
-			queue.push( self.lbuf.update_depth( self.depth.texture ));
-			queue.push_all_move( self.lbuf.bake_layer(
-				0u, self.lights, &self.lvolume, self.cam, ct, lg
-				));
-			&self.lbuf.tech_apply
-		}else	{&self.technique};
+				for self.gr_other.each() |ent|	{
+					lbuf.fill_data( ent.mut_data() );
+				}
+				queue.push( lbuf.update_depth( self.depth.texture ));
+				queue.push_all_move( lbuf.bake_layer(
+					0u, self.lights, &self.lvolume, self.cam, ct, lg
+					));
+				lbuf.tech_apply
+			},
+			None	=> self.technique,
+		};
 		if el.character	{
 			for self.gr_main.each() |ent|	{
 				queue.push( tech.process( ent, copy out_solid, ct, lg ) );
@@ -275,7 +281,7 @@ pub fn make_scene( el : &main::Elements, ct : &engine::context::Context, aspect 
 	let detail_info = scene::load_config::<~[scene::EntityInfo]>( ~"data/details.json" );
 	let mut details = scene.context.parse_group( detail_info, ct, Some(vao), lg );
 	// techniques & rast states
-	let tech = engine::draw::load_technique( ~"data/code/tech/forward/spot-shadow" );
+	let tech = @engine::draw::load_technique( ~"data/code/tech/forward/spot-shadow" );
 	let pmap = engine::call::make_pmap_simple( ~"o_Color", engine::frame::TarEmpty );
 	let mut rast = copy ct.default_rast;
 	rast.depth.test = true;
@@ -334,7 +340,9 @@ pub fn make_scene( el : &main::Elements, ct : &engine::context::Context, aspect 
 	let hdebug = @engine::load::load_program( ct, ~"data/code/hud/debug", lg );
 	//arm.set_record( arm.actions[0], 0f );
 	let depth = render::depth::Data::create( ct );
-	let lbuf = render::lbuf::Context::create( ct, 2u, el.lbuffer );
+	let lbuf = if el.lbuffer!=0	{
+		Some( render::lbuf::Context::create( ct, 2u, el.lbuffer ))
+	}else	{None};
 	let lvolume = render::lbuf::LightVolume::create( ct, lg );
 	let shadow = render::shadow::create_data( ct, scene.lights.get(&~"Lamp"), 0x200u );
 	// load camera

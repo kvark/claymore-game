@@ -377,36 +377,38 @@ impl context::Context	{
 		let mut tex_unit = 0;
 		for p.params.each() |name,par|	{
 			match data.find_ref(name)	{
-				Some(value)	=>	{
-					let mut val = copy *value;
-					match val	{
-						UniTexture(_,t,s_opt)	=>	{
-							check_sampler( *t.target, par.storage );
-							match s_opt	{
-								Some(ref s) => self.texture.bind_to( tex_unit, t, s ),
-								None	=>	{
-									self.texture.switch(tex_unit);
-									self.texture.bind(t);
-								}
-							}
-							val = UniTexture( tex_unit, t, s_opt );
-							tex_unit += 1;
-						},
-						_	=> ()
+				Some(&UniTexture(_,t,s_opt))	=> {
+					check_sampler( *t.target, par.storage );
+					self.texture.bind_to( tex_unit, t );
+					match s_opt	{
+						Some(ref s) => self.texture.bind_sampler( t, s ),
+						None	=> ()
 					}
-					if par.value != val	{
-						//io::println(fmt!( "Uploading val '%s'", *name ));
-						par.value = val;
+					let old_unit = match par.value	{
+						UniTexture(unit,_,_)	=> unit,
+						UniInt(val)				=> val as uint,
+						_						=> !tex_unit,
+					};
+					par.value = UniTexture( tex_unit, t, s_opt );
+					if old_unit != tex_unit	{
+						par.write();
+					}
+					tex_unit += 1;
+				},
+				Some(value)	=>	{
+					if par.value != *value	{
+						//io::println(fmt!( "Uploading value '%s'", *name ));
+						par.value = copy *value;
 						par.write();
 					}
 				},
 				None	=>	{
-					match par.value	{
-						Unitialized => fail fmt!(
-							"Program %d has non-initialized parameter: name=%s, loc=%d",
-							*p.handle as int, *name, *par.loc as int ),
-						_ => (),
-					}
+					let msg = match par.value	{
+						Unitialized	=> ~"not inialized",
+						_			=> ~"missing",
+					};
+					fail fmt!("Program %d parameter is %s: name=%s, loc=%d",
+						*p.handle as int, msg, *name, *par.loc as int )
 				}
 			}
 		}

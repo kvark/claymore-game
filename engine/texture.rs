@@ -158,10 +158,13 @@ impl Binding	{
 	fn bind( t : &Texture )	{
 		self._bind( t.target, t.handle );
 	}
-	fn bind_to( unit: uint, t : &Texture, s : &Sampler )	{
+	fn bind_to( unit: uint, t : &Texture )	{
 		self.switch( unit );
 		self.bind( t );
-		if t.samples != 0	{return}
+	}
+	fn bind_sampler( t : &Texture, s : &Sampler )	{
+		self.bind( t );
+		if t.samples != 0	{return}	//TODO: error here?
 		let filter_modes = [glcore::GL_TEXTURE_MIN_FILTER,glcore::GL_TEXTURE_MAG_FILTER];
 		for [0,1].each() |i|	{
 			if t.sampler.filter[*i] != s.filter[*i]	{

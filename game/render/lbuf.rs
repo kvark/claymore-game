@@ -22,8 +22,8 @@ pub impl LightVolume	{
 
 
 pub struct Context	{
-	tech_bake	: engine::draw::Technique,
-	tech_apply	: engine::draw::Technique,
+	tech_bake	: @engine::draw::Technique,
+	tech_apply	: @engine::draw::Technique,
 	fbo			: @engine::frame::Buffer,
 	vao			: @engine::buf::VertexArray,
 	ta_direction: @engine::texture::Texture,
@@ -46,8 +46,8 @@ pub impl Context	{
 		gc.texture.init( ta_col, 1u, engine::texture::map_int_format(copy s_format), true );
 		let depth = @gc.create_texture( ~"2D", wid/div, het/div, 0u, 0u );
 		gc.texture.init_depth( depth, false );
-		let t_bake	= engine::draw::load_technique( ~"data/code/tech/lbuf/bake" );
-		let t_apply	= engine::draw::load_technique( ~"data/code/tech/lbuf/apply" );
+		let t_bake	= @engine::draw::load_technique( ~"data/code/tech/lbuf/bake" );
+		let t_apply	= @engine::draw::load_technique( ~"data/code/tech/lbuf/apply" );
 		Context{
 			tech_bake	: t_bake,
 			tech_apply	: t_apply,
@@ -75,26 +75,27 @@ pub impl Context	{
 			gc : &engine::context::Context, lg : &engine::context::Log )-> ~[engine::call::Call]	{
 		let mut pmap = engine::call::make_pmap_empty();
 		pmap.depth = engine::frame::TarTexture( self.t_depth, 0 );
-		if use_array	{
-			pmap.colors.insert( ~"o_Dir", engine::frame::TarTextureLayer(self.ta_direction,	layer, 0) );
-			pmap.colors.insert( ~"o_Col", engine::frame::TarTextureLayer(self.ta_color,		layer, 0) );
-		}else	{
-			assert layer == 0u;
-			pmap.colors.insert( ~"o_Dir", engine::frame::TarTexture(self.ta_direction,	0) );
-			pmap.colors.insert( ~"o_Col", engine::frame::TarTexture(self.ta_color,		0) );
+		pure fn to_target( t : @engine::texture::Texture, l : uint )-> engine::frame::Target	{
+			if use_array	{
+				engine::frame::TarTextureLayer(t,l,0)
+			}else	{ assert l == 0;
+				engine::frame::TarTexture(t,0)
+			}
 		}
+		pmap.colors.insert( ~"o_Dir", to_target( self.ta_direction, layer ));
+		pmap.colors.insert( ~"o_Col", to_target( self.ta_color, layer ));
 		let (wid,het) = self.ta_color.get_level_size(0);
 		let mut rast = copy gc.default_rast;
 		rast.view = engine::rast::Viewport( engine::frame::make_rect(wid,het) );
 		rast.prime.cull = true;
-		rast.prime.front_cw = true;
+		//rast.prime.front_cw = true;
 		rast.set_blend( ~"s+d", ~"1", ~"1" );
-		rast.set_depth( ~">", false );
+		rast.set_depth( ~"<=", false );
 		let output = ( self.fbo, pmap, rast );
 		let mut data = engine::shade::make_data();
 		{	// fill data
 			let sampler = Some( engine::texture::make_sampler(2u,0) );
-			data.insert( ~"t_Depth", 	engine::shade::UniTexture(0,self.t_depth,sampler) );
+			data.insert( ~"t_Depth", engine::shade::UniTexture(0,self.t_depth,sampler) );
 			let target_size = lmath::gltypes::vec4::new( wid as f32, het as f32,
 				1f32/(wid as f32), 1f32/(het as f32) );
 			data.insert( ~"u_TargetSize",		engine::shade::UniFloatVec(target_size) );
