@@ -2,6 +2,8 @@ extern mod engine;
 extern mod cgmath;
 extern mod lmath;
 
+use scene;
+
 
 pub struct Data	{
 	light		: @scene::Light,
@@ -12,14 +14,17 @@ pub struct Data	{
 	par_shadow	: engine::shade::Uniform,
 }
 
-pub fn create_data( ct : &engine::context::Context, light : @scene::Light, size : uint )-> Data	{
-	let shadow = @ct.create_texture( ~"2D", size, size, 0u, 0u );
-	ct.texture.init_depth( shadow, false );
-	let fbo = @ct.create_frame_buffer();
-	let mut pmap = engine::call::make_pmap_empty();
+pub fn create_data( ct : &mut engine::context::Context, light : @scene::Light, size : uint )-> Data	{
+	let shadow = {
+		let mut t = ct.create_texture( ~"2D", size, size, 0u, 0u );
+		ct.texture.init_depth( &mut t, false );
+		@t
+	};
+	let fbo = @mut ct.create_frame_buffer();
+	let mut pmap = engine::call::PlaneMap::new_empty();
 	pmap.depth = engine::frame::TarTexture(shadow,0u);
 	let mut rast = copy ct.default_rast;
-	rast.view = engine::rast::Viewport( engine::frame::make_rect(size,size) );
+	rast.view = engine::rast::Viewport( engine::frame::Rect::new(size,size) );
 	rast.set_depth( ~"<", true );
 	rast.prime.cull = true;
 	rast.set_offset(2f);
@@ -30,7 +35,7 @@ pub fn create_data( ct : &engine::context::Context, light : @scene::Light, size 
 	};
 	let t_solid = engine::draw::load_technique( ~"data/code/tech/shadow/spot" );
 	let t_alpha = engine::draw::load_technique( ~"data/code/tech/shadow/spot-alpha" );
-	let mut samp = engine::texture::make_sampler( 2u, 0 );
+	let mut samp = engine::texture::Sampler::new( 2u, 0 );
 	samp.compare = Some( engine::rast::map_comparison(~"<") );
 	let par = engine::shade::UniTexture( 0u, shadow, Some(samp) );
 	let out = (fbo,pmap,rast);

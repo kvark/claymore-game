@@ -2,10 +2,17 @@ extern mod glcore;
 
 use core::io::WriterUtil;
 
+use buf;
+use frame;
+use rast;
+use rast::Stage;
+use shade;
+use texture;
 
-pub trait State	{
+
+pub trait ProxyState	{
 	// query all
-	fn sync_back()->bool;
+	fn sync_back( &mut self ) -> bool;
 }
 
 pub struct Capabilities	{
@@ -22,87 +29,39 @@ priv fn read_cap( what : glcore::GLenum )-> uint	{
 
 
 pub trait GLType	{
-	pure fn to_gl_type()-> glcore::GLenum;
+	fn to_gl_type( &self )-> glcore::GLenum;
 }
-impl i8 : GLType	{
-	pure fn to_gl_type()-> glcore::GLenum	{glcore::GL_BYTE}
+impl GLType for i8	{
+	fn to_gl_type( &self )-> glcore::GLenum	{glcore::GL_BYTE}
 }
-impl u8 : GLType	{
-	pure fn to_gl_type()-> glcore::GLenum	{glcore::GL_UNSIGNED_BYTE}
+impl GLType for u8	{
+	fn to_gl_type( &self )-> glcore::GLenum	{glcore::GL_UNSIGNED_BYTE}
 }
-impl i16 : GLType	{
-	pure fn to_gl_type()-> glcore::GLenum	{glcore::GL_SHORT}
+impl GLType for i16	{
+	fn to_gl_type( &self )-> glcore::GLenum	{glcore::GL_SHORT}
 }
-impl u16 : GLType	{
-	pure fn to_gl_type()-> glcore::GLenum	{glcore::GL_UNSIGNED_SHORT}
+impl GLType for u16	{
+	fn to_gl_type( &self )-> glcore::GLenum	{glcore::GL_UNSIGNED_SHORT}
 }
-impl i32 : GLType	{
-	pure fn to_gl_type()-> glcore::GLenum	{glcore::GL_INT}
+impl GLType for i32	{
+	fn to_gl_type( &self )-> glcore::GLenum	{glcore::GL_INT}
 }
-impl u32 : GLType	{
-	pure fn to_gl_type()-> glcore::GLenum	{glcore::GL_UNSIGNED_INT}
+impl GLType for u32	{
+	fn to_gl_type( &self )-> glcore::GLenum	{glcore::GL_UNSIGNED_INT}
 }
-impl f32 : GLType	{
-	pure fn to_gl_type()-> glcore::GLenum	{glcore::GL_FLOAT}
+impl GLType for f32	{
+	fn to_gl_type( &self )-> glcore::GLenum	{glcore::GL_FLOAT}
 }
 
 
 pub struct ClearData	{
-	mut color	: rast::Color,
-	mut depth	: float,
-	mut stencil	: uint,
+	color	: rast::Color,
+	depth	: float,
+	stencil	: uint,
 }
 
-
-pub struct Context	{
-	caps				: Capabilities,
-	mut rast			: rast::State,
-	priv clear_data		: ClearData,
-	// bindings
-	shader				: shade::Binding,
-	vertex_array		: buf::VaBinding,
-	array_buffer		: buf::Binding,
-	render_buffer		: frame::RenBinding,
-	frame_buffer_draw	: frame::Binding,
-	frame_buffer_read	: frame::Binding,
-	texture				: texture::Binding,
-	// defaults
-	screen_size			: (uint,uint),
-	default_rast		: rast::State,
-	default_vertex_array: @buf::VertexArray,
-	default_frame_buffer: @frame::Buffer,
-}
-
-
-pub fn create( wid : uint, het : uint )-> Context	{
-	// read caps
-	let caps	= Capabilities{
-		max_color_attachments : read_cap( glcore::GL_MAX_COLOR_ATTACHMENTS ),
-	};
-	let rast	= rast::make_default( wid, het );
-	let color	= rast::Color{r:0f32,g:0f32,b:0f32,a:0f32};
-	// fill up the context
-	Context{
-		caps				: caps,
-		rast				: copy rast,
-		clear_data			: ClearData{ color:color, depth:1f, stencil:0u },
-		shader				: shade::make_binding(),
-		vertex_array		: buf::make_va_binding(),
-		array_buffer		: buf::make_binding( glcore::GL_ARRAY_BUFFER ),
-		render_buffer		: frame::make_ren_binding(),
-		frame_buffer_draw	: frame::make_binding( glcore::GL_DRAW_FRAMEBUFFER ),
-		frame_buffer_read	: frame::make_binding( glcore::GL_READ_FRAMEBUFFER ),
-		texture				: texture::make_binding(),
-		screen_size			: (wid,het),
-		default_rast		: rast,
-		default_vertex_array: @buf::default_vertex_array(),
-		default_frame_buffer: @frame::default_frame_buffer(),
-	}
-}
-
-
-impl ClearData : State	{
-	fn sync_back()-> bool	{
+impl ProxyState for ClearData	{
+	fn sync_back( &mut self )-> bool	{
 		let mut color = vec::from_elem( 4, 0 as glcore::GLfloat );
 		let mut depth = 0 as glcore::GLdouble;
 		let mut stencil = 0 as glcore::GLint;
@@ -121,51 +80,54 @@ impl ClearData : State	{
 }
 
 
-impl Context	{
-	fn check( where : &str )	{
-		let code = glcore::glGetError();
-		if code != 0	{
-			let decode =
-				if code	== glcore::GL_INVALID_ENUM					{~"(enum)"}			else
-				if code	== glcore::GL_INVALID_VALUE					{~"(value)"}		else
-				if code	== glcore::GL_INVALID_OPERATION				{~"(operation)"}	else
-				if code	== glcore::GL_OUT_OF_MEMORY					{~"(memory)"}		else
-				if code == glcore::GL_INVALID_FRAMEBUFFER_OPERATION	{~"(framebuffer)"}	else
-				{~"(unknown)"};
-			fail fmt!("%s: GL Error: %d %s",where,code as int,decode)
-		}
-	}
-	fn cleanup( lg : &Log )	{
-		self.cleanup_shaders();
-		self.cleanup_buffers();
-		self.cleanup_frames();
-		self.cleanup_textures( lg );
-	}
-	fn set_clear_color( c : &rast::Color )	{
-		if self.clear_data.color != *c	{
-			self.clear_data.color = *c;
-			glcore::glClearColor(
-				c.r as glcore::GLfloat, c.g as glcore::GLfloat,
-				c.b as glcore::GLfloat, c.a as glcore::GLfloat );
-		}
-	}
-	fn set_clear_depth( d : float )	{
-		if self.clear_data.depth != d	{
-			self.clear_data.depth = d;
-			glcore::glClearDepth( d as glcore::GLdouble );
-		}
-	}
-	fn set_clear_stencil( s : uint )	{
-		if self.clear_data.stencil != s	{
-			self.clear_data.stencil = s;
-			glcore::glClearStencil( s as glcore::GLint );
-		}
-	}
+pub struct Context	{
+	caps				: Capabilities,
+	rast				: rast::State,
+	priv clear_data		: ClearData,
+	// bindings
+	shader				: shade::Binding,
+	vertex_array		: buf::VaBinding,
+	array_buffer		: buf::Binding,
+	render_buffer		: frame::RenBinding,
+	frame_buffer_draw	: frame::Binding,
+	frame_buffer_read	: frame::Binding,
+	texture				: texture::Binding,
+	// defaults
+	screen_size			: (uint,uint),
+	default_rast		: rast::State,
+	default_vertex_array: @mut buf::VertexArray,
+	default_frame_buffer: @mut frame::Buffer,
 }
 
 
-impl Context : State	{
-	fn sync_back()->bool	{
+pub fn create( wid : uint, het : uint )-> Context	{
+	// read caps
+	let caps	= Capabilities{
+		max_color_attachments : read_cap( glcore::GL_MAX_COLOR_ATTACHMENTS ),
+	};
+	let rast	= rast::make_default( wid, het );
+	let color	= rast::Color{r:0f32,g:0f32,b:0f32,a:0f32};
+	// fill up the context
+	Context{
+		caps				: caps,
+		rast				: copy rast,
+		clear_data			: ClearData{ color:color, depth:1f, stencil:0u },
+		shader				: shade::Binding::new(),
+		vertex_array		: buf::VaBinding::new(),
+		array_buffer		: buf::Binding::new( glcore::GL_ARRAY_BUFFER ),
+		render_buffer		: frame::RenBinding::new(),
+		frame_buffer_draw	: frame::Binding::new( glcore::GL_DRAW_FRAMEBUFFER ),
+		frame_buffer_read	: frame::Binding::new( glcore::GL_READ_FRAMEBUFFER ),
+		texture				: texture::Binding::new(),
+		screen_size			: (wid,het),
+		default_rast		: rast,
+		default_vertex_array: @mut buf::VertexArray::new_default(),
+		default_frame_buffer: @mut frame::Buffer::new_default(),
+	}
+}
+
+impl ProxyState for Context	{
+	fn sync_back( &mut self )->bool	{
 		let mut was_ok = true;
 		self.rast.verify();
 		was_ok &= self.clear_data.sync_back();
@@ -180,23 +142,65 @@ impl Context : State	{
 	}
 }
 
+pub impl Context	{
+	fn check( &self, where : &str )	{
+		let code = glcore::glGetError();
+		if code == 0	{return}
+		let message = match code	{
+			glcore::GL_INVALID_ENUM			=> ~"enum",
+			glcore::GL_INVALID_VALUE		=> ~"value",
+			glcore::GL_INVALID_OPERATION	=> ~"operation",
+			glcore::GL_OUT_OF_MEMORY		=> ~"memory",
+			glcore::GL_INVALID_FRAMEBUFFER_OPERATION	=> ~"framebuffer",
+			_	=> ~"unknown"
+		};
+		fail!(fmt!( "%s: GL error 0x%x (%s)", where, code as uint, message ))
+	}
+	fn cleanup( &mut self, lg : &Log )	{
+		self.cleanup_shaders();
+		self.cleanup_buffers();
+		self.cleanup_frames();
+		self.cleanup_textures( lg );
+	}
+	fn set_clear_color( &mut self, c : &rast::Color )	{
+		if self.clear_data.color != *c	{
+			self.clear_data.color = *c;
+			glcore::glClearColor(
+				c.r as glcore::GLfloat, c.g as glcore::GLfloat,
+				c.b as glcore::GLfloat, c.a as glcore::GLfloat );
+		}
+	}
+	fn set_clear_depth( &mut self, d : float )	{
+		if self.clear_data.depth != d	{
+			self.clear_data.depth = d;
+			glcore::glClearDepth( d as glcore::GLdouble );
+		}
+	}
+	fn set_clear_stencil( &mut self, s : uint )	{
+		if self.clear_data.stencil != s	{
+			self.clear_data.stencil = s;
+			glcore::glClearStencil( s as glcore::GLint );
+		}
+	}
+}
+
 
 pub struct Log	{
 	depth		: uint,
-	priv wr		: io::Writer,
+	priv wr		: @io::Writer,
 }
-impl Log	{
-	fn add( message : ~str )	{
+
+pub impl Log	{
+	fn create( path : ~str, depth : uint )->Log	{
+		match io::file_writer( &path::Path(path), &[io::Create,io::Truncate] )	{
+			Ok(wr)	=> Log{ depth:depth, wr:wr },
+			Err(e)	=> fail!( e.to_str() ),
+		}
+	}
+	fn add( &self, message : ~str )	{
 		let d = str::find(message,char::is_alphanumeric).expect(~"Bad log record");
 		if d<self.depth	{
 			self.wr.write_line(message)
 		}
 	}
 }
-pub fn create_log( path : ~str, depth : uint )->Log	{
-	match io::file_writer( &path::Path(path), &[io::Create,io::Truncate] )	{
-		Ok(wr)	=> Log{ depth:depth, wr:wr },
-		Err(e)	=> fail e.to_str(),
-	}
-}
-

@@ -1,24 +1,37 @@
 extern mod glcore;
 
+use core::hashmap::linear::LinearMap;
+
+use buf;
+use context;
+use frame;
+use mesh;
+use rast;
+use rast::Stage;
+use shade;
+
 
 pub struct PlaneMap	{
 	stencil	: frame::Target,
 	depth	: frame::Target,
-	colors	: send_map::linear::LinearMap<~str,frame::Target>,
+	colors	: LinearMap<~str,frame::Target>,
 }
 
-impl PlaneMap : Copy	{}
-pub fn make_pmap_empty()-> PlaneMap	{
-	PlaneMap	{
-		stencil	: frame::TarEmpty,
-		depth	: frame::TarEmpty,
-		colors	: send_map::linear::LinearMap::<~str,frame::Target>(),
+impl Copy for PlaneMap	{}
+
+pub impl PlaneMap	{
+	fn new_empty()-> PlaneMap	{
+		PlaneMap	{
+			stencil	: frame::TarEmpty,
+			depth	: frame::TarEmpty,
+			colors	: LinearMap::new(),
+		}
 	}
-}
-pub fn make_pmap_simple( name : ~str, col : frame::Target )-> PlaneMap	{
-	let mut pm = make_pmap_empty();
-	pm.colors.insert( name, col );
-	pm
+	fn new_simple( name : ~str, col : frame::Target )-> PlaneMap	{
+		let mut pm = PlaneMap::new_empty();
+		pm.colors.insert( name, col );
+		pm
+	}
 }
 
 
@@ -28,27 +41,27 @@ pub struct ClearData	{
 	stencil	: Option<uint>,
 }
 
-pub type DrawInput = (@buf::VertexArray, @mesh::Mesh, mesh::Range);
-pub type DrawOutput = (@frame::Buffer, PlaneMap, rast::State);
+pub type DrawInput = (@mut buf::VertexArray, @mesh::Mesh, mesh::Range);
+pub type DrawOutput = (@mut frame::Buffer, PlaneMap, rast::State);
 
 pub enum Call	{
 	CallEmpty,
-	CallClear( @frame::Buffer, PlaneMap, ClearData, rast::Scissor, rast::Mask ),
-	CallBlit( @frame::Buffer, PlaneMap, @frame::Buffer, PlaneMap, rast::Scissor ),
+	CallClear( @mut frame::Buffer, PlaneMap, ClearData, rast::Scissor, rast::Mask ),
+	CallBlit( @mut frame::Buffer, PlaneMap, @mut frame::Buffer, PlaneMap, rast::Scissor ),
 	CallDraw( DrawInput, DrawOutput, @shade::Program, shade::DataMap ),
 	CallTransfrom(),	//FIXME
 }
 
-impl ClearData	{
-	pub fn gen_call( output : DrawOutput )-> Call	{
+pub impl ClearData	{
+	fn gen_call( &self, output : DrawOutput )-> Call	{
 		let (fbo,pmap,rast) = output;
-		CallClear( fbo, pmap, self, rast.scissor, rast.mask )
+		CallClear( fbo, pmap, copy *self, rast.scissor, rast.mask )
 	}
 }
 
 
-impl context::Context	{
-	fn flush( queue	: ~[Call] )	{
+pub impl context::Context	{
+	fn flush( &mut self, queue	: ~[Call] )	{
 		for vec::each_const(queue)	|&call|	{
 			match call	{
 				CallEmpty => {},
@@ -65,21 +78,21 @@ impl context::Context	{
 					//FIXME: cache this
 					match data.color	{
 						Some(c) =>	{
-							assert has_color;
+							assert!( has_color );
 							flags |= glcore::GL_COLOR_BUFFER_BIT;
 							self.set_clear_color( &c );
 						},None	=>	{}
 					}
 					match data.depth	{
 						Some(d) => 	{
-							assert *fb.handle==0 || pmap.depth!=frame::TarEmpty;
+							assert!( *fb.handle==0 || pmap.depth!=frame::TarEmpty );
 							flags |= glcore::GL_DEPTH_BUFFER_BIT;
 							self.set_clear_depth( d );
 						},None	=> 	{}
 					}
 					match data.stencil	{
 						Some(s)	=>	{
-							assert *fb.handle==0 || pmap.stencil!=frame::TarEmpty;
+							assert!( *fb.handle==0 || pmap.stencil!=frame::TarEmpty );
 							flags |= glcore::GL_STENCIL_BUFFER_BIT;
 							self.set_clear_stencil( s );
 						},None	=>	{}
@@ -87,7 +100,7 @@ impl context::Context	{
 					glcore::glClear( flags );
 				},
 				CallBlit(f1,pm1,f2,pm2,scissor)	=>	{
-					assert *f1.handle != *f2.handle;
+					assert!( *f1.handle != *f2.handle );
 					// bind frame buffers
 					let mut colors : ~[frame::Target] = ~[];
 					for pm1.colors.each_value() |target|	{
@@ -117,7 +130,7 @@ impl context::Context	{
 					// prepare
 					let (wid1,het1,_dep1,sam1) = f1.check_size();
 					let (wid2,het2,_dep2,sam2) = f2.check_size();
-					assert sam1 == sam2 || (sam1*sam2==0 && only_color);
+					assert!( sam1 == sam2 || (sam1*sam2==0 && only_color) );
 					let filter = if (only_color && sam1==0) {glcore::GL_LINEAR} else {glcore::GL_NEAREST};
 					// call blit
 					glcore::glBlitFramebuffer(
@@ -129,29 +142,29 @@ impl context::Context	{
 					let &(fb,pmap,rast) = &output;
 					// bind FBO
 					let mut attaches = vec::from_elem( pmap.colors.len(), frame::TarEmpty );
-					for pmap.colors.each() |name,target|	{
+					for pmap.colors.each() |&(name,target)|	{
 						let loc = prog.find_output( name );
-						assert loc < attaches.len() && attaches[loc] == frame::TarEmpty;
+						assert!( loc < attaches.len() && attaches[loc] == frame::TarEmpty );
 						attaches[loc] = *target;
 					}
 					self.bind_frame_buffer( fb, true, pmap.stencil, pmap.depth, attaches );
 					// check & activate raster
 					let rect = if *fb.handle != 0	{
-						assert !rast.stencil.test	|| pmap.stencil	!= frame::TarEmpty;
-						assert !rast.depth.test		|| pmap.depth	!= frame::TarEmpty;
-						assert !rast.blend.on		|| !pmap.colors.is_empty();
+						assert!( !rast.stencil.test	|| pmap.stencil	!= frame::TarEmpty );
+						assert!( !rast.depth.test	|| pmap.depth	!= frame::TarEmpty );
+						assert!( !rast.blend.on		|| !pmap.colors.is_empty() );
 						let (wid,het,_dep,_sam) = fb.check_size();
-						frame::make_rect(wid,het)
+						frame::Rect::new(wid,het)
 					}else	{
 						*self.default_rast.view
 					};
 					let (_,mesh,_) = input;
 					self.rast.activate( &rast, mesh.get_poly_size() );
-					assert *self.rast.view == rect;
+					assert!( *self.rast.view == rect );
 					// draw
 					self.draw_mesh( input, prog, &data );
 				},
-				_	=> fail ~"Unsupported call!"
+				_	=> fail!(~"Unsupported call!")
 			}
 		}
 	}

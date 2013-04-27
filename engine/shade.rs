@@ -1,22 +1,28 @@
 extern mod glcore;
 extern mod lmath;
 
-use send_map::linear::LinearMap;
-use lmath::gltypes::*;
+use core::hashmap::linear::LinearMap;
 
-#[deriving_eq]
-pub enum Handle		= glcore::GLuint;
-pub enum Location	= glcore::GLint;
+use lmath::vec::*;
+use lmath::mat::*;
+
+use context;
+use texture;
+
+
+#[deriving(Eq)]
+pub struct Handle(	glcore::GLuint	);
+pub struct Location(glcore::GLint	);
 
 
 pub struct Binding	{
-	priv mut active_program	: Handle,
-	priv pool_objects		: @mut ~[Handle],
-	priv pool_programs		: @mut ~[Handle],
+	priv active_program	: Handle,
+	priv pool_objects	: @mut ~[Handle],
+	priv pool_programs	: @mut ~[Handle],
 }
 
-impl Binding : context::State	{
-	fn sync_back()-> bool	{
+impl context::ProxyState for Binding	{
+	fn sync_back( &mut self )-> bool	{
 		let mut hid = 0 as glcore::GLint;
 		glcore::glGetIntegerv( glcore::GL_CURRENT_PROGRAM, ptr::addr_of(&hid) );
 		let program = Handle( hid as glcore::GLuint );
@@ -27,8 +33,10 @@ impl Binding : context::State	{
 	}
 }
 
-pub pure fn make_binding()-> Binding	{
-	Binding{ active_program:Handle(0), pool_objects:@mut ~[], pool_programs:@mut ~[] }
+pub impl Binding	{
+	fn new()-> Binding	{
+		Binding{ active_program:Handle(0), pool_objects:@mut ~[], pool_programs:@mut ~[] }
+	}
 }
 
 
@@ -43,8 +51,8 @@ pub enum Uniform	{
 	UniTexture(uint,@texture::Texture,Option<texture::Sampler>),
 }
 
-impl Uniform : cmp::Eq	{
-	pure fn eq( &self, v : &Uniform )-> bool	{
+impl cmp::Eq for Uniform	{
+	fn eq( &self, v : &Uniform )-> bool	{
 		match (self,v)	{
 			(&Unitialized,&Unitialized)						=> true,
 			(&UniFloat(f1),&UniFloat(f2))					=> f1==f2,
@@ -57,8 +65,9 @@ impl Uniform : cmp::Eq	{
 			(_,_)											=> false
 		}
 	}
-	pure fn ne( &self, v : &Uniform )-> bool	{ !self.eq(v) }
+	fn ne( &self, v : &Uniform )-> bool	{ !self.eq(v) }
 }
+
 
 pub struct Attribute	{
 	loc		: uint,
@@ -66,12 +75,12 @@ pub struct Attribute	{
 	size	: uint,
 }
 
-impl Attribute	{
-	pure fn is_integer()-> bool	{
+pub impl Attribute	{
+	fn is_integer( &self )-> bool	{
 		![glcore::GL_FLOAT,glcore::GL_FLOAT_VEC2,glcore::GL_FLOAT_VEC3,
 			glcore::GL_FLOAT_VEC4].contains( &self.storage )
 	}
-	pure fn decompose()-> (uint,glcore::GLenum)	{
+	fn decompose( &self )-> (uint,glcore::GLenum)	{
 		if self.storage==glcore::GL_FLOAT_VEC2			{(2,glcore::GL_FLOAT)} else
 		if self.storage==glcore::GL_FLOAT_VEC3			{(3,glcore::GL_FLOAT)} else
 		if self.storage==glcore::GL_FLOAT_VEC4			{(4,glcore::GL_FLOAT)} else
@@ -90,46 +99,48 @@ struct Parameter	{
 	loc		: Location,
 	storage	: glcore::GLenum,
 	size	: uint,
-	mut value	: Uniform,
+	value	: @mut Uniform,
 }
 
-impl Parameter	{
-	priv fn read( h : Handle )-> bool	{
-		let t = self.storage;
+priv impl Parameter	{
+	fn read( &self, h : Handle )-> bool	{
 		let loc = *self.loc;
-		assert loc>=0 && self.size==1u;
-		if t == glcore::GL_FLOAT	{
-			let mut v = 0f32;
-			glcore::glGetUniformfv( *h, loc, ptr::addr_of(&v) );
-			self.value = UniFloat(v as float);
-		}else
-		if t == glcore::GL_INT	{
-			let mut v = 0i32;
-			glcore::glGetUniformiv( *h, loc, ptr::addr_of(&v) );
-			self.value = UniInt(v as int);
-		}else
-		if t == glcore::GL_FLOAT_VEC4	{
-			let mut v = vec4::zero();
-			glcore::glGetUniformfv( *h, loc, v.to_ptr() );
-			self.value = UniFloatVec(v);
-		}else
-		if t == glcore::GL_INT_VEC4	{
-			let mut v = ivec4::zero();
-			glcore::glGetUniformiv( *h, loc, v.to_ptr() );
-			self.value = UniIntVec(v);
-		}else
-		if t == glcore::GL_FLOAT_MAT4	{
-			let mut v = mat4::zero();
-			glcore::glGetUniformfv( *h, loc, ptr::addr_of(&v.x.x) );
-			self.value = UniMatrix(false,v);
-		}else	{return false;}
+		assert!( loc>=0 && self.size==1u );
+		*self.value = match self.storage	{
+			glcore::GL_FLOAT	=> {
+				let mut v = 0f32;
+				glcore::glGetUniformfv( *h, loc, ptr::addr_of(&v) );
+				UniFloat(v as float)
+			},
+			glcore::GL_INT	=>	{
+				let mut v = 0i32;
+				glcore::glGetUniformiv( *h, loc, ptr::addr_of(&v) );
+				UniInt(v as int)
+			},
+			glcore::GL_FLOAT_VEC4	=>	{
+				let mut v = vec4::zero();
+				glcore::glGetUniformfv( *h, loc, v.to_ptr() );
+				UniFloatVec(v)
+			},
+			glcore::GL_INT_VEC4	=>	{
+				let mut v = ivec4::zero();
+				glcore::glGetUniformiv( *h, loc, v.to_ptr() );
+				UniIntVec(v)
+			},
+			glcore::GL_FLOAT_MAT4	=>	{
+				let mut v = mat4::zero();
+				glcore::glGetUniformfv( *h, loc, ptr::addr_of(&v.x.x) );
+				UniMatrix(false,v)
+			},
+			_	=>	{return false}
+		};
 		true
 	}
 
-	priv fn write()	{
+	fn write( &self )	{
 		let loc = *self.loc;
-		match copy self.value	{
-			Unitialized			=> fail(fmt!( "Uninitalized parameter at location %d", loc as int )),
+		match copy *self.value	{
+			Unitialized			=> fail!(fmt!( "Uninitalized parameter at location %d", loc as int )),
 			UniFloat(v)			=> glcore::glUniform1f( loc, v as glcore::GLfloat ),
 			UniInt(v)			=> glcore::glUniform1i( loc, v as glcore::GLint ),
 			UniFloatVec(v)		=> glcore::glUniform4fv( loc, 1, ptr::addr_of(&v.x) ),
@@ -153,11 +164,15 @@ struct Object	{
 	alive	: bool,
 	info	: ~str,
 	priv pool	: @mut ~[Handle],
+}
 
-	drop	{
+#[unsafe_destructor]
+impl Drop for Object	{
+	fn finalize( &self )	{
 		self.pool.push( self.handle );
 	}
 }
+
 
 pub struct Program	{
 	handle	: Handle,
@@ -165,26 +180,30 @@ pub struct Program	{
 	info	: ~str,
 	attribs	: AttriMap,
 	params	: ParaMap,
-	priv mut outputs	: ~[~str],
-	priv pool			: @mut ~[Handle],
+	priv outputs	: @mut ~[~str],	//FIXME
+	priv pool		: @mut ~[Handle],
+}
 
-	drop	{
+#[unsafe_destructor]
+impl Drop for Program	{
+	fn finalize( &self )	{
 		self.pool.push( self.handle );
 	}
 }
 
-impl Program	{
-	fn read_parameter( name : ~str )-> Uniform	{
-		match self.params.find_ref(&name)	{
-			Some(ref par) =>	{
+pub impl Program	{
+	fn read_parameter( &self, name : ~str )-> Uniform	{
+		match self.params.find(&name)	{
+			Some(par) =>	{
 				par.read( self.handle );
-				copy par.value
+				copy *par.value
 			},
-			None => {Unitialized}
+			None => Unitialized
 		}
 	}
-	fn find_output( name : &~str )-> uint	{
-		match self.outputs.position_elem(name)	{
+	fn find_output( &self, name : &~str )-> uint	{
+		let outs : &mut ~[~str] = self.outputs;
+		match outs.position_elem(name)	{
 			Some(p)	=> p,
 			None	=>	{
 				/*let mut p = -1 as glcore::GLint;
@@ -200,15 +219,15 @@ impl Program	{
 				}
 				self.outputs[pu] = copy *name;
 				pu*/
-				self.outputs.push( copy *name );
-				self.outputs.len() - 1u
+				outs.push( copy *name );
+				outs.len() - 1u
 			}
 		}
 	}
 }
 
-impl Program : context::State	{
-	fn sync_back()-> bool	{
+impl context::ProxyState for Program	{
+	fn sync_back( &mut self )-> bool	{
 		true
 	}
 }
@@ -223,7 +242,7 @@ priv fn query_attributes( h : Handle, lg : &context::Log )-> AttriMap	{
 	let mut info_bytes	= vec::from_elem( max_len as uint, 0 as libc::c_char );
 	let raw_bytes		= unsafe{ vec::raw::to_ptr(info_bytes) };
 	lg.add(fmt!( "\tQuerying %d attributes:", num as int ));
-	let mut rez		= send_map::linear::linear_map_with_capacity::<~str,Attribute>( num as uint );
+	let mut rez		= LinearMap::with_capacity::<~str,Attribute>( num as uint );
 	for uint::range(0u,num as uint) |i|	{
 		let mut length	= 0 as glcore::GLint;
 		let mut size	= 0 as glcore::GLint;
@@ -250,7 +269,7 @@ priv fn query_parameters( h : Handle, lg : &context::Log )-> ParaMap	{
 	let mut info_bytes	= vec::from_elem( max_len as uint, 0 as libc::c_char );
 	let raw_bytes		= unsafe{ vec::raw::to_ptr(info_bytes) };
 	lg.add(fmt!( "\tQuerying %d parameters:", num as int ));
-	let mut rez		= send_map::linear::linear_map_with_capacity::<~str,Parameter>( num as uint );
+	let mut rez		= LinearMap::with_capacity::<~str,Parameter>( num as uint );
 	for uint::range(0u,num as uint) |i|	{
 		let mut length	= 0 as glcore::GLint;
 		let mut size	= 0 as glcore::GLint;
@@ -262,7 +281,7 @@ priv fn query_parameters( h : Handle, lg : &context::Log )-> ParaMap	{
 		info_bytes[length] = 0;
 		let loc = glcore::glGetUniformLocation( *h, raw_bytes );
 		lg.add(fmt!( "\t\t[%d-%d]\t= '%s',\tformat %d", loc as int, ((loc + size) as int) -1, name, storage as int ));
-		let p = Parameter{ loc:Location(loc), storage:storage, size:size as uint, value:Unitialized };
+		let p = Parameter{ loc:Location(loc), storage:storage, size:size as uint, value:@mut Unitialized };
 		//p.read( h );	// no need to read them here
 		rez.insert( name, p );
 	}
@@ -270,38 +289,31 @@ priv fn query_parameters( h : Handle, lg : &context::Log )-> ParaMap	{
 }
 
 
-pure fn check_sampler( target : glcore::GLenum, storage : glcore::GLenum )	{
-	if target == glcore::GL_TEXTURE_1D	{
-		assert [glcore::GL_SAMPLER_1D]		.contains( &storage );
-	}else
-	if target == glcore::GL_TEXTURE_2D	{
-		assert [glcore::GL_SAMPLER_2D,glcore::GL_SAMPLER_2D_SHADOW].contains( &storage );
-	}else
-	if target == glcore::GL_TEXTURE_RECTANGLE	{
-		assert [glcore::GL_SAMPLER_2D_RECT]	.contains( &storage );
-	}else
-	if target == glcore::GL_TEXTURE_2D_ARRAY	{
-		assert [glcore::GL_SAMPLER_2D_ARRAY].contains( &storage );
-	}else
-	if target == glcore::GL_TEXTURE_3D	{
-		assert [glcore::GL_SAMPLER_3D]		.contains( &storage );
-	}else	{
-		fail fmt!( "Unknown texture target: %x", target as uint )
-	}
+pub fn check_sampler( target : glcore::GLenum, storage : glcore::GLenum )	{
+	let expected_target = match storage	{
+		glcore::GL_SAMPLER_1D			=> glcore::GL_TEXTURE_1D,
+		glcore::GL_SAMPLER_2D			|
+		glcore::GL_SAMPLER_2D_SHADOW	=> glcore::GL_TEXTURE_2D,
+		glcore::GL_SAMPLER_2D_RECT		=> glcore::GL_TEXTURE_RECTANGLE,
+		glcore::GL_SAMPLER_2D_ARRAY		=> glcore::GL_TEXTURE_2D_ARRAY,
+		glcore::GL_SAMPLER_3D			=> glcore::GL_TEXTURE_3D,
+		_	=> fail!(fmt!( "Unknown sampler: %x", storage as uint ))
+	};
+	assert!( target == expected_target );
 }
 
-pure fn map_shader_type( t : char )-> glcore::GLenum	{
+pub fn map_shader_type( t : char )-> glcore::GLenum	{
 	match t	{
 		'v'	=> glcore::GL_VERTEX_SHADER,
 		'g' => glcore::GL_GEOMETRY_SHADER,
 		'f'	=> glcore::GL_FRAGMENT_SHADER,
-		_	=> fail fmt!( "Unknown shader type: %c", t )
+		_	=> fail!(fmt!( "Unknown shader type: %c", t ))
 	}
 }
 
 
-impl context::Context	{
-	pub fn create_shader( t : char, code : &str )-> Object	{
+pub impl context::Context	{
+	fn create_shader( &self, t : char, code : &str )-> Object	{
 		let target = map_shader_type(t);
 		let h = Handle( glcore::glCreateShader(target) );
 		let mut length = code.len() as glcore::GLint;
@@ -324,7 +336,7 @@ impl context::Context	{
 		if !ok	{
 			io::println(~"Failed shader code:");
 			io::println(code);
-			fail ~"\tGLSL " + message
+			fail!( ~"\tGLSL " + message )
 		}
 		Object{ handle:h, target:target,
 			alive:ok, info:message,
@@ -332,7 +344,7 @@ impl context::Context	{
 		}
 	}
 	
-	pub fn create_program( shaders : ~[Object], lg : &context::Log )-> Program	{
+	fn create_program( &self, shaders : ~[Object], lg : &context::Log )-> Program	{
 		let h = Handle( glcore::glCreateProgram() );
 		for shaders.each |s| {
 			glcore::glAttachShader( *h, *s.handle );
@@ -352,19 +364,19 @@ impl context::Context	{
 		};
 		let ok = (status != (0 as glcore::GLint));
 		if !ok	{
-			fail ~"\tGLSL program error: " + message
+			fail!( ~"\tGLSL program error: " + message )
 		}
 		// done
 		Program{ handle:h,
 			alive:ok, info:message,
 			attribs	:query_attributes(h,lg),
 			params	:query_parameters(h,lg),
-			outputs :~[],
+			outputs :@mut ~[],
 			pool	:self.shader.pool_programs,
 		}
 	}
 
-	priv fn _bind_program( h : Handle )	{
+	priv fn _bind_program( &mut self, h : Handle )	{
 		if *self.shader.active_program != *h	{
 			self.shader.active_program = h;
 			glcore::glUseProgram( *h );
@@ -372,11 +384,11 @@ impl context::Context	{
 	}
 
 	//FIXME: accept Map trait once HashMap<~str> are supported
-	fn bind_program( p : &Program, data : &DataMap )->bool	{
+	fn bind_program( &mut self, p : &Program, data : &DataMap )->bool	{
 		self._bind_program( p.handle );
 		let mut tex_unit = 0;
-		for p.params.each() |name,par|	{
-			match data.find_ref(name)	{
+		for p.params.each() |&(name,par)|	{
+			match data.find(name)	{
 				Some(&UniTexture(_,t,s_opt))	=> {
 					check_sampler( *t.target, par.storage );
 					self.texture.bind_to( tex_unit, t );
@@ -384,49 +396,51 @@ impl context::Context	{
 						Some(ref s) => self.texture.bind_sampler( t, s ),
 						None	=> ()
 					}
-					let old_unit = match par.value	{
+					let old_unit = match *par.value	{
 						UniTexture(unit,_,_)	=> unit,
 						UniInt(val)				=> val as uint,
 						_						=> !tex_unit,
 					};
-					par.value = UniTexture( tex_unit, t, s_opt );
+					*par.value = UniTexture( tex_unit, t, s_opt );
 					if old_unit != tex_unit	{
 						par.write();
 					}
 					tex_unit += 1;
 				},
 				Some(value)	=>	{
-					if par.value != *value	{
+					if *par.value != *value	{
 						//io::println(fmt!( "Uploading value '%s'", *name ));
-						par.value = copy *value;
+						*par.value = copy *value;
 						par.write();
 					}
 				},
 				None	=>	{
-					let msg = match par.value	{
+					let msg = match *par.value	{
 						Unitialized	=> ~"not inialized",
 						_			=> ~"missing",
 					};
-					fail fmt!("Program %d parameter is %s: name=%s, loc=%d",
-						*p.handle as int, msg, *name, *par.loc as int )
+					fail!(fmt!( "Program %d parameter is %s: name=%s, loc=%d",
+						*p.handle as int, msg, *name, *par.loc as int ))
 				}
 			}
 		}
 		true
 	}
 
-	fn unbind_program()	{
+	fn unbind_program( &mut self )	{
 		self._bind_program( Handle(0) );
 	}
 
-	fn cleanup_shaders()	{
-		while self.shader.pool_objects.len()!=0	{
-			let h = self.shader.pool_objects.pop();
+	fn cleanup_shaders( &mut self )	{
+		let objs : &mut ~[Handle] = self.shader.pool_objects;
+		while !objs.is_empty()	{
+			let h = objs.pop();
 			glcore::glDeleteShader( *h );
 		}
-		while self.shader.pool_programs.len()!=0	{
-			let h = self.shader.pool_programs.pop();
-			assert *h != 0;
+		let progs : &mut ~[Handle] = self.shader.pool_programs;
+		while !progs.is_empty()	{
+			let h = progs.pop();
+			assert!( *h != 0 );
 			if *h == *self.shader.active_program	{
 				self.unbind_program();
 			}
@@ -437,5 +451,5 @@ impl context::Context	{
 
 
 pub fn make_data()-> DataMap	{
-	LinearMap::<~str,Uniform>()
+	LinearMap::new()
 }

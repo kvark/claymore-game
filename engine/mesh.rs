@@ -1,12 +1,19 @@
 extern mod glcore;
-use cmp::Eq;
+
+use core::hashmap::linear::LinearMap;
+
+use call;
+use context;
+use buf;
+use shade;
+
 
 pub struct Range	{
 	start	: uint,
 	num		: uint,
 }
 
-#[deriving_eq]
+#[deriving(Eq)]
 pub struct Attribute	{
 	// semantics
 	kind			: glcore::GLenum,
@@ -19,18 +26,41 @@ pub struct Attribute	{
 	offset			: uint,
 }
 
-impl buf::Object : cmp::Eq	{
-	pure fn eq( &self, other : &buf::Object )-> bool	{
-		*self.handle == *other.handle
-	}
-	pure fn ne( &self, other : &buf::Object )-> bool	{
-		!self.eq( other )
-	}
-}
 
 
-impl Attribute	{
-	pure fn compatible( at : &shade::Attribute )-> bool	{
+pub impl Attribute	{
+	fn new( format : ~str, buffer : @buf::Object, stride : uint, offset : uint )-> (Attribute,uint)	{
+		assert!( format.len()==3u && ['.','!'].contains(&format.char_at(2))) ||
+			format.len()==2u || (format.len()==4u && str::substr(format,2,2)==~".!" );
+		let count = (format[0] - "0"[0]) as uint;
+		let is_fixed_point	= format.len()>2u	&& format.char_at(2)=='.';
+		let can_interpolate	= format.len()<=2u	|| format.char_at(format.len()-1u)!='!';
+		let (el_size,el_type) = match format.char_at(1)	{
+			'b'	=> (1u,glcore::GL_BYTE),
+			'B'	=> (1u,glcore::GL_UNSIGNED_BYTE),
+			'h'	=> (2u,glcore::GL_SHORT),
+			'H'	=> (2u,glcore::GL_UNSIGNED_SHORT),
+			'i'	=> (4u,glcore::GL_INT),
+			'I'	=> (4u,glcore::GL_UNSIGNED_INT),
+			'f'	=> (4u,glcore::GL_FLOAT),
+			_	=> fail!(fmt!( "Unknown attribute format: %s", format ))
+		};
+		(Attribute{
+			kind			: el_type,
+			count			: count,
+			normalized		: is_fixed_point,
+			interpolated	: can_interpolate,
+			buffer			: buffer,
+			stride			: stride,
+			offset			: offset,
+		}, count * el_size)
+	}
+
+	fn new_index( format : ~str, buffer : @buf::Object )-> (Attribute,uint)	{
+		Attribute::new( format, buffer, 0u, 0u )
+	}
+
+	fn compatible( &self, at : &shade::Attribute )-> bool	{
 		//io::println(fmt!( "Checking compatibility: kind=0x%x, count=%u, storage=0x%x",
 		//	self.kind as uint, self.count, at.storage as uint ));
 		let (count,unit) = at.decompose();
@@ -48,62 +78,29 @@ impl Attribute	{
 
 
 pub struct Mesh	{
-	name			: ~str,
-	attribs			: send_map::linear::LinearMap<~str,Attribute>,
-	index			: Option<Attribute>,
-	poly_type		: glcore::GLuint,
-	num_vert		: uint,
-	num_ind			: uint,
-	mut black_list	: ~[shade::Handle]
+	name		: ~str,
+	attribs		: LinearMap<~str,Attribute>,
+	index		: Option<Attribute>,
+	poly_type	: glcore::GLuint,
+	num_vert	: uint,
+	num_ind		: uint,
+	black_list	: @mut ~[shade::Handle]
 }
 
-impl Mesh	{
-	pure fn create_attrib( format : ~str, buffer : @buf::Object, stride : uint, offset : uint )-> (Attribute,uint)	{
-		assert (format.len()==3u && ['.','!'].contains(&format.char_at(2))) ||
-			format.len()==2u || (format.len()==4u && str::substr(format,2,2)==~".!");
-		let count = (format[0] - "0"[0]) as uint;
-		let letter = format.char_at(1);
-		let is_fixed_point	= format.len()>2u	&& format.char_at(2)=='.';
-		let can_interpolate	= format.len()<=2u	|| format.char_at(format.len()-1u)!='!';
-		let (el_size,el_type) =
-			if letter=='b'	{(1u,glcore::GL_BYTE)}				else
-			if letter=='B'	{(1u,glcore::GL_UNSIGNED_BYTE)}		else
-			if letter=='h'	{(2u,glcore::GL_SHORT)}				else
-			if letter=='H'	{(2u,glcore::GL_UNSIGNED_SHORT)}	else
-			if letter=='i'	{(4u,glcore::GL_INT)}				else
-			if letter=='I'	{(4u,glcore::GL_UNSIGNED_INT)}		else
-			if letter=='f'	{(4u,glcore::GL_FLOAT)}				else
-			{fail(fmt!("Unknown attribute format: %s", format))};
-		(Attribute{
-			kind			: el_type,
-			count			: count,
-			normalized		: is_fixed_point,
-			interpolated	: can_interpolate,
-			buffer			: buffer,
-			stride			: stride,
-			offset			: offset,
-		}, count * el_size)
-	}
-
-	pure fn create_index( format : ~str, buffer : @buf::Object )-> (Attribute,uint)	{
-		self.create_attrib( format, buffer, 0u, 0u )
-	}
-
-	pure fn get_poly_size()-> uint	{
-		if [glcore::GL_POINT].contains(&self.poly_type)	{
-			1u
-		}else
-		if [glcore::GL_LINES,glcore::GL_LINE_STRIP].contains(&self.poly_type)	{
-			2u
-		}else
-		if [glcore::GL_TRIANGLES,glcore::GL_TRIANGLE_STRIP,glcore::GL_TRIANGLE_FAN].contains(&self.poly_type)	{
-			3u
-		}else	{
-			fail(fmt!( "Unknown poly type: %d",self.poly_type as int ));
+pub impl Mesh	{
+	fn get_poly_size( &self )-> uint	{
+		match self.poly_type	{
+			glcore::GL_POINT	=>1u,
+			glcore::GL_LINES 		|
+			glcore::GL_LINE_STRIP	=> 2u,
+			glcore::GL_TRIANGLES		|
+			glcore::GL_TRIANGLE_STRIP	|
+			glcore::GL_TRIANGLE_FAN		=> 3u,
+			_	=> fail!(fmt!( "Unknown poly type: %d",self.poly_type as int ))
 		}
 	}
 
-	pure fn get_range()-> Range	{
+	fn get_range( &self )-> Range	{
 		match self.index	{
 			Some(_)	=> Range{ start:0u, num:self.num_ind },
 			None	=> Range{ start:0u, num:self.num_vert }
@@ -112,8 +109,8 @@ impl Mesh	{
 }
 
 
-pub fn create_quad( ct : &context::Context )-> mesh::Mesh	{
-	let vdata = ~[0i8,0i8,1i8,0i8,0i8,1i8,1i8,1i8];
+pub fn create_quad( ct : &mut context::Context )-> Mesh	{
+	let vdata = [0i8,0i8,1i8,0i8,0i8,1i8,1i8,1i8];
 	let count = 2u;
 	let mut mesh = ct.create_mesh( ~"grid", ~"3s", vdata.len()/count, 0u );
 	let vat = ct.create_attribute( vdata, count, false );
@@ -122,8 +119,8 @@ pub fn create_quad( ct : &context::Context )-> mesh::Mesh	{
 }
 
 
-impl context::Context	{
-	pub fn create_attribute<T:context::GLType>( vdata : ~[T], count : uint, norm : bool )-> Attribute	{
+pub impl context::Context	{
+	fn create_attribute<T:context::GLType>( &mut self, vdata : &[T], count : uint, norm : bool )-> Attribute	{
 		Attribute{
 			kind: vdata[0].to_gl_type(),
 			count: count,
@@ -135,44 +132,47 @@ impl context::Context	{
 		}
 	}
 
-	fn create_mesh( name : ~str, poly : ~str, nv : uint, ni : uint )-> Mesh	{
-		let ptype = if poly == ~"1"		{glcore::GL_POINTS}
-			else	if poly == ~"2"		{glcore::GL_LINES}
-			else	if poly == ~"2s"	{glcore::GL_LINE_STRIP}
-			else	if poly == ~"3"		{glcore::GL_TRIANGLES}
-			else	if poly == ~"3s"	{glcore::GL_TRIANGLE_STRIP}
-			else	if poly == ~"3f"	{glcore::GL_TRIANGLE_FAN}
-			else	{fail fmt!("Unknown poly type: %s",poly)};
-		let ats = send_map::linear::LinearMap::<~str,Attribute>();
-		Mesh{ name:name, attribs:ats, index:None, poly_type:ptype, num_vert:nv, num_ind:ni, black_list:~[] }
+	fn create_mesh( &self, name : ~str, poly : ~str, nv : uint, ni : uint )-> Mesh	{
+		let ptype = match poly	{
+			~"1"	=> glcore::GL_POINTS,
+			~"2"	=> glcore::GL_LINES,
+			~"2s"	=> glcore::GL_LINE_STRIP,
+			~"3"	=> glcore::GL_TRIANGLES,
+			~"3s"	=> glcore::GL_TRIANGLE_STRIP,
+			~"3f"	=> glcore::GL_TRIANGLE_FAN,
+			_		=> fail!(fmt!( "Unknown poly type: %s", poly ))
+		};
+		let ats = LinearMap::new();
+		Mesh{ name:name, attribs:ats, index:None, poly_type:ptype, num_vert:nv, num_ind:ni, black_list:@mut ~[] }
 	}
 
-	fn disable_mesh_attribs( va : &buf::VertexArray, clean_mask : uint )	{
-		assert self.vertex_array.is_active(va);
-		for va.data.eachi |i,vd|	{
-			if clean_mask&(1<<i)!=0u && vd.enabled	{
+	fn disable_mesh_attribs( &self, va : &mut buf::VertexArray, clean_mask : uint )	{
+		assert!( self.vertex_array.is_active(va) );
+		for uint::range(0,va.data.len()) |i|	{
+			if clean_mask&(1<<i)!=0u && va.data[i].enabled	{
 				glcore::glDisableVertexAttribArray( i as glcore::GLuint );
-				vd.enabled = false;
+				va.data[i].enabled = false;
 			}
 		}
 	}
 
-	fn bind_mesh_attrib( va : &buf::VertexArray, loc : uint, at : &Attribute, is_int : bool )	{
-		assert self.vertex_array.is_active(va);
+	fn bind_mesh_attrib( &mut self, va : &mut buf::VertexArray, loc : uint, at : &Attribute, is_int : bool )	{
+		assert!( self.vertex_array.is_active(va) );
 		self.bind_buffer( at.buffer );
-		let mut vdata = &va.data[loc];
+		let vdata = &mut va.data[loc];
 		// update vertex info
 		if vdata.attrib != *at	{
 			vdata.attrib = *at;
+			let ptr = at.offset as *glcore::GLvoid;
 			if is_int	{
 				glcore::glVertexAttribIPointer(
 					loc as glcore::GLuint, at.count as glcore::GLint, at.kind,
-					at.stride as glcore::GLsizei, at.offset as *glcore::GLvoid );
+					at.stride as glcore::GLsizei, ptr );
 			}else	{
 				glcore::glVertexAttribPointer(
 					loc as glcore::GLuint, at.count as glcore::GLint, at.kind,
 					if at.normalized {glcore::GL_TRUE} else {glcore::GL_FALSE},
-					at.stride as glcore::GLsizei, at.offset as *glcore::GLvoid );
+					at.stride as glcore::GLsizei, ptr );
 			}
 		}
 		// enable attribute
@@ -182,9 +182,9 @@ impl context::Context	{
 		}
 	}
 
-	fn draw_mesh( input : call::DrawInput, prog : &shade::Program, data : &shade::DataMap )-> bool	{
+	fn draw_mesh( &mut self, input : call::DrawInput, prog : &shade::Program, data : &shade::DataMap )-> bool	{
 		let &(va,m,range) = &input;
-		assert *va.handle as int != 0;
+		assert!( *va.handle as int != 0 );
 		// check black list
 		if m.black_list.contains( &prog.handle )	{
 			return false;
@@ -198,7 +198,7 @@ impl context::Context	{
 		// bind attributes
 		self.bind_vertex_array( va );
 		let mut va_clean_mask = va.get_mask();
-		for prog.attribs.each |name,pat|	{
+		for prog.attribs.each |&(name,pat)|	{
 			match m.attribs.find(name)	{
 				Some(sat) => {
 					if !sat.compatible(pat)	{
@@ -208,7 +208,7 @@ impl context::Context	{
 						return false;
 					}
 					va_clean_mask &= !(1<<pat.loc);
-					self.bind_mesh_attrib( va, pat.loc, &sat, pat.is_integer() );
+					self.bind_mesh_attrib( va, pat.loc, sat, pat.is_integer() );
 				},
 				None => {
 					m.black_list.push( prog.handle );
@@ -223,11 +223,11 @@ impl context::Context	{
 		match m.index	{
 			Some(el) =>	{
 				self.bind_element_buffer( va, el.buffer );
-				assert range.start + range.num <= m.num_ind;
+				assert!( range.start + range.num <= m.num_ind );
 				glcore::glDrawElements( m.poly_type, range.num as glcore::GLsizei, el.kind, range.start as *glcore::GLvoid );
 			},
 			None =>	{
-				assert range.start + range.num <= m.num_vert;
+				assert!( range.start + range.num <= m.num_vert );
 				glcore::glDrawArrays( m.poly_type, range.start as glcore::GLint, range.num as glcore::GLsizei );
 			}
 		}

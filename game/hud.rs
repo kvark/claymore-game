@@ -2,10 +2,14 @@ extern mod engine;
 extern mod lmath;
 extern mod std;
 
-use lmath::vec::vec4::*;
-use send_map::linear::LinearMap;
-use std::json;
-use std::serialize::{Decoder,Decodable};
+use core::hashmap::linear::LinearMap;
+//use std::json;
+use std::serialize::Decoder;
+
+use lmath::vec::vec4;
+use engine::space::Pretty;
+
+use scene;
 
 
 pub enum Anchor	{
@@ -30,7 +34,7 @@ pub struct Alignment(Anchor,Relation,Anchor);
 pub type Point = (int,int);
 
 
-pure fn parse_anchor( s : &~str )-> Anchor	{
+fn parse_anchor( s : &~str )-> Anchor	{
 	match *s	{
 		~"left-top"	=> ALeftTop,
 		~"mid-top"	=> AMidTop,
@@ -41,20 +45,22 @@ pure fn parse_anchor( s : &~str )-> Anchor	{
 		~"left-bot"	=> ALeftBot,
 		~"mid-bot"	=> AMidBot,
 		~"right-bot"=> ARightBot,
-		_	=> fail ~"Unknown anchor: " + *s
+		_	=> fail!( ~"Unknown anchor: " + *s )
 	}
 }
 
-pure fn parse_relation( s : &str )-> Relation	{
+fn parse_relation( s : &str )-> Relation	{
 	if s == ~"parent"	{RelParent}	else
 	if s == ~"head"		{RelHead}	else
 	if s == ~"tail"		{RelTail}	else
-	{ fail ~"Unknown relation: " + s }
+	{fail!( ~"Unknown relation: " + s )}
 }
 
-pure fn parse_alignment( expression : &str )-> Alignment	{
-	let s = do str::split(expression) |c|	{c=='=' || c=='.'};
-	assert s.len() == 3u;
+fn parse_alignment( expression : &str )-> Alignment	{
+	let s = vec::build( |push|	{
+		expression.each_split( |c| {c=='=' || c=='.'}, |s| {push(s.to_owned());true} );
+	});
+	assert!( s.len() == 3u );
 	Alignment(parse_anchor(&s[0]), parse_relation(s[1]), parse_anchor(&s[2]))
 }
 
@@ -70,21 +76,21 @@ pub struct Rect    {
 	size	: Point,
 }
 
-impl Rect : engine::space::Pretty	{
-	pure fn to_string()-> ~str	{
+impl engine::space::Pretty for Rect	{
+	fn to_string( &self )-> ~str	{
 		let (bx,by) = self.base;
 		let (sx,sy) = self.size;
 		fmt!( "[%d:%d)x[%d:%d)", bx, bx+sx, by, by+sy )
 	}
 }
 
-impl Rect	{
-	pure fn get_corner()-> Point	{
+pub impl Rect	{
+	fn get_corner( &self )-> Point	{
 		let (bx,by) = self.base;
 		let (sx,sy) = self.size;
 		(bx+sx,by+sy)
 	}
-	pure fn get_point( anchor : Anchor, m : &Margin )-> Point	{
+	fn get_point( &self, anchor : Anchor, m : &Margin )-> Point	{
 		let (bx,by) = self.base;
 		let (sx,sy) = self.size;
 		match anchor	{
@@ -108,8 +114,8 @@ pub struct Context	{
 	size	: (uint,uint),
 }
 
-impl Context	{
-	fn call( prog : @engine::shade::Program, data : engine::shade::DataMap,
+pub impl Context	{
+	fn call( &self, prog : @engine::shade::Program, data : engine::shade::DataMap,
 		rast_override : Option<&engine::rast::State> )-> engine::call::Call	{
 		let &(fbo,pmap,rast_orig) = &self.output;
 		let r = copy match rast_override	{
@@ -118,11 +124,12 @@ impl Context	{
 		};
 		engine::call::CallDraw( copy self.input, (fbo,pmap,r), prog, data )
 	}
-	pure fn transform( r : &Rect )-> engine::shade::Uniform	{
+
+	fn transform( &self, r : &Rect )-> engine::shade::Uniform	{
 		let (tx,ty) = self.size, (bx,by) = r.base, (sx,sy) = r.size;
 		let dx = 2f32 / (tx as f32);
 		let dy = 2f32 / (ty as f32);
-		let vt = Vec4::new(
+		let vt = vec4::new(
 			dx * (sx as f32),
 			dy * (sy as f32),
 			dx * (bx as f32) - 1f32,
@@ -133,13 +140,13 @@ impl Context	{
 }
 
 pub trait Element	{
-	pure fn get_size()-> Point;
-	fn draw( &Context, &Rect )-> engine::call::Call;
+	fn get_size( &self )-> Point;
+	fn draw( &self, &Context, &Rect )-> engine::call::Call;
 }
 
-impl () : Element	{
-	pure fn get_size()-> Point	{(0,0)}
-	fn draw( _hc : &Context, _r : &Rect )-> engine::call::Call	{
+impl Element for ()	{
+	fn get_size( &self )-> Point	{(0,0)}
+	fn draw( &self, _hc : &Context, _r : &Rect )-> engine::call::Call	{
 		engine::call::CallEmpty
 	}
 }
@@ -149,22 +156,22 @@ impl () : Element	{
 pub struct Frame	{
 	name		: ~str,
 	min_size	: Point,
-	mut area	: Rect,				// in absolute coords
+	area		: Rect,		// in absolute coords
 	alignment	: Alignment,
 	element		: @Element,
 	margin		: Margin,
 	children	: ~[Frame],
 }
 
-impl Frame	{
-	pure fn get_size( content : Point )-> Point	{
+pub impl Frame	{
+	fn get_size( &self, content : Point )-> Point	{
 		let m = &self.margin;
 		let (sx,sy) = self.min_size;
 		let (ex,ey) = content;
 		( int::max(sx,m.side+ex+m.side), int::max(sy,m.bot+ey+m.top) )
 	}
 
-	pure fn get_draw_rect()-> Rect	{
+	fn get_draw_rect( &self )-> Rect	{
 		/*let m = &self.margin;
 		let (bx,by) = self.area.base;
 		let (sx,sy) = self.area.size;
@@ -175,7 +182,7 @@ impl Frame	{
 		self.area
 	}
 
-	priv fn update_size( lg : &engine::context::Log )-> Point	{
+	priv fn update_size( &self, lg : &engine::context::Log )-> Point	{
 		let (ex,ey) = self.element.get_size();
 		let (cx,cy) = self.get_size((ex,ey));
 		if self.children.is_empty()	{
@@ -183,7 +190,7 @@ impl Frame	{
 			return (cx,cy);
 		}
 		let no_margin = Margin{side:0,bot:0,top:0};
-		const BIG : int = 10000;
+		let BIG : int = 10000;
 		let mut x_min=BIG, y_min=BIG, x_max=-BIG, y_max=-BIG;
 		for uint::range(0,self.children.len()) |i|	{
 			let child = &self.children[i];
@@ -193,11 +200,11 @@ impl Frame	{
 				get_point( destination, &no_margin );
 			let (dst_x,dst_y) = match relation	{
 				RelParent	=> (0,0),
-				RelHead		=> { assert i>0u;
+				RelHead		=> { assert!( i>0u );
 					let fr = &self.children[0];
 					fr.area.get_point( source, &no_margin )
 				},
-				RelTail		=> { assert i>0u;
+				RelTail		=> { assert!( i>0u );
 					let fr = &self.children[i-1u];
 					fr.area.get_point( source, &no_margin )
 				}
@@ -207,7 +214,7 @@ impl Frame	{
 			child.area.base = ( dst_x-src_x, dst_y-src_y );
 			let (x1,y1) = child.area.get_point( ALeftBot, &no_margin );
 			let (x2,y2) = child.area.get_point( ARightTop,&no_margin );
-			assert x1<=x2 && y1<=y2;
+			assert!( x1<=x2 && y1<=y2 );
 			x_min = int::min(x_min,x1); y_min = int::min(y_min,y1);
 			x_max = int::max(x_max,x2); y_max = int::max(y_max,y2);
 			lg.add(fmt!( "\tUpdated1 '%s' to: %s, (%d,%d),(%d,%d)",
@@ -219,7 +226,7 @@ impl Frame	{
 		self.area.size
 	}
 
-	priv fn update_base( lg : &engine::context::Log )	{
+	priv fn update_base( &self, lg : &engine::context::Log )	{
 		let no_margin = Margin{side:0,bot:0,top:0};
 		for uint::range(0,self.children.len()) |i|	{
 			let child = &self.children[i];
@@ -239,10 +246,10 @@ impl Frame	{
 		}
 	}
 
-	fn update( lg : &engine::context::Log )	{
+	fn update( &self, lg : &engine::context::Log )	{
 		lg.add( ~"Updating HUD: " + self.name );
 		self.update_size( lg );
-		assert self.area.size == self.min_size;
+		assert!( self.area.size == self.min_size );
 		self.update_base( lg );
 	}
 
@@ -279,7 +286,7 @@ impl Frame	{
 		res.is_some()
 	}
 
-	fn draw_all( hc : &Context )-> ~[engine::call::Call]	{
+	fn draw_all( &self, hc : &Context )-> ~[engine::call::Call]	{
 		let c0 = self.element.draw( hc, &self.get_draw_rect() );
 		let mut queue = ~[c0];
 		for self.children.each() |child|	{
@@ -288,13 +295,13 @@ impl Frame	{
 		queue
 	}
 
-	fn draw_debug( hc : &Context, prog : @engine::shade::Program,
+	fn draw_debug( &self, hc : &Context, prog : @engine::shade::Program,
 		data : &mut engine::shade::DataMap, rast : &engine::rast::State )-> engine::call::Call	{
 		data.insert( ~"u_Transform", hc.transform(&self.area) );
 		hc.call( prog, copy *data, Some(rast) )
 	}
 
-	fn draw_debug_all( hc : &Context, prog : @engine::shade::Program,
+	fn draw_debug_all( &self, hc : &Context, prog : @engine::shade::Program,
 		data : &mut engine::shade::DataMap, rast : &engine::rast::State )-> ~[engine::call::Call]	{
 		let c0 = self.draw_debug(hc,prog,data,rast);
 		let mut queue = ~[c0];
@@ -345,17 +352,18 @@ pub struct Image	{
 	program	: @engine::shade::Program,
 	center	: (f32,f32),
 }
-impl Image : Element	{
-	pure fn get_size()-> Point	{
+
+impl Element for Image	{
+	fn get_size( &self )-> Point	{
 		(self.texture.width as int, self.texture.height as int)
 	}
-	fn draw( hc : &Context, rect : &Rect )-> engine::call::Call	{
+	fn draw( &self, hc : &Context, rect : &Rect )-> engine::call::Call	{
 		// fill shader data
 		let mut data = engine::shade::make_data();
 		data.insert( ~"t_Image",	engine::shade::UniTexture(
 			0, self.texture, Some(self.sampler) ));
 		let (cx,cy) = self.center, (sx,sy) = rect.size;
-		let vc = Vec4::new( cx, cy,
+		let vc = vec4::new( cx, cy,
 			(sx as f32)/(self.texture.width as f32),
 			(sy as f32)/(self.texture.height as f32)
 			);
@@ -385,16 +393,17 @@ pub struct Label	{
 	color	: engine::rast::Color,
 	font	: @engine::font::Font,
 }
-impl Label : Element	{
-	pure fn get_size()-> Point	{
+
+impl Element for Label	{
+	fn get_size( &self )-> Point	{
 		(self.texture.width as int, self.texture.height as int)
 	}
-	fn draw( hc : &Context, rect : &Rect )-> engine::call::Call	{
+	fn draw( &self, hc : &Context, rect : &Rect )-> engine::call::Call	{
 		// fill shader data
 		let mut data = engine::shade::make_data();
-		let sm = engine::texture::make_sampler(1u,0);
+		let sm = engine::texture::Sampler::new(1u,0);
 		data.insert( ~"t_Text",	engine::shade::UniTexture(0,self.texture,Some(sm)) );
-		let vc = Vec4::new( self.color.r, self.color.g, self.color.b, self.color.a );
+		let vc = vec4::new( self.color.r, self.color.g, self.color.b, self.color.a );
 		data.insert( ~"u_Color",	engine::shade::UniFloatVec(vc) );
 		let dr = Rect{ base:rect.base, size:self.get_size() };
 		data.insert( ~"u_Transform", hc.transform(&dr) );
@@ -420,7 +429,7 @@ pub struct Screen    {
 }
 
 
-pub fn load_screen(path : ~str, ct : &engine::context::Context,
+pub fn load_screen( path : ~str, ct : &engine::context::Context,
 		ft : @engine::font::Context, lg : &engine::context::Log )-> Screen	{
 	lg.add( ~"Loading HUD screen: " + path );
 	let iscreen = scene::load_config::<ScreenInfo>( path );
@@ -435,14 +444,14 @@ pub fn load_screen(path : ~str, ct : &engine::context::Context,
 		margin		: Margin{side:0,bot:0,top:0},
 		children	: convert_frames( &iscreen.frames ),
 	};
-	let mut map_texture	= LinearMap::<~str,@engine::texture::Texture>();
+	let mut map_texture	: LinearMap<~str,@engine::texture::Texture> = LinearMap::new();
 	lg.add(fmt!( "\tParsing %u images", iscreen.images.len() ));
-	let mut map_image = LinearMap::<~str,@Image>();
+	let mut map_image : LinearMap<~str,@Image> = LinearMap::new();
 	let prog_image = @engine::load::load_program( ct, ~"data/code/hud/image", lg );
 	for iscreen.images.each() |iimage|	{
 		let path = ~"data/texture/hud/" + iimage.path;
 		let texture = match map_texture.find(&path)	{
-			Some(t)	=> t,
+			Some(t)	=> *t,
 			None	=>	{
 				let t = @engine::load::load_texture_2D( ct, &path, false );
 				map_texture.insert(path,t);
@@ -451,22 +460,22 @@ pub fn load_screen(path : ~str, ct : &engine::context::Context,
 		};
 		let image = @Image	{
 			texture	: texture,
-			sampler	: engine::texture::make_sampler(1u,0),
+			sampler	: engine::texture::Sampler::new(1u,0),
 			program	: prog_image,
 			center	: iimage.center,
 		};
 		map_image.insert( copy iimage.frame, image );
 		if !root.populate( &iimage.frame, image as @Element )	{
-			fail ~"\tImage frame not found: " + iimage.frame
+			fail!( ~"\tImage frame not found: " + iimage.frame )
 		}
 	}
 	lg.add(fmt!( "\tParsing %u labels", iscreen.labels.len() ));
-	let mut map_font	= LinearMap::<FontInfo,@engine::font::Font>();
-	let mut map_label	= LinearMap::<~str,@mut Label>();
+	let mut map_font	: LinearMap<FontInfo,@engine::font::Font>	= LinearMap::new();
+	let mut map_label	: LinearMap<~str,@mut Label>				= LinearMap::new();
 	let prog_label = @engine::load::load_program( ct, ~"data/code/hud/text", lg );
 	for iscreen.labels.each() |ilabel|	{
 		let font = match map_font.find(&ilabel.font)	{
-			Some(f)	=> f,
+			Some(f)	=> *f,
 			None	=>	{
 				let &(fname,fsx,fsy) = &ilabel.font;
 				let (kern_x,kern_y) = ilabel.kern;
@@ -479,12 +488,12 @@ pub fn load_screen(path : ~str, ct : &engine::context::Context,
 			texture	: @font.bake( ct, ilabel.text, ilabel.bound, lg ),
 			content	: copy ilabel.text,
 			program	: prog_label,
-			color	: engine::rast::make_color(ilabel.color),
+			color	: engine::rast::Color::new( ilabel.color ),
 			font	: font,
 		};
 		map_label.insert( copy ilabel.frame, label );
 		if !root.populate( &ilabel.frame, label as @Element )	{
-			fail ~"\tText frame not found: " + ilabel.frame
+			fail!( ~"\tText frame not found: " + ilabel.frame )
 		}
 	}
 	lg.add(~"\tDone");
@@ -503,11 +512,11 @@ pub struct Blink<T>	{
 	visible	: bool,
 }
 
-impl<T:Element> Blink<T>	: Element	{
-	pure fn get_size()-> Point	{
+impl<T:Element> Element for Blink<T>	{
+	fn get_size( &self )-> Point	{
 		self.element.get_size()
 	}
-	fn draw( ct : &Context, r : &Rect )-> engine::call::Call	{
+	fn draw( &self, ct : &Context, r : &Rect )-> engine::call::Call	{
 		if self.visible	{
 			self.element.draw(ct,r)
 		}else	{
@@ -516,20 +525,21 @@ impl<T:Element> Blink<T>	: Element	{
 	}
 }
 
+
 pub struct EditLabel	{
 	text	: @mut Label,
 	size	: (uint,uint),
 	cursor	: @mut Blink<Image>,
-	mut active	: bool,
+	active	: bool,
 }
 
 pub type KeyInput = ();
 
 pub impl EditLabel	{
-	static fn obtain( screen : &mut Screen, base_name : ~str )-> EditLabel	{
+	fn obtain( screen : &mut Screen, base_name : ~str )-> EditLabel	{
 		let cursor_name = base_name + ~".cursor";
 		let blink = @mut Blink	{
-			element	: screen.images.get(&cursor_name),
+			element	: *screen.images.get(&cursor_name),
 			visible	: false,
 		};
 		let (sx,sy) = do screen.root.with_frame_mut( &cursor_name ) |fr|	{
@@ -537,16 +547,16 @@ pub impl EditLabel	{
 			fr.area.size
 		}.expect( ~"Frame not found: " + base_name );
 		EditLabel{
-			text	: screen.labels.get(&base_name),
+			text	: *screen.labels.get(&base_name),
 			size	: (sx as uint, sy as uint),
 			cursor	: blink,
 			active	: false,
 		}
 	}
 
-	fn change( &self, input : &~str, ct : &engine::context::Context, lg : &engine::context::Log )	{
+	fn change( &self, input : &str, ct : &engine::context::Context, lg : &engine::context::Log )	{
 		let mut text = copy self.text.content;
-		for input.each_char() |key|	{
+		str::each_char(input, |key|	{
 			if key == (259 as char)	{
 				if !text.is_empty()	{
 					str::pop_char( &mut text );
@@ -554,14 +564,15 @@ pub impl EditLabel	{
 			}else	{
 				str::push_char( &mut text, key );
 			};
-		}
+			true
+		});
 		self.text.texture = @self.text.font.bake( ct, text, (1000,100), lg );	//self.size
 		self.text.content = text;
 	}
 }
 
-impl EditLabel : engine::anim::Act	{
-	fn update()-> bool	{
+impl engine::anim::Act for EditLabel	{
+	fn update( &mut self )-> bool	{
 		let time_ms = (engine::anim::get_time() * 1000f) as uint;
 		self.cursor.visible = self.active && (time_ms % 1000u < 500u);
 		true

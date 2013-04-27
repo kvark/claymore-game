@@ -8,7 +8,7 @@
 	},
 	"GL":	{
 		"major"	:3,
-		"minor"	:2,
+		"minor"	:1,
 		"debug"	:true
 	},
 	"journal":	{

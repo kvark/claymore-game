@@ -13,15 +13,15 @@ extern mod lmath;
 extern mod numeric;
 extern mod std;
 
-mod battle;
-mod chared;
-mod grid;
-mod hud;
-mod main;
-mod scene;
+//pub mod battle;
+//pub mod chared;
+//pub mod grid;
+//pub mod hud;
+pub mod main;
+pub mod scene;
 
-mod render	{
-	mod depth;
-	mod lbuf;
-	mod shadow;
+pub mod render	{
+	//pub mod depth;
+	//pub mod lbuf;
+	//pub mod shadow;
 }

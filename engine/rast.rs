@@ -1,25 +1,29 @@
 extern mod glcore;
 
+use frame;
 
-#[deriving_eq]
+
+#[deriving(Eq)]
 pub struct Color	{
 	r:f32, g:f32, b:f32, a:f32,
 }
 
-pub pure fn make_color( hex : uint )-> Color	{
-	let k = 1f32/255f32;
-	Color{
-		r : (((hex>>24)&0xFF) as f32) * k,
-		g : (((hex>>16)&0xFF) as f32) * k,
-		b : (((hex>> 8)&0xFF) as f32) * k,
-		a : (((hex>> 0)&0xFF) as f32) * k,
+pub impl Color	{
+	fn new( hex : uint )-> Color	{
+		let k = 1f32/255f32;
+		Color{
+			r : (((hex>>24)&0xFF) as f32) * k,
+			g : (((hex>>16)&0xFF) as f32) * k,
+			b : (((hex>> 8)&0xFF) as f32) * k,
+			a : (((hex>> 0)&0xFF) as f32) * k,
+		}
 	}
 }
 
 
-priv trait Stage	{
-	fn activate( &mut self, new : &self, poly : uint );
-	fn verify( &mut self );	//FIXME:waiting for the Copy derivation
+pub trait Stage	{
+	fn activate( &mut self, new : &Self, poly : uint );
+	fn verify( &self );
 }
 
 
@@ -36,25 +40,25 @@ priv fn ask_state( state : glcore::GLenum )-> bool	{
 }
 
 
-pub enum Viewport = frame::Rect;
+pub struct Viewport( frame::Rect );
 
-impl Viewport : Stage	{
+impl Stage for Viewport	{
 	fn activate( &mut self, new : &Viewport, _poly : uint )	{
 		if **self == **new 	{return}
 		**self = **new;
 		glcore::glViewport( new.x as glcore::GLint, new.y as glcore::GLint,
 			new.w as glcore::GLsizei, new.h as glcore::GLsizei );
 	}
-	fn verify( &mut self )	{
+	fn verify( &self )	{
 		let v = vec::from_elem( 4, 0 as glcore::GLint );
 		unsafe	{
 			glcore::glGetIntegerv( glcore::GL_VIEWPORT, vec::raw::to_ptr(v) );
 		}
-		assert
+		assert!(
 			self.x == v[0] as uint &&
 			self.y == v[1] as uint &&
 			self.w == v[2] as uint &&
-			self.h == v[3] as uint;
+			self.h == v[3] as uint );
 	}
 }
 
@@ -67,16 +71,18 @@ pub struct Primitive	{
 	line_width	: f32,
 }
 
-impl Primitive	{
-	pure fn get_poly_size()-> uint	{
-		if self.poly_mode == glcore::GL_FILL	{3u} else
-		if self.poly_mode == glcore::GL_LINE	{2u} else
-		if self.poly_mode == glcore::GL_POINT	{1u} else
-		{fail fmt!( "Unknown poly mode: %d", self.poly_mode as int )}
+pub impl Primitive	{
+	fn get_poly_size( &self )-> uint	{
+		match self.poly_mode	{
+			glcore::GL_FILL	=> 3u,
+			glcore::GL_LINE	=> 2u,
+			glcore::GL_POINT=> 1u,
+			_				=> fail!(fmt!( "Unknown poly mode: %d", self.poly_mode as int ))
+		}
 	}
 }
 
-impl Primitive : Stage	{
+impl Stage for Primitive	{
 	fn activate( &mut self, new : &Primitive, poly : uint )	{
 		if poly == 3u	{
 			if self.poly_mode != new.poly_mode	{
@@ -102,7 +108,8 @@ impl Primitive : Stage	{
 			glcore::glLineWidth( new.line_width );
 		}
 	}
-	fn verify( &mut self )	{
+	
+	fn verify( &self )	{
 		//let mut mode	= 0 as glcore::GLint;
 		let mut front	= 0 as glcore::GLint;
 		let mut cmode	= 0 as glcore::GLint;
@@ -113,11 +120,11 @@ impl Primitive : Stage	{
 			glcore::glGetIntegerv(	glcore::GL_CULL_FACE_MODE,	ptr::addr_of(&cmode) );
 			glcore::glGetFloatv(	glcore::GL_LINE_WIDTH,		ptr::addr_of(&lw) );
 		}
-		assert //self.poly_mode == mode as glcore::GLenum &&
+		assert!( //self.poly_mode == mode as glcore::GLenum &&
 			self.front_cw == (front==glcore::GL_CW as glcore::GLint) &&
 			self.cull == ask_state( glcore::GL_CULL_FACE ) &&
 			self.cull_mode == cmode as glcore::GLenum && 
-			self.line_width == lw as f32;
+			self.line_width == lw as f32 );
 	}
 }
 
@@ -130,7 +137,7 @@ pub struct Offset	{
 	units	: float,
 }
 
-impl Offset : Stage	{
+impl Stage for Offset	{
 	fn activate( &mut self, new : &Offset, poly : uint )	{
 		if poly == 3u && self.on_fill != new.on_fill 	{
 			self.on_fill = new.on_fill;
@@ -153,18 +160,19 @@ impl Offset : Stage	{
 				new.units	as glcore::GLfloat );
 		}
 	}
-	fn verify( &mut self )	{
+
+	fn verify( &self )	{
 		let mut f = 0 as glcore::GLfloat;
 		let mut u = 0 as glcore::GLfloat;
 		unsafe	{
 			glcore::glGetFloatv( glcore::GL_POLYGON_OFFSET_FACTOR,	ptr::addr_of(&f) );
 			glcore::glGetFloatv( glcore::GL_POLYGON_OFFSET_UNITS,	ptr::addr_of(&u) );
 		}
-		assert
+		assert!(
 			self.on_fill	== ask_state( glcore::GL_POLYGON_OFFSET_FILL ) &&
 			self.on_line	== ask_state( glcore::GL_POLYGON_OFFSET_LINE ) &&
 			self.on_point	== ask_state( glcore::GL_POLYGON_OFFSET_POINT ) &&
-			self.factor	== f as float && self.units == u as float;
+			self.factor	== f as float && self.units == u as float );
 	}
 }
 
@@ -174,7 +182,7 @@ pub struct Scissor	{
 	area	: frame::Rect,
 }
 
-impl Scissor : Stage	{
+impl Stage for Scissor	{
 	fn activate( &mut self, new : &Scissor, _poly : uint )	{
 		if self.test != new.test	{
 			self.test = new.test;
@@ -186,14 +194,15 @@ impl Scissor : Stage	{
 				new.area.w as glcore::GLsizei, new.area.h as glcore::GLsizei );
 		}
 	}
-	fn verify( &mut self )	{
+
+	fn verify( &self )	{
 		let mut v = vec::from_elem( 4, 0 as glcore::GLint );
 		unsafe	{
 			glcore::glGetIntegerv( glcore::GL_SCISSOR_BOX, vec::raw::to_ptr(v) );
 		}
 		let mut r = frame::Rect{ x:v[0] as uint, y:v[1] as uint, w:v[2] as uint, h:v[3] as uint };
-		assert self.test == ask_state( glcore::GL_SCISSOR_TEST ) &&
-			self.area == r;
+		assert!( self.test == ask_state( glcore::GL_SCISSOR_TEST ) &&
+			self.area == r );
 	}
 }
 
@@ -206,7 +215,7 @@ pub struct Multisample	{
 	value	: f32,
 }
 
-impl Multisample : Stage	{
+impl Stage for Multisample	{
 	fn activate( &mut self, new : &Multisample, _poly : uint )	{
 		if self.on != new.on	{
 			self.on = new.on;
@@ -227,22 +236,23 @@ impl Multisample : Stage	{
 			glcore::glSampleCoverage( new.value, new.invert as glcore::GLboolean );
 		}
 	}
-	fn verify( &mut self )	{
+
+	fn verify( &self )	{
 		let mut value = 0 as glcore::GLfloat;
 		let mut invert = glcore::GL_FALSE;
 		unsafe	{
 			glcore::glGetFloatv( glcore::GL_SAMPLE_COVERAGE_VALUE,	ptr::addr_of(&value) );
 			glcore::glGetBooleanv( glcore::GL_SAMPLE_COVERAGE_INVERT,	ptr::addr_of(&invert) );
 		}
-		assert self.on == ask_state( glcore::GL_MULTISAMPLE ) &&
+		assert!( self.on == ask_state( glcore::GL_MULTISAMPLE ) &&
 			self.alpha == ask_state( glcore::GL_SAMPLE_ALPHA_TO_COVERAGE ) &&
 			self.cover == ask_state( glcore::GL_SAMPLE_COVERAGE ) &&
-			self.value == value as f32 && self.invert == (invert==glcore::GL_TRUE);
+			self.value == value as f32 && self.invert == (invert==glcore::GL_TRUE) );
 	}
 }
 
 
-#[deriving_eq]
+#[deriving(Eq)]
 pub struct StencilSide	{
 	function		: glcore::GLenum,
 	ref_value		: int,
@@ -254,7 +264,14 @@ pub struct StencilSide	{
 
 
 impl StencilSide	{
-	fn activate( &mut self, new : &StencilSide, side : glcore::GLenum )	{
+	priv fn new()-> StencilSide	{
+		StencilSide{
+			function:glcore::GL_ALWAYS, ref_value:0, read_mask:-1,
+			op_fail:glcore::GL_KEEP, op_depth_fail:glcore::GL_KEEP, op_pass:glcore::GL_KEEP
+		}
+	}
+
+	pub fn activate( &mut self, new : &StencilSide, side : glcore::GLenum )	{
 		if self.function!=new.function || self.ref_value!=new.ref_value || self.read_mask!=new.read_mask	{
 			self.function = new.function;
 			self.ref_value = new.ref_value;
@@ -270,13 +287,6 @@ impl StencilSide	{
 	}
 }
 
-priv pure fn create_stencil()-> StencilSide	{
-	StencilSide{
-		function:glcore::GL_ALWAYS, ref_value:0, read_mask:-1,
-		op_fail:glcore::GL_KEEP, op_depth_fail:glcore::GL_KEEP, op_pass:glcore::GL_KEEP
-	}
-}
-
 
 pub struct Stencil	{
 	test	: bool,
@@ -284,7 +294,7 @@ pub struct Stencil	{
 	back	: StencilSide,
 }
 
-impl Stencil : Stage	{
+impl Stage for Stencil	{
 	fn activate( &mut self, new : &Stencil, _poly : uint )	{
 		if self.test != new.test	{
 			self.test = new.test;
@@ -301,7 +311,8 @@ impl Stencil : Stage	{
 			self.back	.activate( &new.back,	glcore::GL_BACK );
 		}
 	}
-	fn verify( &mut self )	{
+
+	fn verify( &self )	{
 		let mut vals = vec::from_elem( 12, 0 as glcore::GLint );
 		let queries = ~[glcore::GL_STENCIL_FUNC,glcore::GL_STENCIL_REF,glcore::GL_STENCIL_VALUE_MASK,
 			glcore::GL_STENCIL_FAIL,glcore::GL_STENCIL_PASS_DEPTH_FAIL,glcore::GL_STENCIL_PASS_DEPTH_PASS,
@@ -313,7 +324,7 @@ impl Stencil : Stage	{
 				glcore::glGetIntegerv( *q, ptr::addr_of(&vals[i]) );
 			}
 		}
-		assert self.test == ask_state( glcore::GL_STENCIL_TEST ) &&
+		assert!( self.test == ask_state( glcore::GL_STENCIL_TEST ) &&
 			self.front.function		== vals[0] as glcore::GLenum && 
 			self.front.ref_value	== vals[1] as int && 
 			self.front.read_mask	== vals[2] as int && 
@@ -325,7 +336,7 @@ impl Stencil : Stage	{
 			self.back.read_mask		== vals[8] as int && 
 			self.back.op_fail		== vals[9] as glcore::GLenum &&
 			self.back.op_depth_fail	== vals[10] as glcore::GLenum &&
-			self.back.op_pass		== vals[11] as glcore::GLenum;
+			self.back.op_pass		== vals[11] as glcore::GLenum );
 	}
 }
 
@@ -337,7 +348,7 @@ pub struct Depth	{
 	r1		: f32,
 }
 
-impl Depth : Stage	{
+impl Stage for Depth	{
 	fn activate( &mut self, new : &Depth, _poly : uint )	{
 		if self.test != new.test	{
 			self.test = new.test;
@@ -354,18 +365,20 @@ impl Depth : Stage	{
 			glcore::glDepthRange( new.r0 as glcore::GLdouble, new.r1 as glcore::GLdouble )
 		}
 	}
-	fn verify( &mut self )	{
+
+	fn verify( &self )	{
 		let mut val = 0 as glcore::GLint;
 		let mut r = vec::from_elem( 2, 0 as glcore::GLfloat );
 		unsafe	{
 			glcore::glGetIntegerv(	glcore::GL_DEPTH_FUNC, ptr::addr_of(&val) );
 			glcore::glGetFloatv(	glcore::GL_DEPTH_RANGE, vec::raw::to_ptr(r) );
 		}
-		assert self.test == ask_state( glcore::GL_DEPTH_TEST ) &&
+		assert!( self.test == ask_state( glcore::GL_DEPTH_TEST ) &&
 			self.fun == val as glcore::GLenum &&
-			self.r0 == r[0] as f32 && self.r1 == r[1] as f32;
+			self.r0 == r[0] as f32 && self.r1 == r[1] as f32 );
 	}
 }
+
 
 pub struct BlendChannel	{
 	equation	: glcore::GLenum,
@@ -374,22 +387,23 @@ pub struct BlendChannel	{
 }
 
 impl BlendChannel	{
-	fn verify( &mut self, we : glcore::GLenum, ws : glcore::GLenum, wd : glcore::GLenum )	{
+	priv fn new()-> BlendChannel	{
+		BlendChannel{ equation:glcore::GL_FUNC_ADD, source:glcore::GL_ONE, destination:glcore::GL_ZERO }
+	}
+
+	pub fn verify( &self, we : glcore::GLenum, ws : glcore::GLenum, wd : glcore::GLenum )	{
 		let mut v = vec::from_elem( 3, 0 as glcore::GLint );
 		unsafe	{
 			glcore::glGetIntegerv( we, ptr::addr_of(&v[0]) );
 			glcore::glGetIntegerv( ws, ptr::addr_of(&v[1]) );
 			glcore::glGetIntegerv( wd, ptr::addr_of(&v[2]) );
 		}
-		assert self.equation	== v[0] as glcore::GLenum &&
+		assert!( self.equation	== v[0] as glcore::GLenum &&
 			self.source			== v[1] as glcore::GLenum &&
-			self.destination	== v[2] as glcore::GLenum;
+			self.destination	== v[2] as glcore::GLenum );
 	}
 }
 
-priv pure fn create_blend()-> BlendChannel	{
-	BlendChannel{ equation:glcore::GL_FUNC_ADD, source:glcore::GL_ONE, destination:glcore::GL_ZERO }
-}
 
 pub struct Blend	{
 	on		: bool,
@@ -398,7 +412,7 @@ pub struct Blend	{
 	value	: Color,
 }
 
-impl Blend : Stage	{
+impl Stage for Blend	{
 	fn activate( &mut self, new : &Blend, _poly : uint )	{
 		if self.on != new.on	{
 			self.on = new.on;
@@ -432,21 +446,21 @@ impl Blend : Stage	{
 				new.value.r as glcore::GLfloat, new.value.g as glcore::GLfloat,
 				new.value.b as glcore::GLfloat, new.value.a as glcore::GLfloat );
 		}
-
 	}
-	fn verify( &mut self )	{
-		assert self.on == ask_state( glcore::GL_BLEND );
+
+	fn verify( &self )	{
+		assert!( self.on == ask_state( glcore::GL_BLEND ));
 		self.color.verify( glcore::GL_BLEND_EQUATION_RGB,	glcore::GL_BLEND_SRC_RGB,	glcore::GL_BLEND_DST_RGB	);
 		self.alpha.verify( glcore::GL_BLEND_EQUATION_ALPHA,	glcore::GL_BLEND_SRC_ALPHA,	glcore::GL_BLEND_DST_ALPHA	);
 		let mut cv = vec::from_elem( 4, 0 as glcore::GLfloat );
 		unsafe	{
 			glcore::glGetFloatv( glcore::GL_BLEND_COLOR, vec::raw::to_ptr(cv) );
 		}
-		assert
+		assert!(
 			cv[0] == self.value.r as f32 &&
 			cv[1] == self.value.g as f32 &&
 			cv[2] == self.value.b as f32 &&
-			cv[3] == self.value.a as f32;
+			cv[3] == self.value.a as f32 );
 	}
 }
 
@@ -462,7 +476,7 @@ pub struct Mask	{
 	alpha	: bool,
 }
 
-impl Mask : Stage	{
+impl Stage for Mask	{
 	fn activate( &mut self, new : &Mask, _poly : uint )	{
 		if self.stencil_front != new.stencil_front || self.stencil_back != new.stencil_back	{
 			self.stencil_front = new.stencil_front;
@@ -484,7 +498,8 @@ impl Mask : Stage	{
 				new.blue as glcore::GLboolean, new.alpha as glcore::GLboolean );
 		}
 	}
-	fn verify( &mut self )	{
+
+	fn verify( &self )	{
 		let bools	= vec::from_elem( 5, false as glcore::GLboolean );
 		let sf		= 0 as glcore::GLint;
 		let sb		= 0 as glcore::GLint;
@@ -494,14 +509,14 @@ impl Mask : Stage	{
 			glcore::glGetIntegerv( glcore::GL_STENCIL_WRITEMASK,		ptr::addr_of(&sf) );
 			glcore::glGetIntegerv( glcore::GL_STENCIL_BACK_WRITEMASK,	ptr::addr_of(&sb) );
 		}
-		assert
+		assert!(
 			self.red	== (bools[0]==glcore::GL_TRUE) &&
 			self.green	== (bools[1]==glcore::GL_TRUE) &&
 			self.blue	== (bools[2]==glcore::GL_TRUE) &&
 			self.alpha	== (bools[3]==glcore::GL_TRUE) &&
 			self.depth	== (bools[4]==glcore::GL_TRUE) &&
-			self.stencil_front	== sf as int	&&
-			self.stencil_back	== sb as int;
+			self.stencil_front	== sf as int &&
+			self.stencil_back	== sb as int );
 	}
 }
 
@@ -519,7 +534,7 @@ pub struct State	{
 }
 
 
-impl State : Stage	{
+impl Stage for State	{
 	//FIXME
 	fn activate( &mut self, new : &State, p0 : uint )	{
 		self.view	.activate( &new.view,		p0 );
@@ -535,7 +550,8 @@ impl State : Stage	{
 		self.blend	.activate( &new.blend,		p1 );
 		self.mask	.activate( &new.mask,		p1 );
 	}
-	fn verify( &mut self )	{
+
+	fn verify( &self )	{
 		self.view	.verify();
 		self.prime	.verify();
 		self.offset	.verify();
@@ -549,11 +565,11 @@ impl State : Stage	{
 }
 
 
-pub pure fn map_polygon_fill( dim : int )-> glcore::GLenum	{
+pub fn map_polygon_fill( dim : int )-> glcore::GLenum	{
 	[glcore::GL_POINT,glcore::GL_LINE,glcore::GL_FILL][dim-1]
 }
 
-pub pure fn map_comparison( s : ~str )-> glcore::GLenum	{
+pub fn map_comparison( s : ~str )-> glcore::GLenum	{
 	match s	{
 		~"!"	=> glcore::GL_NEVER,
 		~"*"	=> glcore::GL_ALWAYS,
@@ -563,11 +579,11 @@ pub pure fn map_comparison( s : ~str )-> glcore::GLenum	{
 		~"<="	=> glcore::GL_LEQUAL,
 		~">"	=> glcore::GL_GREATER,
 		~">="	=> glcore::GL_GEQUAL,
-		_		=> fail(fmt!( "Can not recognize comparison %s", s ))
+		_		=> fail!(fmt!( "Can not recognize comparison %s", s ))
 	}
 }
 
-pub pure fn map_operation( c : char )-> glcore::GLenum	{
+pub fn map_operation( c : char )-> glcore::GLenum	{
 	match c	{
 		'.'	=> glcore::GL_KEEP,
 		'0'	=> glcore::GL_ZERO,
@@ -577,22 +593,22 @@ pub pure fn map_operation( c : char )-> glcore::GLenum	{
 		'-' => glcore::GL_DECR,
 		'^' => glcore::GL_INCR_WRAP,
 		'v' => glcore::GL_DECR_WRAP,
-		_	=> fail(fmt!( "Can not recognize stencil operation '%c'", c ))
+		_	=> fail!(fmt!( "Can not recognize stencil operation '%c'", c ))
 	}
 }
 
-pub pure fn map_equation( s : ~str )-> glcore::GLenum	{
+pub fn map_equation( s : ~str )-> glcore::GLenum	{
 	match s	{
 		~"s+d"	=> glcore::GL_FUNC_ADD,
 		~"s-d"	=> glcore::GL_FUNC_SUBTRACT,
 		~"d-s"	=> glcore::GL_FUNC_REVERSE_SUBTRACT,
 		~"max"	=> glcore::GL_MAX,
 		~"min"	=> glcore::GL_MIN,
-		_		=> fail(fmt!( "Can not recognize blend equation %s", s ))
+		_		=> fail!(fmt!( "Can not recognize blend equation %s", s ))
 	}
 }
 
-pub pure fn map_factor( s : ~str )-> glcore::GLenum	{
+pub fn map_factor( s : ~str )-> glcore::GLenum	{
 	match s	{
 		~"0"	=> glcore::GL_ZERO,
 		~"1"	=> glcore::GL_ONE,
@@ -609,12 +625,12 @@ pub pure fn map_factor( s : ~str )-> glcore::GLenum	{
 		~"Ca"	=> glcore::GL_CONSTANT_ALPHA,
 		~"1-Ca"	=> glcore::GL_ONE_MINUS_CONSTANT_ALPHA,
 		~"Sa^"	=> glcore::GL_SRC_ALPHA_SATURATE,
-		_		=> fail(fmt!( "Can not recognize blend factor %s", s ))
+		_		=> fail!(fmt!( "Can not recognize blend factor %s", s ))
 	}
 }
 
 
-impl State	{
+pub impl State	{
 	pub fn set_offset( &mut self, value : float )	{
 		self.offset.on_fill	= true;
 		self.offset.on_line	= true;
@@ -649,9 +665,9 @@ impl State	{
 
 // Creates a default GL context rasterizer state
 // make sure to verify that it matches GL specification
-pub pure fn make_default( wid : uint, het : uint )-> State	{
+pub fn make_default( wid : uint, het : uint )-> State	{
 	State{
-		view : Viewport( frame::make_rect(wid,het) ),
+		view : Viewport( frame::Rect::new(wid,het) ),
 		prime : Primitive{
 			poly_mode:glcore::GL_FILL, front_cw:false, cull:false,
 			cull_mode:glcore::GL_BACK, line_width:1f32
@@ -660,20 +676,20 @@ pub pure fn make_default( wid : uint, het : uint )-> State	{
 			on_fill:false, on_line:false, on_point:false, factor:0f, units:0f
 		},
 		scissor : Scissor{
-			test:false, area:frame::make_rect(wid,het)
+			test:false, area:frame::Rect::new(wid,het)
 		},
 		multi : Multisample{
 			on:true, alpha:false, cover:false, value:1f32, invert:false
 		},
 		stencil : Stencil{
-			test:false, front:create_stencil(), back:create_stencil()
+			test:false, front:StencilSide::new(), back:StencilSide::new()
 		},
 		depth : Depth{
 			test:false, fun:glcore::GL_LESS, r0:0f32, r1:1f32
 		},
 		blend : Blend{
-			on:false, color:create_blend(), alpha:create_blend(),
-			value:make_color(0)
+			on:false, color:BlendChannel::new(), alpha:BlendChannel::new(),
+			value:Color::new(0)
 		},
 		mask : Mask{
 			stencil_front:-1, stencil_back:-1, depth:true,

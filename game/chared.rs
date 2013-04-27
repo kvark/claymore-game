@@ -2,14 +2,22 @@ extern mod engine;
 extern mod lmath;
 extern mod numeric;
 
+use numeric::Float;
 use lmath::quat::*;
-use lmath::vec::vec3::*;
+use lmath::vec::*;
+use engine::anim::Player;
+use engine::space::Pretty;
+
+use hud;
+use main;
+use render;
+use scene;
 
 
 struct Envir	{
 	input	: engine::call::DrawInput,
 	prog	: @engine::shade::Program,
-	mut data: engine::shade::DataMap,
+	data	: engine::shade::DataMap,
 	rast	: engine::rast::State,
 }
 
@@ -18,7 +26,7 @@ struct CamControl	{
 	origin		: Vec3<f32>,
 	speed_rot	: f32,
 	speed_zoom	: f32,
-	mut last_scroll	: Option<float>,
+	last_scroll	: Option<float>,
 }
 
 pub fn clamp<T:cmp::Ord>( x:T, a:T, b:T )-> T	{
@@ -28,17 +36,17 @@ pub fn clamp<T:cmp::Ord>( x:T, a:T, b:T )-> T	{
 	}else {a}
 }
 
-impl CamControl	{
-	fn update( dt : float, nx : float, _ny : float, hit : bool, scroll : float )	{
+pub impl CamControl	{
+	fn update( &mut self, dt : float, nx : float, _ny : float, hit : bool, scroll : float )	{
 		// calculate rotation
 		if hit	{
-			let axis = Vec3::new( 0f32, 0f32, if nx>0.5f {1f32} else {-1f32} );
-			let angle = numeric::types::Radians( dt as f32 * self.speed_rot );
-			let qr = Quat::from_axis_angle( &axis, angle );
+			let axis = vec3::new( 0f32, 0f32, if nx>0.5f {1f32} else {-1f32} );
+			let angle = dt as f32 * self.speed_rot;
+			let qr = Quat::from_angle_axis( angle, &axis );
 			let sq = engine::space::QuatSpace{
-				position : Vec3::new(0f32,0f32,0f32),
+				position : vec3::new(0f32,0f32,0f32),
 				orientation : qr, scale : 1f32 };
-			*self.node.mut_space() = sq * self.node.space;
+			self.node.space = sq * self.node.space;
 		}
 		// calculate scroll
 		if scroll != 0f	{
@@ -49,7 +57,7 @@ impl CamControl	{
 			let dist_raw = dist - (scroll as f32) * self.speed_zoom;
 			let dist_diff = clamp( dist_raw, dist_min, dist_max ) - dist;
 			let p = self.node.space.position.sub_v( &v_origin.mul_t(dist_diff/dist) );
-			self.node.mut_space().position = p;
+			self.node.space.position = p;
 		}
 	}
 }
@@ -84,18 +92,19 @@ pub struct Scene	{
 	hud_context	: hud::Context,
 	hud_debug	: @engine::shade::Program,
 	edit_label	: @hud::EditLabel,
-	mut mouse_point	: (int,int),
-	mut input_queue	: ~str,
-	mut hud_active	: ActiveHud,
+	mouse_point	: (int,int),
+	input_queue	: ~str,
+	hud_active	: ActiveHud,
 }
 
 
-impl Scene	{
-	fn loose_focus()	{
+pub impl Scene	{
+	fn loose_focus( &mut self )	{
 		self.edit_label.active = false;
 		self.hud_active = AhInactive;
 	}
-	fn update( dt : float, nx : float, ny : float, hit : bool, scroll : float, _lg : &engine::context::Log )-> bool	{
+
+	fn update( &mut self, dt : float, nx : float, ny : float, hit : bool, scroll : float, _lg : &engine::context::Log )-> bool	{
 		if true	{
 			let root = &self.hud_screen.root;
 			let (mx,my) = root.min_size;
@@ -118,24 +127,27 @@ impl Scene	{
 		self.control.update( dt, nx, ny, hit, scroll );
 		true
 	}
-	fn on_char( &self, key : char )	{
+
+	fn on_char( &mut self, key : char )	{
 		str::push_char( &mut self.input_queue, key );
 	}
-	fn on_key_press( &self, key : int )	{
+
+	fn on_key_press( &mut self, key : int )	{
 		match key	{
 			257		=> self.loose_focus(),	//Esc,Enter
 			259		=> str::push_char( &mut self.input_queue, key as char ),
 			_	=> ()
 		}
 	}
-	fn render( el : &main::Elements, ct : &engine::context::Context, lg : &engine::context::Log  )	{
+
+	fn render( &mut self, el : &main::Elements, ct : &engine::context::Context, lg : &engine::context::Log  )	{
 		// clear screen
 		let fbo = ct.default_frame_buffer;
-		let pmap = engine::call::make_pmap_simple( ~"o_Color", engine::frame::TarEmpty );
+		let pmap = engine::call::PlaneMap::new_simple( ~"o_Color", engine::frame::TarEmpty );
 		let out_solid = (fbo, copy pmap, self.rast_solid);
 		let c0 =
 			engine::call::ClearData{
-				color	:Some( engine::rast::make_color(0x8080FFFF) ),
+				color	:Some( engine::rast::Color::new(0x8080FFFF) ),
 				depth	:Some( 1f ),
 				stencil	:Some( 0u ),
 			}.gen_call( copy out_solid );
@@ -164,13 +176,13 @@ impl Scene	{
 		}
 		if el.character	{
 			let (wid,het) = ct.screen_size;
-			let target_size = lmath::gltypes::vec4::new( wid as f32, het as f32,
+			let target_size = vec4::new( wid as f32, het as f32,
   				1f32/(wid as f32), 1f32/(het as f32) );
 			let par_ts = engine::shade::UniFloatVec( target_size );
 			for [&self.gr_main, &self.gr_cape, &self.gr_hair, &self.gr_other].each() |group|	{
 				for group.each() |ent|	{
 					ent.update_world();
-					let gd = ent.mut_data();
+					let gd = &mut ent.data;
 					self.shadow.light.fill_data( gd, 1f32, 200f32 );
 					gd.insert( ~"t_Shadow", copy self.shadow.par_shadow );
 					gd.insert( ~"u_TargetSize",	copy par_ts );
@@ -200,11 +212,11 @@ impl Scene	{
 				for [&self.gr_main,&self.gr_cape,&self.gr_hair].each() |group|	{
 					for group.each() |ent|	{
 						queue.push( self.depth.tech_solid.process( ent, copy self.depth.output, ct, lg ));
-						lbuf.fill_data( ent.mut_data() );
+						lbuf.fill_data( &mut ent.data );
 					}
 				}
 				for self.gr_other.each() |ent|	{
-					lbuf.fill_data( ent.mut_data() );
+					lbuf.fill_data( &mut ent.data );
 				}
 				queue.push( lbuf.update_depth( self.depth.texture ));
 				queue.push_all_move( lbuf.bake_layer(
@@ -236,7 +248,7 @@ impl Scene	{
 			if !self.input_queue.is_empty()	{
 				match self.hud_active	{
 					AhEditName	=> {
-						self.edit_label.change( &copy self.input_queue, ct, lg );
+						self.edit_label.change( self.input_queue, ct, lg );
 						self.hud_screen.root.update( lg );
 					},
 					_	=> ()
@@ -250,7 +262,7 @@ impl Scene	{
 			let mut rast  = copy ct.default_rast;
 			rast.prime.poly_mode = engine::rast::map_polygon_fill(2);
 			let mut data = engine::shade::make_data();
-			let vc = lmath::gltypes::vec4::new(1f32,0f32,0f32,1f32);
+			let vc = vec4::new(1f32,0f32,0f32,1f32);
 			data.insert( ~"u_Color", engine::shade::UniFloatVec(vc) );
 			do self.hud_screen.root.trace(x,y)	|frame,depth| {
 				if depth==0u && frame.element.get_size()!=(0,0)	{
@@ -265,7 +277,7 @@ impl Scene	{
 				let mut rast  = copy ct.default_rast;
 				rast.prime.poly_mode = engine::rast::map_polygon_fill(2);
 				let mut data = engine::shade::make_data();
-				let vc = lmath::gltypes::vec4::new(1f32,0f32,0f32,1f32);
+				let vc = vec4::new(1f32,0f32,0f32,1f32);
 				data.insert( ~"u_Color", engine::shade::UniFloatVec(vc) );
 				self.hud_screen.root.draw_debug_all( &self.hud_context,
 					self.hud_debug, &mut data, &rast )
@@ -275,14 +287,15 @@ impl Scene	{
 	}
 }
 
+
 pub fn make_scene( el : &main::Elements, ct : &engine::context::Context, aspect : float, lg : &engine::context::Log )-> Scene	{
-	let vao = @ct.create_vertex_array();
+	let vao = @mut ct.create_vertex_array();
 	let mut scene = scene::load_scene( ~"data/claymore-2a", ct, Some(vao), aspect, lg );
 	let detail_info = scene::load_config::<~[scene::EntityInfo]>( ~"data/details.json" );
 	let mut details = scene.context.parse_group( detail_info, ct, Some(vao), lg );
 	// techniques & rast states
 	let tech = @engine::draw::load_technique( ~"data/code/tech/forward/spot-shadow" );
-	let pmap = engine::call::make_pmap_simple( ~"o_Color", engine::frame::TarEmpty );
+	let pmap = engine::call::PlaneMap::new_simple( ~"o_Color", engine::frame::TarEmpty );
 	let mut rast = copy ct.default_rast;
 	rast.depth.test = true;
 	rast.prime.cull = true;
@@ -293,7 +306,7 @@ pub fn make_scene( el : &main::Elements, ct : &engine::context::Context, aspect 
 	rast.set_blend( ~"s+d", ~"Sa", ~"1-Sa" );
 	let r_alpha = copy rast;
 	// armature
-	let arm = scene.context.armatures.get(&~"Armature.002");
+	let arm = *scene.context.armatures.get(&~"Armature.002");
 	let mut group = scene.entities.divide( &~"noTrasnform" );
 	group.swap_entity( &~"boots", &mut details );
 	let cape = group.divide( &~"polySurface172" );
@@ -302,10 +315,10 @@ pub fn make_scene( el : &main::Elements, ct : &engine::context::Context, aspect 
 	let envir = {
 		let mesh = @engine::mesh::create_quad( ct );
 		let mut data = engine::shade::make_data();
-		let samp = engine::texture::make_sampler(3u,1);
+		let samp = engine::texture::Sampler::new(3u,1);
 		let use_spherical = false;
 		let prog = if use_spherical	{
-			let tex = scene.context.textures.get( &~"data/texture/Topanga_Forest_B_3k.hdr" );
+			let tex = *scene.context.textures.get( &~"data/texture/Topanga_Forest_B_3k.hdr" );
 			data.insert( ~"t_Environment",		engine::shade::UniTexture(0,tex,Some(samp)) );
 			@engine::load::load_program( ct, ~"data/code-game/envir", lg )
 		}else	{
@@ -323,7 +336,7 @@ pub fn make_scene( el : &main::Elements, ct : &engine::context::Context, aspect 
 		}		
 	};
 	// load char HUD
-	let fcon = @engine::font::create_context();
+	let fcon = @engine::font::Context::create();
 	let mut hud_screen = hud::load_screen( ~"data/hud/char.json", ct, fcon, lg );
 	hud_screen.root.update( lg );
 	let hc = {
@@ -344,20 +357,20 @@ pub fn make_scene( el : &main::Elements, ct : &engine::context::Context, aspect 
 		Some( render::lbuf::Context::create( ct, 2u, el.lbuffer ))
 	}else	{None};
 	let lvolume = render::lbuf::LightVolume::create( ct, lg );
-	let shadow = render::shadow::create_data( ct, scene.lights.get(&~"Lamp"), 0x200u );
+	let shadow = render::shadow::create_data( ct, *scene.lights.get(&~"Lamp"), 0x200u );
 	// load camera
-	let cam = scene.cameras.get(&~"Camera");
+	let cam = *scene.cameras.get(&~"Camera");
 	//cam.proj = copy shadow.light.proj;
 	//cam.node = shadow.light.node;
 	lg.add(fmt!( "Camera fov:%f, aspect:%f, range:%f-%f",
-		*cam.proj.vfov.to_degrees() as float,
+		cam.proj.vfov.degrees() as float,
 		cam.proj.aspect as float,
 		cam.proj.near as float,
 		cam.proj.far as float ));
 	lg.add( ~"\tWorld :" + cam.node.world_space().to_string() );
 	let control = CamControl{
 		node	: cam.node,
-		origin	: Vec3::new(0f32,0f32,75f32),
+		origin	: vec3::new(0f32,0f32,75f32),
 		speed_rot	: 1.5f32,
 		speed_zoom	: 15f32,
 		last_scroll	: None,
