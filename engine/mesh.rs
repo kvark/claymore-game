@@ -29,9 +29,9 @@ pub struct Attribute	{
 
 
 pub impl Attribute	{
-	fn new( format : ~str, buffer : @buf::Object, stride : uint, offset : uint )-> (Attribute,uint)	{
-		assert!( format.len()==3u && ['.','!'].contains(&format.char_at(2))) ||
-			format.len()==2u || (format.len()==4u && str::substr(format,2,2)==~".!" );
+	fn new( format : &str, buffer : @buf::Object, stride : uint, offset : uint )-> (Attribute,uint)	{
+		assert!( (format.len()==3u && ['.','!'].contains(&format.char_at(2))) ||
+			format.len()==2u || (format.len()==4u && str::substr(format,2,2)==~".!") );
 		let count = (format[0] - "0"[0]) as uint;
 		let is_fixed_point	= format.len()>2u	&& format.char_at(2)=='.';
 		let can_interpolate	= format.len()<=2u	|| format.char_at(format.len()-1u)!='!';
@@ -56,7 +56,7 @@ pub impl Attribute	{
 		}, count * el_size)
 	}
 
-	fn new_index( format : ~str, buffer : @buf::Object )-> (Attribute,uint)	{
+	fn new_index( format : &str, buffer : @buf::Object )-> (Attribute,uint)	{
 		Attribute::new( format, buffer, 0u, 0u )
 	}
 
@@ -112,7 +112,7 @@ pub impl Mesh	{
 pub fn create_quad( ct : &mut context::Context )-> Mesh	{
 	let vdata = [0i8,0i8,1i8,0i8,0i8,1i8,1i8,1i8];
 	let count = 2u;
-	let mut mesh = ct.create_mesh( ~"grid", ~"3s", vdata.len()/count, 0u );
+	let mut mesh = ct.create_mesh( ~"grid", "3s", vdata.len()/count, 0u );
 	let vat = ct.create_attribute( vdata, count, false );
 	mesh.attribs.insert( ~"a_Vertex", vat );
 	mesh
@@ -132,15 +132,15 @@ pub impl context::Context	{
 		}
 	}
 
-	fn create_mesh( &self, name : ~str, poly : ~str, nv : uint, ni : uint )-> Mesh	{
+	fn create_mesh( &self, name : ~str, poly : &str, nv : uint, ni : uint )-> Mesh	{
 		let ptype = match poly	{
-			~"1"	=> glcore::GL_POINTS,
-			~"2"	=> glcore::GL_LINES,
-			~"2s"	=> glcore::GL_LINE_STRIP,
-			~"3"	=> glcore::GL_TRIANGLES,
-			~"3s"	=> glcore::GL_TRIANGLE_STRIP,
-			~"3f"	=> glcore::GL_TRIANGLE_FAN,
-			_		=> fail!(fmt!( "Unknown poly type: %s", poly ))
+			"1"	=> glcore::GL_POINTS,
+			"2"	=> glcore::GL_LINES,
+			"2s"=> glcore::GL_LINE_STRIP,
+			"3"	=> glcore::GL_TRIANGLES,
+			"3s"=> glcore::GL_TRIANGLE_STRIP,
+			"3f"=> glcore::GL_TRIANGLE_FAN,
+			_	=> fail!(fmt!( "Unknown poly type: %s", poly ))
 		};
 		let ats = LinearMap::new();
 		Mesh{ name:name, attribs:ats, index:None, poly_type:ptype, num_vert:nv, num_ind:ni, black_list:@mut ~[] }

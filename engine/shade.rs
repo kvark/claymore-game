@@ -317,7 +317,8 @@ pub impl context::Context	{
 		let target = map_shader_type(t);
 		let h = Handle( glcore::glCreateShader(target) );
 		let mut length = code.len() as glcore::GLint;
-		do str::as_c_str(code) |text|	{
+		// temporary fix for Linux Radeon HD4000
+		do str::as_c_str(str::replace(code,"150 core","140")) |text|	{
 			glcore::glShaderSource(	*h, 1i32, ptr::addr_of(&text), ptr::addr_of(&length) );
 		}
 		glcore::glCompileShader( *h );

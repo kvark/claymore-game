@@ -13,6 +13,7 @@ use numeric::*;
 use lmath::quat::*;
 use lmath::vec::*;
 use lmath::mat::*;
+use lmath::projection::*;
 use cgmath::projection::*;
 
 use engine::space::Pretty;
@@ -29,7 +30,7 @@ pub fn load_config<T:Decodable<json::Decoder>>( path : ~str )-> T	{
 		Err(e)	=> fail!( e.to_str() ),
 	}
 }
-/*
+
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -//
 //	Space
 
@@ -109,8 +110,8 @@ struct TextureInfo	{
 	path	: ~str,
 	filter	: uint,
 	wrap	: int,
-	scale	: (f32,f32),
-	offset	: (f32,f32),
+	scale	: (f32,f32,f32),	//temp!
+	offset	: (f32,f32,f32),
 }
 
 pub struct ShaderParam	{
@@ -170,7 +171,7 @@ impl MaterialInfo	{
 			let tex = *cache.get( &tinfo.path );
 			let s_opt = Some(engine::texture::Sampler::new( tinfo.filter, tinfo.wrap ));
 			data.insert( ~"t_"+tinfo.name, engine::shade::UniTexture(0,tex,s_opt) );
-			let (sx,sy) = tinfo.scale, (ox,oy) = tinfo.offset;
+			let (sx,sy,_) = tinfo.scale, (ox,oy,_) = tinfo.offset;
 			let u_transform = vec4::new(sx,sy,ox,oy);
 			data.insert( fmt!("u_Tex%uTransform",i), engine::shade::UniFloatVec(u_transform) );
 		}
@@ -212,10 +213,9 @@ pub struct Camera	{
 
 pub impl Camera	{
 	fn get_proj_matrix( &self )-> mat4	{
-		match self.proj.to_mat4()	{
-			Ok(m)	=> m,
-			Err(e)	=> fail!( ~"Camera projection fail: " + e.to_str() ),
-		}
+		//self.proj.to_mat4().unwrap()	//ICE on Rust-0.6
+		let p = &self.proj;
+		lmath::projection::perspective( p.vfov, p.aspect, p.near, p.far )
 	}
 	fn get_matrix( &self )-> mat4	{
 		let proj = self.get_proj_matrix();
@@ -291,17 +291,15 @@ pub impl Light	{
 		}
 	}
 
-	fn get_proj_blend( &self, near:f32, far:f32 )-> Option<(Result<Mat4<f32>,~str>,float)>	{
+	fn get_proj_blend( &self, near:f32, far:f32 )-> Option<(mat4,float)>	{
 		match self.kind	{
 			LiSpot(angle,blend)	=>	{
-				let proj = PerspectiveSym{ vfov:angle, aspect:1f32, near:near, far:far };
-				Some((proj.to_mat4(),blend))
+				let m = perspective( angle, 1f32, near, far );
+				Some(( m, blend ))
 			},
 			LiArea(v2,blend)	=>	{
-				let proj = Ortho{ left:-v2.x, right:v2.x,
-					bottom:-v2.y, top:v2.y,
-					near:near, far:far };
-				Some((proj.to_mat4(),blend))
+				let m = ortho( -v2.x, v2.x, -v2.y, v2.y, near, far );
+				Some(( m, blend ))
 			},
 			_	=> None
 		}
@@ -319,11 +317,7 @@ pub impl Light	{
 		}
 		match self.get_proj_blend(near,far)	{
 			Some(ref pair)	=>	{
-				let &(opt_mp,blend) = pair;
-				let mp = match opt_mp	{
-					Ok(m)	=> m,
-					Err(e)	=> fail!( ~"Light projection fail: " + e.to_str() ),
-				};
+				let &(mp,blend) = pair;
 				//let ml = mp * self.node.world_space().invert().to_matrix();
 				let ml = mp.mul_m( &self.node.world_space().invert().to_matrix() );
 				data.insert( ~"u_LightProj",	engine::shade::UniMatrix(false,ml) );
@@ -335,7 +329,7 @@ pub impl Light	{
 		data.insert( ~"u_LightColor",		engine::shade::UniFloatVec(col) );
 		data.insert( ~"u_LightAttenuation",	engine::shade::UniFloatVec(self.attenu) );
 		data.insert( ~"u_LightRange",		engine::shade::UniFloatVec(range) );
-	}	
+	}
 }
 
 #[auto_decode]
@@ -400,7 +394,7 @@ pub struct SceneContext	{
 	textures	: Dict<@engine::texture::Texture>,
 	nodes		: Dict<NodeRef>,
 	meshes		: Dict<@engine::mesh::Mesh>,
-	armatures	: Dict<@engine::space::Armature>,
+	armatures	: Dict<@mut engine::space::Armature>,
 }
 
 pub impl SceneContext	{
@@ -554,7 +548,7 @@ pub fn load_scene( path : ~str, gc : &mut engine::context::Context,
 	make_nodes( &scene.nodes, None, &mut map_node );
 	// armatures
 	let mut map_armature = {
-		let mut map : LinearMap<~str,@engine::space::Armature> = LinearMap::new();
+		let mut map : LinearMap<~str,@mut engine::space::Armature> = LinearMap::new();
 		let mut rd = engine::load::Reader::create_std( path+".k3arm" );	
 		assert!( rd.enter() == ~"*arm" );
 		while rd.has_more()!=0u	{
@@ -563,7 +557,7 @@ pub fn load_scene( path : ~str, gc : &mut engine::context::Context,
 			let node_name = rd.get_string();
 			let dual_quat = rd.get_bool();
 			let root = *map_node.get( &node_name );
-			let arm = @engine::load::read_armature( &mut rd, root, dual_quat, lg );
+			let arm = @mut engine::load::read_armature( &mut rd, root, dual_quat, lg );
 			map.insert( name, arm );
 			rd.leave();
 		}
@@ -631,4 +625,4 @@ pub fn load_scene( path : ~str, gc : &mut engine::context::Context,
 		cameras		: map_camera,
 		lights		: map_light,
 	}
-}*/
+}

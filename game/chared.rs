@@ -5,7 +5,7 @@ extern mod numeric;
 use numeric::Float;
 use lmath::quat::*;
 use lmath::vec::*;
-use engine::anim::Player;
+use engine::anim::{Act,Player};
 use engine::space::Pretty;
 
 use hud;
@@ -22,7 +22,7 @@ struct Envir	{
 }
 
 struct CamControl	{
-	node		: @engine::space::Node,
+	node		: @mut engine::space::Node,
 	origin		: Vec3<f32>,
 	speed_rot	: f32,
 	speed_zoom	: f32,
@@ -50,13 +50,13 @@ pub impl CamControl	{
 		}
 		// calculate scroll
 		if scroll != 0f	{
-			let v_origin = self.origin.sub_v( &self.node.space.position );
+			let v_origin = self.origin.sub_v( &copy self.node.space.position );
 			let dist_min = 20f32;
 			let dist_max = 200f32;
 			let dist = v_origin.length();
 			let dist_raw = dist - (scroll as f32) * self.speed_zoom;
 			let dist_diff = clamp( dist_raw, dist_min, dist_max ) - dist;
-			let p = self.node.space.position.sub_v( &v_origin.mul_t(dist_diff/dist) );
+			let p = (copy self.node.space.position).sub_v( &v_origin.mul_t(dist_diff/dist) );
 			self.node.space.position = p;
 		}
 	}
@@ -74,7 +74,7 @@ pub struct Scene	{
 	gr_hair	: scene::EntityGroup,
 	gr_other: scene::EntityGroup,
 	details	: scene::EntityGroup,
-	skel	: @engine::space::Armature,
+	skel	: @mut engine::space::Armature,
 	cam		: @scene::Camera,
 	control	: CamControl,
 	lights	: ~[@scene::Light],
@@ -91,7 +91,7 @@ pub struct Scene	{
 	hud_screen	: hud::Screen,
 	hud_context	: hud::Context,
 	hud_debug	: @engine::shade::Program,
-	edit_label	: @hud::EditLabel,
+	edit_label	: @mut hud::EditLabel,
 	mouse_point	: (int,int),
 	input_queue	: ~str,
 	hud_active	: ActiveHud,
@@ -106,8 +106,7 @@ pub impl Scene	{
 
 	fn update( &mut self, dt : float, nx : float, ny : float, hit : bool, scroll : float, _lg : &engine::context::Log )-> bool	{
 		if true	{
-			let root = &self.hud_screen.root;
-			let (mx,my) = root.min_size;
+			let (mx,my) = self.hud_screen.root.min_size;
 			let x = ((0f+nx) * (mx as float)) as int;
 			let y = ((1f-ny) * (my as float)) as int;
 			self.mouse_point = (x,y);
@@ -115,15 +114,16 @@ pub impl Scene	{
 			//io::println( ~"Click: " + name );
 			if hit	{
 				self.loose_focus();	
+				/*//FIXME
 				do self.hud_screen.root.trace(x,y)	|frame,depth|	{
 					if depth==0u && frame.name == ~"id.name.text"	{
 						self.edit_label.active = true;
 						self.hud_active = AhEditName;
 					}
-				};
+				};*/
 			}
 		}
-		(self.edit_label as @engine::anim::Act).update();
+		self.edit_label.update();
 		self.control.update( dt, nx, ny, hit, scroll );
 		true
 	}
@@ -140,7 +140,7 @@ pub impl Scene	{
 		}
 	}
 
-	fn render( &mut self, el : &main::Elements, ct : &engine::context::Context, lg : &engine::context::Log  )	{
+	fn render( &mut self, el : &main::Elements, ct : &mut engine::context::Context, lg : &engine::context::Log  )	{
 		// clear screen
 		let fbo = ct.default_frame_buffer;
 		let pmap = engine::call::PlaneMap::new_simple( ~"o_Color", engine::frame::TarEmpty );
@@ -179,15 +179,17 @@ pub impl Scene	{
 			let target_size = vec4::new( wid as f32, het as f32,
   				1f32/(wid as f32), 1f32/(het as f32) );
 			let par_ts = engine::shade::UniFloatVec( target_size );
-			for [&self.gr_main, &self.gr_cape, &self.gr_hair, &self.gr_other].each() |group|	{
-				for group.each() |ent|	{
+			for [&mut self.gr_main, &mut self.gr_cape, &mut self.gr_hair, &mut self.gr_other].each() |group|	{
+				for group.each_mut() |ent|	{
 					ent.update_world();
-					let gd = &mut ent.data;
-					self.shadow.light.fill_data( gd, 1f32, 200f32 );
-					gd.insert( ~"t_Shadow", copy self.shadow.par_shadow );
-					gd.insert( ~"u_TargetSize",	copy par_ts );
-					self.cam.fill_data( gd );
-					//self.skel.fill_data( gd );
+					{
+						let gd = &mut ent.data;
+						self.shadow.light.fill_data( gd, 1f32, 200f32 );
+						gd.insert( ~"t_Shadow", copy self.shadow.par_shadow );
+						gd.insert( ~"u_TargetSize",	copy par_ts );
+						self.cam.fill_data( gd );
+						//self.skel.fill_data( gd );
+					}
 				}	
 			}
 		}
@@ -209,13 +211,13 @@ pub impl Scene	{
 		let tech = match self.lbuf {
 			Some(ref lbuf)	=>	{
 				queue.push( copy self.depth.call_clear );
-				for [&self.gr_main,&self.gr_cape,&self.gr_hair].each() |group|	{
-					for group.each() |ent|	{
+				for [&mut self.gr_main,&mut self.gr_cape,&mut self.gr_hair].each() |group|	{
+					for group.each_mut() |ent|	{
 						queue.push( self.depth.tech_solid.process( ent, copy self.depth.output, ct, lg ));
 						lbuf.fill_data( &mut ent.data );
 					}
 				}
-				for self.gr_other.each() |ent|	{
+				for self.gr_other.each_mut() |ent|	{
 					lbuf.fill_data( &mut ent.data );
 				}
 				queue.push( lbuf.update_depth( self.depth.texture ));
@@ -288,7 +290,7 @@ pub impl Scene	{
 }
 
 
-pub fn make_scene( el : &main::Elements, ct : &engine::context::Context, aspect : float, lg : &engine::context::Log )-> Scene	{
+pub fn make_scene( el : &main::Elements, ct : &mut engine::context::Context, aspect : float, lg : &engine::context::Log )-> Scene	{
 	let vao = @mut ct.create_vertex_array();
 	let mut scene = scene::load_scene( ~"data/claymore-2a", ct, Some(vao), aspect, lg );
 	let detail_info = scene::load_config::<~[scene::EntityInfo]>( ~"data/details.json" );
@@ -306,7 +308,7 @@ pub fn make_scene( el : &main::Elements, ct : &engine::context::Context, aspect 
 	rast.set_blend( ~"s+d", ~"Sa", ~"1-Sa" );
 	let r_alpha = copy rast;
 	// armature
-	let arm = *scene.context.armatures.get(&~"Armature.002");
+	let arm = { *scene.context.armatures.get(&~"Armature.002") };
 	let mut group = scene.entities.divide( &~"noTrasnform" );
 	group.swap_entity( &~"boots", &mut details );
 	let cape = group.divide( &~"polySurface172" );
@@ -349,7 +351,7 @@ pub fn make_scene( el : &main::Elements, ct : &engine::context::Context, aspect 
 			size	: ct.screen_size,
 		}
 	};
-	let edit_label = @hud::EditLabel::obtain( &mut hud_screen, ~"id.name.text" );
+	let edit_label = @mut hud::EditLabel::obtain( &mut hud_screen, ~"id.name.text" );
 	let hdebug = @engine::load::load_program( ct, ~"data/code/hud/debug", lg );
 	//arm.set_record( arm.actions[0], 0f );
 	let depth = render::depth::Data::create( ct );

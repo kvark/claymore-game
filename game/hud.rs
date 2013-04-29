@@ -182,7 +182,7 @@ pub impl Frame	{
 		self.area
 	}
 
-	priv fn update_size( &self, lg : &engine::context::Log )-> Point	{
+	priv fn update_size( &mut self, lg : &engine::context::Log )-> Point	{
 		let (ex,ey) = self.element.get_size();
 		let (cx,cy) = self.get_size((ex,ey));
 		if self.children.is_empty()	{
@@ -193,7 +193,7 @@ pub impl Frame	{
 		let BIG : int = 10000;
 		let mut x_min=BIG, y_min=BIG, x_max=-BIG, y_max=-BIG;
 		for uint::range(0,self.children.len()) |i|	{
-			let child = &self.children[i];
+			let child = &mut self.children[i];
 			let size = child.update_size(lg);
 			let Alignment(destination,relation,source) = child.alignment;
 			let (src_x,src_y) = Rect{base:(0,0),size:size}.
@@ -201,12 +201,12 @@ pub impl Frame	{
 			let (dst_x,dst_y) = match relation	{
 				RelParent	=> (0,0),
 				RelHead		=> { assert!( i>0u );
-					let fr = &self.children[0];
-					fr.area.get_point( source, &no_margin )
+					(copy self.children[0].area).
+						get_point( source, &no_margin )
 				},
 				RelTail		=> { assert!( i>0u );
-					let fr = &self.children[i-1u];
-					fr.area.get_point( source, &no_margin )
+					(copy self.children[i-1u].area).
+						get_point( source, &no_margin )
 				}
 			};
 			lg.add(fmt!( "\tFrame1 '%s' rel (%d,%d) := (%d,%d)", child.name,
@@ -226,17 +226,19 @@ pub impl Frame	{
 		self.area.size
 	}
 
-	priv fn update_base( &self, lg : &engine::context::Log )	{
+	priv fn update_base( &mut self, lg : &engine::context::Log )	{
 		let no_margin = Margin{side:0,bot:0,top:0};
 		for uint::range(0,self.children.len()) |i|	{
-			let child = &self.children[i];
+			let child = &mut self.children[i];
 			let Alignment(destination,relation,source) = child.alignment;
 			let (src_x,src_y) = Rect{base:(0,0),size:child.area.size}.
 				get_point( destination, &Margin{side:0,bot:0,top:0} );
 			let (dst_x,dst_y) = match relation	{
 				RelParent	=> self.area.get_point( source, &self.margin ),
-				RelHead		=> self.children[0+0u].area.get_point( source, &no_margin ),
-				RelTail		=> self.children[i-1u].area.get_point( source, &no_margin ),
+				RelHead		=> (copy self.children[0+0u].area)
+					.get_point( source, &no_margin ),
+				RelTail		=> (copy self.children[i-1u].area)
+					.get_point( source, &no_margin ),
 			};
 			lg.add(fmt!( "\tFrame2 '%s' rel (%d,%d) := (%d,%d)", child.name,
 				src_x,src_y, dst_x,dst_y ));
@@ -246,7 +248,7 @@ pub impl Frame	{
 		}
 	}
 
-	fn update( &self, lg : &engine::context::Log )	{
+	fn update( &mut self, lg : &engine::context::Log )	{
 		lg.add( ~"Updating HUD: " + self.name );
 		self.update_size( lg );
 		assert!( self.area.size == self.min_size );
@@ -429,7 +431,7 @@ pub struct Screen    {
 }
 
 
-pub fn load_screen( path : ~str, ct : &engine::context::Context,
+pub fn load_screen( path : ~str, ct : &mut engine::context::Context,
 		ft : @engine::font::Context, lg : &engine::context::Log )-> Screen	{
 	lg.add( ~"Loading HUD screen: " + path );
 	let iscreen = scene::load_config::<ScreenInfo>( path );
@@ -450,14 +452,13 @@ pub fn load_screen( path : ~str, ct : &engine::context::Context,
 	let prog_image = @engine::load::load_program( ct, ~"data/code/hud/image", lg );
 	for iscreen.images.each() |iimage|	{
 		let path = ~"data/texture/hud/" + iimage.path;
-		let texture = match map_texture.find(&path)	{
-			Some(t)	=> *t,
-			None	=>	{
-				let t = @engine::load::load_texture_2D( ct, &path, false );
-				map_texture.insert(path,t);
-				t
-			}
+		let (texture,new) = match map_texture.find(&path)	{
+			Some(t)	=> (*t,false),
+			None	=> (@engine::load::load_texture_2D( ct, &path, false ), true),
 		};
+		if new	{
+			map_texture.insert(path,texture);
+		}
 		let image = @Image	{
 			texture	: texture,
 			sampler	: engine::texture::Sampler::new(1u,0),
@@ -474,16 +475,18 @@ pub fn load_screen( path : ~str, ct : &engine::context::Context,
 	let mut map_label	: LinearMap<~str,@mut Label>				= LinearMap::new();
 	let prog_label = @engine::load::load_program( ct, ~"data/code/hud/text", lg );
 	for iscreen.labels.each() |ilabel|	{
-		let font = match map_font.find(&ilabel.font)	{
-			Some(f)	=> *f,
+		let (font,new) = match map_font.find(&ilabel.font)	{
+			Some(f)	=> (*f,false),
 			None	=>	{
 				let &(fname,fsx,fsy) = &ilabel.font;
 				let (kern_x,kern_y) = ilabel.kern;
 				let f = @ft.load_font( ~"data/font/"+fname, 0u, fsx, fsy, kern_x, kern_y );
-				map_font.insert( copy ilabel.font, f );
-				f
+				(f,true)
 			}
 		};
+		if new	{
+			map_font.insert( copy ilabel.font, font );
+		}
 		let label = @mut Label{
 			texture	: @font.bake( ct, ilabel.text, ilabel.bound, lg ),
 			content	: copy ilabel.text,
@@ -554,7 +557,7 @@ pub impl EditLabel	{
 		}
 	}
 
-	fn change( &self, input : &str, ct : &engine::context::Context, lg : &engine::context::Log )	{
+	fn change( &self, input : &str, ct : &mut engine::context::Context, lg : &engine::context::Log )	{
 		let mut text = copy self.text.content;
 		str::each_char(input, |key|	{
 			if key == (259 as char)	{

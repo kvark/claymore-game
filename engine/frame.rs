@@ -1,5 +1,7 @@
 extern mod glcore;
 
+use core::to_str::ToStr;
+
 use context;
 use texture;
 
@@ -30,6 +32,13 @@ impl context::ProxyState for Surface	{
 	}
 }
 
+impl ToStr for Surface	{
+	fn to_str( &self )-> ~str	{
+		fmt!( "Surface(h=%d, %ux%u, samples=%u)", *self.handle as int,
+			self.width, self.height, self.samples )
+	}
+}
+
 
 pub enum Target	{
 	TarEmpty,
@@ -56,6 +65,17 @@ impl cmp::Eq for Target	{
 	}
 }
 
+impl ToStr for Target	{
+	fn to_str( &self )-> ~str	{
+		match self	{
+			&TarEmpty	=> ~"Empty",
+			&TarSurface(s)	=> s.to_str(),
+			&TarTexture(t,l)	=> fmt!( "%s.lod[%u]", t.to_str(), l ),
+			&TarTextureLayer(t,r,l)	=> fmt!("%s.layer[%u].lod[%u]", t.to_str(), r, l ),
+		}
+	}
+}
+
 
 impl Target	{
 	priv fn attach( &self, root : glcore::GLenum, slot : glcore::GLenum )-> bool	{
@@ -66,7 +86,10 @@ impl Target	{
 			},
 			&TarTexture(tex,lev)	=> {
 				assert!( tex.get_levels() > lev );
-				glcore::glFramebufferTexture( root, slot, *tex.handle, lev as glcore::GLint );
+				//glcore::glFramebufferTexture( root, slot, *tex.handle, lev as glcore::GLint );
+				// workaround for Linux:
+				assert!( tex.depth == 0 );
+				glcore::glFramebufferTexture2D( root, slot, *tex.target, *tex.handle, lev as glcore::GLint );
 			},
 			&TarTextureLayer(tex,layer,lev) => {
 				assert!( tex.depth > layer && tex.get_levels() > lev );
@@ -203,7 +226,7 @@ pub impl Buffer	{
 	fn new_default()-> Buffer	{
 		Buffer{
 			handle:Handle(0),
-			draw_mask		:0u,
+			draw_mask		:0x10u,	// invalid one
 			read_id			:None,	// actually, GL_BACK
 			stencil			:TarEmpty,
 			depth			:TarEmpty,
@@ -309,6 +332,7 @@ pub impl context::Context	{
 			glcore::GL_COLOR_ATTACHMENT0 + (index as glcore::GLenum)
 		};
 		// attach planes
+		glcore::glGetError();	//debug
 		binding.attach_target( stencil,	&mut fb.stencil,	glcore::GL_STENCIL_ATTACHMENT );
 		binding.attach_target( depth,	&mut fb.depth,		glcore::GL_DEPTH_ATTACHMENT );
 		for colors.eachi() |i,target|	{
@@ -316,6 +340,7 @@ pub impl context::Context	{
 			binding.attach_target( *target, &mut val, get_color(i) );
 			fb.colors[i] = val;
 		}
+		glcore::glGetError();	//debug
 		let mask = (1u<<colors.len()) - 1u;
 		if draw && fb.draw_mask != mask	{
 			// set the draw mask
@@ -351,6 +376,7 @@ pub impl context::Context	{
 			}
 		}
 		// check completeness
+		glcore::glGetError();
 		binding.check();	//FIXME: debug only
 	}
 

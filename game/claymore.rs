@@ -14,14 +14,14 @@ extern mod numeric;
 extern mod std;
 
 //pub mod battle;
-//pub mod chared;
+pub mod chared;
 //pub mod grid;
-//pub mod hud;
+pub mod hud;
 pub mod main;
 pub mod scene;
 
 pub mod render	{
-	//pub mod depth;
-	//pub mod lbuf;
-	//pub mod shadow;
+	pub mod depth;
+	pub mod lbuf;
+	pub mod shadow;
 }

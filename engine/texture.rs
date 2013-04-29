@@ -3,6 +3,7 @@ extern mod glcore;
 use core::cmp::Eq;
 use core::hashmap::linear::LinearMap;
 use core::to_bytes;
+use core::to_str::ToStr;
 
 use context;
 use frame;
@@ -69,6 +70,13 @@ impl context::ProxyState for Texture	{
 	fn sync_back( &mut self )->bool	{
 		//FIXME
 		true
+	}
+}
+
+impl ToStr for Texture	{
+	fn to_str( &self )-> ~str	{
+		fmt!( "Texture(h=%d, %ux%ux%u, samples=%u)", *self.handle as int,
+			self.width, self.height, self.depth, self.samples )
 	}
 }
 
@@ -287,22 +295,25 @@ pub impl Binding	{
 			}
 			t.levels += 1u;
 		}
+		glcore::glGetError();	//debug
 	}
 
 	fn init_depth( &mut self, t : &mut Texture, stencil : bool )	{
 		self.bind( t );
 		assert!( t.samples == 0u && t.levels == 0u );
 		let (wi,hi,di) = ( t.width as glcore::GLsizei, t.height	as glcore::GLsizei, t.depth as glcore::GLsizei );
-		let fm = if stencil {glcore::GL_DEPTH_STENCIL} else {glcore::GL_DEPTH_COMPONENT};
+		let (ifm,pfm)	= if stencil { (glcore::GL_DEPTH24_STENCIL8, glcore::GL_DEPTH_STENCIL) }
+			else { (glcore::GL_DEPTH_COMPONENT16, glcore::GL_DEPTH_COMPONENT) };
 		let data_type = glcore::GL_UNSIGNED_BYTE;
 		if t.depth != 0u	{
-			glcore::glTexImage3D( *t.target, 0, fm as glcore::GLint, wi, hi, di,
-				0, fm, data_type, ptr::null() );
+			glcore::glTexImage3D( *t.target, 0, ifm as glcore::GLint, wi, hi, di,
+				0, pfm, data_type, ptr::null() );
 		}else	{
-			glcore::glTexImage2D( *t.target, 0, fm as glcore::GLint, wi, hi,
-				0, fm, data_type, ptr::null() );
+			glcore::glTexImage2D( *t.target, 0, ifm as glcore::GLint, wi, hi,
+				0, pfm, data_type, ptr::null() );
 		}
 		t.levels = 1u;
+		glcore::glGetError();	//debug
 	}
 
 	#[cfg(multisample)]
@@ -319,6 +330,7 @@ pub impl Binding	{
 			glcore::glTexImage2DMultisample( *t.target, si, int_format, wi, hi,		fixed );
 		}
 		t.levels = 1u;
+		glcore::glGetError();	//debug
 	}
 
 	fn load_2D<T>( &mut self, t : &mut Texture, level : uint, int_format : glcore::GLint,
@@ -333,6 +345,7 @@ pub impl Binding	{
 		glcore::glTexImage2D( *t.target, level as glcore::GLint, int_format,
 			w as glcore::GLint, h as glcore::GLint, 0 as glcore::GLint,
 			pix_format, pix_type, raw );
+		glcore::glGetError();	//debug
 	}
 
 	fn load_sub_2D<T>( &mut self, t : &mut Texture, level : uint, r : &frame::Rect,
@@ -347,6 +360,7 @@ pub impl Binding	{
 			r.x as glcore::GLint, r.y as glcore::GLint,
 			r.w as glcore::GLsizei, r.h as glcore::GLsizei,
 			pix_format, pix_type, raw );
+		glcore::glGetError();	//debug
 	}
 
 	fn generate_levels( &self, t : &mut Texture )-> uint	{

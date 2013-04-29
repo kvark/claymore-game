@@ -1,6 +1,7 @@
 NAME=claymore
 DIR=${NAME}-game
-#RUST=RUST_LOG=rustc=1,::rt::backtrace rustc
+TRACE=RUST_LOG=rustc=1,::rt::backtrace
+#RUST=${TRACE} rustc -S
 RUST=rustc
 #LIBMASK=*.dylib*
 LIBMASK=*.so *.a
@@ -9,6 +10,11 @@ GLTARGET=linux
 
 # game/engine/demos code
 all: engine-code game-code
+
+run:
+	build/claymore
+run-trace:
+	${TRACE} build/claymore
 
 game-code:
 	${RUST} game/claymore.rs -L lib --out-dir build

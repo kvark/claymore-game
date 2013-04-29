@@ -5,12 +5,12 @@ extern mod std;
 
 use engine::context::ProxyState;
 //use battle;
-//temp!//use chared;
+use chared;
 use scene;
 
 
 enum Screen	{
-	//ScreenChar,	temp!
+	ScreenChar,
 	//ScreenBattle,
 	ScreenWorld,
 	ScreenDeath,
@@ -25,7 +25,7 @@ struct Game	{
 	frames		: uint,
 	technique	: engine::draw::Technique,
 	output		: engine::call::DrawOutput,
-	//editor		: chared::Scene,	temp!
+	editor		: chared::Scene,
 	//battle		: battle::Scene,
 	screen		: Screen,
 	time		: float,
@@ -42,7 +42,7 @@ pub struct Elements	{
 }
 
 pub impl Game	{
-	fn create( _el : &Elements, wid : uint, het : uint, lg : engine::context::Log  )-> Game	{
+	fn create( el : &Elements, wid : uint, het : uint, lg : engine::context::Log  )-> Game	{
 		let mut ct = engine::context::create( wid, het );
 		assert!( ct.sync_back() );
 		// audio test
@@ -62,44 +62,44 @@ pub impl Game	{
 		};
 		// done
 		ct.check(~"init");
-		let _aspect = (wid as float) / (het as float);
-		//let editor = chared::make_scene( el, &ct, aspect, &lg );	temp!
+		let aspect = (wid as float) / (het as float);
+		let editor = chared::make_scene( el, &mut ct, aspect, &lg );
 		//let battle = battle::make_scene( &ct, aspect, &lg );
 		Game{ context:ct, audio:ac, journal:lg,
 			sound_source:src, frames:0u,
 			technique:tech, output:out,
-			/*editor:editor, battle:battle,
-			screen:ScreenChar*/screen:ScreenWorld, time:0f,
+			editor:editor, //battle:battle,
+			screen:ScreenChar, time:0f,
 		}
 	}
 
-	fn update( &mut self, _nx : float, _ny : float, _mouse_hit : bool, _scroll : float )-> bool	{
+	fn update( &mut self, nx : float, ny : float, mouse_hit : bool, scroll : float )-> bool	{
 		let dt = engine::anim::get_time() - self.time;
 		self.time += dt;
 		match self.screen	{
-			//temp!//ScreenChar		=> self.editor.update( dt, nx, ny, mouse_hit, scroll, &self.journal ),
+			ScreenChar		=> self.editor.update( dt, nx, ny, mouse_hit, scroll, &self.journal ),
 			//ScreenBattle	=> self.battle.update( &self.context.texture, nx, ny, mouse_hit ),
 			_ => true
 		}
 	}
 
-	fn on_char( &mut self, _key : char )	{
+	fn on_char( &mut self, key : char )	{
 		//io::println(fmt!("Char %c", key));
 		match self.screen	{
-			//temp!//ScreenChar	=> self.editor.on_char( key ),
+			ScreenChar	=> self.editor.on_char( key ),
 			_	=> ()
 		}
 	}
-	fn on_key_press( &mut self, _key : int )	{
+	fn on_key_press( &mut self, key : int )	{
 		match self.screen	{
-			//temp!//ScreenChar	=> self.editor.on_key_press( key ),
+			ScreenChar	=> self.editor.on_key_press( key ),
 			_	=> ()
 		}	
 	}
 	
-	fn render( &mut self, _el : &Elements )-> bool	{
+	fn render( &mut self, el : &Elements )-> bool	{
 		match self.screen	{
-			//temp!//ScreenChar => self.editor.render( el, &self.context, &self.journal ),
+			ScreenChar => self.editor.render( el, &mut self.context, &self.journal ),
 			/*ScreenBattle => {
 				// clear screen
 				let c0 =

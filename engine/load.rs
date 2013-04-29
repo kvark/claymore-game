@@ -39,7 +39,7 @@ pub fn enter_dummy( _rd : &Reader )-> Chunk	{
 pub fn enter_chunk( rd : &Reader )-> Chunk	{
 	let name_bin = rd.get_bytes(8u);
 	let size = rd.get_uint(4u);
-	let name_clean = do name_bin.filter()	|b| {*b != 0u8};
+	let name_clean = do name_bin.filtered()	|b| {*b != 0u8};
 	Chunk	{
 		name	: str::from_bytes(name_clean),
 		size	: size,
@@ -354,7 +354,7 @@ pub fn read_armature( br : &mut Reader, root : @mut space::Node, dual_quat : boo
 	let max = {
 		let start	= str::find_str(shader,~"MAX_BONES")	.expect(~"Has to have MAX_BONES");
 		let end		= str::find_char_from(shader,';',start)	.expect(~"Line has to end");
-		let npos	= str::rfind_char_from(shader,' ',start).expect(~"Space is expected");
+		let npos	= str::rfind_char_from(shader,' ',end)	.expect(~"Space is expected");
 		uint::from_str( shader.slice(npos+1,end) )			.expect(~"Unable to parse int")
 	};
 	lg.add(fmt!( "\tDetected %u bones", max ));
