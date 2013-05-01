@@ -4,14 +4,14 @@ extern mod engine;
 extern mod std;
 
 use engine::context::ProxyState;
-//use battle;
+use battle;
 use chared;
 use scene;
 
 
 enum Screen	{
 	ScreenChar,
-	//ScreenBattle,
+	ScreenBattle,
 	ScreenWorld,
 	ScreenDeath,
 }
@@ -26,7 +26,7 @@ struct Game	{
 	technique	: engine::draw::Technique,
 	output		: engine::call::DrawOutput,
 	editor		: chared::Scene,
-	//battle		: battle::Scene,
+	battle		: battle::Scene,
 	screen		: Screen,
 	time		: float,
 }
@@ -64,11 +64,11 @@ pub impl Game	{
 		ct.check(~"init");
 		let aspect = (wid as float) / (het as float);
 		let editor = chared::make_scene( el, &mut ct, aspect, &lg );
-		//let battle = battle::make_scene( &ct, aspect, &lg );
+		let battle = battle::make_scene( &mut ct, aspect, &lg );
 		Game{ context:ct, audio:ac, journal:lg,
 			sound_source:src, frames:0u,
 			technique:tech, output:out,
-			editor:editor, //battle:battle,
+			editor:editor, battle:battle,
 			screen:ScreenChar, time:0f,
 		}
 	}
@@ -78,7 +78,7 @@ pub impl Game	{
 		self.time += dt;
 		match self.screen	{
 			ScreenChar		=> self.editor.update( dt, nx, ny, mouse_hit, scroll, &self.journal ),
-			//ScreenBattle	=> self.battle.update( &self.context.texture, nx, ny, mouse_hit ),
+			ScreenBattle	=> self.battle.update( &mut self.context.texture, nx, ny, mouse_hit ),
 			_ => true
 		}
 	}
@@ -100,7 +100,7 @@ pub impl Game	{
 	fn render( &mut self, el : &Elements )-> bool	{
 		match self.screen	{
 			ScreenChar => self.editor.render( el, &mut self.context, &self.journal ),
-			/*ScreenBattle => {
+			ScreenBattle => {
 				// clear screen
 				let c0 =
 					engine::call::ClearData{
@@ -110,8 +110,8 @@ pub impl Game	{
 					}.gen_call( copy self.output );
 				self.context.flush(~[c0]);
 				// draw battle
-				self.battle.render( &self.context, &self.technique, copy self.output, &self.journal );
-			},*/
+				self.battle.render( &mut self.context, &self.technique, copy self.output, &self.journal );
+			},
 			_ => ()
 		}
 		// done
@@ -121,8 +121,8 @@ pub impl Game	{
 		true
 	}
 	
-	fn debug_move( &mut self, _rot : bool, _x : int, _y : int )	{
-		//self.battle.debug_move( rot, x, y );
+	fn debug_move( &mut self, rot : bool, x : int, y : int )	{
+		self.battle.debug_move( rot, x, y );
 	}
 }
 
@@ -133,7 +133,7 @@ struct ConfigWindow	{
 }
 #[auto_decode]
 struct ConfigGL	{
-	major:uint, minor:uint, debug:bool,
+	major:uint, minor:uint, core:bool, debug:bool,
 }
 #[auto_decode]
 struct Log	{
@@ -161,8 +161,10 @@ fn main()	{
 		glfw::ml::window_hint( glfw::OPENGL_DEBUG_CONTEXT, if config.GL.debug {1} else {0} );
 		glfw::ml::window_hint( glfw::CONTEXT_VERSION_MAJOR, config.GL.major as libc::c_int );
 		glfw::ml::window_hint( glfw::CONTEXT_VERSION_MINOR, config.GL.minor as libc::c_int );
-		//glfw::ml::window_hint( glfw::OPENGL_PROFILE, glfw::OPENGL_CORE_PROFILE );
-		//glfw::ml::window_hint( glfw::OPENGL_FORWARD_COMPAT, 1 );
+		if config.GL.core	{
+			glfw::ml::window_hint( glfw::OPENGL_PROFILE, glfw::OPENGL_CORE_PROFILE );
+			glfw::ml::window_hint( glfw::OPENGL_FORWARD_COMPAT, 1 );
+		}
 
 		let mode = if config.window.fullscreen {
 			glfw::FullScreen( glfw::get_primary_monitor() )

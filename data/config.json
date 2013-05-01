@@ -9,6 +9,7 @@
 	"GL":	{
 		"major"	:3,
 		"minor"	:1,
+		"core"	:false,
 		"debug"	:true
 	},
 	"journal":	{
@@ -18,7 +19,7 @@
 	"elements":	{
 		"character"		: true,
 		"shadow"		: true,
-		"lbuffer"		: 3,
+		"lbuffer"		: 0,
 		"environment"	: true,
 		"hud"			: true,
 		"hud_debug"		: false

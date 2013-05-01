@@ -13,9 +13,9 @@ extern mod lmath;
 extern mod numeric;
 extern mod std;
 
-//pub mod battle;
+pub mod battle;
 pub mod chared;
-//pub mod grid;
+pub mod grid;
 pub mod hud;
 pub mod main;
 pub mod scene;

@@ -14,7 +14,7 @@ use scene;
 
 pub struct Character	{
 	entity		: engine::draw::Entity,
-	skeleton	: @engine::space::Armature,
+	skeleton	: @mut engine::space::Armature,
 	record		: @engine::space::ArmatureRecord,
 	priv start_time	: float,
 }
@@ -56,12 +56,12 @@ pub impl View	{
 		match copy self.source	{
 			Some(source)	=>	{
 				let moment = (time - self.start_time) / self.trans_duration;
-				let dst = &self.points[ self.destination ];
+				let dst = self.points[ self.destination ];
 				self.cam.node.space = if moment >= 1f	{
 						self.source = None;
-						*dst
+						dst
 					}else	{
-						source.interpolate( dst, moment )
+						source.interpolate( &dst, moment )
 					};
 			},
 			None	=> ()
@@ -79,7 +79,7 @@ pub struct Scene	{
 }
 
 pub impl Scene	{
-	fn update( &mut self, tb : &engine::texture::Binding, nx : float, ny : float, mouse_hit : bool)-> bool	{
+	fn update( &mut self, tb : &mut engine::texture::Binding, nx : float, ny : float, mouse_hit : bool)-> bool	{
 		let cam_dir = 0;
 		let (i,j,ok) = self.grid.update( tb, &self.view.cam, nx, ny );
 		if mouse_hit && self.grid.get_rectangle().contains(i,j)	{
@@ -90,10 +90,10 @@ pub impl Scene	{
 		}
 		self.hero.update() && self.view.update( cam_dir ) && ok
 	}
-	fn render( &mut self, ct : &engine::context::Context, tech : &engine::draw::Technique, output : engine::call::DrawOutput, lg : &engine::context::Log )	{
+	fn render( &mut self, ct : &mut engine::context::Context, tech : &engine::draw::Technique, output : engine::call::DrawOutput, lg : &engine::context::Log )	{
 		{// update matrices
 			let light_pos	= vec4::new( 4f32, 1f32, 6f32, 1f32 );
-			for [ &self.land, &self.hero.entity ].each |ent|	{
+			for [ &mut self.land, &mut self.hero.entity ].each |ent|	{
 				let d = &mut ent.data;
 				self.view.cam.fill_data( d );
 				d.insert( ~"u_LightPos",	engine::shade::UniFloatVec(light_pos) );
@@ -104,17 +104,17 @@ pub impl Scene	{
 		let c_land = tech.process( &self.land, copy output, ct, lg );
 		let c_hero = tech.process( &self.hero.entity, copy output, ct, lg );
 		let (fbo,pmap,_) = output;
-		let &(vao,_,_) = &self.land.input;
+		let (vao,_,_) = self.land.input;
 		let c_grid = self.grid.call( fbo, copy pmap, vao );
 		ct.flush( ~[c_land,c_hero,c_grid] );
 	}
-	 fn debug_move( _rot : bool, _x : int, _y : int )	{
+	 fn debug_move( &self, _rot : bool, _x : int, _y : int )	{
 		//empty
 	}
 }
 
 
-pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine::context::Log )-> Scene	{
+pub fn make_scene( ct : &mut engine::context::Context, aspect : float, lg : &engine::context::Log )-> Scene	{
 	// create view
 	let view = 	{
 		// create camera
@@ -124,7 +124,7 @@ pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine:
 				orientation	: quat::new( 0.802f32, 0.447f32, 0.198f32, 0.343f32 ),
 				scale		: 1f32
 			};
-			let cam_node = @engine::space::Node{
+			let cam_node = @mut engine::space::Node{
 				name	: ~"cam",
 				space	: cam_space,
 				parent	: None,
@@ -145,10 +145,11 @@ pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine:
 			//FIXME: use new quat constructors
 			let angle = (i as f32) * 0.25f32 * f32::consts::pi;
 			let q = Quat::new( f32::cos(angle), 0f32, 0f32, f32::sin(angle) );
+			let cs = cam.node.space;
 			engine::space::QuatSpace{
-				position	: q.mul_v( &cam.node.space.position ),
-				orientation	: q.mul_q( &cam.node.space.orientation ),
-				scale		: cam.node.space.scale,
+				position	: q.mul_v( &cs.position ),
+				orientation	: q.mul_q( &cs.orientation ),
+				scale		: cs.scale,
 			}
 		};
 		View{
@@ -164,9 +165,9 @@ pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine:
 	let mat = @engine::draw::load_material(~"data/code/mat/phong");
 	let vao = @mut ct.create_vertex_array();
 	// load battle landscape
-	let battle_land = {
+	let mut battle_land = {
 		let mesh = @engine::load::load_mesh( ~"data/mesh/battle-test.k3mesh", ct, lg );
-		let node = @engine::space::Node{
+		let node = @mut engine::space::Node{
 			name	: ~"landscape",
 			space	: engine::space::QuatSpace::identity(),
 			parent	: None,
@@ -189,14 +190,14 @@ pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine:
 			parent	: None,
 			actions	: ~[],
 		};
-		let skel = @engine::load::load_armature( ~"data/arm/character.k3arm", arm_node, lg );
-		let node = @engine::space::Node{
+		let skel = @mut engine::load::load_armature( ~"data/arm/character.k3arm", arm_node, lg );
+		let node = @mut engine::space::Node{
 			name	: ~"hero",
 			space	: engine::space::QuatSpace::identity(),
 			parent	: Some(arm_node),
 			actions	: ~[],
 		};
-		let ent = engine::draw::Entity{
+		let mut ent = engine::draw::Entity{
 			node	: node,
 			input	: (vao,mesh,mesh.get_range()),
 			data	: engine::shade::make_data(),
@@ -225,9 +226,9 @@ pub fn make_scene( ct : &engine::context::Context, aspect : float, lg : &engine:
 	battle_land.data.insert( ~"u_Tex0Transform", engine::shade::UniFloatVec(utc) );
 	// create grid
 	let grid = grid::Grid::create( ct, 10u, lg );
-	grid.init( &ct.texture );
+	grid.init( &mut ct.texture );
 	{	// move hero
-		let sp = hero.entity.node.space;
+		let mut sp = hero.entity.node.space;
 		sp.position = grid.get_cell_center(7u,2u);
 		sp.position.z = 1.3f32;
 		sp.orientation = quat::new( 0.707f32, 0f32, 0f32, 0.707f32 );

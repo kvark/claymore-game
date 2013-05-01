@@ -25,7 +25,7 @@ static CELL_ACTIVE	: uint	= 0x2040E040;
 
 
 pub impl Grid	{
-	fn create( ct : &engine::context::Context, segments : uint, lg : &engine::context::Log )-> Grid	{
+	fn create( ct : &mut engine::context::Context, segments : uint, lg : &engine::context::Log )-> Grid	{
 		let mut data = engine::shade::make_data();
 		let mut rast = copy ct.default_rast;
 		rast.prime.cull = true;
@@ -79,21 +79,23 @@ pub impl Grid	{
 			(fbo, pmap, copy self.rast), self.program, copy self.data )
 	}
 
-	priv fn upload_all_cells( &self, tb : &engine::texture::Binding )	{
+	priv fn upload_all_cells( &self, tb : &mut engine::texture::Binding )	{
 		tb.bind( self.texture );
-		let fm_pix = engine::texture::map_pix_format( ~"rgba" );
-		let component = self.cells[0].r.to_gl_type();
-		let r = self.get_rectangle();
-		tb.load_sub_2D(	self.texture, 0u, &r, fm_pix, component, &const self.cells );
+		let _fm_pix = engine::texture::map_pix_format( ~"rgba" );
+		let _component = self.cells[0].r.to_gl_type();
+		let _r = self.get_rectangle();
+		//FIXME:
+		//tb.load_sub_2D(	self.texture, 0u, &r, fm_pix, component, &const self.cells );
 	}
 
-	priv fn upload_single_cell( &self, tb : &engine::texture::Binding, x : uint, y : uint )	{
+	priv fn upload_single_cell( &self, tb : &mut engine::texture::Binding, x : uint, y : uint )	{
 		tb.bind( self.texture );
 		let col = self.cells[x + y*self.nseg];
-		let fm_pix = engine::texture::map_pix_format( ~"rgba" );
-		let component = col.r.to_gl_type();
-		let r = engine::frame::Rect{ x:x, y:y, w:1u, h:1u };
-		tb.load_sub_2D(	self.texture, 0u, &r, fm_pix, component, &const ~[col] );
+		let _fm_pix = engine::texture::map_pix_format( ~"rgba" );
+		let _component = col.r.to_gl_type();
+		let _r = engine::frame::Rect{ x:x, y:y, w:1u, h:1u };
+		//FIXME:
+		//tb.load_sub_2D(	self.texture, 0u, &r, fm_pix, component, &const ~[col] );
 	}
 
 	priv fn get_cell_selected( &self, cam : &scene::Camera, nx : float, ny : float )-> (uint,uint)	{
@@ -107,17 +109,18 @@ pub impl Grid	{
 		(x as uint, y as uint)
 	}
 
-	fn init( &self, tb : &engine::texture::Binding )	{
+	fn init( &self, tb : &mut engine::texture::Binding )	{
 		// init storage
 		tb.bind( self.texture );
-		let fm_int = engine::texture::map_int_format( ~"rgba8" );
-		tb.init( self.texture, 1u, fm_int, true );
+		//FIXME
+		//let fm_int = engine::texture::map_int_format( ~"rgba8" );
+		//tb.init( self.texture, 1u, fm_int, true );
 		// load data
 		self.upload_all_cells(tb);
 		// set up texture
 	}
 
-	fn update( &mut self, tb : &engine::texture::Binding, cam : &scene::Camera, nx : float, ny : float )-> (uint,uint,bool)	{
+	fn update( &mut self, tb : &mut engine::texture::Binding, cam : &scene::Camera, nx : float, ny : float )-> (uint,uint,bool)	{
 		let view_proj = cam.get_matrix();
 		self.data.insert( ~"u_ViewProj", engine::shade::UniMatrix(false,view_proj) );
 		let (sx,sy) = self.get_cell_selected( cam, nx, ny );
