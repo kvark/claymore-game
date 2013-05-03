@@ -9,24 +9,32 @@ LIBMASK=*.so *.a
 GLTARGET=linux
 
 # game/engine/demos code
-all: engine-code game-code
+.PHONY: game engine
 
-run:
-	build/claymore
-run-trace:
-	${TRACE} build/claymore
+all:	game
 
-game-code:
+run:	game
+	build/${NAME}
+run-trace:	game
+	${TRACE} build/${NAME}
+
+
+game:	build/claymore
+
+build/claymore:	game/*.rs game/render/*.rs lib/engine.s
 	${RUST} game/claymore.rs -L lib --out-dir build
 
-engine-code:
-	${RUST} engine/engine.rs -L lib --out-dir lib
+engine:	lib/engine.s
 
-demo-03:
+lib/engine.s:	engine/*.rs
+	${RUST} -S engine/engine.rs -L lib --out-dir lib
+
+
+demo-03:	engine
 	${RUST} sample/demo03-materials.rs	-L lib --out-dir build
-demo-04:
+demo-04:	engine
 	${RUST} sample/demo04-skeleton.rs	-L lib --out-dir build
-demo-05:
+demo-05:	engine
 	${RUST} sample/demo05-text.rs		-L lib --out-dir build
 
 clean:
@@ -67,7 +75,7 @@ freetype:
 	(cd ../rust-freetype && make clean && make && cp -R ${LIBMASK} ../${DIR}/lib/)
 
 # demo packing
-demo-pack:
+demo-pack: engine game
 	cp build/${NAME} .
 	tar -czf demo.tar.gz engine game data ${NAME}
 	rm ${NAME}
