@@ -9,6 +9,7 @@ data/texture/*
 *.k3arm
 data/*.json
 lib/*.dSYM
+lib/*.dummy
 lib/libengine-*
 misc/*
 project/*

@@ -132,9 +132,9 @@ impl Font	{
 	pub fn bake( &self, gr : &mut context::Context, s : &str, max_size : (uint,uint), lg : &context::Log )-> texture::Texture	{
 		lg.add(fmt!( "Font baking text: %s", s ));
 		if s.is_empty()	{
-			let mut tex = gr.create_texture( ~"2D", 1u, 1u, 1u, 0u );
+			let tex = gr.create_texture( ~"2D", 1u, 1u, 1u, 0u );
 			let mut image = vec::from_elem( 1u, 0u8 );
-			gr.texture.load_2D( &mut tex, 0u, texture::map_int_format(~"r8"),
+			gr.texture.load_2D( &tex, 0u, texture::map_int_format(~"r8"),
 				texture::map_pix_format(~"red"), image[0].to_gl_type(), &image );
 			return tex
 		}
@@ -238,8 +238,8 @@ impl Font	{
 			assert!( x + bw <= width && y + bh <= height );
 			self.draw( bmp, &mut image, y*width + x, width );
 		}
-		let mut tex = gr.create_texture( ~"2D", width, height, 1u, 0u );
-		gr.texture.load_2D( &mut tex, 0u, texture::map_int_format(~"r8"),
+		let tex = gr.create_texture( ~"2D", width, height, 1u, 0u );
+		gr.texture.load_2D( &tex, 0u, texture::map_int_format(~"r8"),
 			texture::map_pix_format(~"red"), image[0].to_gl_type(), &image );
 		tex
 	}

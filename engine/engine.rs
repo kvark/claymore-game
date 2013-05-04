@@ -7,6 +7,7 @@
 #[crate_type = "lib"];
 
 extern mod freetype;
+extern mod stb_image;
 extern mod lmath;
 extern mod openal;
 

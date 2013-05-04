@@ -158,11 +158,11 @@ fn create_texture_2D<T>( ct : &mut context::Context, image : &stb_image::image::
 		3u	=> glcore::GL_RGB,
 		_	=> fail!(fmt!("Unknown image depth: %u", image.depth ))
 	};
-	let mut t = ct.create_texture( ~"2D", image.width, image.height, 1, 0 );
+	let t = ct.create_texture( ~"2D", image.width, image.height, 1, 0 );
 	ct.texture.bind( &t );
-	ct.texture.load_2D( &mut t, 0, int_format as glcore::GLint,	format, pix_type, &image.data );
+	ct.texture.load_2D( &t, 0, int_format as glcore::GLint,	format, pix_type, &image.data );
 	if mipmap	{
-		ct.texture.generate_levels( &mut t );
+		ct.texture.generate_levels( &t );
 	}
 	t
 }

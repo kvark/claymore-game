@@ -44,6 +44,12 @@ pub impl Sampler	{
 	}
 }
 
+pub struct LevelInfo	{
+	total	: uint,
+	min		: uint,
+	max		: uint,
+}
+
 
 pub struct Texture	{
 	handle	: Handle,
@@ -52,10 +58,8 @@ pub struct Texture	{
 	height		: uint,
 	depth		: uint,
 	samples		: uint,
-	priv levels		: uint,
+	priv levels		: @mut LevelInfo,
 	priv sampler	: @mut Sampler,
-	priv level_base	: uint,
-	priv level_max	: uint,
 	priv pool	: @mut ~[Handle],
 }
 
@@ -81,15 +85,15 @@ impl ToStr for Texture	{
 }
 
 pub impl Texture	{
-	fn get_levels( &self )-> uint	{
-		self.levels
+	fn get_num_levels( &self )-> uint	{
+		self.levels.total
 	}
 	fn get_level_size( &self, lev : uint )-> (uint,uint)	{
 		assert!( self.width>0u && self.height>0u );
 		(uint::max(1u,self.width>>lev),uint::max(1u,self.height>>lev))
 	}
 	fn get_level_limits( &self )-> (uint,uint)	{
-		(self.level_base, self.level_max)
+		(self.levels.min, self.levels.max)
 	}
 	fn count_levels( &self )-> uint	{
 		let mut i = 0;
@@ -104,7 +108,7 @@ pub impl Texture	{
 		contains(&(self.sampler.filter[1] as glcore::GLenum))
 	}
 	fn can_sample( &self )-> bool	{
-		self.samples==0u && (!self.is_filtering_mapmap() || self.levels==1u)
+		self.samples==0u && (!self.is_filtering_mapmap() || self.levels.total==1u)
 	}
 }
 
@@ -273,16 +277,16 @@ pub impl Binding	{
 		-1
 	}
 
-	fn init( &mut self, t : &mut Texture, num_levels : uint, int_format : glcore::GLint, alpha : bool )	{
+	fn init( &mut self, t : &Texture, num_levels : uint, int_format : glcore::GLint, alpha : bool )	{
 		self.bind( t );
 		assert!( t.samples == 0u && (t.depth == 0u || num_levels == 1u) );
-		t.levels = 0u;
-		while t.levels<num_levels	{
-			let (w,h) = t.get_level_size( t.levels );
+		let mut level = 0u;
+		while level<num_levels	{
+			let (w,h) = t.get_level_size( level );
 			let (wi,hi,di) = ( w as glcore::GLsizei, h as glcore::GLsizei, t.depth as glcore::GLsizei );
 			let pix_format = if alpha {glcore::GL_RGBA} else {glcore::GL_RGB};
 			let data_type = glcore::GL_UNSIGNED_BYTE;
-			let li = t.levels as glcore::GLint;
+			let li = level as glcore::GLint;
 			if t.depth != 0u	{
 				glcore::glTexImage3D( *t.target, li, int_format, wi, hi, di,
 					0, pix_format, data_type, ptr::null() );
@@ -293,14 +297,15 @@ pub impl Binding	{
 				glcore::glTexImage1D( *t.target, li, int_format, wi,
 					0, pix_format, data_type, ptr::null() );
 			}
-			t.levels += 1u;
+			level += 1u;
 		}
+		t.levels.total = level;
 		glcore::glGetError();	//debug
 	}
 
-	fn init_depth( &mut self, t : &mut Texture, stencil : bool )	{
+	fn init_depth( &mut self, t : &Texture, stencil : bool )	{
 		self.bind( t );
-		assert!( t.samples == 0u && t.levels == 0u );
+		assert!( t.samples == 0u && t.levels.total == 0u );
 		let (wi,hi,di) = ( t.width as glcore::GLsizei, t.height	as glcore::GLsizei, t.depth as glcore::GLsizei );
 		let (ifm,pfm)	= if stencil { (glcore::GL_DEPTH24_STENCIL8, glcore::GL_DEPTH_STENCIL) }
 			else { (glcore::GL_DEPTH_COMPONENT16, glcore::GL_DEPTH_COMPONENT) };
@@ -312,14 +317,14 @@ pub impl Binding	{
 			glcore::glTexImage2D( *t.target, 0, ifm as glcore::GLint, wi, hi,
 				0, pfm, data_type, ptr::null() );
 		}
-		t.levels = 1u;
+		t.levels.total = 1u;
 		glcore::glGetError();	//debug
 	}
 
 	#[cfg(multisample)]
-	fn init_multi( &mut self, t : &mut Texture, int_format : glcore::GLint, fixed_loc : bool )	{
+	fn init_multi( &mut self, t : &Texture, int_format : glcore::GLint, fixed_loc : bool )	{
 		self.bind( t );
-		assert!( t.samples != 0u && t.levels == 0u );
+		assert!( t.samples != 0u && t.levels.total == 0u );
 		let (wi,hi,di,si) = (
 			t.width as glcore::GLsizei, t.height	as glcore::GLsizei,
 			t.depth as glcore::GLsizei, t.samples	as glcore::GLsizei );
@@ -329,17 +334,17 @@ pub impl Binding	{
 		}else {
 			glcore::glTexImage2DMultisample( *t.target, si, int_format, wi, hi,		fixed );
 		}
-		t.levels = 1u;
+		t.levels.total = 1u;
 		glcore::glGetError();	//debug
 	}
 
-	fn load_2D<T>( &mut self, t : &mut Texture, level : uint, int_format : glcore::GLint,
+	fn load_2D<T>( &mut self, t : &Texture, level : uint, int_format : glcore::GLint,
 			pix_format : glcore::GLenum, pix_type : glcore::GLenum, data : &const ~[T])	{
 		self.bind( t );
 		glcore::glPixelStorei( glcore::GL_UNPACK_ALIGNMENT, 1 as glcore::GLint );
 		assert!( t.width>0 && t.height>0 && t.samples==0u );
-		assert!( t.levels >= level );
-		if t.levels==level	{ t.levels+=1; }
+		assert!( t.levels.total >= level );
+		if t.levels.total==level	{ t.levels.total += 1; }
 		let (w,h) = t.get_level_size( level );
 		let raw = unsafe{vec::raw::to_ptr(*data)} as *glcore::GLvoid;
 		glcore::glTexImage2D( *t.target, level as glcore::GLint, int_format,
@@ -348,14 +353,14 @@ pub impl Binding	{
 		glcore::glGetError();	//debug
 	}
 
-	fn load_sub_2D<T>( &mut self, t : &mut Texture, level : uint, r : &frame::Rect,
-			pix_format : glcore::GLenum, pix_type : glcore::GLenum, data : &~[T])	{
+	fn load_sub_2D<T>( &mut self, t : &Texture, level : uint, r : &frame::Rect,
+			pix_format : glcore::GLenum, pix_type : glcore::GLenum, data : &[T])	{
 		self.bind( t );
-		assert!( t.width>0 && t.height>0 && t.samples==0u && t.levels>level );
+		assert!( t.width>0 && t.height>0 && t.samples==0u && t.levels.total>level );
 		assert!( r.w*r.h == data.len() );
 		let (w,h) = t.get_level_size( level );
 		assert!( frame::Rect::new(w,h).contains_rect( r ) );
-		let raw = unsafe{vec::raw::to_ptr(*data)} as *glcore::GLvoid;
+		let raw = unsafe{vec::raw::to_ptr(data)} as *glcore::GLvoid;
 		glcore::glTexSubImage2D( *t.target, level as glcore::GLint,
 			r.x as glcore::GLint, r.y as glcore::GLint,
 			r.w as glcore::GLsizei, r.h as glcore::GLsizei,
@@ -363,23 +368,22 @@ pub impl Binding	{
 		glcore::glGetError();	//debug
 	}
 
-	fn generate_levels( &self, t : &mut Texture )-> uint	{
+	fn generate_levels( &self, t : &Texture )	{
 		assert!( self.is_bound( t ) );
-		assert!( t.samples == 0u && t.levels > 0u );
+		assert!( t.samples == 0u && t.levels.total > 0u );
 		glcore::glGenerateMipmap( *t.target );
-		t.levels = t.count_levels();
-		t.levels
+		t.levels.total = t.count_levels();
 	}
 
-	fn limit_levels( &self, t : &mut Texture, base : uint, max : uint )	{
+	fn limit_levels( &self, t : &Texture, base : uint, max : uint )	{
 		assert!( self.is_bound( t ) );
 		assert!( base <= max );
-		if t.level_base != base	{
-			t.level_base = base;
+		if t.levels.min != base	{
+			t.levels.min = base;
 			glcore::glTexParameteri( *t.target, glcore::GL_TEXTURE_BASE_LEVEL, base as glcore::GLint );
 		}
-		if t.level_max != max	{
-			t.level_max = max;
+		if t.levels.max != max	{
+			t.levels.max = max;
 			glcore::glTexParameteri( *t.target, glcore::GL_TEXTURE_MAX_LEVEL, max as glcore::GLint );
 		}
 	}
@@ -405,8 +409,8 @@ pub impl context::Context	{
 		glcore::glGenTextures( 1, ptr::addr_of(&hid) );
 		Texture{ handle:Handle(hid), target:map_target(st),
 			width:w, height:h, depth:d, samples:s,
-			levels:0, sampler:@mut Sampler::new(3u,1),
-			level_base:0u, level_max:1000u,
+			levels:@mut LevelInfo{total:0u,min:0u,max:1000u},
+			sampler:@mut Sampler::new(3u,1),
 			pool:self.texture.pool }
 	}
 	fn cleanup_textures( &mut self, lg : &context::Log )	{

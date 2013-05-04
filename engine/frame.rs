@@ -85,14 +85,14 @@ impl Target	{
 				glcore::glFramebufferRenderbuffer( root, slot, s.target, *s.handle );
 			},
 			&TarTexture(tex,lev)	=> {
-				assert!( tex.get_levels() > lev );
+				assert!( tex.get_num_levels() > lev );
 				//glcore::glFramebufferTexture( root, slot, *tex.handle, lev as glcore::GLint );
 				// workaround for Linux:
 				assert!( tex.depth == 0 );
 				glcore::glFramebufferTexture2D( root, slot, *tex.target, *tex.handle, lev as glcore::GLint );
 			},
 			&TarTextureLayer(tex,layer,lev) => {
-				assert!( tex.depth > layer && tex.get_levels() > lev );
+				assert!( tex.depth > layer && tex.get_num_levels() > lev );
 				glcore::glFramebufferTextureLayer( root, slot, *tex.handle, layer as glcore::GLint, lev as glcore::GLint );
 			},
 		}
