@@ -81,16 +81,18 @@ pub impl Attribute	{
 			glcore::GL_FLOAT_VEC4].contains( &self.storage )
 	}
 	fn decompose( &self )-> (uint,glcore::GLenum)	{
-		if self.storage==glcore::GL_FLOAT_VEC2			{(2,glcore::GL_FLOAT)} else
-		if self.storage==glcore::GL_FLOAT_VEC3			{(3,glcore::GL_FLOAT)} else
-		if self.storage==glcore::GL_FLOAT_VEC4			{(4,glcore::GL_FLOAT)} else
-		if self.storage==glcore::GL_INT_VEC2			{(2,glcore::GL_INT)} else
-		if self.storage==glcore::GL_INT_VEC3			{(3,glcore::GL_INT)} else
-		if self.storage==glcore::GL_INT_VEC4			{(4,glcore::GL_INT)} else
-		if self.storage==glcore::GL_UNSIGNED_INT_VEC2	{(2,glcore::GL_UNSIGNED_INT)} else
-		if self.storage==glcore::GL_UNSIGNED_INT_VEC3	{(3,glcore::GL_UNSIGNED_INT)} else
-		if self.storage==glcore::GL_UNSIGNED_INT_VEC4	{(4,glcore::GL_UNSIGNED_INT)} else
-		{(1,self.storage)}
+		match self.storage	{
+			glcore::GL_FLOAT_VEC2			=> (2,glcore::GL_FLOAT),
+			glcore::GL_FLOAT_VEC3			=> (3,glcore::GL_FLOAT),
+			glcore::GL_FLOAT_VEC4			=> (4,glcore::GL_FLOAT),
+			glcore::GL_INT_VEC2				=> (2,glcore::GL_INT),
+			glcore::GL_INT_VEC3				=> (3,glcore::GL_INT),
+			glcore::GL_INT_VEC4				=> (4,glcore::GL_INT),
+			glcore::GL_UNSIGNED_INT_VEC2	=> (2,glcore::GL_UNSIGNED_INT),
+			glcore::GL_UNSIGNED_INT_VEC3	=> (3,glcore::GL_UNSIGNED_INT),
+			glcore::GL_UNSIGNED_INT_VEC4	=> (4,glcore::GL_UNSIGNED_INT),
+			_	=> (1,self.storage)
+		}
 	}
 }
 

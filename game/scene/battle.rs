@@ -8,8 +8,8 @@ use engine::anim::Player;
 use engine::draw::Mod;
 use engine::space::{Interpolate,Space};
 
-use grid;
-use scene;
+use scene::grid;
+use scene = scene::common;
 
 
 pub struct Character	{

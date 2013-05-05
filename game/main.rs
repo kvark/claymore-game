@@ -4,12 +4,10 @@ extern mod engine;
 extern mod std;
 
 use engine::context::ProxyState;
-use battle;
-use chared;
 use scene;
 
-
 enum Screen	{
+	ScreenIntro,
 	ScreenChar,
 	ScreenBattle,
 	ScreenWorld,
@@ -25,8 +23,9 @@ struct Game	{
 	frames		: uint,
 	technique	: engine::draw::Technique,
 	output		: engine::call::DrawOutput,
-	editor		: chared::Scene,
-	battle		: battle::Scene,
+	s_intro		: scene::intro::Scene,
+	s_editor	: scene::chared::Scene,
+	s_battle	: scene::battle::Scene,
 	screen		: Screen,
 	time		: float,
 }
@@ -63,13 +62,14 @@ pub impl Game	{
 		// done
 		ct.check(~"init");
 		let aspect = (wid as float) / (het as float);
-		let editor = chared::make_scene( el, &mut ct, aspect, &lg );
-		let battle = battle::make_scene( &mut ct, aspect, &lg );
+		let intro = scene::intro::Scene{ active:false };
+		let editor = scene::chared::make_scene( el, &mut ct, aspect, &lg );
+		let battle = scene::battle::make_scene( &mut ct, aspect, &lg );
 		Game{ context:ct, audio:ac, journal:lg,
 			sound_source:src, frames:0u,
 			technique:tech, output:out,
-			editor:editor, battle:battle,
-			screen:ScreenChar, time:0f,
+			s_intro:intro, s_editor:editor, s_battle:battle,
+			screen:ScreenIntro, time:0f,
 		}
 	}
 
@@ -77,8 +77,8 @@ pub impl Game	{
 		let dt = engine::anim::get_time() - self.time;
 		self.time += dt;
 		match self.screen	{
-			ScreenChar		=> self.editor.update( dt, nx, ny, mouse_hit, scroll, &self.journal ),
-			ScreenBattle	=> self.battle.update( &mut self.context.texture, nx, ny, mouse_hit ),
+			ScreenChar		=> self.s_editor.update( dt, nx, ny, mouse_hit, scroll, &self.journal ),
+			ScreenBattle	=> self.s_battle.update( &mut self.context.texture, nx, ny, mouse_hit ),
 			_ => true
 		}
 	}
@@ -86,21 +86,22 @@ pub impl Game	{
 	fn on_char( &mut self, key : char )	{
 		//io::println(fmt!("Char %c", key));
 		match self.screen	{
-			ScreenChar	=> self.editor.on_char( key ),
+			ScreenChar	=> self.s_editor.on_char( key ),
 			_	=> ()
 		}
 	}
 	fn on_key_press( &mut self, key : int )	{
 		match self.screen	{
-			ScreenChar	=> self.editor.on_key_press( key ),
+			ScreenChar	=> self.s_editor.on_key_press( key ),
 			_	=> ()
 		}	
 	}
 	
 	fn render( &mut self, el : &Elements )-> bool	{
 		match self.screen	{
-			ScreenChar => self.editor.render( el, &mut self.context, &self.journal ),
-			ScreenBattle => {
+			ScreenIntro	=> (),
+			ScreenChar	=> self.s_editor.render( el, &mut self.context, &self.journal ),
+			ScreenBattle	=> {
 				// clear screen
 				let c0 =
 					engine::call::ClearData{
@@ -110,19 +111,20 @@ pub impl Game	{
 					}.gen_call( copy self.output );
 				self.context.flush(~[c0]);
 				// draw battle
-				self.battle.render( &mut self.context, &self.technique, copy self.output, &self.journal );
+				self.s_battle.render( &mut self.context, &self.technique, copy self.output, &self.journal );
 			},
 			_ => ()
 		}
 		// done
 		self.frames += 1;
+		self.audio.cleanup();
 		self.context.cleanup( &self.journal );
 		self.context.check( ~"render" );
 		true
 	}
 	
 	fn debug_move( &mut self, rot : bool, x : int, y : int )	{
-		self.battle.debug_move( rot, x, y );
+		self.s_battle.debug_move( rot, x, y );
 	}
 }
 
@@ -153,7 +155,7 @@ fn main()	{
 		fail!(fmt!( "GLFW Error: %s", description ))
 	}
 	do glfw::spawn {
-		let config = scene::load_config::<Config>( ~"data/config.json" );
+		let config = scene::common::load_config::<Config>( ~"data/config.json" );
 		let lg = engine::context::Log::create( copy config.journal.path, config.journal.depth );
 		lg.add(~"--- Claymore ---");
 

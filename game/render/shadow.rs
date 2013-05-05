@@ -2,7 +2,7 @@ extern mod engine;
 extern mod cgmath;
 extern mod lmath;
 
-use scene;
+use scene = scene::common;
 
 
 pub struct Data	{

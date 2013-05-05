@@ -5,7 +5,7 @@ use lmath::vec::*;
 use engine::context::GLType;
 use engine::space::Space;
 
-use scene;
+use scene = scene::common;
 
 
 pub struct Grid	{

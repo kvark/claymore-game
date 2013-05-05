@@ -5,7 +5,7 @@ use lmath::vec::vec4;
 
 use engine::space::Space;
 
-use scene;
+use scene = scene::common;
 
 
 static use_array : bool	= false;

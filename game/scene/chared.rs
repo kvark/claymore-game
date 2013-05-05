@@ -11,7 +11,7 @@ use engine::space::Pretty;
 use hud;
 use main;
 use render;
-use scene;
+use scene = scene::common;
 
 
 struct Envir	{

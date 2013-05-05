@@ -116,7 +116,14 @@ pub impl Context	{
 	}
 
 	fn cleanup( &self )	{
-		//empty
+		for self.pool_buffers.each() |buf|	{
+			ll::alDeleteBuffers( 1, ptr::addr_of(&**buf) );
+		}
+		for self.pool_sources.each() |src|	{
+			ll::alDeleteSources( 1, ptr::addr_of(&**src) );
+		}
+		self.pool_buffers.clear();
+		self.pool_sources.clear();
 	}
 
 	fn create_buffer<T>( &self, channels : uint, bits : uint, byte_rate : uint, 

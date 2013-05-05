@@ -9,7 +9,7 @@ use std::serialize::Decoder;
 use lmath::vec::vec4;
 use engine::space::Pretty;
 
-use scene;
+use scene = scene::common;
 
 
 pub enum Anchor	{
