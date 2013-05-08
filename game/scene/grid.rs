@@ -34,7 +34,7 @@ pub impl Grid	{
 		let cells = do vec::from_fn::<engine::rast::Color>(segments*segments) |_i|	{
 			engine::rast::Color::new(CELL_EMPTY)
 		};
-		let tex = @ct.create_texture( ~"2D", segments, segments, 0u, 0u );
+		let tex = ct.create_texture( ~"2D", segments, segments, 0u, 0u );
 		let s_opt = Some( engine::texture::Sampler::new(1u,0) );
 		data.insert( ~"t_Grid",		engine::shade::UniTexture(0,tex,s_opt) );
 		let par_scale = vec4::new( 10f32, 10f32, 0.1f32, 0f32 );

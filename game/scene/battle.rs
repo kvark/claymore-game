@@ -205,7 +205,7 @@ pub fn make_scene( ct : &mut engine::context::Context, aspect : float, lg : &eng
 			material: mat,
 		};
 		// load char texture
-		let tex = @engine::load::load_texture_2D( ct, &~"data/texture/diffuse.jpg", true );
+		let tex = engine::load::load_texture_2D( ct, &~"data/texture/diffuse.jpg", true );
 		let s_opt = Some( engine::texture::Sampler::new(3u,1) );
 		ent.data.insert( ~"t_Main", engine::shade::UniTexture(0u,tex,s_opt) );
 		let utc = vec4::new(1f32,1f32,0f32,0f32);
@@ -219,7 +219,7 @@ pub fn make_scene( ct : &mut engine::context::Context, aspect : float, lg : &eng
 		}
 	};
 	// load land texture
-	let tex = @engine::load::load_texture_2D( ct, &~"data/texture/SoilCracked0103_2_S.jpg", true );
+	let tex = engine::load::load_texture_2D( ct, &~"data/texture/SoilCracked0103_2_S.jpg", true );
 	let s_opt = Some( engine::texture::Sampler::new(3u,1) );
 	battle_land.data.insert( ~"t_Main", engine::shade::UniTexture(0u,tex,s_opt) );
 	let utc = vec4::new(10f32,10f32,0f32,0f32);

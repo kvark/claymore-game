@@ -10,7 +10,7 @@ pub struct Data	{
 pub impl Data	{
 	fn create( gc : &mut engine::context::Context )-> Data	{
 		let (wid,het) = gc.screen_size;
-		let texture = @gc.create_texture( ~"2D", wid, het, 0u, 0u );
+		let texture = gc.create_texture( ~"2D", wid, het, 0u, 0u );
 		gc.texture.init_depth( texture, false );
 		let mut pmap = engine::call::PlaneMap::new_empty();
 		pmap.depth = engine::frame::TarTexture(texture,0);

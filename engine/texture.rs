@@ -2,6 +2,7 @@ extern mod glcore;
 
 use core::cmp::Eq;
 use core::hashmap::linear::LinearMap;
+use core::managed;
 use core::to_bytes;
 use core::to_str::ToStr;
 
@@ -14,6 +15,12 @@ pub type Mode	= glcore::GLenum;
 pub struct Handle( glcore::GLuint );
 #[deriving(Eq)]
 pub struct Target( glcore::GLenum );
+
+impl Drop for Handle	{
+	fn finalize( &self )	{
+		glcore::glDeleteTextures( 1, ptr::addr_of(&**self) );
+	}
+}
 
 
 pub struct Sampler	{
@@ -60,14 +67,6 @@ pub struct Texture	{
 	samples		: uint,
 	priv levels		: @mut LevelInfo,
 	priv sampler	: @mut Sampler,
-	priv pool	: @mut ~[Handle],
-}
-
-#[unsafe_destructor]
-impl Drop for Texture	{
-	fn finalize( &self )	{
-		self.pool.push( self.handle );
-	}
 }
 
 impl context::ProxyState for Texture	{
@@ -154,8 +153,8 @@ impl to_bytes::IterBytes for Slot	{
 
 pub struct Binding	{
 	active_unit	: uint,
-	active		: LinearMap<Slot,Handle>,
-	priv pool	: @mut ~[Handle],
+	active		: LinearMap<Slot,@Texture>,
+	default		: @Texture,
 }
 
 impl context::ProxyState for Binding	{
@@ -169,7 +168,7 @@ impl context::ProxyState for Binding	{
 			self.active_unit = cur_unit;
 		}
 		// Rust wouldn't allow us to mutate while scanning
-		for (copy self.active).each |&(slot,handle)|	{
+		for (copy self.active).each |&(slot,tex)|	{
 			let t = *slot.target;
 			let query =	if t == glcore::GL_TEXTURE_2D	{glcore::GL_TEXTURE_BINDING_2D}
 			else	{
@@ -177,10 +176,10 @@ impl context::ProxyState for Binding	{
 			};
 			self.switch( slot.unit );
 			glcore::glGetIntegerv( query, ptr::addr_of(&id) );
-			if *(*handle) != id as glcore::GLuint	{
+			if *tex.handle != id as glcore::GLuint	{
 				io::println("bad2");
 				was_ok = false;
-				self.active.swap( *slot, Handle(id as glcore::GLuint) );
+				self.active.swap( *slot, self.default );
 			}
 		}
 		self.switch( cur_unit );
@@ -191,16 +190,21 @@ impl context::ProxyState for Binding	{
 pub impl Binding	{
 	fn new()-> Binding	{
 		let slots	= LinearMap::new();
-		Binding{ active_unit:0u, active:slots, pool:@mut ~[] }
+		let tex = @Texture{
+			handle: Handle(0), target: Target(0),
+			width: 0, height: 0, depth: 0, samples: 0,
+			levels: @mut LevelInfo{total:0,min:0,max:0},
+			sampler	: @mut Sampler::new(1,0)
+		};
+		Binding{ active_unit:0u, active:slots, default:tex }
 	}
 
-	priv fn _bind( &mut self, target : Target, h : Handle )	{
-		let slot = Slot{ unit:self.active_unit, target:target };
-		if self.active.contains_key(&slot) && *self.active.get(&slot) == h	{
-			return;
+	fn bind( &mut self, t : @Texture )	{
+		let slot = Slot{ unit:self.active_unit, target:t.target };
+		if !self.active.contains_key(&slot) || !managed::ptr_eq(*self.active.get(&slot),t)	{
+			self.active.insert( slot, t );
+			glcore::glBindTexture( *t.target, *t.handle );
 		}
-		self.active.insert( slot, h );
-		glcore::glBindTexture( *target, *h );
 	}
 	
 	fn switch( &mut self, unit : uint )	{
@@ -210,16 +214,12 @@ pub impl Binding	{
 		}
 	}
 
-	fn bind( &mut self, t : &Texture )	{
-		self._bind( t.target, t.handle );
-	}
-
-	fn bind_to( &mut self, unit: uint, t : &Texture )	{
+	fn bind_to( &mut self, unit: uint, t : @Texture )	{
 		self.switch( unit );
 		self.bind( t );
 	}
 
-	fn bind_sampler( &mut self, t : &Texture, s : &Sampler )	{
+	fn bind_sampler( &mut self, t : @Texture, s : &Sampler )	{
 		self.bind( t );
 		if t.samples != 0	{return}	//TODO: error here?
 		let filter_modes = [glcore::GL_TEXTURE_MIN_FILTER,glcore::GL_TEXTURE_MAG_FILTER];
@@ -252,24 +252,29 @@ pub impl Binding	{
 		*t.sampler = *s;
 	}
 	fn unbind( &mut self, target : Target )	{
-		self._bind( target, Handle(0) );
-	}
-
-	fn get_bound( &self, target : Target )->Handle	{
 		let slot = Slot{ unit:self.active_unit, target:target };
-		match self.active.find( &slot )	{
-			Some(s)	=> *s,
-			None	=> Handle(0)
+		let t = self.default;
+		if !managed::ptr_eq(*self.active.get(&slot),t)	{
+			self.active.insert(slot,t);
+			glcore::glBindTexture( *target, 0 );
 		}
 	}
 
-	fn is_bound( &self, t : &Texture )-> bool	{
-		self.get_bound( t.target ) == t.handle
+	fn get_bound( &self, target : Target )-> @Texture	{
+		let slot = Slot{ unit:self.active_unit, target:target };
+		match self.active.find( &slot )	{
+			Some(t)	=> *t,
+			None	=> self.default
+		}
 	}
 
-	fn find( &self, t : &Texture )-> int	{
-		for self.active.each |&(slot,handle)|	{
-			if *handle == t.handle	{
+	fn is_bound( &self, t : @Texture )-> bool	{
+		managed::ptr_eq( self.get_bound( t.target ), t )
+	}
+
+	fn find( &self, t : @Texture )-> int	{
+		for self.active.each |&(slot,tex)|	{
+			if managed::ptr_eq(t,*tex)	{
 				assert!( slot.target == t.target );
 				return slot.unit as int;
 			}
@@ -277,7 +282,7 @@ pub impl Binding	{
 		-1
 	}
 
-	fn init( &mut self, t : &Texture, num_levels : uint, int_format : glcore::GLint, alpha : bool )	{
+	fn init( &mut self, t : @Texture, num_levels : uint, int_format : glcore::GLint, alpha : bool )	{
 		self.bind( t );
 		assert!( t.samples == 0u && (t.depth == 0u || num_levels == 1u) );
 		let mut level = 0u;
@@ -303,7 +308,7 @@ pub impl Binding	{
 		glcore::glGetError();	//debug
 	}
 
-	fn init_depth( &mut self, t : &Texture, stencil : bool )	{
+	fn init_depth( &mut self, t : @Texture, stencil : bool )	{
 		self.bind( t );
 		assert!( t.samples == 0u && t.levels.total == 0u );
 		let (wi,hi,di) = ( t.width as glcore::GLsizei, t.height	as glcore::GLsizei, t.depth as glcore::GLsizei );
@@ -322,7 +327,7 @@ pub impl Binding	{
 	}
 
 	#[cfg(multisample)]
-	fn init_multi( &mut self, t : &Texture, int_format : glcore::GLint, fixed_loc : bool )	{
+	fn init_multi( &mut self, t : @Texture, int_format : glcore::GLint, fixed_loc : bool )	{
 		self.bind( t );
 		assert!( t.samples != 0u && t.levels.total == 0u );
 		let (wi,hi,di,si) = (
@@ -338,7 +343,7 @@ pub impl Binding	{
 		glcore::glGetError();	//debug
 	}
 
-	fn load_2D<T>( &mut self, t : &Texture, level : uint, int_format : glcore::GLint,
+	fn load_2D<T>( &mut self, t : @Texture, level : uint, int_format : glcore::GLint,
 			pix_format : glcore::GLenum, pix_type : glcore::GLenum, data : &const ~[T])	{
 		self.bind( t );
 		glcore::glPixelStorei( glcore::GL_UNPACK_ALIGNMENT, 1 as glcore::GLint );
@@ -353,7 +358,7 @@ pub impl Binding	{
 		glcore::glGetError();	//debug
 	}
 
-	fn load_sub_2D<T>( &mut self, t : &Texture, level : uint, r : &frame::Rect,
+	fn load_sub_2D<T>( &mut self, t : @Texture, level : uint, r : &frame::Rect,
 			pix_format : glcore::GLenum, pix_type : glcore::GLenum, data : &[T])	{
 		self.bind( t );
 		assert!( t.width>0 && t.height>0 && t.samples==0u && t.levels.total>level );
@@ -368,14 +373,14 @@ pub impl Binding	{
 		glcore::glGetError();	//debug
 	}
 
-	fn generate_levels( &self, t : &Texture )	{
+	fn generate_levels( &self, t : @Texture )	{
 		assert!( self.is_bound( t ) );
 		assert!( t.samples == 0u && t.levels.total > 0u );
 		glcore::glGenerateMipmap( *t.target );
 		t.levels.total = t.count_levels();
 	}
 
-	fn limit_levels( &self, t : &Texture, base : uint, max : uint )	{
+	fn limit_levels( &self, t : @Texture, base : uint, max : uint )	{
 		assert!( self.is_bound( t ) );
 		assert!( base <= max );
 		if t.levels.min != base	{
@@ -404,28 +409,12 @@ pub fn map_target( s : ~str )-> Target	{
 
 
 pub impl context::Context	{
-	fn create_texture( &self, st:~str, w:uint, h:uint, d:uint, s:uint )->Texture	{
+	fn create_texture( &self, st:~str, w:uint, h:uint, d:uint, s:uint )-> @Texture	{
 		let mut hid = 0 as glcore::GLuint;
 		glcore::glGenTextures( 1, ptr::addr_of(&hid) );
-		Texture{ handle:Handle(hid), target:map_target(st),
+		@Texture{ handle:Handle(hid), target:map_target(st),
 			width:w, height:h, depth:d, samples:s,
 			levels:@mut LevelInfo{total:0u,min:0u,max:1000u},
-			sampler:@mut Sampler::new(3u,1),
-			pool:self.texture.pool }
-	}
-	fn cleanup_textures( &mut self, lg : &context::Log )	{
-		let pool : &mut ~[Handle] = self.texture.pool;
-		while !pool.is_empty()	{
-			let han = pool.pop();
-			assert!( *han != 0 );
-			for (copy self.texture.active).each() |&(s,h)|	{
-				if han == *h	{
-					self.texture.switch( s.unit );
-					self.texture.unbind( s.target );
-				}
-			}
-			lg.add(fmt!( "Deleting texture id %d", *han as int ));
-			glcore::glDeleteTextures( 1, ptr::addr_of(&*han) );
-		}
+			sampler:@mut Sampler::new(3u,1) }
 	}
 }

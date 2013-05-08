@@ -6,7 +6,6 @@ use numeric::Float;
 use lmath::quat::*;
 use lmath::vec::*;
 use engine::anim::{Act,Player};
-use engine::space::Pretty;
 
 use hud;
 use main;
@@ -324,7 +323,7 @@ pub fn make_scene( el : &main::Elements, ct : &mut engine::context::Context, asp
 			data.insert( ~"t_Environment",		engine::shade::UniTexture(0,tex,Some(samp)) );
 			@engine::load::load_program( ct, ~"data/code-game/envir", lg )
 		}else	{
-			let tex = @engine::load::load_texture_2D( ct, &~"data/texture/bg2.jpg", true );
+			let tex = engine::load::load_texture_2D( ct, &~"data/texture/bg2.jpg", true );
 			data.insert( ~"t_Image",		engine::shade::UniTexture(0,tex,Some(samp)) );
 			@engine::load::load_program( ct, ~"data/code-game/copy", lg )
 		};
@@ -369,7 +368,7 @@ pub fn make_scene( el : &main::Elements, ct : &mut engine::context::Context, asp
 		cam.proj.aspect as float,
 		cam.proj.near as float,
 		cam.proj.far as float ));
-	lg.add( ~"\tWorld :" + cam.node.world_space().to_string() );
+	lg.add( ~"\tWorld :" + cam.node.world_space().to_str() );
 	let control = CamControl{
 		node	: cam.node,
 		origin	: vec3::new(0f32,0f32,75f32),

@@ -6,6 +6,7 @@ extern mod std;
 
 use core::hashmap::linear::LinearMap;
 use core::managed;
+use core::to_str::ToStr;
 use std::json;
 use std::serialize::{Decoder,Decodable};
 
@@ -16,7 +17,6 @@ use lmath::mat::*;
 use lmath::projection::*;
 use cgmath::projection::*;
 
-use engine::space::Pretty;
 use engine::space::Space;
 
 
@@ -282,7 +282,7 @@ pub impl Light	{
 			let D = a1*a1 - 4f32*a2*(1f32 - E/threshold);
 			if D>=0f32	{
 				0.5f32 * (f32::sqrt(D) - a1) / a2
-			}else	{fail!( ~"Bad attenuation: " + self.attenu.to_string() )}
+			}else	{fail!( ~"Bad attenuation: " /*+ self.attenu.to_str()*/ )}
 		}else if a1>0f32	{
 			assert!( a2==0f32 );
 			(E/threshold - 1f32) / a1
@@ -520,7 +520,7 @@ pub fn load_scene( path : ~str, gc : &mut engine::context::Context,
 				let path = ~"data/texture/" + itex.path;
 				let tex = match tex_cache.find(&path)	{
 					Some(t) => *t,
-					None	=> @engine::load::load_texture_2D( gc, &path, true ),
+					None	=> engine::load::load_texture_2D( gc, &path, true ),
 				};
 				tex_cache.insert( copy itex.path, tex );
 			}
@@ -535,7 +535,7 @@ pub fn load_scene( path : ~str, gc : &mut engine::context::Context,
 		lg.add( ~"\tCustom material: " + imat.name );
 		for imat.textures.each() |itex|	{
 			if !tex_cache.contains_key( &itex.path )	{
-				let tex = @engine::load::load_texture_2D( gc, &itex.path, true );
+				let tex = engine::load::load_texture_2D( gc, &itex.path, true );
 				tex_cache.insert( copy itex.path, tex );
 			}
 		}

@@ -15,7 +15,7 @@ pub struct Data	{
 }
 
 pub fn create_data( ct : &mut engine::context::Context, light : @scene::Light, size : uint )-> Data	{
-	let shadow = @ct.create_texture( ~"2D", size, size, 0u, 0u );
+	let shadow = ct.create_texture( ~"2D", size, size, 0u, 0u );
 	ct.texture.init_depth( shadow, false );
 	let fbo = @mut ct.create_frame_buffer();
 	let mut pmap = engine::call::PlaneMap::new_empty();

@@ -3,11 +3,10 @@ extern mod lmath;
 extern mod std;
 
 use core::hashmap::linear::LinearMap;
-//use std::json;
+use core::to_str::ToStr;
 use std::serialize::Decoder;
 
 use lmath::vec::vec4;
-use engine::space::Pretty;
 
 use scene = scene::common;
 
@@ -34,26 +33,28 @@ pub struct Alignment(Anchor,Relation,Anchor);
 pub type Point = (int,int);
 
 
-fn parse_anchor( s : &~str )-> Anchor	{
-	match *s	{
-		~"left-top"	=> ALeftTop,
-		~"mid-top"	=> AMidTop,
-		~"right-top"=> ARightTop,
-		~"left-mid"	=> ALeftMid,
-		~"center"	=> ACenter,
-		~"right-mid"=> ARightMid,
-		~"left-bot"	=> ALeftBot,
-		~"mid-bot"	=> AMidBot,
-		~"right-bot"=> ARightBot,
-		_	=> fail!( ~"Unknown anchor: " + *s )
+fn parse_anchor( s : &str )-> Anchor	{
+	match s	{
+		"left-top"	=> ALeftTop,
+		"mid-top"	=> AMidTop,
+		"right-top"	=> ARightTop,
+		"left-mid"	=> ALeftMid,
+		"center"	=> ACenter,
+		"right-mid"	=> ARightMid,
+		"left-bot"	=> ALeftBot,
+		"mid-bot"	=> AMidBot,
+		"right-bot"	=> ARightBot,
+		_	=> fail!( ~"Unknown anchor: " + s )
 	}
 }
 
 fn parse_relation( s : &str )-> Relation	{
-	if s == ~"parent"	{RelParent}	else
-	if s == ~"head"		{RelHead}	else
-	if s == ~"tail"		{RelTail}	else
-	{fail!( ~"Unknown relation: " + s )}
+	match s	{
+		"parent"	=> RelParent,
+		"head"		=> RelHead,
+		"tail"		=> RelTail,
+		_	=> fail!( ~"Unknown relation: " + s )
+	} 
 }
 
 fn parse_alignment( expression : &str )-> Alignment	{
@@ -61,7 +62,7 @@ fn parse_alignment( expression : &str )-> Alignment	{
 		expression.each_split( |c| {c=='=' || c=='.'}, |s| {push(s.to_owned());true} );
 	});
 	assert!( s.len() == 3u );
-	Alignment(parse_anchor(&s[0]), parse_relation(s[1]), parse_anchor(&s[2]))
+	Alignment(parse_anchor(s[0]), parse_relation(s[1]), parse_anchor(s[2]))
 }
 
 
@@ -76,8 +77,8 @@ pub struct Rect    {
 	size	: Point,
 }
 
-impl engine::space::Pretty for Rect	{
-	fn to_string( &self )-> ~str	{
+impl ToStr for Rect	{
+	fn to_str( &self )-> ~str	{
 		let (bx,by) = self.base;
 		let (sx,sy) = self.size;
 		fmt!( "[%d:%d)x[%d:%d)", bx, bx+sx, by, by+sy )
@@ -218,7 +219,7 @@ pub impl Frame	{
 			x_min = int::min(x_min,x1); y_min = int::min(y_min,y1);
 			x_max = int::max(x_max,x2); y_max = int::max(y_max,y2);
 			lg.add(fmt!( "\tUpdated1 '%s' to: %s, (%d,%d),(%d,%d)",
-				child.name, child.area.to_string(), x1,y1, x2,y2 ));
+				child.name, child.area.to_str(), x1,y1, x2,y2 ));
 		}
 		let content = ( int::max(ex,x_max-x_min), int::max(ey,y_max-y_min) ); 
 		lg.add(fmt!( "\tFrame3 '%s' bounding box is [%d-%d]x[%d-%d]", self.name, x_min, x_max, y_min, y_max ));
@@ -244,7 +245,7 @@ pub impl Frame	{
 				src_x,src_y, dst_x,dst_y ));
 			child.area.base = ( dst_x-src_x, dst_y-src_y );
 			child.update_base(lg);
-			lg.add(fmt!( "\tUpdated2 '%s' to: %s", child.name, child.area.to_string() ));
+			lg.add(fmt!( "\tUpdated2 '%s' to: %s", child.name, child.area.to_str() ));
 		}
 	}
 
@@ -454,7 +455,7 @@ pub fn load_screen( path : ~str, ct : &mut engine::context::Context,
 		let path = ~"data/texture/hud/" + iimage.path;
 		let (texture,new) = match map_texture.find(&path)	{
 			Some(t)	=> (*t,false),
-			None	=> (@engine::load::load_texture_2D( ct, &path, false ), true),
+			None	=> (engine::load::load_texture_2D( ct, &path, false ), true),
 		};
 		if new	{
 			map_texture.insert(path,texture);
@@ -488,7 +489,7 @@ pub fn load_screen( path : ~str, ct : &mut engine::context::Context,
 			map_font.insert( copy ilabel.font, font );
 		}
 		let label = @mut Label{
-			texture	: @font.bake( ct, ilabel.text, ilabel.bound, lg ),
+			texture	: font.bake( ct, ilabel.text, ilabel.bound, lg ),
 			content	: copy ilabel.text,
 			program	: prog_label,
 			color	: engine::rast::Color::new( ilabel.color ),
@@ -569,7 +570,7 @@ pub impl EditLabel	{
 			};
 			true
 		});
-		self.text.texture = @self.text.font.bake( ct, text, (1000,100), lg );	//self.size
+		self.text.texture = self.text.font.bake( ct, text, (1000,100), lg );	//self.size
 		self.text.content = text;
 	}
 }

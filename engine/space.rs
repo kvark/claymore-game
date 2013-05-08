@@ -1,6 +1,7 @@
 extern mod lmath;
 
 use core::managed;
+use core::to_str::ToStr;
 
 use lmath::vec::*;
 use lmath::quat::*;
@@ -104,7 +105,7 @@ pub impl QuatSpace	{
 
 
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - //
-//		Interpolation & Pretty							//
+//		Interpolation									//
 
 pub trait Interpolate	{
 	fn interpolate( &self, other : &Self, t : float )-> Self;
@@ -143,39 +144,13 @@ impl Interpolate for QuatSpace	{
 }
 
 
-pub trait Pretty	{
-	fn to_string( &self )-> ~str;
-}
-
-impl Pretty for Vec3<f32>	{
-	fn to_string( &self )-> ~str	{
-		fmt!( "(%f,%f,%f)", self.x as float, self.y as float, self.z as float )
-	}
-}
-impl Pretty for Vec4<f32>	{
-	fn to_string( &self )-> ~str	{
-		fmt!( "(%f,%f,%f,%f)", self.x as float, self.y as float, self.z as float, self.w as float )
-	}	
-}
-impl Pretty for Quat<f32>	{
-	fn to_string( &self )-> ~str	{
-		fmt!( "(%f,%f,%f,%f)", self.s as float, self.v.x as float, self.v.y as float, self.v.z as float )
-	}
-}
-impl Pretty for QuatSpace	{
-	fn to_string( &self )-> ~str	{
-		fmt!( "{pos:%s,rot:%s,scale:%f}", self.position.to_string(),
-			self.orientation.to_string(), self.scale as float )
-	}
-}
-
-impl Pretty for Matrix	{
-	fn to_string( &self )-> ~str	{
-		fmt!("/%s\\\n|%s|\n|%s|\n\\%s/",
-			self.row(0).to_string(),
-			self.row(1).to_string(),
-			self.row(2).to_string(),
-			self.row(3).to_string())
+impl ToStr for QuatSpace	{
+	fn to_str( &self )-> ~str	{
+		fmt!( "{pos:%s,rot:%s,scale:%f}",
+			"","",
+			//self.position.to_str(),
+			//self.orientation.to_str(),
+			self.scale as float )
 	}
 }
 

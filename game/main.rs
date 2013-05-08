@@ -69,7 +69,7 @@ pub impl Game	{
 			sound_source:src, frames:0u,
 			technique:tech, output:out,
 			s_intro:intro, s_editor:editor, s_battle:battle,
-			screen:ScreenIntro, time:0f,
+			screen:ScreenChar, time:0f,
 		}
 	}
 

@@ -47,11 +47,11 @@ pub impl Context	{
 		} else {
 			(~"2D",~"rgba8",0u)
 		};
-		let ta_dir = @gc.create_texture( copy s_type, wid/div, het/div, dim_depth, 0u );
+		let ta_dir = gc.create_texture( copy s_type, wid/div, het/div, dim_depth, 0u );
 		gc.texture.init( ta_dir, 1u, engine::texture::map_int_format(copy s_format), true );
-		let ta_col = @gc.create_texture( copy s_type, wid/div, het/div, dim_depth, 0u );
+		let ta_col = gc.create_texture( copy s_type, wid/div, het/div, dim_depth, 0u );
 		gc.texture.init( ta_col, 1u, engine::texture::map_int_format(copy s_format), true );
-		let depth = @gc.create_texture( ~"2D", wid/div, het/div, 0u, 0u );
+		let depth = gc.create_texture( ~"2D", wid/div, het/div, 0u, 0u );
 		gc.texture.init_depth( depth, false );
 		let t_bake	= @engine::draw::load_technique( ~"data/code/tech/lbuf/bake" );
 		let t_apply	= @engine::draw::load_technique( ~"data/code/tech/lbuf/apply" );
