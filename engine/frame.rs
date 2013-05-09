@@ -1,27 +1,25 @@
 extern mod glcore;
 
+use core::managed;
 use core::to_str::ToStr;
 
 use context;
 use texture;
 
 
-pub struct Handle( glcore::GLuint );
-
+pub struct SurfaceHandle( glcore::GLuint );
 
 pub struct Surface	{
-	handle	: Handle,
+	handle	: SurfaceHandle,
 	target	: glcore::GLenum,
 	width	: uint,
 	height	: uint,
 	samples	: uint,
-	priv pool	: @mut ~[Handle],
 }
 
-#[unsafe_destructor]
-impl Drop for Surface	{
+impl Drop for SurfaceHandle	{
 	fn finalize( &self )	{
-		self.pool.push( self.handle );
+		glcore::glDeleteRenderbuffers( 1, ptr::addr_of(&**self) );
 	}
 }
 
@@ -103,15 +101,18 @@ impl Target	{
 
 pub struct RenBinding	{
 	target		: glcore::GLenum,
-	priv active	: Handle,
-	priv pool	: @mut ~[Handle],
+	default		: @Surface,
+	priv active	: @Surface,
 }
 
 pub impl RenBinding	{
 	fn new()-> RenBinding	{
+		let t = glcore::GL_RENDERBUFFER;
+		let s = @Surface{ handle:SurfaceHandle(0),
+			target:t, width:0, height:0, samples:0
+		};
 		RenBinding{
-			target : glcore::GL_RENDERBUFFER,
-			active : Handle(0), pool : @mut ~[],
+			target: t, default: s, active: s,
 		}
 	}
 }
@@ -121,64 +122,10 @@ impl context::ProxyState for RenBinding	{
 		let mut hid = 0 as glcore::GLint;
 		glcore::glGetIntegerv( glcore::GL_RENDERBUFFER_BINDING, ptr::addr_of(&hid) );
 		let hu = hid as glcore::GLuint;
-		if *self.active != hu	{
-			self.active = Handle( hu );
+		if *self.active.handle != hu	{
+			assert!( false, "Active render buffer mismatch" );
 			false
 		}else {true}
-	}
-}
-
-
-
-pub struct Binding	{
-	target		: glcore::GLenum,
-	priv active	: Handle,
-	priv pool	: @mut ~[Handle],
-}
-
-impl context::ProxyState for Binding	{
-	fn sync_back( &mut self )-> bool	{
-		let mut hid = 0 as glcore::GLint;
-		glcore::glGetIntegerv( glcore::GL_FRAMEBUFFER_BINDING, ptr::addr_of(&hid) );
-		let hu = hid as glcore::GLuint;
-		if *self.active != hu	{
-			self.active = Handle( hu );
-			false
-		}else {true}	
-	}
-}
-
-impl Binding	{
-	pub fn new( value : glcore::GLenum )-> Binding	{
-		Binding{
-			target:value, active:Handle(0), pool:@mut ~[],
-		}
-	}
-
-	priv fn _bind( &mut self, h : Handle )	{
-		if *self.active != *h	{
-			self.active = h;
-			glcore::glBindFramebuffer( self.target, *h );
-		}
-	}
-
-	priv fn attach_target( &self, new : Target, old : &mut Target, slot : glcore::GLenum )-> bool	{
-		if *old != new	{
-			*old = new;
-			new.attach( self.target, slot )
-		}else	{true}
-	}
-
-	priv fn check( &self )	{
-		let code = glcore::glCheckFramebufferStatus( self.target );
-		if code == glcore::GL_FRAMEBUFFER_COMPLETE	{return};
-		let message =
-			if code == glcore::GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT			{~"format"}		else
-			//if code == glcore::GL_FRAMEBUFFER_INCOMPLETE_DIMENSIONS		{~"dimensions"}	else
-			if code == glcore::GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT	{~"missing"}	else
-			if code == glcore::GL_FRAMEBUFFER_UNSUPPORTED					{~"hardware"}	else
-			{~"unknown"};
-		fail!(fmt!( "FBO %d is incomplete: %s", *self.active as int, message ))
 	}
 }
 
@@ -204,34 +151,32 @@ pub impl Rect	{
 	}
 }
 
+pub struct BufferHandle( glcore::GLuint );
 
 pub struct Buffer	{
-	handle			: Handle,
+	handle			: BufferHandle,
 	priv draw_mask	: uint,
 	priv read_id	: Option<uint>,
 	stencil			: Target,
 	depth			: Target,
 	colors			: ~[Target],
-	priv pool		: @mut ~[Handle],
 }
 
-#[unsafe_destructor]
-impl Drop for Buffer	{
+impl Drop for BufferHandle	{
 	fn finalize( &self )	{
-		self.pool.push( self.handle );
+		glcore::glDeleteFramebuffers( 1, ptr::addr_of(&**self) );
 	}
 }
 
 pub impl Buffer	{
-	fn new_default()-> Buffer	{
-		Buffer{
-			handle:Handle(0),
-			draw_mask		:0x10u,	// invalid one
-			read_id			:None,	// actually, GL_BACK
-			stencil			:TarEmpty,
-			depth			:TarEmpty,
-			colors			:~[TarEmpty],
-			pool			:@mut ~[],
+	fn new_default()-> @mut Buffer	{
+		@mut Buffer{
+			handle		:BufferHandle(0),
+			draw_mask	:0x10u,	// invalid one
+			read_id		:None,	// actually, GL_BACK
+			stencil		:TarEmpty,
+			depth		:TarEmpty,
+			colors		:~[TarEmpty],
 		}
 	}
 	
@@ -269,47 +214,95 @@ impl context::ProxyState for Buffer	{
 }
 
 
-pub impl context::Context	{
-	fn create_render_buffer( &self, wid:uint, het:uint, sam:uint )-> Surface	{
-		let mut hid = 0 as glcore::GLuint;
-		glcore::glGenRenderbuffers( 1, ptr::addr_of(&hid) );
-		Surface{ handle:Handle(hid),
-			target:self.render_buffer.target,
-			width:wid, height:het, samples:sam,
-			pool:self.render_buffer.pool }
+
+pub struct Binding	{
+	target		: glcore::GLenum,
+	priv active	: @mut Buffer,
+}
+
+impl context::ProxyState for Binding	{
+	fn sync_back( &mut self )-> bool	{
+		let mut hid = 0 as glcore::GLint;
+		glcore::glGetIntegerv( glcore::GL_FRAMEBUFFER_BINDING, ptr::addr_of(&hid) );
+		let hu = hid as glcore::GLuint;
+		if *self.active.handle != hu	{
+			assert!( false, "Active frame buffer mismatch" );
+			false
+		}else {true}	
+	}
+}
+
+impl Binding	{
+	pub fn new( target:glcore::GLenum, active:@mut Buffer )-> Binding	{
+		Binding{ target:target, active:active }
 	}
 
-	priv fn _bind_render_buffer( &mut self, h : Handle )	{
-		let binding = &mut self.render_buffer;
-		if *binding.active != *h	{
-			binding.active = h;
-			glcore::glBindRenderbuffer( binding.target, *h );
+	priv fn bind( &mut self, b : @mut Buffer )	{
+		if !managed::mut_ptr_eq(self.active,b)	{
+			self.active = b;
+			glcore::glBindFramebuffer( self.target, *b.handle );
 		}
 	}
-	fn bind_render_buffer( &mut self, rb : &Surface )	{
-		self._bind_render_buffer( rb.handle );
-	}
-	fn unbind_render_buffers( &mut self )	{
-		self._bind_render_buffer( Handle(0) );
+
+	priv fn attach_target( &self, new : Target, old : &mut Target, slot : glcore::GLenum )-> bool	{
+		if *old != new	{
+			*old = new;
+			new.attach( self.target, slot )
+		}else	{true}
 	}
 
-	fn create_frame_buffer( &self )-> Buffer	{
+	priv fn check( &self )	{
+		let code = glcore::glCheckFramebufferStatus( self.target );
+		if code == glcore::GL_FRAMEBUFFER_COMPLETE	{return};
+		let message =
+			if code == glcore::GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT			{~"format"}		else
+			//if code == glcore::GL_FRAMEBUFFER_INCOMPLETE_DIMENSIONS		{~"dimensions"}	else
+			if code == glcore::GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT	{~"missing"}	else
+			if code == glcore::GL_FRAMEBUFFER_UNSUPPORTED					{~"hardware"}	else
+			{~"unknown"};
+		fail!(fmt!( "FBO %d is incomplete: %s", *self.active.handle as int, message ))
+	}
+}
+
+
+pub impl context::Context	{
+	fn create_render_buffer( &self, wid:uint, het:uint, sam:uint )-> @Surface	{
+		let mut hid = 0 as glcore::GLuint;
+		glcore::glGenRenderbuffers( 1, ptr::addr_of(&hid) );
+		@Surface{ handle:SurfaceHandle(hid),
+			target:self.render_buffer.target,
+			width:wid, height:het, samples:sam,
+		}
+	}
+
+	priv fn bind_render_buffer( &mut self, s : @Surface )	{
+		let binding = &mut self.render_buffer;
+		assert!( s.target == binding.target );
+		if !managed::ptr_eq(binding.active,s)	{
+			binding.active = s;
+			glcore::glBindRenderbuffer( binding.target, *s.handle );
+		}
+	}
+	fn unbind_render_buffers( &mut self )	{
+		self.bind_render_buffer( self.render_buffer.default );
+	}
+
+	fn create_frame_buffer( &self )-> @mut Buffer	{
 		let mut hid = 0 as glcore::GLuint;
 		glcore::glGenFramebuffers( 1, ptr::addr_of(&hid) );
-		Buffer{ handle:Handle(hid),
+		@mut Buffer{ handle:BufferHandle(hid),
 			draw_mask:1u, read_id:Some(0u),
 			stencil:TarEmpty, depth:TarEmpty,
 			colors	: vec::from_elem( self.caps.max_color_attachments, TarEmpty ),
-			pool	: self.frame_buffer_draw.pool,
 		}
 	}
 
-	fn bind_frame_buffer( &mut self, fb : &mut Buffer, draw : bool,
+	fn bind_frame_buffer( &mut self, fb : @mut Buffer, draw : bool,
 			stencil : Target, depth : Target, colors : ~[Target] )	{
 		let binding = if draw {&mut self.frame_buffer_draw} else {&mut self.frame_buffer_read};
-		binding._bind( fb.handle );
+		binding.bind( fb );
 		// work around main framebuffer
-		if *fb.handle == 0	{
+		if managed::mut_ptr_eq(fb,self.default_frame_buffer)	{
 			let use_color = colors.len()!=0u;
 			let value = if use_color {glcore::GL_BACK} else {glcore::GL_NONE} ;
 			//FIXME: cache this
@@ -380,34 +373,10 @@ pub impl context::Context	{
 		binding.check();	//FIXME: debug only
 	}
 
-	/*fn unbind_frame_buffers()	{
-		self._bind_frame_buffer( &self.framebuffer_draw, Handle(0) );
-		self._bind_frame_buffer( &self.framebuffer_read, Handle(0) );
+	fn unbind_frame_buffers( &mut self )	{
+		self.frame_buffer_draw.bind( self.default_frame_buffer );
+		self.frame_buffer_read.bind( self.default_frame_buffer );
 		glcore::glDrawBuffer( glcore::GL_BACK );
 		glcore::glReadBuffer( glcore::GL_NONE );
-	}*/
-
-	fn cleanup_frames( &mut self )	{
-		let rb_pool : &mut ~[Handle] = self.render_buffer.pool;
-		while !rb_pool.is_empty()	{
-			let h = rb_pool.pop();
-			assert!( *h != 0 );
-			if *h == *self.render_buffer.active	{
-				self.unbind_render_buffers();
-			}
-			glcore::glDeleteRenderbuffers( 1, ptr::addr_of(&*h) );	
-		}
-		let fb_pool : &mut ~[Handle] = self.frame_buffer_draw.pool;
-		while !fb_pool.is_empty()	{
-			let h = fb_pool.pop();
-			assert!( *h != 0 );
-			if *h == *self.frame_buffer_draw.active	{
-				//self.unbind_draw_buffer();
-			}
-			if *h == *self.frame_buffer_read.active	{
-				//self.unbind_read_buffer();
-			}
-			glcore::glDeleteFramebuffers( 1, ptr::addr_of(&*h) );
-		}
 	}
 }

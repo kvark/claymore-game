@@ -17,7 +17,7 @@ pub impl Data	{
 		let mut rast = copy gc.default_rast;
 		rast.prime.cull = true;
 		rast.set_depth( ~"<=", true );
-		let out = ( @mut gc.create_frame_buffer(), pmap, rast );
+		let out = ( gc.create_frame_buffer(), pmap, rast );
 		let clear = engine::call::ClearData{
 				color:None, depth:Some(1f), stencil:None
 			}.gen_call( copy out );

@@ -107,6 +107,7 @@ pub fn create( wid : uint, het : uint )-> Context	{
 	};
 	let rast	= rast::make_default( wid, het );
 	let color	= rast::Color{r:0f32,g:0f32,b:0f32,a:0f32};
+	let def_fb	= frame::Buffer::new_default();
 	// fill up the context
 	Context{
 		caps				: caps,
@@ -116,13 +117,13 @@ pub fn create( wid : uint, het : uint )-> Context	{
 		vertex_array		: buf::VaBinding::new(),
 		array_buffer		: buf::Binding::new( glcore::GL_ARRAY_BUFFER ),
 		render_buffer		: frame::RenBinding::new(),
-		frame_buffer_draw	: frame::Binding::new( glcore::GL_DRAW_FRAMEBUFFER ),
-		frame_buffer_read	: frame::Binding::new( glcore::GL_READ_FRAMEBUFFER ),
+		frame_buffer_draw	: frame::Binding::new( glcore::GL_DRAW_FRAMEBUFFER, def_fb ),
+		frame_buffer_read	: frame::Binding::new( glcore::GL_READ_FRAMEBUFFER, def_fb ),
 		texture				: texture::Binding::new(),
 		screen_size			: (wid,het),
 		default_rast		: rast,
 		default_vertex_array: @mut buf::VertexArray::new_default(),
-		default_frame_buffer: @mut frame::Buffer::new_default(),
+		default_frame_buffer: def_fb,
 	}
 }
 
@@ -160,7 +161,6 @@ pub impl Context	{
 	fn cleanup( &mut self, _lg : &Log )	{
 		self.cleanup_shaders();
 		self.cleanup_buffers();
-		self.cleanup_frames();
 	}
 	fn set_clear_color( &mut self, c : &rast::Color )	{
 		if self.clear_data.color != *c	{
