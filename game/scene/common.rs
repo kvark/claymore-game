@@ -460,7 +460,7 @@ pub impl SceneContext	{
 			};
 			let vao = match opt_vao	{
 				Some(v) => v,
-				None	=> @mut gc.create_vertex_array(),
+				None	=> gc.create_vertex_array(),
 			};
 			let mesh = self.query_mesh( &ient.mesh, gc, lg );
 			let (r_min,r_max) = ient.range;

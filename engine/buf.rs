@@ -1,40 +1,38 @@
 extern mod glcore;
 
+use core::managed;
+
 use context;
 use mesh;
 
 
 static MAX_VERTEX_ATTRIBS	:uint	= 8;
-pub struct Handle( glcore::GLuint );
+
+#[deriving(Eq)]
+pub struct ObjectHandle( glcore::GLuint );
+#[deriving(Eq)]
+pub struct ArrayHandle( glcore::GLuint );
 pub struct Target( glcore::GLenum );
 
 
+#[deriving(Eq)]
 pub struct Object	{
-	handle		: Handle,
-	priv pool	: @mut ~[Handle],
+	handle		: ObjectHandle,
 }
 
-#[unsafe_destructor]
-impl Drop for Object	{
+impl Drop for ObjectHandle	{
 	fn finalize( &self )	{
-		self.pool.push( self.handle );
-	}
-}
-
-impl cmp::Eq for Object	{
-	fn eq( &self, other : &Object )-> bool	{
-		*self.handle == *other.handle
-	}
-	fn ne( &self, other : &Object )-> bool	{
-		!self.eq( other )
+		if **self != 0	{
+			glcore::glDeleteBuffers( 1, ptr::addr_of(&**self) );
+		}
 	}
 }
 
 
 pub struct Binding	{
 	target		: Target,
-	priv active	: Handle,
-	priv pool	: @mut ~[Handle],
+	default		: @Object,
+	priv active	: @Object,
 }
 
 impl context::ProxyState for Binding	{
@@ -50,24 +48,24 @@ impl context::ProxyState for Binding	{
 			};
 		let hid = 0 as glcore::GLint;
 		glcore::glGetIntegerv( query, ptr::addr_of(&hid) );
-		let h = Handle( hid as glcore::GLuint );
-		if *self.active != *h	{
-			self.active = h;
+		let h = ObjectHandle( hid as glcore::GLuint );
+		if self.active.handle != h	{
+			self.active = self.default;
 			false
 		}else	{ true }
 	}
 }
 
 pub impl Binding	{
-	fn new( value : glcore::GLenum )-> Binding	{
+	fn new( value : glcore::GLenum, default : @Object )-> Binding	{
 		Binding{
-			target : Target(value), active : Handle(0), pool : @mut~[]
+			target : Target(value), default : default, active : default
 		}
 	}
-	priv fn _bind( &mut self, h : Handle )	{
-		if *self.active != *h	{
-			self.active = h;
-			glcore::glBindBuffer( *self.target, *h );
+	priv fn bind( &mut self, ob : @Object )	{
+		if !managed::ptr_eq(self.active,ob)	{
+			self.active = ob;
+			glcore::glBindBuffer( *self.target, *ob.handle );
 		}
 	}
 }
@@ -78,29 +76,15 @@ struct VertexData	{
 	attrib	: mesh::Attribute,
 }
 
-priv fn _create_zero_data()-> ~[VertexData]	{
-	let default = @Object{ handle:Handle(0), pool:@mut ~[] };
-	do vec::from_fn(MAX_VERTEX_ATTRIBS) |_i|	{
-		VertexData{ enabled: false, attrib: mesh::Attribute{
-				kind: glcore::GL_NONE, count: 0u,
-				normalized: true, interpolated: true,
-				buffer: default, stride: 0u, offset: 0u,
-		}}
-	}
-}
-
-
 pub struct VertexArray	{
-	handle			: Handle,
+	handle			: ArrayHandle,
 	data			: ~[VertexData],
 	element			: Binding,
-	priv pool		: @mut ~[Handle],
 }
 
-#[unsafe_destructor]
-impl Drop for VertexArray	{
+impl Drop for ArrayHandle	{
 	fn finalize( &self )	{
-		self.pool.push( self.handle );
+		glcore::glDeleteVertexArrays( 1, ptr::addr_of(&**self) );
 	}
 }
 
@@ -121,80 +105,92 @@ pub impl VertexArray	{
 		}
 		m
 	}
-	fn new_default()-> VertexArray	{
-		VertexArray{ handle : Handle(0), data : _create_zero_data(),
-			element	: Binding::new( glcore::GL_ELEMENT_ARRAY_BUFFER ),
-			pool : @mut ~[],
-		}	
-	}
 }
 
 
 pub struct VaBinding	{
-	priv active	: Handle,
-	priv pool	: @mut ~[Handle],
+	priv active	: @mut VertexArray,
+	default		: @mut VertexArray,
+	default_object	: @Object,
 }
 
-pub impl VaBinding	{
-	fn is_active( &self, va : &VertexArray )-> bool	{
-		*self.active == *va.handle
+impl VaBinding	{
+	priv fn create_data( buf : @Object )-> ~[VertexData]	{
+		do vec::from_fn(MAX_VERTEX_ATTRIBS) |_i|	{
+			VertexData{ enabled: false, attrib: mesh::Attribute{
+					kind: glcore::GL_NONE, count: 0u,
+					normalized: true, interpolated: true,
+					buffer: buf, stride: 0u, offset: 0u,
+			}}
+		}
 	}
 
-	fn new()-> VaBinding	{
+	pub fn create_zero_data( &self )-> ~[VertexData]	{
+		VaBinding::create_data( self.default_object )
+	}
+
+	pub fn is_active( &self, va : @mut VertexArray )-> bool	{
+		managed::mut_ptr_eq(self.active, va)
+	}
+
+	pub fn new()-> VaBinding	{
+		let def_object = @Object{ handle : ObjectHandle(0) };
+		let def = @mut VertexArray{ handle : ArrayHandle(0),
+			data : VaBinding::create_data(def_object),
+			element	: Binding::new( glcore::GL_ELEMENT_ARRAY_BUFFER, def_object ),
+		};
 		VaBinding{
-			active : Handle(0), pool : @mut~[]
+			active	: def,
+			default	: def,
+			default_object: def_object,
 		}
 	}
 }
 
 
 pub impl context::Context	{
-	fn create_vertex_array( &self )-> VertexArray	{
+	fn create_vertex_array( &self )-> @mut VertexArray	{
 		let mut hid = 0 as glcore::GLuint;
 		glcore::glGenVertexArrays( 1, ptr::addr_of(&hid) );
-		VertexArray{ handle : Handle(hid), data : _create_zero_data(),
-			element	: Binding::new( glcore::GL_ELEMENT_ARRAY_BUFFER ),
-			pool : self.vertex_array.pool,
+		@mut VertexArray{ handle : ArrayHandle(hid), data : self.vertex_array.create_zero_data(),
+			element	: Binding::new( glcore::GL_ELEMENT_ARRAY_BUFFER, self.vertex_array.default_object ),
 		}
 	}
 
-	priv fn _bind_vertex_array( &mut self, h : Handle )	{
-		if *self.vertex_array.active != *h	{
-			self.vertex_array.active = h;
-			glcore::glBindVertexArray( *h );
+	fn bind_vertex_array( &mut self, va : @mut VertexArray )	{
+		if !self.vertex_array.is_active( va )	{
+			self.vertex_array.active = va;
+			glcore::glBindVertexArray( *va.handle );
 		}
-	}
-	fn bind_vertex_array( &mut self, va : &VertexArray )	{
-		self._bind_vertex_array( va.handle );
 	}
 	fn unbind_vertex_array( &mut self )	{
-		self._bind_vertex_array( Handle(0) );
+		self.bind_vertex_array( self.vertex_array.default );
 	}
 
-	fn create_buffer( &self )-> Object	{
+	fn create_buffer( &self )-> @Object	{
 		let mut hid = 0 as glcore::GLuint;
 		glcore::glGenBuffers( 1, ptr::addr_of(&hid) );
-		Object{ handle:Handle(hid), pool:self.array_buffer.pool }
+		@Object{ handle:ObjectHandle(hid) }
 	}
 
-	fn bind_element_buffer( &self, va : &mut VertexArray, obj : &Object  )	{
-		assert!( *self.vertex_array.active == *va.handle );
-		va.element._bind( obj.handle );
+	fn bind_element_buffer( &self, va : @mut VertexArray, obj : @Object  )	{
+		assert!( self.vertex_array.is_active(va) );
+		va.element.bind( obj );
 	}
-	fn bind_buffer( &mut self, obj : &Object )	{
-		self.array_buffer._bind( obj.handle );
+	fn bind_buffer( &mut self, obj : @Object )	{
+		self.array_buffer.bind( obj );
 	}
 	fn unbind_buffer( &mut self )	{
-		self.array_buffer._bind( Handle(0) );
+		self.array_buffer.bind( self.array_buffer.default );
 	}
 
-	fn allocate_buffer( &mut self, obj : &Object, size : uint, dynamic : bool )	{
+	fn allocate_buffer( &mut self, obj : @Object, size : uint, dynamic : bool )	{
 		self.bind_buffer( obj );
 		let usage = if dynamic {glcore::GL_DYNAMIC_DRAW} else {glcore::GL_STATIC_DRAW};
 		glcore::glBufferData( *self.array_buffer.target, size as glcore::GLsizeiptr, ptr::null(), usage );
 	}
 
-	fn load_buffer<T>( &mut self, obj : &Object, data : &[T], dynamic : bool )	{
+	fn load_buffer<T>( &mut self, obj : @Object, data : &[T], dynamic : bool )	{
 		self.bind_buffer( obj );
 		let usage = if dynamic {glcore::GL_DYNAMIC_DRAW} else {glcore::GL_STATIC_DRAW};
 		let size = data.len() * sys::size_of::<T>() as glcore::GLsizeiptr;
@@ -202,37 +198,15 @@ pub impl context::Context	{
 		glcore::glBufferData( *self.array_buffer.target, size, raw, usage );
 	}
 
-	fn create_buffer_sized( &mut self, size : uint )-> Object	{
+	fn create_buffer_sized( &mut self, size : uint )-> @Object	{
 		let obj = self.create_buffer();
-		self.allocate_buffer( &obj, size, true );
+		self.allocate_buffer( obj, size, true );
 		obj
 	}
 
-	fn create_buffer_loaded<T>( &mut self, data : &[T] )-> Object	{
+	fn create_buffer_loaded<T>( &mut self, data : &[T] )-> @Object	{
 		let obj = self.create_buffer();
-		self.load_buffer( &obj, data, false );
+		self.load_buffer( obj, data, false );
 		obj
-	}
-
-	fn cleanup_buffers( &mut self )	{
-		let va_pool : &mut ~[Handle] = self.vertex_array.pool;
-		while !va_pool.is_empty()	{
-			let h = va_pool.pop();
-			assert!( *h != 0 );
-			if *h == *self.vertex_array.active	{
-				self.unbind_vertex_array();
-			}
-			glcore::glDeleteVertexArrays( 1, ptr::addr_of(&*h) );
-		}
-		let ab_pool : &mut ~[Handle] = self.array_buffer.pool;
-		while !ab_pool.is_empty()	{
-			let h = ab_pool.pop();
-			assert!( *h != 0 );
-			//ISSUE: active index buffers are not checked
-			if *h == *self.array_buffer.active	{
-				self.unbind_buffer();
-			}
-			glcore::glDeleteBuffers( 1, ptr::addr_of(&*h) );
-		}
 	}
 }

@@ -59,7 +59,7 @@ pub impl Context	{
 			tech_bake	: t_bake,
 			tech_apply	: t_apply,
 			fbo			: gc.create_frame_buffer(),
-			vao			: @mut gc.create_vertex_array(),
+			vao			: gc.create_vertex_array(),
 			ta_direction: ta_dir,
 			ta_color	: ta_col,
 			t_depth		: depth,

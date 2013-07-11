@@ -163,7 +163,7 @@ pub fn make_scene( ct : &mut engine::context::Context, aspect : float, lg : &eng
 	};
 	// load basic material & vao
 	let mat = @engine::draw::load_material(~"data/code/mat/phong");
-	let vao = @mut ct.create_vertex_array();
+	let vao = ct.create_vertex_array();
 	// load battle landscape
 	let mut battle_land = {
 		let mesh = @engine::load::load_mesh( ~"data/mesh/battle-test.k3mesh", ct, lg );

@@ -192,7 +192,7 @@ pub fn read_mesh( br : &mut Reader, context : &mut context::Context, lg : &conte
 	let mut mesh = context.create_mesh( br.get_string(), ~"3", n_vert, n_ind );
 	let mut num_buffers = br.get_uint(1u);
 	while num_buffers>0u	{
-		let buffer = @context.create_buffer();
+		let buffer = context.create_buffer();
 		let stride = br.get_uint(1u);
 		let mut offset = 0u;
 		let format = br.get_string();

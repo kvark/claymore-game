@@ -290,7 +290,7 @@ pub impl Scene	{
 
 
 pub fn make_scene( el : &main::Elements, ct : &mut engine::context::Context, aspect : float, lg : &engine::context::Log )-> Scene	{
-	let vao = @mut ct.create_vertex_array();
+	let vao = ct.create_vertex_array();
 	let mut scene = scene::load_scene( ~"data/claymore-2a", ct, Some(vao), aspect, lg );
 	let detail_info = scene::load_config::<~[scene::EntityInfo]>( ~"data/details.json" );
 	let mut details = scene.context.parse_group( detail_info, ct, Some(vao), lg );

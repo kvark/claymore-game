@@ -126,7 +126,7 @@ pub impl context::Context	{
 			count: count,
 			normalized: norm,
 			interpolated: true,
-			buffer: @self.create_buffer_loaded( vdata ),
+			buffer: self.create_buffer_loaded( vdata ),
 			stride: count * sys::size_of::<T>(),
 			offset: 0u
 		}
@@ -146,20 +146,22 @@ pub impl context::Context	{
 		Mesh{ name:name, attribs:ats, index:None, poly_type:ptype, num_vert:nv, num_ind:ni, black_list:@mut ~[] }
 	}
 
-	fn disable_mesh_attribs( &self, va : &mut buf::VertexArray, clean_mask : uint )	{
+	fn disable_mesh_attribs( &self, va : @mut buf::VertexArray, clean_mask : uint )	{
 		assert!( self.vertex_array.is_active(va) );
-		for uint::range(0,va.data.len()) |i|	{
-			if clean_mask&(1<<i)!=0u && va.data[i].enabled	{
+		let varray = &mut va.data;
+		for uint::range(0,varray.len()) |i|	{
+			if clean_mask&(1<<i)!=0u && varray[i].enabled	{
 				glcore::glDisableVertexAttribArray( i as glcore::GLuint );
-				va.data[i].enabled = false;
+				varray[i].enabled = false;
 			}
 		}
 	}
 
-	fn bind_mesh_attrib( &mut self, va : &mut buf::VertexArray, loc : uint, at : &Attribute, is_int : bool )	{
+	fn bind_mesh_attrib( &mut self, va : @mut buf::VertexArray, loc : uint, at : &Attribute, is_int : bool )	{
 		assert!( self.vertex_array.is_active(va) );
 		self.bind_buffer( at.buffer );
-		let vdata = &mut va.data[loc];
+		let varray = &mut va.data;
+		let vdata = &mut varray[loc];
 		// update vertex info
 		if vdata.attrib != *at	{
 			vdata.attrib = *at;

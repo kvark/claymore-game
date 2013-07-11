@@ -18,7 +18,9 @@ pub struct Target( glcore::GLenum );
 
 impl Drop for Handle	{
 	fn finalize( &self )	{
-		glcore::glDeleteTextures( 1, ptr::addr_of(&**self) );
+		if **self != 0	{
+			glcore::glDeleteTextures( 1, ptr::addr_of(&**self) );
+		}
 	}
 }
 
