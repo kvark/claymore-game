@@ -63,11 +63,9 @@ pub struct Font	{
 	priv face		: FT_Face,
 	kern_offset		: int,
 	line_offset		: int,
-	priv context	: @Context,
 	//priv mut cache	: send_map::linear::LinearMap<char,Glyph>,
 }
 
-#[unsafe_destructor]
 impl Drop for Font	{
 	fn finalize( &self )	{
 		bindgen::FT_Done_Face( self.face ).
@@ -247,7 +245,7 @@ impl Font	{
 
 
 pub impl Context	{
-	fn load_font( @self, path : &str, index : uint, xs : uint, ys : uint,
+	fn load_font( &self, path : &str, index : uint, xs : uint, ys : uint,
 			kerning : float, line_gap : float )-> Font	{
 		let mut face : FT_Face = ptr::null();
 		do str::as_c_str(path) |text|	{
@@ -258,7 +256,7 @@ pub impl Context	{
 		bindgen::FT_Set_Pixel_Sizes( face,
 			xs as FT_UInt, ys as FT_UInt ).
 			check( "Set_Pixel_Sizes" );
-		Font{ face:face, context:self,
+		Font{ face:face,
 			kern_offset: kerning * ((1<<SHIFT) as float) as int,
 			line_offset: line_gap* ((1<<SHIFT) as float) as int,
 			//cache	:send_map::linear::LinearMap::<char,Glyph>(),

@@ -79,12 +79,14 @@ struct VertexData	{
 pub struct VertexArray	{
 	handle			: ArrayHandle,
 	data			: ~[VertexData],
-	element			: Binding,
+	element			: @Object,
 }
 
 impl Drop for ArrayHandle	{
 	fn finalize( &self )	{
-		glcore::glDeleteVertexArrays( 1, ptr::addr_of(&**self) );
+		if **self != 0	{
+			glcore::glDeleteVertexArrays( 1, ptr::addr_of(&**self) );
+		}
 	}
 }
 
@@ -137,7 +139,7 @@ impl VaBinding	{
 		let def_object = @Object{ handle : ObjectHandle(0) };
 		let def = @mut VertexArray{ handle : ArrayHandle(0),
 			data : VaBinding::create_data(def_object),
-			element	: Binding::new( glcore::GL_ELEMENT_ARRAY_BUFFER, def_object ),
+			element	: def_object,
 		};
 		VaBinding{
 			active	: def,
@@ -153,13 +155,13 @@ pub impl context::Context	{
 		let mut hid = 0 as glcore::GLuint;
 		glcore::glGenVertexArrays( 1, ptr::addr_of(&hid) );
 		@mut VertexArray{ handle : ArrayHandle(hid), data : self.vertex_array.create_zero_data(),
-			element	: Binding::new( glcore::GL_ELEMENT_ARRAY_BUFFER, self.vertex_array.default_object ),
-		}
+			element	: self.vertex_array.default_object }
 	}
 
 	fn bind_vertex_array( &mut self, va : @mut VertexArray )	{
 		if !self.vertex_array.is_active( va )	{
 			self.vertex_array.active = va;
+			self.element_buffer.active = va.element;
 			glcore::glBindVertexArray( *va.handle );
 		}
 	}
@@ -173,9 +175,10 @@ pub impl context::Context	{
 		@Object{ handle:ObjectHandle(hid) }
 	}
 
-	fn bind_element_buffer( &self, va : @mut VertexArray, obj : @Object  )	{
+	fn bind_element_buffer( &mut self, va : @mut VertexArray, obj : @Object  )	{
 		assert!( self.vertex_array.is_active(va) );
-		va.element.bind( obj );
+		va.element = obj;
+		self.element_buffer.bind( obj );
 	}
 	fn bind_buffer( &mut self, obj : @Object )	{
 		self.array_buffer.bind( obj );
