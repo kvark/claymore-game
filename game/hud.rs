@@ -450,7 +450,7 @@ pub fn load_screen( path : ~str, ct : &mut engine::context::Context,
 	let mut map_texture	: LinearMap<~str,@engine::texture::Texture> = LinearMap::new();
 	lg.add(fmt!( "\tParsing %u images", iscreen.images.len() ));
 	let mut map_image : LinearMap<~str,@Image> = LinearMap::new();
-	let prog_image = @engine::load::load_program( ct, ~"data/code/hud/image", lg );
+	let prog_image = engine::load::load_program( ct, ~"data/code/hud/image", lg );
 	for iscreen.images.each() |iimage|	{
 		let path = ~"data/texture/hud/" + iimage.path;
 		let (texture,new) = match map_texture.find(&path)	{
@@ -474,7 +474,7 @@ pub fn load_screen( path : ~str, ct : &mut engine::context::Context,
 	lg.add(fmt!( "\tParsing %u labels", iscreen.labels.len() ));
 	let mut map_font	: LinearMap<FontInfo,@engine::font::Font>	= LinearMap::new();
 	let mut map_label	: LinearMap<~str,@mut Label>				= LinearMap::new();
-	let prog_label = @engine::load::load_program( ct, ~"data/code/hud/text", lg );
+	let prog_label = engine::load::load_program( ct, ~"data/code/hud/text", lg );
 	for iscreen.labels.each() |ilabel|	{
 		let (font,new) = match map_font.find(&ilabel.font)	{
 			Some(f)	=> (*f,false),

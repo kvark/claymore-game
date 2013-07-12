@@ -143,7 +143,7 @@ pub fn read_space( br : &Reader )-> space::QuatSpace	{
 	}
 }
 
-pub fn load_program( ct : &context::Context, path : ~str, lg : &context::Log )-> shade::Program	{
+pub fn load_program( ct : &context::Context, path : ~str, lg : &context::Log )-> @shade::Program	{
 	lg.add(fmt!( "Loading program: %s", path ));
 	let sv = ct.create_shader( 'v', load_text( path + ~".glslv" ));
 	let sf = ct.create_shader( 'f', load_text( path + ~".glslf" ));

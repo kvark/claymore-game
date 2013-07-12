@@ -158,10 +158,6 @@ pub impl Context	{
 		};
 		fail!(fmt!( "%s: GL error 0x%x (%s)", where, code as uint, message ))
 	}
-	//FIXME: remove this
-	fn cleanup( &mut self, _lg : &Log )	{
-		self.cleanup_shaders();
-	}
 	fn set_clear_color( &mut self, c : &rast::Color )	{
 		if self.clear_data.color != *c	{
 			self.clear_data.color = *c;

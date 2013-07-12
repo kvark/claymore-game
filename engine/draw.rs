@@ -138,7 +138,7 @@ pub impl Technique	{
 		}else	{
 			~[ ct.create_shader('v',s_vert), ct.create_shader('f',s_frag) ]
 		};
-		Some( @ct.create_program(shaders,lg) )
+		Some( ct.create_program(shaders,lg) )
 	}
 
 	fn get_program( &self, e : &Entity, ct : &context::Context, lg : &context::Log )-> Option<@shade::Program>	{

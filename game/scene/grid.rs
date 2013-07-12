@@ -44,7 +44,7 @@ pub impl Grid	{
 		data.insert( ~"u_Size",		engine::shade::UniFloatVec(par_size) );
 		Grid{
 			mesh	: @engine::mesh::create_quad( ct ),
-			program	: @engine::load::load_program( ct, ~"data/code-game/grid", lg ),
+			program	: engine::load::load_program( ct, ~"data/code-game/grid", lg ),
 			data	: data,
 			rast	: rast,
 			nseg	: segments,

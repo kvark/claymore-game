@@ -118,7 +118,6 @@ pub impl Game	{
 		// done
 		self.frames += 1;
 		self.audio.cleanup();
-		self.context.cleanup( &self.journal );
 		self.context.check( ~"render" );
 		true
 	}

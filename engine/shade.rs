@@ -2,6 +2,7 @@ extern mod glcore;
 extern mod lmath;
 
 use core::hashmap::linear::LinearMap;
+use core::managed;
 
 use lmath::vec::*;
 use lmath::mat::*;
@@ -10,32 +11,37 @@ use context;
 use texture;
 
 
+pub struct Location( glcore::GLint );
 #[deriving(Eq)]
-pub struct Handle(	glcore::GLuint	);
-pub struct Location(glcore::GLint	);
+pub struct ObjectHandle( glcore::GLuint );
+#[deriving(Eq)]
+pub struct ProgramHandle( glcore::GLuint );
 
 
 pub struct Binding	{
-	priv active_program	: Handle,
-	priv pool_objects	: @mut ~[Handle],
-	priv pool_programs	: @mut ~[Handle],
+	priv active		: @Program,
+	priv default	: @Program,
 }
 
 impl context::ProxyState for Binding	{
 	fn sync_back( &mut self )-> bool	{
 		let mut hid = 0 as glcore::GLint;
 		glcore::glGetIntegerv( glcore::GL_CURRENT_PROGRAM, ptr::addr_of(&hid) );
-		let program = Handle( hid as glcore::GLuint );
-		if *self.active_program != *program	{
-			self.active_program = program;
-			false
-		}else	{true}
+		*self.active.handle == hid as glcore::GLuint
 	}
 }
 
 pub impl Binding	{
 	fn new()-> Binding	{
-		Binding{ active_program:Handle(0), pool_objects:@mut ~[], pool_programs:@mut ~[] }
+		let zero = @Program	{
+			handle	: ProgramHandle(0),
+			alive	: true,
+			info	: ~"",
+			attribs	: LinearMap::with_capacity::<~str,Attribute>(0),
+			params	: LinearMap::with_capacity::<~str,Parameter>(0),
+			outputs	: @mut ~[],
+		};
+		Binding{ active:zero, default:zero }
 	}
 }
 
@@ -105,33 +111,33 @@ struct Parameter	{
 }
 
 priv impl Parameter	{
-	fn read( &self, h : Handle )-> bool	{
+	fn read( &self, h : &ProgramHandle )-> bool	{
 		let loc = *self.loc;
 		assert!( loc>=0 && self.size==1u );
 		*self.value = match self.storage	{
 			glcore::GL_FLOAT	=> {
 				let mut v = 0f32;
-				glcore::glGetUniformfv( *h, loc, ptr::addr_of(&v) );
+				glcore::glGetUniformfv( **h, loc, ptr::addr_of(&v) );
 				UniFloat(v as float)
 			},
 			glcore::GL_INT	=>	{
 				let mut v = 0i32;
-				glcore::glGetUniformiv( *h, loc, ptr::addr_of(&v) );
+				glcore::glGetUniformiv( **h, loc, ptr::addr_of(&v) );
 				UniInt(v as int)
 			},
 			glcore::GL_FLOAT_VEC4	=>	{
 				let mut v = vec4::zero();
-				glcore::glGetUniformfv( *h, loc, v.to_ptr() );
+				glcore::glGetUniformfv( **h, loc, v.to_ptr() );
 				UniFloatVec(v)
 			},
 			glcore::GL_INT_VEC4	=>	{
 				let mut v = ivec4::zero();
-				glcore::glGetUniformiv( *h, loc, v.to_ptr() );
+				glcore::glGetUniformiv( **h, loc, v.to_ptr() );
 				UniIntVec(v)
 			},
 			glcore::GL_FLOAT_MAT4	=>	{
 				let mut v = mat4::zero();
-				glcore::glGetUniformfv( *h, loc, ptr::addr_of(&v.x.x) );
+				glcore::glGetUniformfv( **h, loc, ptr::addr_of(&v.x.x) );
 				UniMatrix(false,v)
 			},
 			_	=>	{return false}
@@ -161,35 +167,37 @@ pub type ParaMap	= LinearMap<~str,Parameter>;
 pub type DataMap	= LinearMap<~str,Uniform>;
 
 struct Object	{
-	handle	: Handle,
+	handle	: ObjectHandle,
 	target	: glcore::GLenum,
 	alive	: bool,
 	info	: ~str,
-	priv pool	: @mut ~[Handle],
 }
 
-#[unsafe_destructor]
-impl Drop for Object	{
+
+impl Drop for ObjectHandle	{
 	fn finalize( &self )	{
-		self.pool.push( self.handle );
+		if **self != 0	{
+			glcore::glDeleteShader( **self );
+		}
 	}
 }
 
 
 pub struct Program	{
-	handle	: Handle,
+	handle	: ProgramHandle,
 	alive	: bool,
 	info	: ~str,
 	attribs	: AttriMap,
 	params	: ParaMap,
 	priv outputs	: @mut ~[~str],	//FIXME
-	priv pool		: @mut ~[Handle],
 }
 
-#[unsafe_destructor]
-impl Drop for Program	{
+
+impl Drop for ProgramHandle	{
 	fn finalize( &self )	{
-		self.pool.push( self.handle );
+		if **self != 0	{
+			glcore::glDeleteProgram( **self );
+		}
 	}
 }
 
@@ -197,7 +205,7 @@ pub impl Program	{
 	fn read_parameter( &self, name : ~str )-> Uniform	{
 		match self.params.find(&name)	{
 			Some(par) =>	{
-				par.read( self.handle );
+				par.read( &self.handle );
 				copy *par.value
 			},
 			None => Unitialized
@@ -235,12 +243,12 @@ impl context::ProxyState for Program	{
 }
 
 
-priv fn query_attributes( h : Handle, lg : &context::Log )-> AttriMap	{
+priv fn query_attributes( h : &ProgramHandle, lg : &context::Log )-> AttriMap	{
 	//assert glcore::glGetError() == 0;
 	let num		= 0 as glcore::GLint;
 	let max_len	= 0 as glcore::GLint;
-	glcore::glGetProgramiv( *h, glcore::GL_ACTIVE_ATTRIBUTES, ptr::addr_of(&num) );
-	glcore::glGetProgramiv( *h, glcore::GL_ACTIVE_ATTRIBUTE_MAX_LENGTH, ptr::addr_of(&max_len) );
+	glcore::glGetProgramiv( **h, glcore::GL_ACTIVE_ATTRIBUTES, ptr::addr_of(&num) );
+	glcore::glGetProgramiv( **h, glcore::GL_ACTIVE_ATTRIBUTE_MAX_LENGTH, ptr::addr_of(&max_len) );
 	let mut info_bytes	= vec::from_elem( max_len as uint, 0 as libc::c_char );
 	let raw_bytes		= unsafe{ vec::raw::to_ptr(info_bytes) };
 	lg.add(fmt!( "\tQuerying %d attributes:", num as int ));
@@ -249,12 +257,12 @@ priv fn query_attributes( h : Handle, lg : &context::Log )-> AttriMap	{
 		let mut length	= 0 as glcore::GLint;
 		let mut size	= 0 as glcore::GLint;
 		let mut storage	= 0 as glcore::GLenum;
-		glcore::glGetActiveAttrib( *h, i as glcore::GLuint, max_len,
+		glcore::glGetActiveAttrib( **h, i as glcore::GLuint, max_len,
 			ptr::addr_of(&length), ptr::addr_of(&size),
 			ptr::addr_of(&storage), raw_bytes );
 		let name = unsafe{ str::raw::from_c_str_len( raw_bytes, length as uint ) };
 		info_bytes[length] = 0;
-		let loc = glcore::glGetAttribLocation( *h, raw_bytes );
+		let loc = glcore::glGetAttribLocation( **h, raw_bytes );
 		lg.add(fmt!( "\t\t[%d] = '%s',\tformat %d", loc as int, name, storage as int ));
 		rez.insert( name, Attribute{ loc:loc as uint, storage:storage, size:size as uint } );
 	}
@@ -262,12 +270,12 @@ priv fn query_attributes( h : Handle, lg : &context::Log )-> AttriMap	{
 }
 
 
-priv fn query_parameters( h : Handle, lg : &context::Log )-> ParaMap	{
+priv fn query_parameters( h : &ProgramHandle, lg : &context::Log )-> ParaMap	{
 	//assert glcore::glGetError() == 0;
 	let num		= 0 as glcore::GLint;
 	let max_len	= 0 as glcore::GLint;
-	glcore::glGetProgramiv( *h, glcore::GL_ACTIVE_UNIFORMS, ptr::addr_of(&num) );
-	glcore::glGetProgramiv( *h, glcore::GL_ACTIVE_UNIFORM_MAX_LENGTH, ptr::addr_of(&max_len) );
+	glcore::glGetProgramiv( **h, glcore::GL_ACTIVE_UNIFORMS, ptr::addr_of(&num) );
+	glcore::glGetProgramiv( **h, glcore::GL_ACTIVE_UNIFORM_MAX_LENGTH, ptr::addr_of(&max_len) );
 	let mut info_bytes	= vec::from_elem( max_len as uint, 0 as libc::c_char );
 	let raw_bytes		= unsafe{ vec::raw::to_ptr(info_bytes) };
 	lg.add(fmt!( "\tQuerying %d parameters:", num as int ));
@@ -276,12 +284,12 @@ priv fn query_parameters( h : Handle, lg : &context::Log )-> ParaMap	{
 		let mut length	= 0 as glcore::GLint;
 		let mut size	= 0 as glcore::GLint;
 		let mut storage	= 0 as glcore::GLenum;
-		glcore::glGetActiveUniform( *h, i as glcore::GLuint, max_len,
+		glcore::glGetActiveUniform( **h, i as glcore::GLuint, max_len,
 			ptr::addr_of(&length), ptr::addr_of(&size),
 			ptr::addr_of(&storage), raw_bytes );
 		let name = unsafe{ str::raw::from_c_str_len( raw_bytes, length as uint ) };
 		info_bytes[length] = 0;
-		let loc = glcore::glGetUniformLocation( *h, raw_bytes );
+		let loc = glcore::glGetUniformLocation( **h, raw_bytes );
 		lg.add(fmt!( "\t\t[%d-%d]\t= '%s',\tformat %d", loc as int, ((loc + size) as int) -1, name, storage as int ));
 		let p = Parameter{ loc:Location(loc), storage:storage, size:size as uint, value:@mut Unitialized };
 		//p.read( h );	// no need to read them here
@@ -317,7 +325,7 @@ pub fn map_shader_type( t : char )-> glcore::GLenum	{
 pub impl context::Context	{
 	fn create_shader( &self, t : char, code : &str )-> Object	{
 		let target = map_shader_type(t);
-		let h = Handle( glcore::glCreateShader(target) );
+		let h = ObjectHandle( glcore::glCreateShader(target) );
 		let mut length = code.len() as glcore::GLint;
 		// temporary fix for Linux Radeon HD4000
 		do str::as_c_str(str::replace(code,"150 core","140")) |text|	{
@@ -342,13 +350,11 @@ pub impl context::Context	{
 			fail!( ~"\tGLSL " + message )
 		}
 		Object{ handle:h, target:target,
-			alive:ok, info:message,
-			pool:self.shader.pool_objects,
-		}
+			alive:ok, info:message }
 	}
 	
-	fn create_program( &self, shaders : ~[Object], lg : &context::Log )-> Program	{
-		let h = Handle( glcore::glCreateProgram() );
+	fn create_program( &self, shaders : ~[Object], lg : &context::Log )-> @Program	{
+		let h = ProgramHandle( glcore::glCreateProgram() );
 		for shaders.each |s| {
 			glcore::glAttachShader( *h, *s.handle );
 		}
@@ -370,25 +376,26 @@ pub impl context::Context	{
 			fail!( ~"\tGLSL program error: " + message )
 		}
 		// done
-		Program{ handle:h,
+		let attribs	= query_attributes( &h, lg );
+		let params	= query_parameters( &h, lg );
+		@Program{ handle:h,
 			alive:ok, info:message,
-			attribs	:query_attributes(h,lg),
-			params	:query_parameters(h,lg),
+			attribs	:attribs,
+			params	:params,
 			outputs :@mut ~[],
-			pool	:self.shader.pool_programs,
 		}
 	}
 
-	priv fn _bind_program( &mut self, h : Handle )	{
-		if *self.shader.active_program != *h	{
-			self.shader.active_program = h;
-			glcore::glUseProgram( *h );
+	priv fn _bind_program( &mut self, p : @Program )	{
+		if !managed::ptr_eq( self.shader.active, p )	{
+			self.shader.active = p;
+			glcore::glUseProgram( *p.handle );
 		}
 	}
 
 	//FIXME: accept Map trait once HashMap<~str> are supported
-	fn bind_program( &mut self, p : &Program, data : &DataMap )->bool	{
-		self._bind_program( p.handle );
+	fn bind_program( &mut self, p : @Program, data : &DataMap )->bool	{
+		self._bind_program( p );
 		let mut tex_unit = 0;
 		for p.params.each() |&(name,par)|	{
 			match data.find(name)	{
@@ -431,24 +438,7 @@ pub impl context::Context	{
 	}
 
 	fn unbind_program( &mut self )	{
-		self._bind_program( Handle(0) );
-	}
-
-	fn cleanup_shaders( &mut self )	{
-		let objs : &mut ~[Handle] = self.shader.pool_objects;
-		while !objs.is_empty()	{
-			let h = objs.pop();
-			glcore::glDeleteShader( *h );
-		}
-		let progs : &mut ~[Handle] = self.shader.pool_programs;
-		while !progs.is_empty()	{
-			let h = progs.pop();
-			assert!( *h != 0 );
-			if *h == *self.shader.active_program	{
-				self.unbind_program();
-			}
-			glcore::glDeleteProgram( *h );
-		}
+		self._bind_program( self.shader.default );
 	}
 }
 

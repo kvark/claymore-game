@@ -1,6 +1,7 @@
 extern mod glcore;
 
 use core::hashmap::linear::LinearMap;
+use core::managed;
 
 use call;
 use context;
@@ -84,7 +85,7 @@ pub struct Mesh	{
 	poly_type	: glcore::GLuint,
 	num_vert	: uint,
 	num_ind		: uint,
-	black_list	: @mut ~[shade::Handle]
+	black_list	: @mut ~[@shade::Program]
 }
 
 pub impl Mesh	{
@@ -184,16 +185,16 @@ pub impl context::Context	{
 		}
 	}
 
-	fn draw_mesh( &mut self, input : call::DrawInput, prog : &shade::Program, data : &shade::DataMap )-> bool	{
+	fn draw_mesh( &mut self, input : call::DrawInput, prog : @shade::Program, data : &shade::DataMap )-> bool	{
 		let &(va,m,range) = &input;
 		assert!( *va.handle as int != 0 );
 		// check black list
-		if m.black_list.contains( &prog.handle )	{
+		if m.black_list.find( |&p| managed::ptr_eq(p,prog) ).is_some()	{
 			return false;
 		}
 		// bind program
 		if !self.bind_program( prog, data )	{
-			m.black_list.push( prog.handle );
+			m.black_list.push( prog );
 			io::println(fmt!( "Unable to activate program #%d", *prog.handle as int ));
 			return false;
 		}
@@ -204,7 +205,7 @@ pub impl context::Context	{
 			match m.attribs.find(name)	{
 				Some(sat) => {
 					if !sat.compatible(pat)	{
-						m.black_list.push( prog.handle );
+						m.black_list.push( prog );
 						io::println(fmt!( "Mesh attibute '%s' is incompatible with program #%d",
 							*name, *prog.handle as int ));
 						return false;
@@ -213,7 +214,7 @@ pub impl context::Context	{
 					self.bind_mesh_attrib( va, pat.loc, sat, pat.is_integer() );
 				},
 				None => {
-					m.black_list.push( prog.handle );
+					m.black_list.push( prog );
 					io::println(fmt!( "Mesh '%s' doesn't contain required attribute '%s', needed for program #%d",
 						m.name, *name, *prog.handle as int ));
 					return false;

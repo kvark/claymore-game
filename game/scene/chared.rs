@@ -321,11 +321,11 @@ pub fn make_scene( el : &main::Elements, ct : &mut engine::context::Context, asp
 		let prog = if use_spherical	{
 			let tex = *scene.context.textures.get( &~"data/texture/Topanga_Forest_B_3k.hdr" );
 			data.insert( ~"t_Environment",		engine::shade::UniTexture(0,tex,Some(samp)) );
-			@engine::load::load_program( ct, ~"data/code-game/envir", lg )
+			engine::load::load_program( ct, ~"data/code-game/envir", lg )
 		}else	{
 			let tex = engine::load::load_texture_2D( ct, &~"data/texture/bg2.jpg", true );
 			data.insert( ~"t_Image",		engine::shade::UniTexture(0,tex,Some(samp)) );
-			@engine::load::load_program( ct, ~"data/code-game/copy", lg )
+			engine::load::load_program( ct, ~"data/code-game/copy", lg )
 		};
 		let mut rast = copy ct.default_rast;
 		//rast.set_depth( ~"<=", false );
@@ -351,7 +351,7 @@ pub fn make_scene( el : &main::Elements, ct : &mut engine::context::Context, asp
 		}
 	};
 	let edit_label = @mut hud::EditLabel::obtain( &mut hud_screen, ~"id.name.text" );
-	let hdebug = @engine::load::load_program( ct, ~"data/code/hud/debug", lg );
+	let hdebug = engine::load::load_program( ct, ~"data/code/hud/debug", lg );
 	//arm.set_record( arm.actions[0], 0f );
 	let depth = render::depth::Data::create( ct );
 	let lbuf = if el.lbuffer!=0	{
