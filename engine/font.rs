@@ -58,17 +58,19 @@ impl Drop for Glyph	{
 }
 */
 
+struct FaceHandle( FT_Face );
 
 pub struct Font	{
-	priv face		: FT_Face,
+	priv face		: FaceHandle,
+	priv context	: @Context,	//force the context to destroy first
 	kern_offset		: int,
 	line_offset		: int,
 	//priv mut cache	: send_map::linear::LinearMap<char,Glyph>,
 }
 
-impl Drop for Font	{
+impl Drop for FaceHandle	{
 	fn finalize( &self )	{
-		bindgen::FT_Done_Face( self.face ).
+		bindgen::FT_Done_Face( **self ).
 			check( "Done_Face" );
 	}
 }
@@ -103,14 +105,14 @@ impl Font	{
 	}*/
 
 	priv fn set_char_size( &self, xs : float, ys : float, xdpi : uint, ydpi : uint )	{
-		bindgen::FT_Set_Char_Size( self.face,
+		bindgen::FT_Set_Char_Size( *self.face,
 			64f*xs as FT_F26Dot6, 64f*ys as FT_F26Dot6,
 			xdpi as FT_UInt, ydpi as FT_UInt
 			).check( "Set_Char_Size" );
 	}
 
 	priv fn set_pixel_size( &self, xpix : uint, ypix : uint )	{
-		bindgen::FT_Set_Pixel_Sizes( self.face,
+		bindgen::FT_Set_Pixel_Sizes( *self.face,
 			xpix as FT_UInt, ypix as FT_UInt
 			).check( "Set_Pixel_Sizes" );
 	}
@@ -138,7 +140,7 @@ impl Font	{
 		}
 		struct Target	{ c:char, x:int, y:int }
 		let (limit_x,limit_y) = max_size;
-		let face  = unsafe { &*(self.face) };
+		let face  = unsafe { &**self.face };
 		let line_gap = (self.line_offset as int) + (face.height as int);
 		let mut position = 0, baseline = face.ascender as int;	// in font units
 		lg.add(fmt!( "\tFace height=%d, up=%d, down=%d", face.height as int,
@@ -160,12 +162,12 @@ impl Font	{
 				if char::is_whitespace(c)	{
 					start_word = pos_array.len();
 				}
-				let index = bindgen::FT_Get_Char_Index( self.face, c as FT_ULong );
-				bindgen::FT_Load_Glyph( self.face, index, FT_LOAD_DEFAULT as FT_Int32 ).
+				let index = bindgen::FT_Get_Char_Index( *self.face, c as FT_ULong );
+				bindgen::FT_Load_Glyph( *self.face, index, FT_LOAD_DEFAULT as FT_Int32 ).
 					check( "Load_Glyph" );
 				position += unsafe{
 					let delta = struct_FT_Vector_{ x:0, y:0 };
-					bindgen::FT_Get_Kerning( self.face, prev_index, index,
+					bindgen::FT_Get_Kerning( *self.face, prev_index, index,
 						FT_KERNING_DEFAULT, ptr::addr_of(&delta) ).
 						check( "Get_Kerning" );
 					//lg.add(fmt!( "\tKerning %d-%d is %d",
@@ -174,7 +176,7 @@ impl Font	{
 				};
 				prev_index = index;
 				let glyph = unsafe { &*(face.glyph as FT_GlyphSlot) };
-				assert!( self.face as uint == glyph.face as uint );
+				assert!( *self.face as uint == glyph.face as uint );
 				let cx = position + glyph.metrics.horiBearingX as int;
 				let cy = baseline - glyph.metrics.horiBearingY as int;
 				pos_array.push( Target{ c:c, x:cx, y:cy });
@@ -219,7 +221,7 @@ impl Font	{
 		assert!( width<=limit_x && height<=limit_y );
 		let mut image = vec::from_elem( width*height, 0u8 );
 		for pos_array.each |slice|	{
-			bindgen::FT_Load_Char( self.face,
+			bindgen::FT_Load_Char( *self.face,
 				slice.c as FT_ULong, FT_LOAD_DEFAULT as FT_Int32 ).
 				check( "Load_Char" );
 			bindgen::FT_Render_Glyph(
@@ -245,8 +247,8 @@ impl Font	{
 
 
 pub impl Context	{
-	fn load_font( &self, path : &str, index : uint, xs : uint, ys : uint,
-			kerning : float, line_gap : float )-> Font	{
+	fn load_font( @self, path : &str, index : uint, xs : uint, ys : uint,
+			kerning : float, line_gap : float )-> @Font	{
 		let mut face : FT_Face = ptr::null();
 		do str::as_c_str(path) |text|	{
 			bindgen::FT_New_Face( self.lib, text, 
@@ -256,9 +258,9 @@ pub impl Context	{
 		bindgen::FT_Set_Pixel_Sizes( face,
 			xs as FT_UInt, ys as FT_UInt ).
 			check( "Set_Pixel_Sizes" );
-		Font{ face:face,
-			kern_offset: kerning * ((1<<SHIFT) as float) as int,
-			line_offset: line_gap* ((1<<SHIFT) as float) as int,
+		@Font{ face:FaceHandle(face), context:self,
+			kern_offset	: kerning * ((1<<SHIFT) as float) as int,
+			line_offset	: line_gap* ((1<<SHIFT) as float) as int,
 			//cache	:send_map::linear::LinearMap::<char,Glyph>(),
 		}
 	}

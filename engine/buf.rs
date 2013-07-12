@@ -22,9 +22,7 @@ pub struct Object	{
 
 impl Drop for ObjectHandle	{
 	fn finalize( &self )	{
-		if **self != 0	{
-			glcore::glDeleteBuffers( 1, ptr::addr_of(&**self) );
-		}
+		glcore::glDeleteBuffers( 1, ptr::addr_of(&**self) );
 	}
 }
 
@@ -83,7 +81,7 @@ pub impl Binding	{
 
 struct VertexData	{
 	enabled	: bool,
-	attrib	: mesh::Attribute,
+	attrib	: Option<mesh::Attribute>,
 }
 
 pub struct VertexArray	{
@@ -123,22 +121,14 @@ pub impl VertexArray	{
 pub struct VaBinding	{
 	priv active	: @mut VertexArray,
 	default		: @mut VertexArray,
-	default_object	: @Object,
 }
 
 impl VaBinding	{
-	priv fn create_data( buf : @Object )-> ~[VertexData]	{
+	priv fn make_data()-> ~[VertexData]	{
 		do vec::from_fn(MAX_VERTEX_ATTRIBS) |_i|	{
-			VertexData{ enabled: false, attrib: mesh::Attribute{
-					kind: glcore::GL_NONE, count: 0u,
-					normalized: true, interpolated: true,
-					buffer: buf, stride: 0u, offset: 0u,
-			}}
+			VertexData{ enabled: false, attrib: None }
 		}
-	}
 
-	pub fn create_zero_data( &self )-> ~[VertexData]	{
-		VaBinding::create_data( self.default_object )
 	}
 
 	pub fn is_active( &self, va : @mut VertexArray )-> bool	{
@@ -146,15 +136,14 @@ impl VaBinding	{
 	}
 
 	pub fn new()-> VaBinding	{
-		let def_object = @Object{ handle : ObjectHandle(0) };
-		let def = @mut VertexArray{ handle : ArrayHandle(0),
-			data : VaBinding::create_data(def_object),
+		let def = @mut VertexArray{
+			handle	: ArrayHandle(0),
+			data	: VaBinding::make_data(),
 			element	: None,
 		};
 		VaBinding{
 			active	: def,
 			default	: def,
-			default_object: def_object,
 		}
 	}
 }
@@ -164,9 +153,11 @@ pub impl context::Context	{
 	fn create_vertex_array( &self )-> @mut VertexArray	{
 		let mut hid = 0 as glcore::GLuint;
 		glcore::glGenVertexArrays( 1, ptr::addr_of(&hid) );
-		@mut VertexArray{ handle : ArrayHandle(hid),
-			data : self.vertex_array.create_zero_data(),
-			element	: None }
+		@mut VertexArray{
+			handle	: ArrayHandle(hid),
+			data	: VaBinding::make_data(),
+			element	: None
+		}
 	}
 
 	fn bind_vertex_array( &mut self, va : @mut VertexArray )	{

@@ -164,8 +164,12 @@ pub impl context::Context	{
 		let varray = &mut va.data;
 		let vdata = &mut varray[loc];
 		// update vertex info
-		if vdata.attrib != *at	{
-			vdata.attrib = *at;
+		let need_bind = match vdata.attrib	{
+			Some(ref attrib)	=> *attrib != *at,
+			None				=> true
+		};
+		if need_bind	{
+			vdata.attrib = Some(*at);
 			let ptr = at.offset as *glcore::GLvoid;
 			if is_int	{
 				glcore::glVertexAttribIPointer(

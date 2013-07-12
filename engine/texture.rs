@@ -18,9 +18,7 @@ pub struct Target( glcore::GLenum );
 
 impl Drop for Handle	{
 	fn finalize( &self )	{
-		if **self != 0	{
-			glcore::glDeleteTextures( 1, ptr::addr_of(&**self) );
-		}
+		glcore::glDeleteTextures( 1, ptr::addr_of(&**self) );
 	}
 }
 
@@ -154,9 +152,8 @@ impl to_bytes::IterBytes for Slot	{
 
 
 pub struct Binding	{
-	active_unit	: uint,
-	active		: LinearMap<Slot,@Texture>,
-	default		: @Texture,
+	unit	: uint,
+	active	: LinearMap<Slot,@Texture>,
 }
 
 impl context::ProxyState for Binding	{
@@ -165,9 +162,9 @@ impl context::ProxyState for Binding	{
 		let mut id = 0 as glcore::GLint;
 		glcore::glGetIntegerv( glcore::GL_ACTIVE_TEXTURE, ptr::addr_of(&id) );
 		let cur_unit = id as uint - (glcore::GL_TEXTURE0 as uint);
-		if self.active_unit != cur_unit	{
+		if self.unit != cur_unit	{
 			was_ok = false;
-			self.active_unit = cur_unit;
+			self.unit = cur_unit;
 		}
 		// Rust wouldn't allow us to mutate while scanning
 		for (copy self.active).each |&(slot,tex)|	{
@@ -181,7 +178,7 @@ impl context::ProxyState for Binding	{
 			if *tex.handle != id as glcore::GLuint	{
 				io::println("bad2");
 				was_ok = false;
-				self.active.swap( *slot, self.default );
+				self.active.remove( slot );
 			}
 		}
 		self.switch( cur_unit );
@@ -191,18 +188,14 @@ impl context::ProxyState for Binding	{
 
 pub impl Binding	{
 	fn new()-> Binding	{
-		let slots	= LinearMap::new();
-		let tex = @Texture{
-			handle: Handle(0), target: Target(0),
-			width: 0, height: 0, depth: 0, samples: 0,
-			levels: @mut LevelInfo{total:0,min:0,max:0},
-			sampler	: @mut Sampler::new(1,0)
-		};
-		Binding{ active_unit:0u, active:slots, default:tex }
+		Binding{
+			unit	: 0u,
+			active	: LinearMap::new()
+		}
 	}
 
 	fn bind( &mut self, t : @Texture )	{
-		let slot = Slot{ unit:self.active_unit, target:t.target };
+		let slot = Slot{ unit:self.unit, target:t.target };
 		if !self.active.contains_key(&slot) || !managed::ptr_eq(*self.active.get(&slot),t)	{
 			self.active.insert( slot, t );
 			glcore::glBindTexture( *t.target, *t.handle );
@@ -210,8 +203,8 @@ pub impl Binding	{
 	}
 	
 	fn switch( &mut self, unit : uint )	{
-		if self.active_unit != unit	{
-			self.active_unit = unit;
+		if self.unit != unit	{
+			self.unit = unit;
 			glcore::glActiveTexture( glcore::GL_TEXTURE0 + (unit as glcore::GLenum) );
 		}
 	}
@@ -254,34 +247,36 @@ pub impl Binding	{
 		*t.sampler = *s;
 	}
 	fn unbind( &mut self, target : Target )	{
-		let slot = Slot{ unit:self.active_unit, target:target };
-		let t = self.default;
-		if !managed::ptr_eq(*self.active.get(&slot),t)	{
-			self.active.insert(slot,t);
+		let slot = Slot{ unit:self.unit, target:target };
+		if self.active.find(&slot).is_some()	{
+			self.active.remove( &slot );
 			glcore::glBindTexture( *target, 0 );
 		}
 	}
 
-	fn get_bound( &self, target : Target )-> @Texture	{
-		let slot = Slot{ unit:self.active_unit, target:target };
+	fn get_bound( &self, target : Target )-> Option<@Texture>	{
+		let slot = Slot{ unit:self.unit, target:target };
 		match self.active.find( &slot )	{
-			Some(t)	=> *t,
-			None	=> self.default
+			Some(t)	=> Some(*t),
+			None	=> None
 		}
 	}
 
 	fn is_bound( &self, t : @Texture )-> bool	{
-		managed::ptr_eq( self.get_bound( t.target ), t )
+		match self.get_bound( t.target )	{
+			Some(tex)	=> managed::ptr_eq( tex, t ),
+			None		=> false
+		}
 	}
 
-	fn find( &self, t : @Texture )-> int	{
+	fn find( &self, t : @Texture )-> Option<uint>	{
 		for self.active.each |&(slot,tex)|	{
 			if managed::ptr_eq(t,*tex)	{
 				assert!( slot.target == t.target );
-				return slot.unit as int;
+				return Some(slot.unit)
 			}
 		}
-		-1
+		None
 	}
 
 	fn init( &mut self, t : @Texture, num_levels : uint, int_format : glcore::GLint, alpha : bool )	{

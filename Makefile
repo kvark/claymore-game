@@ -15,8 +15,10 @@ all: game
 
 run: game
 	build/${NAME}
-run-trace:	game
+run-trace: game
 	${TRACE} build/${NAME}
+run-memtest: game
+	valgrind --leak-check=full --track-origins=yes build/${NAME} 2>build/memtest.txt
 
 
 game: build/claymore
