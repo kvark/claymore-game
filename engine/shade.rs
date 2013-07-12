@@ -19,29 +19,23 @@ pub struct ProgramHandle( glcore::GLuint );
 
 
 pub struct Binding	{
-	priv active		: @Program,
-	priv default	: @Program,
+	priv active		: Option<@Program>,
 }
 
 impl context::ProxyState for Binding	{
 	fn sync_back( &mut self )-> bool	{
 		let mut hid = 0 as glcore::GLint;
 		glcore::glGetIntegerv( glcore::GL_CURRENT_PROGRAM, ptr::addr_of(&hid) );
-		*self.active.handle == hid as glcore::GLuint
+		hid == match self.active	{
+			Some(p)	=> *p.handle as glcore::GLint,
+			None	=> 0
+		}
 	}
 }
 
 pub impl Binding	{
 	fn new()-> Binding	{
-		let zero = @Program	{
-			handle	: ProgramHandle(0),
-			alive	: true,
-			info	: ~"",
-			attribs	: LinearMap::with_capacity::<~str,Attribute>(0),
-			params	: LinearMap::with_capacity::<~str,Parameter>(0),
-			outputs	: @mut ~[],
-		};
-		Binding{ active:zero, default:zero }
+		Binding{ active:None }
 	}
 }
 
@@ -176,9 +170,7 @@ struct Object	{
 
 impl Drop for ObjectHandle	{
 	fn finalize( &self )	{
-		if **self != 0	{
-			glcore::glDeleteShader( **self );
-		}
+		glcore::glDeleteShader( **self );
 	}
 }
 
@@ -195,9 +187,7 @@ pub struct Program	{
 
 impl Drop for ProgramHandle	{
 	fn finalize( &self )	{
-		if **self != 0	{
-			glcore::glDeleteProgram( **self );
-		}
+		glcore::glDeleteProgram( **self );
 	}
 }
 
@@ -323,7 +313,7 @@ pub fn map_shader_type( t : char )-> glcore::GLenum	{
 
 
 pub impl context::Context	{
-	fn create_shader( &self, t : char, code : &str )-> Object	{
+	fn create_shader( &self, t : char, code : &str )-> @Object	{
 		let target = map_shader_type(t);
 		let h = ObjectHandle( glcore::glCreateShader(target) );
 		let mut length = code.len() as glcore::GLint;
@@ -349,11 +339,11 @@ pub impl context::Context	{
 			io::println(code);
 			fail!( ~"\tGLSL " + message )
 		}
-		Object{ handle:h, target:target,
+		@Object{ handle:h, target:target,
 			alive:ok, info:message }
 	}
 	
-	fn create_program( &self, shaders : ~[Object], lg : &context::Log )-> @Program	{
+	fn create_program( &self, shaders : ~[@Object], lg : &context::Log )-> @Program	{
 		let h = ProgramHandle( glcore::glCreateProgram() );
 		for shaders.each |s| {
 			glcore::glAttachShader( *h, *s.handle );
@@ -386,16 +376,16 @@ pub impl context::Context	{
 		}
 	}
 
-	priv fn _bind_program( &mut self, p : @Program )	{
-		if !managed::ptr_eq( self.shader.active, p )	{
-			self.shader.active = p;
-			glcore::glUseProgram( *p.handle );
-		}
-	}
-
 	//FIXME: accept Map trait once HashMap<~str> are supported
 	fn bind_program( &mut self, p : @Program, data : &DataMap )->bool	{
-		self._bind_program( p );
+		let need_bind = match self.shader.active	{
+			Some(prog)	=> !managed::ptr_eq(p,prog),
+			None		=> true
+		};
+		if need_bind	{
+			self.shader.active = Some(p);
+			glcore::glUseProgram( *p.handle );
+		}
 		let mut tex_unit = 0;
 		for p.params.each() |&(name,par)|	{
 			match data.find(name)	{
@@ -438,7 +428,10 @@ pub impl context::Context	{
 	}
 
 	fn unbind_program( &mut self )	{
-		self._bind_program( self.shader.default );
+		if self.shader.active.is_some()	{
+			self.shader.active = None;
+			glcore::glUseProgram( 0 );
+		}
 	}
 }
 

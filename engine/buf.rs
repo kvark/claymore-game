@@ -31,8 +31,7 @@ impl Drop for ObjectHandle	{
 
 pub struct Binding	{
 	target		: Target,
-	default		: @Object,
-	priv active	: @Object,
+	priv active	: Option<@Object>,
 }
 
 impl context::ProxyState for Binding	{
@@ -48,24 +47,35 @@ impl context::ProxyState for Binding	{
 			};
 		let hid = 0 as glcore::GLint;
 		glcore::glGetIntegerv( query, ptr::addr_of(&hid) );
-		let h = ObjectHandle( hid as glcore::GLuint );
-		if self.active.handle != h	{
-			self.active = self.default;
-			false
-		}else	{ true }
+		hid == match self.active	{
+			Some(o)	=> *o.handle as glcore::GLint,
+			None		=> 0
+		}
 	}
 }
 
 pub impl Binding	{
-	fn new( value : glcore::GLenum, default : @Object )-> Binding	{
+	fn new( value : glcore::GLenum )-> Binding	{
 		Binding{
-			target : Target(value), default : default, active : default
+			target : Target(value), active : None
 		}
 	}
+
 	priv fn bind( &mut self, ob : @Object )	{
-		if !managed::ptr_eq(self.active,ob)	{
-			self.active = ob;
+		let need_bind = match self.active	{
+			Some(o)	=> !managed::ptr_eq(o,ob),
+			None	=> true
+		};
+		if need_bind	{
+			self.active = Some(ob);
 			glcore::glBindBuffer( *self.target, *ob.handle );
+		}
+	}
+
+	priv fn unbind( &mut self )	{
+		if self.active.is_some()	{
+			self.active = None;
+			glcore::glBindBuffer( *self.target, 0 );
 		}
 	}
 }
@@ -79,7 +89,7 @@ struct VertexData	{
 pub struct VertexArray	{
 	handle			: ArrayHandle,
 	data			: ~[VertexData],
-	element			: @Object,
+	element			: Option<@Object>,
 }
 
 impl Drop for ArrayHandle	{
@@ -139,7 +149,7 @@ impl VaBinding	{
 		let def_object = @Object{ handle : ObjectHandle(0) };
 		let def = @mut VertexArray{ handle : ArrayHandle(0),
 			data : VaBinding::create_data(def_object),
-			element	: def_object,
+			element	: None,
 		};
 		VaBinding{
 			active	: def,
@@ -154,8 +164,9 @@ pub impl context::Context	{
 	fn create_vertex_array( &self )-> @mut VertexArray	{
 		let mut hid = 0 as glcore::GLuint;
 		glcore::glGenVertexArrays( 1, ptr::addr_of(&hid) );
-		@mut VertexArray{ handle : ArrayHandle(hid), data : self.vertex_array.create_zero_data(),
-			element	: self.vertex_array.default_object }
+		@mut VertexArray{ handle : ArrayHandle(hid),
+			data : self.vertex_array.create_zero_data(),
+			element	: None }
 	}
 
 	fn bind_vertex_array( &mut self, va : @mut VertexArray )	{
@@ -177,14 +188,14 @@ pub impl context::Context	{
 
 	fn bind_element_buffer( &mut self, va : @mut VertexArray, obj : @Object  )	{
 		assert!( self.vertex_array.is_active(va) );
-		va.element = obj;
+		va.element = Some(obj);
 		self.element_buffer.bind( obj );
 	}
 	fn bind_buffer( &mut self, obj : @Object )	{
 		self.array_buffer.bind( obj );
 	}
 	fn unbind_buffer( &mut self )	{
-		self.array_buffer.bind( self.array_buffer.default );
+		self.array_buffer.unbind();
 	}
 
 	fn allocate_buffer( &mut self, obj : @Object, size : uint, dynamic : bool )	{

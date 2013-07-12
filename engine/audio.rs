@@ -8,16 +8,14 @@ use load;
 //- - - - - -
 // TYPES	//
 
-pub struct Handle( types::ALuint );
+pub struct BufferHandle( types::ALuint );
+pub struct SourceHandle( types::ALuint );
 
 pub struct Context	{
 	device	: *types::ALCdevice,
 	context	: *types::ALCcontext,
-	priv pool_buffers	: @mut ~[Handle],
-	priv pool_sources	: @mut ~[Handle],
 }
 
-#[unsafe_destructor]
 impl Drop for Context	{
 	fn finalize( &self )	{
 		ll::alcMakeContextCurrent( ptr::null() );
@@ -28,29 +26,25 @@ impl Drop for Context	{
 
 
 pub struct Buffer	{
-	handle		: Handle,
+	handle		: BufferHandle,
 	duration	: float,
-	priv pool	: @mut ~[Handle],
 }
 
-#[unsafe_destructor]
-impl Drop for Buffer	{
+impl Drop for BufferHandle	{
 	fn finalize( &self )	{
-		self.pool.push( self.handle );
+		ll::alDeleteBuffers( 1, ptr::addr_of(&**self) );
 	}
 }
 
 
 pub struct Source	{
-	handle		: Handle,
+	handle		: SourceHandle,
 	priv buffer	: Option<@Buffer>,
-	priv pool	: @mut ~[Handle],
 }
 
-#[unsafe_destructor]
-impl Drop for Source	{
+impl Drop for SourceHandle	{
 	fn finalize( &self )	{
-		self.pool.push( self.handle );
+		ll::alDeleteSources( 1, ptr::addr_of(&**self) );
 	}
 }
 
@@ -93,11 +87,7 @@ pub impl Context	{
 		let dev = ll::alcOpenDevice( ptr::null() );
 		let ctx = ll::alcCreateContext( dev, ptr::null() );
 		ll::alcMakeContextCurrent( ctx );
-		Context{
-			device:dev, context:ctx,
-			pool_buffers	:@mut ~[],
-			pool_sources	:@mut ~[],
-		}
+		Context{ device:dev, context:ctx }
 	}
 	
 	fn check( &self )	{
@@ -115,17 +105,6 @@ pub impl Context	{
 		yes
 	}
 
-	fn cleanup( &self )	{
-		for self.pool_buffers.each() |buf|	{
-			ll::alDeleteBuffers( 1, ptr::addr_of(&**buf) );
-		}
-		for self.pool_sources.each() |src|	{
-			ll::alDeleteSources( 1, ptr::addr_of(&**src) );
-		}
-		self.pool_buffers.clear();
-		self.pool_sources.clear();
-	}
-
 	fn create_buffer<T>( &self, channels : uint, bits : uint, byte_rate : uint, 
 		sample_rate : uint, data : ~[T] )-> Buffer	{
 		let mut hid : types::ALuint = 0;
@@ -135,9 +114,8 @@ pub impl Context	{
 			unsafe{vec::raw::to_ptr(data) as *types::ALvoid},
 			size as types::ALsizei, sample_rate as types::ALsizei );
 		Buffer{
-			handle	: Handle(hid),
+			handle	: BufferHandle(hid),
 			duration: (size as float) / (byte_rate as float),
-			pool	: self.pool_buffers,
 		}
 	}
 
@@ -145,9 +123,8 @@ pub impl Context	{
 		let mut hid : types::ALuint = 0;
 		ll::alGenSources( 1, ptr::addr_of(&hid) );
 		Source{
-			handle	: Handle(hid),
+			handle	: SourceHandle(hid),
 			buffer	: None,
-			pool	: self.pool_sources,
 		}
 	}
 }

@@ -107,7 +107,6 @@ pub fn create( wid : uint, het : uint )-> Context	{
 	};
 	let rast	= rast::make_default( wid, het );
 	let color	= rast::Color{r:0f32,g:0f32,b:0f32,a:0f32};
-	let def_va	= buf::VaBinding::new();
 	let def_fb	= frame::Buffer::new_default();
 	// fill up the context
 	Context{
@@ -115,9 +114,9 @@ pub fn create( wid : uint, het : uint )-> Context	{
 		rast				: copy rast,
 		clear_data			: ClearData{ color:color, depth:1f, stencil:0u },
 		shader				: shade::Binding::new(),
-		vertex_array		: def_va,
-		array_buffer		: buf::Binding::new( glcore::GL_ARRAY_BUFFER, def_va.default_object ),
-		element_buffer		: buf::Binding::new( glcore::GL_ELEMENT_ARRAY_BUFFER, def_va.default_object ),
+		vertex_array		: buf::VaBinding::new(),
+		array_buffer		: buf::Binding::new( glcore::GL_ARRAY_BUFFER ),
+		element_buffer		: buf::Binding::new( glcore::GL_ELEMENT_ARRAY_BUFFER ),
 		render_buffer		: frame::RenBinding::new(),
 		frame_buffer_draw	: frame::Binding::new( glcore::GL_DRAW_FRAMEBUFFER, def_fb ),
 		frame_buffer_read	: frame::Binding::new( glcore::GL_READ_FRAMEBUFFER, def_fb ),
