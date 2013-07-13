@@ -8,6 +8,7 @@ use lmath::vec::*;
 use engine::anim::{Act,Player};
 
 use hud;
+use input;
 use main;
 use render;
 use scene = scene::common;
@@ -36,10 +37,11 @@ pub fn clamp<T:cmp::Ord>( x:T, a:T, b:T )-> T	{
 }
 
 pub impl CamControl	{
-	fn update( &mut self, dt : float, nx : float, _ny : float, hit : bool, scroll : float )	{
+	fn update( &mut self, input : &input::State )	{
 		// calculate rotation
-		if hit	{
-			let axis = vec3::new( 0f32, 0f32, if nx>0.5f {1f32} else {-1f32} );
+		if (input.mouse.buttons & 1) != 0	{
+			let dt = 1f32/30f32;	//FIXME
+			let axis = vec3::new( 0f32, 0f32, if input.mouse.x>0.5f {1f32} else {-1f32} );
 			let angle = dt as f32 * self.speed_rot;
 			let qr = Quat::from_angle_axis( angle, &axis );
 			let sq = engine::space::QuatSpace{
@@ -47,17 +49,17 @@ pub impl CamControl	{
 				orientation : qr, scale : 1f32 };
 			self.node.space = sq * self.node.space;
 		}
-		// calculate scroll
-		if scroll != 0f	{
-			let v_origin = self.origin.sub_v( &copy self.node.space.position );
-			let dist_min = 20f32;
-			let dist_max = 200f32;
-			let dist = v_origin.length();
-			let dist_raw = dist - (scroll as f32) * self.speed_zoom;
-			let dist_diff = clamp( dist_raw, dist_min, dist_max ) - dist;
-			let p = (copy self.node.space.position).sub_v( &v_origin.mul_t(dist_diff/dist) );
-			self.node.space.position = p;
-		}
+	}
+
+	fn on_scroll( &mut self, scroll : float )	{
+		let v_origin = self.origin.sub_v( &copy self.node.space.position );
+		let dist_min = 20f32;
+		let dist_max = 200f32;
+		let dist = v_origin.length();
+		let dist_raw = dist - (scroll as f32) * self.speed_zoom;
+		let dist_diff = clamp( dist_raw, dist_min, dist_max ) - dist;
+		let p = (copy self.node.space.position).sub_v( &v_origin.mul_t(dist_diff/dist) );
+		self.node.space.position = p;
 	}
 }
 
@@ -103,16 +105,32 @@ pub impl Scene	{
 		self.hud_active = AhInactive;
 	}
 
-	fn update( &mut self, dt : float, nx : float, ny : float, hit : bool, scroll : float, _lg : &engine::context::Log )-> bool	{
+	fn update( &mut self, input : &input::State, _lg : &engine::context::Log )-> bool	{
 		if true	{
 			let (mx,my) = self.hud_screen.root.min_size;
-			let x = ((0f+nx) * (mx as float)) as int;
-			let y = ((1f-ny) * (my as float)) as int;
+			let x = ((0f+input.mouse.x) * (mx as float)) as int;
+			let y = ((1f-input.mouse.y) * (my as float)) as int;
 			self.mouse_point = (x,y);
 			//let name = root.trace( x, y, lg );
 			//io::println( ~"Click: " + name );
-			if hit	{
-				self.loose_focus();	
+		}
+		self.edit_label.update();
+		self.control.update( input );
+		true
+	}
+
+	fn on_input( &mut self, event : &input::Event )	{
+		match event	{
+			&input::Character(c)	=> str::push_char( &mut self.input_queue, c ),
+			&input::Keyboard(key,press)	=> {
+				match (key,press)	{
+					(257,true)	=> self.loose_focus(),
+					(259,true)	=> str::push_char( &mut self.input_queue, key as char ),
+					_	=> ()
+				}
+			},
+			&input::MouseClick(_key,press) if press	=> {
+				self.loose_focus();
 				/*//FIXME
 				do self.hud_screen.root.trace(x,y)	|frame,depth|	{
 					if depth==0u && frame.name == ~"id.name.text"	{
@@ -120,21 +138,8 @@ pub impl Scene	{
 						self.hud_active = AhEditName;
 					}
 				};*/
-			}
-		}
-		self.edit_label.update();
-		self.control.update( dt, nx, ny, hit, scroll );
-		true
-	}
-
-	fn on_char( &mut self, key : char )	{
-		str::push_char( &mut self.input_queue, key );
-	}
-
-	fn on_key_press( &mut self, key : int )	{
-		match key	{
-			257		=> self.loose_focus(),	//Esc,Enter
-			259		=> str::push_char( &mut self.input_queue, key as char ),
+			},
+			&input::Scroll(_,scroll)	=> self.control.on_scroll(scroll),
 			_	=> ()
 		}
 	}
@@ -320,7 +325,7 @@ pub fn make_scene( el : &main::Elements, ct : &mut engine::context::Context, asp
 		let use_spherical = false;
 		let prog = if use_spherical	{
 			let tex = *scene.context.textures.get( &~"data/texture/Topanga_Forest_B_3k.hdr" );
-			data.insert( ~"t_Environment",		engine::shade::UniTexture(0,tex,Some(samp)) );
+			data.insert( ~"t_Environment",	engine::shade::UniTexture(0,tex,Some(samp)) );
 			engine::load::load_program( ct, ~"data/code-game/envir", lg )
 		}else	{
 			let tex = engine::load::load_texture_2D( ct, &~"data/texture/bg2.jpg", true );

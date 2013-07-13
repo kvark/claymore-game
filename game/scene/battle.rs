@@ -8,6 +8,7 @@ use engine::anim::Player;
 use engine::draw::Mod;
 use engine::space::{Interpolate,Space};
 
+use input;
 use scene::grid;
 use scene = scene::common;
 
@@ -79,9 +80,29 @@ pub struct Scene	{
 }
 
 pub impl Scene	{
-	fn update( &mut self, tb : &mut engine::texture::Binding, nx : float, ny : float, mouse_hit : bool)-> bool	{
+	fn update( &mut self, input : &input::State, tb : &mut engine::texture::Binding )-> bool	{
+		/*let (_,scroll_y) = window.get_scroll_offset(); //FIXME
+		let scroll_y = 0;
+		let shift = window.get_key(glfw::KEY_LEFT_SHIFT)!=0;
+		// debug keys
+		if window.get_key(glfw::KEY_LEFT)!=0	{
+			game.debug_move(shift,-1,0);
+		}
+		if window.get_key(glfw::KEY_RIGHT)!=0	{
+			game.debug_move(shift,1,0);
+		}
+		if window.get_key(glfw::KEY_DOWN)!=0	{
+			game.debug_move(shift,0,-1);
+		}
+		if window.get_key(glfw::KEY_UP)!=0	{
+			game.debug_move(shift,0,1);
+		}
+		// camera rotation
+		let _cam_dir = (window.get_key(glfw::KEY_E) - window.get_key(glfw::KEY_Q)) as int;
+		*/
 		let cam_dir = 0;
-		let (i,j,ok) = self.grid.update( tb, &self.view.cam, nx, ny );
+		let (i,j,ok) = self.grid.update( tb, &self.view.cam, input.mouse.x, input.mouse.y );
+		let mouse_hit = (input.mouse.buttons & 1) != 0;
 		if mouse_hit && self.grid.get_rectangle().contains(i,j)	{
 			let sp = &mut self.hero.entity.node.space;
 			sp.position = self.grid.get_cell_center(i,j);

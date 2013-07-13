@@ -4,7 +4,10 @@ extern mod engine;
 extern mod std;
 
 use engine::context::ProxyState;
+
+use input;
 use scene;
+
 
 enum Screen	{
 	ScreenIntro,
@@ -27,7 +30,6 @@ struct Game	{
 	s_editor	: scene::chared::Scene,
 	s_battle	: scene::battle::Scene,
 	screen		: Screen,
-	time		: float,
 }
 
 #[auto_decode]
@@ -69,34 +71,25 @@ pub impl Game	{
 			sound_source:src, frames:0u,
 			technique:tech, output:out,
 			s_intro:intro, s_editor:editor, s_battle:battle,
-			screen:ScreenChar, time:0f,
+			screen:ScreenChar,
 		}
 	}
 
-	fn update( &mut self, nx : float, ny : float, mouse_hit : bool, scroll : float )-> bool	{
-		let dt = engine::anim::get_time() - self.time;
-		self.time += dt;
+	fn update( &mut self, input : &input::State )-> bool	{
 		match self.screen	{
-			ScreenChar		=> self.s_editor.update( dt, nx, ny, mouse_hit, scroll, &self.journal ),
-			ScreenBattle	=> self.s_battle.update( &mut self.context.texture, nx, ny, mouse_hit ),
+			ScreenChar		=> self.s_editor.update( input, &self.journal ),
+			ScreenBattle	=> self.s_battle.update( input, &mut self.context.texture ),
 			_ => true
 		}
 	}
 
-	fn on_char( &mut self, key : char )	{
-		//io::println(fmt!("Char %c", key));
+	fn on_input( &mut self, event : input::Event )	{
 		match self.screen	{
-			ScreenChar	=> self.s_editor.on_char( key ),
+			ScreenChar	=> self.s_editor.on_input( &event ),
 			_	=> ()
 		}
 	}
-	fn on_key_press( &mut self, key : int )	{
-		match self.screen	{
-			ScreenChar	=> self.s_editor.on_key_press( key ),
-			_	=> ()
-		}	
-	}
-	
+
 	fn render( &mut self, el : &Elements )-> bool	{
 		match self.screen	{
 			ScreenIntro	=> (),
@@ -177,16 +170,32 @@ fn main()	{
 
 		//window.set_input_mode( glfw::CURSOR_MODE, glfw::CURSOR_CAPTURED as int );
 		window.make_context_current();
-		
 		let game = @mut Game::create( &config.elements, config.window.width, config.window.height, lg );
-		do window.set_char_callback()	|_win,key|	{
-			game.on_char( key as char );
-		}
-		do window.set_key_callback() |_win,key,action|	{
-			if action == glfw::PRESS	{
-				game.on_key_press( key as int );
-			}
-		};
+
+		// init callbacks
+		window.set_iconify_callback( |_win,done|	{
+			assert!( done );
+			game.on_input( input::Focus(false) );
+		});
+		window.set_focus_callback( |_win,done|	{
+			assert!( done );
+			game.on_input( input::Focus(true) );
+		});
+		window.set_char_callback( |_win,key|	{
+			game.on_input( input::Character( key as char ));
+		});
+		window.set_key_callback( |_win,key,action|	{
+			game.on_input( input::Keyboard( key as int, action == glfw::PRESS ));
+		});
+		window.set_cursor_pos_callback( |_win,posx,posy|	{
+			game.on_input( input::MouseMove( posx, posy ));
+		});
+		window.set_mouse_button_callback( |_win,button,action|	{
+			game.on_input( input::MouseClick( button as uint, action == glfw::PRESS ));
+		});
+		window.set_scroll_callback( |_win,floatx,floaty|	{
+			game.on_input( input::Scroll( floatx, floaty ));
+		});
 		
 		loop	{
 			glfw::poll_events();
@@ -194,31 +203,26 @@ fn main()	{
 				window.destroy();
 				break;
 			}
-			//let (_,scroll_y) = window.get_scroll_offset(); //FIXME
-			let scroll_y = 0;
-			let shift = window.get_key(glfw::KEY_LEFT_SHIFT)!=0;
-			// debug keys
-			if window.get_key(glfw::KEY_LEFT)!=0	{
-				game.debug_move(shift,-1,0);
-			}
-			if window.get_key(glfw::KEY_RIGHT)!=0	{
-				game.debug_move(shift,1,0);
-			}
-			if window.get_key(glfw::KEY_DOWN)!=0	{
-				game.debug_move(shift,0,-1);
-			}
-			if window.get_key(glfw::KEY_UP)!=0	{
-				game.debug_move(shift,0,1);
-			}
-			// mouse buttons
-			let mouse_hit = window.get_mouse_button( glfw::MOUSE_BUTTON_LEFT )!=0;
-			// camera rotation
-			let _cam_dir = (window.get_key(glfw::KEY_E) - window.get_key(glfw::KEY_Q)) as int;
 			// render
-			let (cx,cy) = window.get_cursor_pos();
-			let nx = (cx as float)/(config.window.width as float);
-			let ny = (cy as float)/(config.window.height as float);
-			if !game.update( nx, ny, mouse_hit, scroll_y as float )	{
+			let input = {
+				let (cx,cy) = window.get_cursor_pos();
+				let mut buttons = 0u;
+				for [0u, ..8u].each() |&i|	{
+					buttons |= (window.get_mouse_button(i as i32) << i) as uint;
+				}
+				input::State{
+					time	: engine::anim::get_time(),
+					focus	: true,	//FIXME
+					mouse	: input::Mouse{
+						x	:cx/(config.window.width as float),
+						y	:cy/(config.window.height as float),
+						buttons	: buttons,
+					},
+					keys	: ~[],
+				}
+			};
+			//TODO: update on a higher frequency than render
+			if !game.update( &input )	{
 				break
 			}
 			if !game.render( &config.elements )	{

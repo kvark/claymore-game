@@ -14,6 +14,7 @@ extern mod numeric;
 extern mod std;
 
 pub mod hud;
+pub mod input;
 pub mod main;
 
 pub mod render	{

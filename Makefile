@@ -23,7 +23,7 @@ run-memtest: game
 
 game: build/claymore
 
-build/claymore:	lib/engine.dummy lib/numeric.dummy lib/lmath.dummy lib/cgmath.dummy game/*.rs game/render/*.rs
+build/claymore:	lib/engine.dummy lib/numeric.dummy lib/lmath.dummy lib/cgmath.dummy game/*.rs game/render/*.rs game/scene/*.rs
 	${RUST} game/claymore.rs -L lib --out-dir build
 
 engine: lib/engine.dummy
