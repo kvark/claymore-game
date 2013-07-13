@@ -174,12 +174,10 @@ fn main()	{
 
 		// init callbacks
 		window.set_iconify_callback( |_win,done|	{
-			assert!( done );
-			game.on_input( input::Focus(false) );
+			game.on_input( input::Focus(!done) );
 		});
 		window.set_focus_callback( |_win,done|	{
-			assert!( done );
-			game.on_input( input::Focus(true) );
+			game.on_input( input::Focus(done) );
 		});
 		window.set_char_callback( |_win,key|	{
 			game.on_input( input::Character( key as char ));

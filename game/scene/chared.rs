@@ -27,6 +27,7 @@ struct CamControl	{
 	speed_rot	: f32,
 	speed_zoom	: f32,
 	last_scroll	: Option<float>,
+	in_rotation	: bool,
 }
 
 pub fn clamp<T:cmp::Ord>( x:T, a:T, b:T )-> T	{
@@ -39,7 +40,7 @@ pub fn clamp<T:cmp::Ord>( x:T, a:T, b:T )-> T	{
 pub impl CamControl	{
 	fn update( &mut self, input : &input::State )	{
 		// calculate rotation
-		if (input.mouse.buttons & 1) != 0	{
+		if self.in_rotation	{
 			let dt = 1f32/30f32;	//FIXME
 			let axis = vec3::new( 0f32, 0f32, if input.mouse.x>0.5f {1f32} else {-1f32} );
 			let angle = dt as f32 * self.speed_rot;
@@ -129,15 +130,27 @@ pub impl Scene	{
 					_	=> ()
 				}
 			},
-			&input::MouseClick(_key,press) if press	=> {
-				self.loose_focus();
-				/*//FIXME
-				do self.hud_screen.root.trace(x,y)	|frame,depth|	{
-					if depth==0u && frame.name == ~"id.name.text"	{
+			&input::MouseClick(key,press) if key==0	=> {
+				if press	{
+					self.loose_focus();
+					let (x,y) = self.mouse_point;
+					let mut found_name = false, found_any = false;
+					do self.hud_screen.root.trace(x,y)	|frame,depth|	{
+						if depth>0u	{
+							found_any = true;
+						}
+						if depth==0u && frame.name == ~"id.name.text"	{
+							found_name = true;
+						}
+					};
+					self.control.in_rotation = !found_any;
+					if found_name	{
 						self.edit_label.active = true;
 						self.hud_active = AhEditName;
 					}
-				};*/
+				}else	{
+					self.control.in_rotation = false;
+				}
 			},
 			&input::Scroll(_,scroll)	=> self.control.on_scroll(scroll),
 			_	=> ()
@@ -380,6 +393,7 @@ pub fn make_scene( el : &main::Elements, ct : &mut engine::context::Context, asp
 		speed_rot	: 1.5f32,
 		speed_zoom	: 15f32,
 		last_scroll	: None,
+		in_rotation	: false,
 	};
 	let mut lights : ~[@scene::Light] = ~[];
 	do scene.lights.each_value() |&val|	{
