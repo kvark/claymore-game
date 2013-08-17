@@ -1,5 +1,3 @@
-use HashMap = core::hashmap::linear::LinearMap;
-
 type Name = ~str;
 type Path = ~str;
 type UintRange = [uint, ..2];
@@ -21,11 +19,10 @@ pub enum MaterialKind	{
 }
 
 pub enum MaterialData	{
-	DataInt(int),
-	DataIntVector([int, ..4]),
-	DataScalar(Scalar),
-	DataVector(Vector4),
-	DataColor(Color),
+	DataInt(~str,int),
+	DataScalar(~str,Scalar),
+	DataVector(~str,Vector4),
+	DataColor(~str,Vector3),
 }
 
 pub struct Texture	{
@@ -40,7 +37,7 @@ pub struct Texture	{
 pub struct Material	{
 	name		: Name,
 	kind		: MaterialKind,
-	data		: HashMap<~str,MaterialData>,
+	data		: ~[MaterialData],
 	textures	: ~[Texture],
 }
 

@@ -1,8 +1,8 @@
-#[link(name = "scene", 
+#[link(name = "data", 
        vers = "0.1", 
        author = "Dzmitry Malyshau")];
 
-#[comment = "Generated Claymore scene"];
+#[comment = "Generated Claymore scenes"];
 #[license = "MIT"];
 #[crate_type = "lib"];
 

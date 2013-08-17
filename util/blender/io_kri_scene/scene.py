@@ -40,13 +40,13 @@ def cook_mat(mat,log):
 	return ('Material',{
 		'name'	: mat.name,
 		'kind' 	: kind,
-		'data'		: {
-			'Ambient'		: ('DataScalar', mat.ambient ),
-			'DiffuseColor'	: ('DataVector', list(mat.diffuse_color)+[1.0] ),
-			'DiffuseParams'	: ('DataVector', diff_params ),
-			'SpecularColor'	: ('DataVector', list(mat.specular_color)+[1.0] ),
-			'SpecularParams': ('DataVector', spec_params ),
-		},
+		'data'		: [
+			('DataScalar',	'Ambient',			mat.ambient ),
+			('DataColor',	'DiffuseColor', 	list(mat.diffuse_color) ),
+			('DataVector',	'DiffuseParams',	diff_params ),
+			('DataColor',	'SpecularColor',	list(mat.specular_color) ),
+			('DataVector',	'SpecularParams',	spec_params ),
+		],
 		'textures'	: textures
 	})
 
@@ -125,21 +125,12 @@ def export_value(elem,ofile,num_format,level):
 		else:	# enum element
 			ofile.write( elem[0] )
 			if len(elem)>1:
-				ofile.write( '(' )
+				ofile.write( '(\t' )
 				for sub in elem[1:]:
 					export_value( sub, ofile, num_format, level+1 )
 					if not (sub is last):
-						ofile.write(', ')
+						ofile.write(',\t')
 				ofile.write( ')' )
-	elif tip is dict:
-		ofile.write( '{%s\tlet mut m = HashMap::new();' % (new_line) )
-		for key,val in elem.items():
-			ofile.write( '%s\tm.insert( ' % (new_line) )
-			export_value( key, ofile, num_format, level+2 )
-			ofile.write( ',\t' )
-			export_value( val, ofile, num_format, level+2 )
-			ofile.write( '\t);')
-		ofile.write( new_line + 'm}' )
 	elif tip is bool:
 		ofile.write( ('false','true')[elem] )
 	elif tip is int:
@@ -172,13 +163,10 @@ def export_value(elem,ofile,num_format,level):
 
 def export_doc(document,filename,num_format):
 	ofile = open(filename+'.rs','w')
-	ofile.write('use HashMap = core::hashmap::linear::LinearMap;\n')
 	ofile.write('use common::*;\n')
-	#ofile.write('pub static scene : Scene = ');
-	ofile.write('pub fn load_scene()-> Scene	{\n\t');
+	ofile.write('pub fn load()-> Scene	{\n\t')
 	export_value(document, ofile, num_format, 1)
 	ofile.write('\n}\n')
-	#ofile.write(str(document))
 	ofile.close()
 
 
@@ -290,7 +278,7 @@ def save_scene(filename,context,export_meshes,export_armatures,precision):
 		'materials'	: materials,
 		'nodes'		: nodes,
 	})
-	num_format = '%' + ('.%df' % precision) + 'f32'
+	num_format = '%' + ('.%df' % precision)
 	export_doc(document, filename, num_format)
 	print('Done.')
 	log.conclude()
