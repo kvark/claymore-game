@@ -216,7 +216,7 @@ fn main()	{
 						y	:cy/(config.window.height as float),
 						buttons	: buttons,
 					},
-					keys	: ~[],
+					keys	: ~[],	//FIXME
 				}
 			};
 			//TODO: update on a higher frequency than render

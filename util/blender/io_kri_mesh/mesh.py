@@ -171,7 +171,7 @@ def collect_attributes(mesh,armature,groups,no_output,log):
 	hasQuatUv	= Settings.putQuat and hasUv
 	hasQuat		= Settings.putQuat and (Settings.fakeQuat != 'Never' or hasUv)
 	ar_face = []
-	for i,face in enumerate(mesh.faces):
+	for i,face in enumerate(mesh.polygons):
 		uves,colors,nvert = [],[],len(face.vertices)
 		for layer in mesh.uv_textures:
 			d = layer.data[i]
