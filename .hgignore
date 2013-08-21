@@ -2,16 +2,17 @@ syntax: glob
 
 .DS_Store
 build/*
+game/data/*/*
+data/*.json
 data/font/*
 data/sound/*
 data/texture/*
 *.k3mesh
 *.k3arm
-data/*.json
 lib/*.dSYM
 lib/*.dummy
 lib/libengine-*
+asset/*
 misc/*
 project/*
-util/blender/data/*
 __pycache__

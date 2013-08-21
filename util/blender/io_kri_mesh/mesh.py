@@ -172,17 +172,20 @@ def collect_attributes(mesh,armature,groups,no_output,log):
 	hasQuat		= Settings.putQuat and (Settings.fakeQuat != 'Never' or hasUv)
 	ar_face = []
 	for i,face in enumerate(mesh.polygons):
-		uves,colors,nvert = [],[],len(face.vertices)
-		for layer in mesh.uv_textures:
-			d = layer.data[i]
-			cur = tuple(mathutils.Vector(x) for x in (d.uv1,d.uv2,d.uv3,d.uv4))
+		uves,colors = [],[]
+		loop_end = face.loop_start+face.loop_total
+		for layer in mesh.uv_layers:
+			storage = layer.data[face.loop_start:loop_end]
+			cur = tuple(mathutils.Vector(x.uv) for x in storage)
 			uves.append(cur)
 		for layer in mesh.vertex_colors:
-			d = layer.data[i]
-			cur = tuple(mathutils.Vector(x) for x in (d.color1,d.color2,d.color3,d.color4))
+			storage = layer.data[face.loop_start:loop_end]
+			cur = tuple(mathutils.Vector(x.color) for x in storage)
 			colors.append(cur)
-		if nvert>=3:	ar_face.append( Face(face, mesh, (0,1,2), uves,colors) )
-		if nvert>=4:	ar_face.append( Face(face, mesh, (0,2,3), uves,colors) )
+		if face.loop_total>=3:
+			ar_face.append( Face(face, mesh, (0,1,2), uves,colors) )
+		if face.loop_total>=4:
+			ar_face.append( Face(face, mesh, (0,2,3), uves,colors) )
 	#else: log.logu(1,'converted to tri-mesh')
 	if not 'ClearNonUV':
 		n_bad_face =	len(ar_face)
