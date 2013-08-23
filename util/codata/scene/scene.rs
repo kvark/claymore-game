@@ -1,4 +1,4 @@
-#[link(name = "data", 
+#[link(name = "gen_scene", 
        vers = "0.1", 
        author = "Dzmitry Malyshau")];
 

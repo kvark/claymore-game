@@ -7,6 +7,7 @@
 #[license = "MIT"];
 #[crate_type = "bin"];
 
+extern mod gen_scene;
 extern mod cgmath;
 extern mod engine;
 extern mod lmath;
@@ -29,4 +30,5 @@ pub mod scene	{
 	pub mod common;
 	pub mod grid;
 	pub mod intro;
+	pub mod load;
 }

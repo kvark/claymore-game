@@ -74,7 +74,7 @@ pub enum Call	{
 	CallClear( @mut frame::Buffer, PlaneMap, ClearData, rast::Scissor, rast::Mask ),
 	CallBlit( @mut frame::Buffer, PlaneMap, @mut frame::Buffer, PlaneMap, rast::Scissor ),
 	CallDraw( Input, Output, @shade::Program, shade::DataMap ),
-	CallTransfrom(),	//FIXME
+	CallTransfrom(),	//TODO
 }
 
 pub impl ClearData	{

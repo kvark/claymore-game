@@ -1,5 +1,6 @@
 NAME=claymore
 DIR=${NAME}-game
+CODATA=util/codata
 TRACE=RUST_LOG=rustc=1,::rt::backtrace
 #RUST		?=${TRACE} rustc
 RUST		?=rustc
@@ -23,7 +24,7 @@ run-memtest: game
 
 game: build/claymore
 
-build/claymore:	lib/engine.dummy lib/glfw3.dummy lib/numeric.dummy lib/lmath.dummy lib/cgmath.dummy game/*.rs game/render/*.rs game/scene/*.rs
+build/claymore:	lib/engine.dummy lib/codata.dummy lib/glfw3.dummy lib/numeric.dummy lib/lmath.dummy lib/cgmath.dummy game/*.rs game/render/*.rs game/scene/*.rs
 	${RUST} game/claymore.rs -L lib --out-dir build
 
 engine: lib/engine.dummy
@@ -33,12 +34,19 @@ lib/engine.dummy: lib/glcore.dummy lib/lmath.dummy lib/openal.dummy lib/freetype
 	touch $@
 
 
-demo-03: lib/engine.dummy sample/$@*.rs
-	${RUST} sample/demo03-materials.rs	-L lib --out-dir build
+codata: lib/codata.dummy
+
+lib/codata.dummy: ${CODATA}/scene/*.rs ${CODATA}/scene/chared/*.rs
+	${RUST} ${CODATA}/scene/scene.rs --out-dir lib
+	touch $@
+
+
+demo-03: lib/engine.dummy util/sample/$@*.rs
+	${RUST} util/sample/demo03-materials.rs	-L lib --out-dir build
 demo-04: lib/engine.dummy sample/$@*.rs
-	${RUST} sample/demo04-skeleton.rs	-L lib --out-dir build
+	${RUST} util/sample/demo04-skeleton.rs	-L lib --out-dir build
 demo-05: lib/engine.dummy sample/$@*.rs
-	${RUST} sample/demo05-text.rs		-L lib --out-dir build
+	${RUST} util/sample/demo05-text.rs		-L lib --out-dir build
 
 clean:
 	rm -Rf lib/* build/*

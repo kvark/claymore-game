@@ -175,6 +175,14 @@ pub struct Node	{
 }
 
 pub impl Node	{
+	fn new( name : ~str )-> Node	{
+		Node	{
+			name	: name,
+			space	: QuatSpace::identity(),
+			parent	: None,
+			actions	: ~[],
+		}
+	}
 	fn world_space( &self ) -> QuatSpace	{
 		match self.parent	{
 			Some(p)	=> p.world_space() * self.space,

@@ -399,6 +399,17 @@ pub struct SceneContext	{
 }
 
 pub impl SceneContext	{
+	fn new( prefix : ~str )-> SceneContext	{
+		SceneContext	{
+			prefix		: prefix,
+			materials	: LinearMap::new(),
+			mat_data	: LinearMap::new(),
+			textures	: LinearMap::new(),
+			nodes		: LinearMap::new(),
+			meshes		: LinearMap::new(),
+			armatures	: LinearMap::new(),
+		}
+	}
 	fn query_mesh( &mut self, mesh_name : &~str, gc : &mut gr_low::context::Context,
 			lg : &engine::journal::Log )-> @gr_mid::mesh::Mesh	{
 		match self.meshes.find(mesh_name)	{
