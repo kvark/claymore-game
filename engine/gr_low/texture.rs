@@ -6,8 +6,7 @@ use core::managed;
 use core::to_bytes;
 use core::to_str::ToStr;
 
-use context;
-use frame;
+use gr_low::{context,frame};
 
 
 pub type Mode	= glcore::GLenum;

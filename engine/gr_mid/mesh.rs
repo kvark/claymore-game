@@ -3,10 +3,8 @@ extern mod glcore;
 use core::hashmap::linear::LinearMap;
 use core::managed;
 
-use call;
-use context;
-use buf;
-use shade;
+use gr_low::{buf,context,shade};
+use gr_mid::call;
 
 
 pub struct Range	{

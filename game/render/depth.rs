@@ -1,29 +1,32 @@
 extern mod engine;
 
+use engine::gr_low;
+use engine::gr_mid;
+
 pub struct Data	{
-	texture		: @engine::texture::Texture,
-	tech_solid	: engine::draw::Technique,
-	output		: engine::call::DrawOutput,
-	call_clear	: engine::call::Call,
+	texture		: @gr_low::texture::Texture,
+	tech_solid	: gr_mid::draw::Technique,
+	output		: gr_mid::call::DrawOutput,
+	call_clear	: gr_mid::call::Call,
 }
 
 pub impl Data	{
-	fn create( gc : &mut engine::context::Context )-> Data	{
+	fn create( gc : &mut gr_low::context::Context )-> Data	{
 		let (wid,het) = gc.screen_size;
 		let texture = gc.create_texture( ~"2D", wid, het, 0u, 0u );
 		gc.texture.init_depth( texture, false );
-		let mut pmap = engine::call::PlaneMap::new_empty();
-		pmap.depth = engine::frame::TarTexture(texture,0);
+		let mut pmap = gr_mid::call::PlaneMap::new_empty();
+		pmap.depth = gr_low::frame::TarTexture(texture,0);
 		let mut rast = copy gc.default_rast;
 		rast.prime.cull = true;
 		rast.set_depth( ~"<=", true );
 		let out = ( gc.create_frame_buffer(), pmap, rast );
-		let clear = engine::call::ClearData{
+		let clear = gr_mid::call::ClearData{
 				color:None, depth:Some(1f), stencil:None
 			}.gen_call( copy out );
 		Data{
 			texture		: texture,
-			tech_solid	: engine::draw::load_technique( ~"data/code/tech/pure/solid" ),
+			tech_solid	: gr_mid::draw::load_technique( ~"data/code/tech/pure/solid" ),
 			output		: out,
 			call_clear	: clear,
 		}

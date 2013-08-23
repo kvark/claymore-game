@@ -5,7 +5,8 @@ use lmath::quat::*;
 use lmath::vec::*;
 use cgmath::projection;
 use engine::anim::Player;
-use engine::draw::Mod;
+use engine::{gr_low,gr_mid};
+use engine::gr_mid::draw::Mod;
 use engine::space::{Interpolate,Space};
 
 use input;
@@ -14,7 +15,7 @@ use scene = scene::common;
 
 
 pub struct Character	{
-	entity		: engine::draw::Entity,
+	entity		: engine::gr_mid::draw::Entity,
 	skeleton	: @mut engine::space::Armature,
 	record		: @engine::space::ArmatureRecord,
 	priv start_time	: float,
@@ -74,13 +75,13 @@ pub impl View	{
 
 pub struct Scene	{
 	view	: View,
-	land	: engine::draw::Entity,
+	land	: gr_mid::draw::Entity,
 	grid	: grid::Grid,
 	hero	: Character,
 }
 
 pub impl Scene	{
-	fn update( &mut self, input : &input::State, tb : &mut engine::texture::Binding )-> bool	{
+	fn update( &mut self, input : &input::State, tb : &mut gr_low::texture::Binding )-> bool	{
 		/*let (_,scroll_y) = window.get_scroll_offset(); //FIXME
 		let scroll_y = 0;
 		let shift = window.get_key(glfw::KEY_LEFT_SHIFT)!=0;
@@ -111,15 +112,15 @@ pub impl Scene	{
 		}
 		self.hero.update() && self.view.update( cam_dir ) && ok
 	}
-	fn render( &mut self, ct : &mut engine::context::Context, tech : &engine::draw::Technique, output : engine::call::DrawOutput, lg : &engine::context::Log )	{
+	fn render( &mut self, ct : &mut gr_low::context::Context, tech : &gr_mid::draw::Technique, output : gr_mid::call::DrawOutput, lg : &engine::journal::Log )	{
 		{// update matrices
 			let light_pos	= vec4::new( 4f32, 1f32, 6f32, 1f32 );
 			for [ &mut self.land, &mut self.hero.entity ].each |ent|	{
 				let d = &mut ent.data;
 				self.view.cam.fill_data( d );
-				d.insert( ~"u_LightPos",	engine::shade::UniFloatVec(light_pos) );
+				d.insert( ~"u_LightPos",	gr_low::shade::UniFloatVec(light_pos) );
 				let world = ent.node.world_space().to_matrix();
-				d.insert( ~"u_World",		engine::shade::UniMatrix(false,world) );
+				d.insert( ~"u_World",		gr_low::shade::UniMatrix(false,world) );
 			}
 		}
 		let c_land = tech.process( &self.land, copy output, ct, lg );
@@ -135,7 +136,7 @@ pub impl Scene	{
 }
 
 
-pub fn make_scene( ct : &mut engine::context::Context, aspect : float, lg : &engine::context::Log )-> Scene	{
+pub fn make_scene( ct : &mut gr_low::context::Context, aspect : float, lg : &engine::journal::Log )-> Scene	{
 	// create view
 	let view = 	{
 		// create camera
@@ -183,7 +184,7 @@ pub fn make_scene( ct : &mut engine::context::Context, aspect : float, lg : &eng
 		}
 	};
 	// load basic material & vao
-	let mat = @engine::draw::load_material(~"data/code/mat/phong");
+	let mat = @gr_mid::draw::load_material(~"data/code/mat/phong");
 	let vao = ct.create_vertex_array();
 	// load battle landscape
 	let mut battle_land = {
@@ -194,11 +195,11 @@ pub fn make_scene( ct : &mut engine::context::Context, aspect : float, lg : &eng
 			parent	: None,
 			actions	: ~[],
 		};
-		engine::draw::Entity{
+		gr_mid::draw::Entity{
 			node	: node,
 			input	: (vao, mesh, mesh.get_range()),
-			data	: engine::shade::make_data(),
-			modifier: @() as @engine::draw::Mod,
+			data	: gr_low::shade::make_data(),
+			modifier: @() as @gr_mid::draw::Mod,
 			material: mat,
 		}
 	};
@@ -218,19 +219,19 @@ pub fn make_scene( ct : &mut engine::context::Context, aspect : float, lg : &eng
 			parent	: Some(arm_node),
 			actions	: ~[],
 		};
-		let mut ent = engine::draw::Entity{
+		let mut ent = gr_mid::draw::Entity{
 			node	: node,
 			input	: (vao,mesh,mesh.get_range()),
-			data	: engine::shade::make_data(),
-			modifier: skel as @engine::draw::Mod,
+			data	: gr_low::shade::make_data(),
+			modifier: skel as @gr_mid::draw::Mod,
 			material: mat,
 		};
 		// load char texture
 		let tex = engine::load::load_texture_2D( ct, &~"data/texture/diffuse.jpg", true );
-		let s_opt = Some( engine::texture::Sampler::new(3u,1) );
-		ent.data.insert( ~"t_Main", engine::shade::UniTexture(0u,tex,s_opt) );
+		let s_opt = Some( gr_low::texture::Sampler::new(3u,1) );
+		ent.data.insert( ~"t_Main", gr_low::shade::UniTexture(0u,tex,s_opt) );
 		let utc = vec4::new(1f32,1f32,0f32,0f32);
-		ent.data.insert( ~"u_Tex0Transform", engine::shade::UniFloatVec(utc) );
+		ent.data.insert( ~"u_Tex0Transform", gr_low::shade::UniFloatVec(utc) );
 		// done
 		Character{
 			entity		: ent,
@@ -241,10 +242,10 @@ pub fn make_scene( ct : &mut engine::context::Context, aspect : float, lg : &eng
 	};
 	// load land texture
 	let tex = engine::load::load_texture_2D( ct, &~"data/texture/SoilCracked0103_2_S.jpg", true );
-	let s_opt = Some( engine::texture::Sampler::new(3u,1) );
-	battle_land.data.insert( ~"t_Main", engine::shade::UniTexture(0u,tex,s_opt) );
+	let s_opt = Some( gr_low::texture::Sampler::new(3u,1) );
+	battle_land.data.insert( ~"t_Main", gr_low::shade::UniTexture(0u,tex,s_opt) );
 	let utc = vec4::new(10f32,10f32,0f32,0f32);
-	battle_land.data.insert( ~"u_Tex0Transform", engine::shade::UniFloatVec(utc) );
+	battle_land.data.insert( ~"u_Tex0Transform", gr_low::shade::UniFloatVec(utc) );
 	// create grid
 	let grid = grid::Grid::create( ct, 10u, lg );
 	grid.init( &mut ct.texture );

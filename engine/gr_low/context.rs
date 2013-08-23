@@ -1,13 +1,7 @@
 extern mod glcore;
 
-use core::io::WriterUtil;
-
-use buf;
-use frame;
-use rast;
-use rast::Stage;
-use shade;
-use texture;
+use gr_low::{buf,frame,rast,shade,texture};
+use gr_low::rast::Stage;
 
 
 pub trait ProxyState	{
@@ -175,27 +169,6 @@ pub impl Context	{
 		if self.clear_data.stencil != s	{
 			self.clear_data.stencil = s;
 			glcore::glClearStencil( s as glcore::GLint );
-		}
-	}
-}
-
-
-pub struct Log	{
-	depth		: uint,
-	priv wr		: @io::Writer,
-}
-
-pub impl Log	{
-	fn create( path : ~str, depth : uint )->Log	{
-		match io::file_writer( &path::Path(path), &[io::Create,io::Truncate] )	{
-			Ok(wr)	=> Log{ depth:depth, wr:wr },
-			Err(e)	=> fail!( e.to_str() ),
-		}
-	}
-	fn add( &self, message : ~str )	{
-		let d = str::find(message,char::is_alphanumeric).expect(~"Bad log record");
-		if d<self.depth	{
-			self.wr.write_line(message)
 		}
 	}
 }

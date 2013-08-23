@@ -7,8 +7,8 @@ use core::managed;
 use lmath::vec::*;
 use lmath::mat::*;
 
-use context;
-use texture;
+use gr_low::{context,texture};
+use journal;
 
 
 pub struct Location( glcore::GLint );
@@ -233,7 +233,7 @@ impl context::ProxyState for Program	{
 }
 
 
-priv fn query_attributes( h : &ProgramHandle, lg : &context::Log )-> AttriMap	{
+priv fn query_attributes( h : &ProgramHandle, lg : &journal::Log )-> AttriMap	{
 	//assert glcore::glGetError() == 0;
 	let num		= 0 as glcore::GLint;
 	let max_len	= 0 as glcore::GLint;
@@ -260,7 +260,7 @@ priv fn query_attributes( h : &ProgramHandle, lg : &context::Log )-> AttriMap	{
 }
 
 
-priv fn query_parameters( h : &ProgramHandle, lg : &context::Log )-> ParaMap	{
+priv fn query_parameters( h : &ProgramHandle, lg : &journal::Log )-> ParaMap	{
 	//assert glcore::glGetError() == 0;
 	let num		= 0 as glcore::GLint;
 	let max_len	= 0 as glcore::GLint;
@@ -343,7 +343,7 @@ pub impl context::Context	{
 			alive:ok, info:message }
 	}
 	
-	fn create_program( &self, shaders : ~[@Object], lg : &context::Log )-> @Program	{
+	fn create_program( &self, shaders : ~[@Object], lg : &journal::Log )-> @Program	{
 		let h = ProgramHandle( glcore::glCreateProgram() );
 		for shaders.each |s| {
 			glcore::glAttachShader( *h, *s.handle );

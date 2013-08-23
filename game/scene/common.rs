@@ -17,6 +17,7 @@ use lmath::mat::*;
 use lmath::projection::*;
 use cgmath::projection::*;
 
+use engine::{gr_low,gr_mid};
 use engine::space::Space;
 
 
@@ -100,7 +101,7 @@ pub struct EntityInfo	{
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -//
 //	Material
 
-fn color_to_vec( col : &engine::rast::Color )-> vec4	{
+fn color_to_vec( col : &gr_low::rast::Color )-> vec4	{
 	vec4::new( col.r, col.g, col.b, col.a )
 }
 
@@ -116,7 +117,7 @@ struct TextureInfo	{
 
 pub struct ShaderParam	{
 	name	: ~str,
-	value	: engine::shade::Uniform,
+	value	: gr_low::shade::Uniform,
 }
 
 impl<D:Decoder> Decodable<D> for ShaderParam	{
@@ -127,20 +128,20 @@ impl<D:Decoder> Decodable<D> for ShaderParam	{
 			let value = match kind	{
 				~"scalar"	=> {
 					let v : float	= d.read_field(~"value",	2u, || {Decodable::decode(d)} );
-					engine::shade::UniFloat(v)
+					gr_low::shade::UniFloat(v)
 				},
 				~"color"	=> {
 					let c : uint	= d.read_field(~"value",	2u, || {Decodable::decode(d)} );
-					let v = color_to_vec( &engine::rast::Color::new(c) );
-					engine::shade::UniFloatVec(v)
+					let v = color_to_vec( &gr_low::rast::Color::new(c) );
+					gr_low::shade::UniFloatVec(v)
 				},
 				~"vec3"		=> {
 					let (x,y,z) : (f32,f32,f32) = d.read_field(~"value", 2u, || {Decodable::decode(d)} );
-					engine::shade::UniFloatVec( vec4::new(x,y,z,0f32) )
+					gr_low::shade::UniFloatVec( vec4::new(x,y,z,0f32) )
 				},
 				~"vec4"		=> {
 					let (x,y,z,w) : (f32,f32,f32,f32) = d.read_field(~"value", 2u, || {Decodable::decode(d)} );
-					engine::shade::UniFloatVec( vec4::new(x,y,z,w) )
+					gr_low::shade::UniFloatVec( vec4::new(x,y,z,w) )
 				},
 				_	=> fail!( ~"Unknown type: "+kind ),
 			};
@@ -161,19 +162,19 @@ struct MaterialInfo	{
 	textures: ~[TextureInfo],
 }
 
-type TextureCache = LinearMap<~str,@engine::texture::Texture>;
+type TextureCache = LinearMap<~str,@gr_low::texture::Texture>;
 impl MaterialInfo	{
-	fn fill_data( &self, data : &mut engine::shade::DataMap, cache : &TextureCache )	{
+	fn fill_data( &self, data : &mut gr_low::shade::DataMap, cache : &TextureCache )	{
 		for self.data.each() |par|	{
 			data.insert( ~"u_"+par.name, copy par.value );
 		}
 		for self.textures.eachi() |i,tinfo|	{
 			let tex = *cache.get( &tinfo.path );
-			let s_opt = Some(engine::texture::Sampler::new( tinfo.filter, tinfo.wrap ));
-			data.insert( ~"t_"+tinfo.name, engine::shade::UniTexture(0,tex,s_opt) );
+			let s_opt = Some(gr_low::texture::Sampler::new( tinfo.filter, tinfo.wrap ));
+			data.insert( ~"t_"+tinfo.name, gr_low::shade::UniTexture(0,tex,s_opt) );
 			let (sx,sy,_) = tinfo.scale, (ox,oy,_) = tinfo.offset;
 			let u_transform = vec4::new(sx,sy,ox,oy);
-			data.insert( fmt!("u_Tex%uTransform",i), engine::shade::UniFloatVec(u_transform) );
+			data.insert( fmt!("u_Tex%uTransform",i), gr_low::shade::UniFloatVec(u_transform) );
 		}
 	}
 }
@@ -239,11 +240,11 @@ pub impl Camera	{
 		let v = vec3::new( 1f32,0f32,0f32 );
 		self.node.world_space().orientation.mul_v( &v )
 	}
-	fn fill_data( &self, data : &mut engine::shade::DataMap )	{
+	fn fill_data( &self, data : &mut gr_low::shade::DataMap )	{
 		let sw = self.node.world_space();
-		data.insert( ~"u_ViewProj",		engine::shade::UniMatrix(false,self.get_matrix()) );
-		data.insert( ~"u_CameraPos",	engine::shade::UniFloatVec(sw.get_pos_scale()) );
-		data.insert( ~"u_CameraRot",	engine::shade::UniFloatVec(sw.get_orientation()) );
+		data.insert( ~"u_ViewProj",		gr_low::shade::UniMatrix(false,self.get_matrix()) );
+		data.insert( ~"u_CameraPos",	gr_low::shade::UniFloatVec(sw.get_pos_scale()) );
+		data.insert( ~"u_CameraRot",	gr_low::shade::UniFloatVec(sw.get_orientation()) );
 	}
 }
 
@@ -266,7 +267,7 @@ pub enum LightKind	{
 
 pub struct Light	{
 	node	: NodeRef,
-	color	: engine::rast::Color,
+	color	: gr_low::rast::Color,
 	attenu	: Vec4<f32>,
 	kind	: LightKind,
 }
@@ -305,7 +306,7 @@ pub impl Light	{
 		}
 	}
 
-	fn fill_data( &self, data : &mut engine::shade::DataMap, near : f32, far : f32 )	{
+	fn fill_data( &self, data : &mut gr_low::shade::DataMap, near : f32, far : f32 )	{
 		let sw = self.node.world_space();
 		let mut pos = vec4::new( sw.position.x, sw.position.y, sw.position.z, 1f32 );
 		let col = vec4::new( self.color.r, self.color.g, self.color.b, self.color.a );
@@ -320,15 +321,15 @@ pub impl Light	{
 				let &(mp,blend) = pair;
 				//let ml = mp * self.node.world_space().invert().to_matrix();
 				let ml = mp.mul_m( &self.node.world_space().invert().to_matrix() );
-				data.insert( ~"u_LightProj",	engine::shade::UniMatrix(false,ml) );
-				data.insert( ~"u_LightBlend",	engine::shade::UniFloat(blend) );
+				data.insert( ~"u_LightProj",	gr_low::shade::UniMatrix(false,ml) );
+				data.insert( ~"u_LightBlend",	gr_low::shade::UniFloat(blend) );
 			},
 			None	=> ()
 		}
-		data.insert( ~"u_LightPos",			engine::shade::UniFloatVec(pos) );
-		data.insert( ~"u_LightColor",		engine::shade::UniFloatVec(col) );
-		data.insert( ~"u_LightAttenuation",	engine::shade::UniFloatVec(self.attenu) );
-		data.insert( ~"u_LightRange",		engine::shade::UniFloatVec(range) );
+		data.insert( ~"u_LightPos",			gr_low::shade::UniFloatVec(pos) );
+		data.insert( ~"u_LightColor",		gr_low::shade::UniFloatVec(col) );
+		data.insert( ~"u_LightAttenuation",	gr_low::shade::UniFloatVec(self.attenu) );
+		data.insert( ~"u_LightRange",		gr_low::shade::UniFloatVec(range) );
 	}
 }
 
@@ -347,7 +348,7 @@ pub struct LightInfo	{
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -//
 //	Scene
 
-pub struct EntityGroup( ~[engine::draw::Entity] );
+pub struct EntityGroup( ~[gr_mid::draw::Entity] );
 
 pub impl EntityGroup	{
 	fn divide( &mut self, name : &~str )-> EntityGroup	{
@@ -362,14 +363,14 @@ pub impl EntityGroup	{
 		}
 		rez	
 	}
-	//pub fn with<T>( &mut self, name : &~str, fun : fn(&mut engine::draw::Entity)->T )-> Option<T>	{
+	//pub fn with<T>( &mut self, name : &~str, fun : fn(&mut gr_mid::draw::Entity)->T )-> Option<T>	{
 	//	let opt_pos = do self.position() |ent|	{ent.node.name == *name};
 	//	match opt_pos	{
 	//		Some(p)	=> Some( fun(&mut self[p]) ),
 	//		None	=> None,
 	//	}
 	//}
-	pub fn change_detail( &mut self, detail : engine::draw::Entity )-> Option<engine::draw::Entity>	{
+	pub fn change_detail( &mut self, detail : gr_mid::draw::Entity )-> Option<gr_mid::draw::Entity>	{
 		let opt_pos = self.position( |ent|	{managed::mut_ptr_eq(ent.node,detail.node)} );
 		self.push( detail );
 		match opt_pos	{
@@ -389,17 +390,17 @@ pub type Dict<T>		= LinearMap<~str,T>;
 
 pub struct SceneContext	{
 	prefix		: ~str,
-	materials	: Dict<@engine::draw::Material>,
-	mat_data	: Dict<engine::shade::DataMap>,
-	textures	: Dict<@engine::texture::Texture>,
+	materials	: Dict<@gr_mid::draw::Material>,
+	mat_data	: Dict<gr_low::shade::DataMap>,
+	textures	: Dict<@gr_low::texture::Texture>,
 	nodes		: Dict<NodeRef>,
-	meshes		: Dict<@engine::mesh::Mesh>,
+	meshes		: Dict<@gr_mid::mesh::Mesh>,
 	armatures	: Dict<@mut engine::space::Armature>,
 }
 
 pub impl SceneContext	{
-	fn query_mesh( &mut self, mesh_name : &~str, gc : &mut engine::context::Context,
-			lg : &engine::context::Log )-> @engine::mesh::Mesh	{
+	fn query_mesh( &mut self, mesh_name : &~str, gc : &mut gr_low::context::Context,
+			lg : &engine::journal::Log )-> @gr_mid::mesh::Mesh	{
 		match self.meshes.find(mesh_name)	{
 			Some(m)	=> return *m,
 			None	=> (),
@@ -411,7 +412,7 @@ pub impl SceneContext	{
 		});
 		let path = self.prefix + split[split.len()-1u] + ~".k3mesh";
 		let mut rd = engine::load::Reader::create_std( path );
-		let mut q_mesh = None::<@engine::mesh::Mesh>;
+		let mut q_mesh = None::<@gr_mid::mesh::Mesh>;
 		if split.len() > 1	{
 			assert!( rd.enter() == ~"*mesh" );
 			while rd.has_more()!=0u	{
@@ -435,9 +436,9 @@ pub impl SceneContext	{
 	}
 
 	fn parse_group( &mut self, info_array : &[EntityInfo],
-			gc			: &mut engine::context::Context,
-			opt_vao		: Option<@mut engine::buf::VertexArray>,
-			lg			: &engine::context::Log
+			gc			: &mut gr_low::context::Context,
+			opt_vao		: Option<@mut gr_low::buf::VertexArray>,
+			lg			: &engine::journal::Log
 			)-> EntityGroup	{
 		let mut group = EntityGroup(~[]);
 		for info_array.each() |ient|	{
@@ -454,9 +455,9 @@ pub impl SceneContext	{
 				None	=> fail!( ~"Material not found: " + ient.material )
 			};
 			let skel = if ient.armature.is_empty()	{
-				@()	as @engine::draw::Mod
+				@()	as @gr_mid::draw::Mod
 			}else	{
-				*self.armatures.get(&ient.armature)	as @engine::draw::Mod
+				*self.armatures.get(&ient.armature)	as @gr_mid::draw::Mod
 			};
 			let vao = match opt_vao	{
 				Some(v) => v,
@@ -464,11 +465,11 @@ pub impl SceneContext	{
 			};
 			let mesh = self.query_mesh( &ient.mesh, gc, lg );
 			let (r_min,r_max) = ient.range;
-			let range = engine::mesh::Range{
+			let range = gr_mid::mesh::Range{
 				start	:r_min,
 				num		:r_max-r_min,
 			};
-			let ent = engine::draw::Entity{
+			let ent = gr_mid::draw::Entity{
 				node	: root,
 				input	: (vao,mesh,range),
 				data	: data,
@@ -499,18 +500,18 @@ pub struct SceneInfo	{
 }
 
 
-pub fn load_scene( path : ~str, gc : &mut engine::context::Context,
-		opt_vao : Option<@mut engine::buf::VertexArray>, aspect : float,
-		lg : &engine::context::Log )-> Scene	{
+pub fn load_scene( path : ~str, gc : &mut gr_low::context::Context,
+		opt_vao : Option<@mut gr_low::buf::VertexArray>, aspect : float,
+		lg : &engine::journal::Log )-> Scene	{
 	lg.add( ~"Loading scene: " + path );
 	let scene = load_config::<SceneInfo>( path + ~".json" );
 	let mat_config = load_config::<~[MaterialInfo]>( path + ~".mat.json" );
 	// materials
-	let mut tex_cache		: LinearMap<~str,@engine::texture::Texture>	= LinearMap::new();
-	let mut map_material	: LinearMap<~str,@engine::draw::Material>	= LinearMap::new();
-	let mut map_data		: LinearMap<~str,engine::shade::DataMap>	= LinearMap::new();
+	let mut tex_cache		: LinearMap<~str,@gr_low::texture::Texture>	= LinearMap::new();
+	let mut map_material	: LinearMap<~str,@gr_mid::draw::Material>	= LinearMap::new();
+	let mut map_data		: LinearMap<~str,gr_low::shade::DataMap>	= LinearMap::new();
 	for scene.materials.each() |imat|	{
-		let mat = @engine::draw::load_material( ~"data/code/mat/" + imat.kind );
+		let mat = @gr_mid::draw::load_material( ~"data/code/mat/" + imat.kind );
 		if !map_material.contains_key( &imat.name )	{
 			lg.add( ~"\tStandard material: " + imat.name );
 			map_material.insert( copy imat.name, mat );
@@ -525,12 +526,12 @@ pub fn load_scene( path : ~str, gc : &mut engine::context::Context,
 				tex_cache.insert( copy itex.path, tex );
 			}
 		}
-		let mut data = engine::shade::make_data();
+		let mut data = gr_low::shade::make_data();
 		imat.fill_data( &mut data, &tex_cache );
 		map_data.insert( copy imat.name, data );
 	}
 	for mat_config.each() |imat|	{
-		let mat = @engine::draw::load_material( copy imat.kind );
+		let mat = @gr_mid::draw::load_material( copy imat.kind );
 		map_material.insert( copy imat.name, mat );
 		lg.add( ~"\tCustom material: " + imat.name );
 		for imat.textures.each() |itex|	{
@@ -539,7 +540,7 @@ pub fn load_scene( path : ~str, gc : &mut engine::context::Context,
 				tex_cache.insert( copy itex.path, tex );
 			}
 		}
-		let mut data = engine::shade::make_data();
+		let mut data = gr_low::shade::make_data();
 		imat.fill_data( &mut data, &tex_cache );
 		map_data.insert( copy imat.name, data );
 	}
@@ -592,7 +593,7 @@ pub fn load_scene( path : ~str, gc : &mut engine::context::Context,
 	for scene.lights.each() |ilight|	{
 		let root = *context.nodes.get( &ilight.node );
 		let (cr,cg,cb) = ilight.color;
-		let col = engine::rast::Color{ r:cr, g:cg, b:cb, a:1f32 };
+		let col = gr_low::rast::Color{ r:cr, g:cg, b:cb, a:1f32 };
 		let data = match ilight.kind	{
 			~"POINT"=> LiPoint,
 			~"SUN"	=> LiSun,

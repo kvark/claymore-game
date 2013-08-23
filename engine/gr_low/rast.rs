@@ -1,6 +1,6 @@
 extern mod glcore;
 
-use frame;
+use gr_low::frame;
 
 
 #[deriving(Eq)]

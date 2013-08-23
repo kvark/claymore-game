@@ -7,9 +7,9 @@ use lmath::vec::*;
 use lmath::quat::*;
 use lmath::mat::*;
 
+use gr_low::shade;
+use gr_mid::draw;
 use anim;
-use draw;
-use shade;
 
 pub type Matrix = Mat4<f32>;
 pub type Vector = Vec3<f32>;

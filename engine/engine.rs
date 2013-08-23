@@ -29,5 +29,6 @@ pub mod gr_mid	{
 
 pub mod anim;
 pub mod audio;
+pub mod journal;
 pub mod load;
 pub mod space;

@@ -3,7 +3,8 @@ extern mod lmath;
 extern mod engine;
 extern mod std;
 
-use engine::context::ProxyState;
+use engine::{gr_low,gr_mid};
+use engine::gr_low::context::ProxyState;
 
 use input;
 use scene;
@@ -19,13 +20,13 @@ enum Screen	{
 
 
 struct Game	{
-	context		: engine::context::Context,
+	context		: gr_low::context::Context,
 	audio		: engine::audio::Context,
-	journal		: engine::context::Log,
+	journal		: engine::journal::Log,
 	sound_source: @mut engine::audio::Source,
 	frames		: uint,
-	technique	: engine::draw::Technique,
-	output		: engine::call::DrawOutput,
+	technique	: gr_mid::draw::Technique,
+	output		: gr_mid::call::DrawOutput,
 	s_intro		: scene::intro::Scene,
 	s_editor	: scene::chared::Scene,
 	s_battle	: scene::battle::Scene,
@@ -43,8 +44,8 @@ pub struct Elements	{
 }
 
 pub impl Game	{
-	fn create( el : &Elements, wid : uint, het : uint, lg : engine::context::Log  )-> Game	{
-		let mut ct = engine::context::create( wid, het );
+	fn create( el : &Elements, wid : uint, het : uint, lg : engine::journal::Log  )-> Game	{
+		let mut ct = gr_low::context::create( wid, het );
 		assert!( ct.sync_back() );
 		// audio test
 		let ac = engine::audio::Context::create();
@@ -53,9 +54,9 @@ pub impl Game	{
 		src.bind(buf);
 		//src.play();
 		// create a forward light technique
-		let tech = engine::draw::load_technique( ~"data/code/tech/forward/light" );
+		let tech = gr_mid::draw::load_technique( ~"data/code/tech/forward/light" );
 		let out = {
-			let pmap = engine::call::PlaneMap::new_simple( ~"o_Color", engine::frame::TarEmpty );
+			let pmap = gr_mid::call::PlaneMap::new_simple( ~"o_Color", gr_low::frame::TarEmpty );
 			let mut rast = copy ct.default_rast;
 			rast.set_depth(~"<=",true);
 			rast.prime.cull = true;
@@ -97,8 +98,8 @@ pub impl Game	{
 			ScreenBattle	=> {
 				// clear screen
 				let c0 =
-					engine::call::ClearData{
-						color	:Some( engine::rast::Color::new(0x8080FFFF) ),
+					gr_mid::call::ClearData{
+						color	:Some( gr_low::rast::Color::new(0x8080FFFF) ),
 						depth	:Some( 1f ),
 						stencil	:Some( 0u ),
 					}.gen_call( copy self.output );
@@ -147,7 +148,7 @@ fn main()	{
 	}
 	do glfw::spawn {
 		let config = scene::common::load_config::<Config>( ~"data/config.json" );
-		let lg = engine::context::Log::create( copy config.journal.path, config.journal.depth );
+		let lg = engine::journal::Log::create( copy config.journal.path, config.journal.depth );
 		lg.add(~"--- Claymore ---");
 
 		glfw::ml::window_hint( glfw::RESIZABLE, 0 );

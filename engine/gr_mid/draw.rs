@@ -1,10 +1,10 @@
 use core::hashmap::linear::LinearMap;
 use core::to_bytes;
 
-use call;
-use context;
+use gr_low::{context,shade};
+use gr_mid::call;
+use journal;
 use load;
-use shade;
 use space;
 use space::Space;
 
@@ -117,7 +117,7 @@ pub impl Technique	{
 		], "\n")
 	}
 	
-	fn link( &self, e : &Entity, ct : &context::Context, lg : &context::Log )-> Option<@shade::Program>	{
+	fn link( &self, e : &Entity, ct : &context::Context, lg : &journal::Log )-> Option<@shade::Program>	{
 		if !vec::all(self.meta_vertex,	|m|	{ e.material.meta_vertex.contains(m) 	})
 		|| !vec::all(self.meta_fragment,|m|	{ e.material.meta_fragment.contains(m)	})	{
 			lg.add(fmt!( "Material '%s' rejected by '%s'", e.material.name, self.name ));
@@ -141,7 +141,7 @@ pub impl Technique	{
 		Some( ct.create_program(shaders,lg) )
 	}
 
-	fn get_program( &self, e : &Entity, ct : &context::Context, lg : &context::Log )-> Option<@shade::Program>	{
+	fn get_program( &self, e : &Entity, ct : &context::Context, lg : &journal::Log )-> Option<@shade::Program>	{
 		let ce = CacheEntry{ material:e.material, modifier:e.modifier,
 			technique:~[copy self.code_vertex,copy self.code_fragment]
 		};
@@ -155,7 +155,7 @@ pub impl Technique	{
 		}
 	}
 
-	fn process( &self, e : &Entity, output	: call::DrawOutput, ct : &context::Context, lg : &context::Log )-> call::Call	{
+	fn process( &self, e : &Entity, output	: call::DrawOutput, ct : &context::Context, lg : &journal::Log )-> call::Call	{
 		match self.get_program(e,ct,lg)	{
 			Some(p)	=> call::CallDraw( copy e.input, output, p, copy e.data ),
 			None => call::CallEmpty

@@ -23,12 +23,12 @@ run-memtest: game
 
 game: build/claymore
 
-build/claymore:	lib/engine.dummy lib/numeric.dummy lib/lmath.dummy lib/cgmath.dummy game/*.rs game/render/*.rs game/scene/*.rs
+build/claymore:	lib/engine.dummy lib/glfw3.dummy lib/numeric.dummy lib/lmath.dummy lib/cgmath.dummy game/*.rs game/render/*.rs game/scene/*.rs
 	${RUST} game/claymore.rs -L lib --out-dir build
 
 engine: lib/engine.dummy
 
-lib/engine.dummy: lib/lmath.dummy lib/openal.dummy lib/freetype.dummy lib/stb-image.dummy engine/*.rs
+lib/engine.dummy: lib/glcore.dummy lib/lmath.dummy lib/openal.dummy lib/freetype.dummy lib/stb-image.dummy engine/*.rs engine/gr_low/*.rs engine/gr_mid/*.rs
 	${RUST} engine/engine.rs -L lib --out-dir lib
 	touch $@
 
@@ -70,7 +70,7 @@ lib/glfw3.dummy: ../glfw3-rs/src/*.rs ../glfw3-rs/src/support/*.rs
 	touch $@
 
 lib/glcore.dummy: ../glcore-rs/src/*.r?
-	(cd ../glcore-rs && && make ${GLTARGET} && cp -Ru lib/* ../${DIR}/lib/)
+	(cd ../glcore-rs && make ${GLTARGET} && cp -Ru lib/* ../${DIR}/lib/)
 	touch $@
 
 lib/openal.dummy: ../openal-rs/src/*.rs

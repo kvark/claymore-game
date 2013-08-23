@@ -2,13 +2,9 @@ extern mod glcore;
 
 use core::hashmap::linear::LinearMap;
 
-use buf;
-use context;
-use frame;
-use mesh;
-use rast;
-use rast::Stage;
-use shade;
+use gr_low::{buf,context,frame,rast,shade};
+use gr_low::rast::Stage;
+use gr_mid::mesh;
 
 
 pub struct PlaneMap	{

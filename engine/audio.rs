@@ -2,7 +2,7 @@ extern mod openal;
 
 use openal::*;
 
-use context;
+use journal;
 use load;
 
 //- - - - - -
@@ -141,7 +141,7 @@ pub fn read_wave_chunk( rd : &load::Reader )-> load::Chunk	{
 	}
 }
 
-pub fn load_wav( at : &Context, path : ~str, lg : &context::Log )-> Buffer	{
+pub fn load_wav( at : &Context, path : ~str, lg : &journal::Log )-> Buffer	{
 	struct Chunk	{
 		id		: ~str,
 		start	: uint,

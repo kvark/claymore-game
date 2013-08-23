@@ -5,9 +5,9 @@ use core::vec;
 
 use freetype::freetype::*;
 
-use context;
-use context::GLType;
-use texture;
+use gr_low::{context,texture};
+use gr_low::context::GLType;
+use journal;
 
 
 static SHIFT : int = 6;
@@ -129,7 +129,7 @@ impl Font	{
 		}
 	}
 
-	pub fn bake( &self, gr : &mut context::Context, s : &str, max_size : (uint,uint), lg : &context::Log )-> @texture::Texture	{
+	pub fn bake( &self, gr : &mut context::Context, s : &str, max_size : (uint,uint), lg : &journal::Log )-> @texture::Texture	{
 		lg.add(fmt!( "Font baking text: %s", s ));
 		if s.is_empty()	{
 			let tex = gr.create_texture( ~"2D", 1u, 1u, 1u, 0u );

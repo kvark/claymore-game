@@ -2,8 +2,8 @@ extern mod glcore;
 
 use core::managed;
 
-use context;
-use mesh;
+use gr_low::context;
+use gr_mid::mesh;
 
 
 static MAX_VERTEX_ATTRIBS	:uint	= 8;

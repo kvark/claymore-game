@@ -7,13 +7,14 @@ use core::io::ReaderUtil;
 use lmath::vec::vec3;
 use lmath::quat::quat;
 
+use gr_low::context;
+use gr_low::shade;
+use gr_low::texture;
+use gr_mid::mesh;
 use anim;
-use context;
-use mesh;
-use shade;
+use journal;
 use space;
 use space::Space;
-use texture;
 
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - //
 //		Chunk reader									//
@@ -143,7 +144,7 @@ pub fn read_space( br : &Reader )-> space::QuatSpace	{
 	}
 }
 
-pub fn load_program( ct : &context::Context, path : ~str, lg : &context::Log )-> @shade::Program	{
+pub fn load_program( ct : &context::Context, path : ~str, lg : &journal::Log )-> @shade::Program	{
 	lg.add(fmt!( "Loading program: %s", path ));
 	let sv = ct.create_shader( 'v', load_text( path + ~".glslv" ));
 	let sf = ct.create_shader( 'f', load_text( path + ~".glslf" ));
@@ -181,7 +182,7 @@ pub fn load_texture_2D( ct : &mut context::Context, path : &~str, mipmap : bool 
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - //
 //		Mesh											//
 
-pub fn read_mesh( br : &mut Reader, context : &mut context::Context, lg : &context::Log )-> mesh::Mesh	{
+pub fn read_mesh( br : &mut Reader, context : &mut context::Context, lg : &journal::Log )-> mesh::Mesh	{
 	let signature = br.enter();
 	if signature != ~"k3mesh"	{
 		fail!(fmt!( "Invalid mesh signature '%s': %s", signature, br.path ))
@@ -224,7 +225,7 @@ pub fn read_mesh( br : &mut Reader, context : &mut context::Context, lg : &conte
 	mesh
 }
 
-pub fn load_mesh( path : ~str, ct : &mut context::Context, lg : &context::Log )-> mesh::Mesh	{
+pub fn load_mesh( path : ~str, ct : &mut context::Context, lg : &journal::Log )-> mesh::Mesh	{
 	let mut rd = Reader::create_std( path );
 	read_mesh( &mut rd, ct, lg )
 }
@@ -265,7 +266,7 @@ pub fn read_curve<T : space::Interpolate>( br : &Reader, fkey : &fn(&Reader)->T 
 }
 
 
-pub fn read_armature( br : &mut Reader, root : @mut space::Node, dual_quat : bool, lg : &context::Log )-> space::Armature	{
+pub fn read_armature( br : &mut Reader, root : @mut space::Node, dual_quat : bool, lg : &journal::Log )-> space::Armature	{
 	let signature = br.enter();
 	if signature != ~"k3arm"	{
 		fail!(fmt!( "Invalid armature signature '%s': %s", signature, br.path ))
@@ -368,7 +369,7 @@ pub fn read_armature( br : &mut Reader, root : @mut space::Node, dual_quat : boo
 	}
 }
 
-pub fn load_armature( path : ~str, root : @mut space::Node, lg : &context::Log )-> space::Armature	{
+pub fn load_armature( path : ~str, root : @mut space::Node, lg : &journal::Log )-> space::Armature	{
 	let mut rd = Reader::create_std( path );
 	read_armature( &mut rd, root, false, lg )
 }

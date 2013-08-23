@@ -7,6 +7,8 @@ use core::to_str::ToStr;
 use std::serialize::Decoder;
 
 use lmath::vec::vec4;
+use engine::gr_low;
+use engine::gr_mid::{call,font};
 
 use scene = scene::common;
 
@@ -110,23 +112,23 @@ pub impl Rect	{
 
 
 pub struct Context	{
-	input	: engine::call::DrawInput,
-	output	: engine::call::DrawOutput,
+	input	: call::DrawInput,
+	output	: call::DrawOutput,
 	size	: (uint,uint),
 }
 
 pub impl Context	{
-	fn call( &self, prog : @engine::shade::Program, data : engine::shade::DataMap,
-		rast_override : Option<&engine::rast::State> )-> engine::call::Call	{
+	fn call( &self, prog : @gr_low::shade::Program, data : gr_low::shade::DataMap,
+		rast_override : Option<&gr_low::rast::State> )-> call::Call	{
 		let &(fbo,pmap,rast_orig) = &self.output;
 		let r = copy match rast_override	{
 			Some(ro)	=> *ro,
 			None		=> rast_orig,
 		};
-		engine::call::CallDraw( copy self.input, (fbo,pmap,r), prog, data )
+		call::CallDraw( copy self.input, (fbo,pmap,r), prog, data )
 	}
 
-	fn transform( &self, r : &Rect )-> engine::shade::Uniform	{
+	fn transform( &self, r : &Rect )-> gr_low::shade::Uniform	{
 		let (tx,ty) = self.size, (bx,by) = r.base, (sx,sy) = r.size;
 		let dx = 2f32 / (tx as f32);
 		let dy = 2f32 / (ty as f32);
@@ -136,19 +138,19 @@ pub impl Context	{
 			dx * (bx as f32) - 1f32,
 			dy * (by as f32) - 1f32
 			);
-		engine::shade::UniFloatVec(vt)
+		gr_low::shade::UniFloatVec(vt)
 	}
 }
 
 pub trait Element	{
 	fn get_size( &self )-> Point;
-	fn draw( &self, &Context, &Rect )-> engine::call::Call;
+	fn draw( &self, &Context, &Rect )-> call::Call;
 }
 
 impl Element for ()	{
 	fn get_size( &self )-> Point	{(0,0)}
-	fn draw( &self, _hc : &Context, _r : &Rect )-> engine::call::Call	{
-		engine::call::CallEmpty
+	fn draw( &self, _hc : &Context, _r : &Rect )-> call::Call	{
+		call::CallEmpty
 	}
 }
 
@@ -183,7 +185,7 @@ pub impl Frame	{
 		self.area
 	}
 
-	priv fn update_size( &mut self, lg : &engine::context::Log )-> Point	{
+	priv fn update_size( &mut self, lg : &engine::journal::Log )-> Point	{
 		let (ex,ey) = self.element.get_size();
 		let (cx,cy) = self.get_size((ex,ey));
 		if self.children.is_empty()	{
@@ -227,7 +229,7 @@ pub impl Frame	{
 		self.area.size
 	}
 
-	priv fn update_base( &mut self, lg : &engine::context::Log )	{
+	priv fn update_base( &mut self, lg : &engine::journal::Log )	{
 		let no_margin = Margin{side:0,bot:0,top:0};
 		for uint::range(0,self.children.len()) |i|	{
 			let child = &mut self.children[i];
@@ -249,7 +251,7 @@ pub impl Frame	{
 		}
 	}
 
-	fn update( &mut self, lg : &engine::context::Log )	{
+	fn update( &mut self, lg : &engine::journal::Log )	{
 		lg.add( ~"Updating HUD: " + self.name );
 		self.update_size( lg );
 		assert!( self.area.size == self.min_size );
@@ -289,7 +291,7 @@ pub impl Frame	{
 		res.is_some()
 	}
 
-	fn draw_all( &self, hc : &Context )-> ~[engine::call::Call]	{
+	fn draw_all( &self, hc : &Context )-> ~[call::Call]	{
 		let c0 = self.element.draw( hc, &self.get_draw_rect() );
 		let mut queue = ~[c0];
 		for self.children.each() |child|	{
@@ -298,14 +300,14 @@ pub impl Frame	{
 		queue
 	}
 
-	fn draw_debug( &self, hc : &Context, prog : @engine::shade::Program,
-		data : &mut engine::shade::DataMap, rast : &engine::rast::State )-> engine::call::Call	{
+	fn draw_debug( &self, hc : &Context, prog : @gr_low::shade::Program,
+		data : &mut gr_low::shade::DataMap, rast : &gr_low::rast::State )-> call::Call	{
 		data.insert( ~"u_Transform", hc.transform(&self.area) );
 		hc.call( prog, copy *data, Some(rast) )
 	}
 
-	fn draw_debug_all( &self, hc : &Context, prog : @engine::shade::Program,
-		data : &mut engine::shade::DataMap, rast : &engine::rast::State )-> ~[engine::call::Call]	{
+	fn draw_debug_all( &self, hc : &Context, prog : @gr_low::shade::Program,
+		data : &mut gr_low::shade::DataMap, rast : &gr_low::rast::State )-> ~[call::Call]	{
 		let c0 = self.draw_debug(hc,prog,data,rast);
 		let mut queue = ~[c0];
 		for self.children.each() |child|	{
@@ -350,9 +352,9 @@ struct ImageInfo	{
 }
 
 pub struct Image	{
-	texture	: @engine::texture::Texture,
-	sampler	: engine::texture::Sampler,
-	program	: @engine::shade::Program,
+	texture	: @gr_low::texture::Texture,
+	sampler	: gr_low::texture::Sampler,
+	program	: @gr_low::shade::Program,
 	center	: (f32,f32),
 }
 
@@ -360,17 +362,17 @@ impl Element for Image	{
 	fn get_size( &self )-> Point	{
 		(self.texture.width as int, self.texture.height as int)
 	}
-	fn draw( &self, hc : &Context, rect : &Rect )-> engine::call::Call	{
+	fn draw( &self, hc : &Context, rect : &Rect )-> call::Call	{
 		// fill shader data
-		let mut data = engine::shade::make_data();
-		data.insert( ~"t_Image",	engine::shade::UniTexture(
+		let mut data = gr_low::shade::make_data();
+		data.insert( ~"t_Image",	gr_low::shade::UniTexture(
 			0, self.texture, Some(self.sampler) ));
 		let (cx,cy) = self.center, (sx,sy) = rect.size;
 		let vc = vec4::new( cx, cy,
 			(sx as f32)/(self.texture.width as f32),
 			(sy as f32)/(self.texture.height as f32)
 			);
-		data.insert( ~"u_Center",	engine::shade::UniFloatVec(vc) );
+		data.insert( ~"u_Center",	gr_low::shade::UniFloatVec(vc) );
 		data.insert( ~"u_Transform", hc.transform(rect) );
 		// return
 		hc.call( self.program, data, None )
@@ -390,24 +392,24 @@ struct LabelInfo	{
 }
 
 pub struct Label	{
-	texture	: @engine::texture::Texture,
+	texture	: @gr_low::texture::Texture,
 	content	: ~str,
-	program	: @engine::shade::Program,
-	color	: engine::rast::Color,
-	font	: @engine::font::Font,
+	program	: @gr_low::shade::Program,
+	color	: gr_low::rast::Color,
+	font	: @font::Font,
 }
 
 impl Element for Label	{
 	fn get_size( &self )-> Point	{
 		(self.texture.width as int, self.texture.height as int)
 	}
-	fn draw( &self, hc : &Context, rect : &Rect )-> engine::call::Call	{
+	fn draw( &self, hc : &Context, rect : &Rect )-> call::Call	{
 		// fill shader data
-		let mut data = engine::shade::make_data();
-		let sm = engine::texture::Sampler::new(1u,0);
-		data.insert( ~"t_Text",	engine::shade::UniTexture(0,self.texture,Some(sm)) );
+		let mut data = gr_low::shade::make_data();
+		let sm = gr_low::texture::Sampler::new(1u,0);
+		data.insert( ~"t_Text",	gr_low::shade::UniTexture(0,self.texture,Some(sm)) );
 		let vc = vec4::new( self.color.r, self.color.g, self.color.b, self.color.a );
-		data.insert( ~"u_Color",	engine::shade::UniFloatVec(vc) );
+		data.insert( ~"u_Color",	gr_low::shade::UniFloatVec(vc) );
 		let dr = Rect{ base:rect.base, size:self.get_size() };
 		data.insert( ~"u_Transform", hc.transform(&dr) );
 		// return
@@ -427,13 +429,13 @@ pub struct Screen    {
 	root	: Frame,
 	images	: LinearMap<~str,@Image>,
 	labels	: LinearMap<~str,@mut Label>,
-	textures: LinearMap<~str,@engine::texture::Texture>,
-	fonts	: LinearMap<FontInfo,@engine::font::Font>,
+	textures: LinearMap<~str,@gr_low::texture::Texture>,
+	fonts	: LinearMap<FontInfo,@font::Font>,
 }
 
 
-pub fn load_screen( path : ~str, ct : &mut engine::context::Context,
-		ft : @engine::font::Context, lg : &engine::context::Log )-> Screen	{
+pub fn load_screen( path : ~str, ct : &mut gr_low::context::Context,
+		ft : @font::Context, lg : &engine::journal::Log )-> Screen	{
 	lg.add( ~"Loading HUD screen: " + path );
 	let iscreen = scene::load_config::<ScreenInfo>( path );
 	let (wid,het) = ct.screen_size;
@@ -447,7 +449,7 @@ pub fn load_screen( path : ~str, ct : &mut engine::context::Context,
 		margin		: Margin{side:0,bot:0,top:0},
 		children	: convert_frames( &iscreen.frames ),
 	};
-	let mut map_texture	: LinearMap<~str,@engine::texture::Texture> = LinearMap::new();
+	let mut map_texture	: LinearMap<~str,@gr_low::texture::Texture> = LinearMap::new();
 	lg.add(fmt!( "\tParsing %u images", iscreen.images.len() ));
 	let mut map_image : LinearMap<~str,@Image> = LinearMap::new();
 	let prog_image = engine::load::load_program( ct, ~"data/code/hud/image", lg );
@@ -462,7 +464,7 @@ pub fn load_screen( path : ~str, ct : &mut engine::context::Context,
 		}
 		let image = @Image	{
 			texture	: texture,
-			sampler	: engine::texture::Sampler::new(1u,0),
+			sampler	: gr_low::texture::Sampler::new(1u,0),
 			program	: prog_image,
 			center	: iimage.center,
 		};
@@ -472,7 +474,7 @@ pub fn load_screen( path : ~str, ct : &mut engine::context::Context,
 		}
 	}
 	lg.add(fmt!( "\tParsing %u labels", iscreen.labels.len() ));
-	let mut map_font	: LinearMap<FontInfo,@engine::font::Font>	= LinearMap::new();
+	let mut map_font	: LinearMap<FontInfo,@font::Font>	= LinearMap::new();
 	let mut map_label	: LinearMap<~str,@mut Label>				= LinearMap::new();
 	let prog_label = engine::load::load_program( ct, ~"data/code/hud/text", lg );
 	for iscreen.labels.each() |ilabel|	{
@@ -492,7 +494,7 @@ pub fn load_screen( path : ~str, ct : &mut engine::context::Context,
 			texture	: font.bake( ct, ilabel.text, ilabel.bound, lg ),
 			content	: copy ilabel.text,
 			program	: prog_label,
-			color	: engine::rast::Color::new( ilabel.color ),
+			color	: gr_low::rast::Color::new( ilabel.color ),
 			font	: font,
 		};
 		map_label.insert( copy ilabel.frame, label );
@@ -520,11 +522,11 @@ impl<T:Element> Element for Blink<T>	{
 	fn get_size( &self )-> Point	{
 		self.element.get_size()
 	}
-	fn draw( &self, ct : &Context, r : &Rect )-> engine::call::Call	{
+	fn draw( &self, ct : &Context, r : &Rect )-> call::Call	{
 		if self.visible	{
 			self.element.draw(ct,r)
 		}else	{
-			engine::call::CallEmpty
+			call::CallEmpty
 		}
 	}
 }
@@ -558,7 +560,7 @@ pub impl EditLabel	{
 		}
 	}
 
-	fn change( &self, input : &str, ct : &mut engine::context::Context, lg : &engine::context::Log )	{
+	fn change( &self, input : &str, ct : &mut gr_low::context::Context, lg : &engine::journal::Log )	{
 		let mut text = copy self.text.content;
 		str::each_char(input, |key|	{
 			if key == (259 as char)	{

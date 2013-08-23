@@ -6,6 +6,7 @@ use numeric::Float;
 use lmath::quat::*;
 use lmath::vec::*;
 use engine::anim::{Act,Player};
+use engine::{gr_low,gr_mid};
 
 use hud;
 use input;
@@ -15,10 +16,10 @@ use scene = scene::common;
 
 
 struct Envir	{
-	input	: engine::call::DrawInput,
-	prog	: @engine::shade::Program,
-	data	: engine::shade::DataMap,
-	rast	: engine::rast::State,
+	input	: gr_mid::call::DrawInput,
+	prog	: @gr_low::shade::Program,
+	data	: gr_low::shade::DataMap,
+	rast	: gr_low::rast::State,
 }
 
 struct CamControl	{
@@ -81,10 +82,10 @@ pub struct Scene	{
 	control	: CamControl,
 	lights	: ~[@scene::Light],
 	envir	: Envir,
-	technique	: @engine::draw::Technique,
-	rast_solid	: engine::rast::State,
-	rast_cloak	: engine::rast::State,
-	rast_alpha	: engine::rast::State,
+	technique	: @gr_mid::draw::Technique,
+	rast_solid	: gr_low::rast::State,
+	rast_cloak	: gr_low::rast::State,
+	rast_alpha	: gr_low::rast::State,
 	depth	: render::depth::Data,
 	lbuf	: Option<render::lbuf::Context>,
 	lvolume	: render::lbuf::LightVolume,
@@ -92,7 +93,7 @@ pub struct Scene	{
 	start	: float,
 	hud_screen	: hud::Screen,
 	hud_context	: hud::Context,
-	hud_debug	: @engine::shade::Program,
+	hud_debug	: @gr_low::shade::Program,
 	edit_label	: @mut hud::EditLabel,
 	mouse_point	: (int,int),
 	input_queue	: ~str,
@@ -106,7 +107,7 @@ pub impl Scene	{
 		self.hud_active = AhInactive;
 	}
 
-	fn update( &mut self, input : &input::State, _lg : &engine::context::Log )-> bool	{
+	fn update( &mut self, input : &input::State, _lg : &engine::journal::Log )-> bool	{
 		if true	{
 			let (mx,my) = self.hud_screen.root.min_size;
 			let x = ((0f+input.mouse.x) * (mx as float)) as int;
@@ -157,14 +158,14 @@ pub impl Scene	{
 		}
 	}
 
-	fn render( &mut self, el : &main::Elements, ct : &mut engine::context::Context, lg : &engine::context::Log  )	{
+	fn render( &mut self, el : &main::Elements, ct : &mut gr_low::context::Context, lg : &engine::journal::Log  )	{
 		// clear screen
 		let fbo = ct.default_frame_buffer;
-		let pmap = engine::call::PlaneMap::new_simple( ~"o_Color", engine::frame::TarEmpty );
+		let pmap = gr_mid::call::PlaneMap::new_simple( ~"o_Color", gr_low::frame::TarEmpty );
 		let out_solid = (fbo, copy pmap, self.rast_solid);
 		let c0 =
-			engine::call::ClearData{
-				color	:Some( engine::rast::Color::new(0x8080FFFF) ),
+			gr_mid::call::ClearData{
+				color	:Some( gr_low::rast::Color::new(0x8080FFFF) ),
 				depth	:Some( 1f ),
 				stencil	:Some( 0u ),
 			}.gen_call( copy out_solid );
@@ -172,15 +173,15 @@ pub impl Scene	{
 			let vpi = self.cam.get_inverse_matrix();
 			//self.cam.fill_data( &mut self.envir.data );
 			self.envir.data.insert( ~"u_ViewProjInverse",
-				engine::shade::UniMatrix(false,vpi) );
+				gr_low::shade::UniMatrix(false,vpi) );
 		}
 		let c1 = if el.environment	{
 			let e = &self.envir;
-			engine::call::CallDraw(
+			gr_mid::call::CallDraw(
 				copy e.input, (fbo,copy pmap,copy e.rast),
 				e.prog, copy e.data )
 		}else	{
-			engine::call::CallEmpty
+			gr_mid::call::CallEmpty
 		};
 		let mut queue = ~[c0,c1];
 		if true	{	// update animation
@@ -195,7 +196,7 @@ pub impl Scene	{
 			let (wid,het) = ct.screen_size;
 			let target_size = vec4::new( wid as f32, het as f32,
   				1f32/(wid as f32), 1f32/(het as f32) );
-			let par_ts = engine::shade::UniFloatVec( target_size );
+			let par_ts = gr_low::shade::UniFloatVec( target_size );
 			for [&mut self.gr_main, &mut self.gr_cape, &mut self.gr_hair, &mut self.gr_other].each() |group|	{
 				for group.each_mut() |ent|	{
 					ent.update_world();
@@ -279,10 +280,10 @@ pub impl Scene	{
 				);
 			let (x,y) = self.mouse_point;
 			let mut rast  = copy ct.default_rast;
-			rast.prime.poly_mode = engine::rast::map_polygon_fill(2);
-			let mut data = engine::shade::make_data();
+			rast.prime.poly_mode = gr_low::rast::map_polygon_fill(2);
+			let mut data = gr_low::shade::make_data();
 			let vc = vec4::new(1f32,0f32,0f32,1f32);
-			data.insert( ~"u_Color", engine::shade::UniFloatVec(vc) );
+			data.insert( ~"u_Color", gr_low::shade::UniFloatVec(vc) );
 			do self.hud_screen.root.trace(x,y)	|frame,depth| {
 				if depth==0u && frame.element.get_size()!=(0,0)	{
 					let call = frame.draw_debug( &self.hud_context,
@@ -294,10 +295,10 @@ pub impl Scene	{
 		if el.hud_debug	{
 			queue.push_all_move({
 				let mut rast  = copy ct.default_rast;
-				rast.prime.poly_mode = engine::rast::map_polygon_fill(2);
-				let mut data = engine::shade::make_data();
+				rast.prime.poly_mode = gr_low::rast::map_polygon_fill(2);
+				let mut data = gr_low::shade::make_data();
 				let vc = vec4::new(1f32,0f32,0f32,1f32);
-				data.insert( ~"u_Color", engine::shade::UniFloatVec(vc) );
+				data.insert( ~"u_Color", gr_low::shade::UniFloatVec(vc) );
 				self.hud_screen.root.draw_debug_all( &self.hud_context,
 					self.hud_debug, &mut data, &rast )
 			});
@@ -307,14 +308,14 @@ pub impl Scene	{
 }
 
 
-pub fn make_scene( el : &main::Elements, ct : &mut engine::context::Context, aspect : float, lg : &engine::context::Log )-> Scene	{
+pub fn make_scene( el : &main::Elements, ct : &mut gr_low::context::Context, aspect : float, lg : &engine::journal::Log )-> Scene	{
 	let vao = ct.create_vertex_array();
 	let mut scene = scene::load_scene( ~"data/claymore-2a", ct, Some(vao), aspect, lg );
 	let detail_info = scene::load_config::<~[scene::EntityInfo]>( ~"data/details.json" );
 	let mut details = scene.context.parse_group( detail_info, ct, Some(vao), lg );
 	// techniques & rast states
-	let tech = @engine::draw::load_technique( ~"data/code/tech/forward/spot-shadow" );
-	let pmap = engine::call::PlaneMap::new_simple( ~"o_Color", engine::frame::TarEmpty );
+	let tech = @gr_mid::draw::load_technique( ~"data/code/tech/forward/spot-shadow" );
+	let pmap = gr_mid::call::PlaneMap::new_simple( ~"o_Color", gr_low::frame::TarEmpty );
 	let mut rast = copy ct.default_rast;
 	rast.depth.test = true;
 	rast.prime.cull = true;
@@ -332,17 +333,17 @@ pub fn make_scene( el : &main::Elements, ct : &mut engine::context::Context, asp
 	let hair = group.divide( &~"Hair_Geo2" );
 	lg.add(fmt!( "Group size: %u", group.len() ));
 	let envir = {
-		let mesh = @engine::mesh::create_quad( ct );
-		let mut data = engine::shade::make_data();
-		let samp = engine::texture::Sampler::new(3u,1);
+		let mesh = @gr_mid::mesh::create_quad( ct );
+		let mut data = gr_low::shade::make_data();
+		let samp = gr_low::texture::Sampler::new(3u,1);
 		let use_spherical = false;
 		let prog = if use_spherical	{
 			let tex = *scene.context.textures.get( &~"data/texture/Topanga_Forest_B_3k.hdr" );
-			data.insert( ~"t_Environment",	engine::shade::UniTexture(0,tex,Some(samp)) );
+			data.insert( ~"t_Environment",	gr_low::shade::UniTexture(0,tex,Some(samp)) );
 			engine::load::load_program( ct, ~"data/code-game/envir", lg )
 		}else	{
 			let tex = engine::load::load_texture_2D( ct, &~"data/texture/bg2.jpg", true );
-			data.insert( ~"t_Image",		engine::shade::UniTexture(0,tex,Some(samp)) );
+			data.insert( ~"t_Image",		gr_low::shade::UniTexture(0,tex,Some(samp)) );
 			engine::load::load_program( ct, ~"data/code-game/copy", lg )
 		};
 		let mut rast = copy ct.default_rast;
@@ -355,13 +356,13 @@ pub fn make_scene( el : &main::Elements, ct : &mut engine::context::Context, asp
 		}		
 	};
 	// load char HUD
-	let fcon = @engine::font::Context::create();
+	let fcon = @gr_mid::font::Context::create();
 	let mut hud_screen = hud::load_screen( ~"data/hud/char.json", ct, fcon, lg );
 	hud_screen.root.update( lg );
 	let hc = {
 		let mut hud_rast = copy ct.default_rast;
 		hud_rast.set_blend( ~"s+d", ~"Sa", ~"1-Sa" );
-		let quad = @engine::mesh::create_quad(ct);
+		let quad = @gr_mid::mesh::create_quad(ct);
 		hud::Context{
 			input	: (vao,quad,quad.get_range()),
 			output	: (ct.default_frame_buffer, copy pmap, hud_rast),

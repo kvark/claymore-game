@@ -3,8 +3,7 @@ extern mod glcore;
 use core::managed;
 use core::to_str::ToStr;
 
-use context;
-use texture;
+use gr_low::{context,texture};
 
 
 pub struct SurfaceHandle( glcore::GLuint );
