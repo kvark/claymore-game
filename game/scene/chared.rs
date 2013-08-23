@@ -16,7 +16,7 @@ use scene = scene::common;
 
 
 struct Envir	{
-	input	: gr_mid::call::DrawInput,
+	input	: gr_mid::call::Input,
 	prog	: @gr_low::shade::Program,
 	data	: gr_low::shade::DataMap,
 	rast	: gr_low::rast::State,
@@ -163,13 +163,17 @@ pub impl Scene	{
 		// clear screen
 		let fbo = ct.default_frame_buffer;
 		let pmap = gr_mid::call::PlaneMap::new_simple( ~"o_Color", gr_low::frame::TarEmpty );
-		let out_solid = (fbo, copy pmap, self.rast_solid);
+		let out_solid = gr_mid::call::Output{
+			fb	: fbo,
+			pmap: copy pmap,
+			rast: copy self.rast_solid
+		};
 		let c0 =
 			gr_mid::call::ClearData{
 				color	:Some( gr_low::rast::Color::new(0x8080FFFF) ),
 				depth	:Some( 1f ),
 				stencil	:Some( 0u ),
-			}.gen_call( copy out_solid );
+			}.gen_call( &out_solid );
 		if el.environment	{
 			let vpi = self.cam.get_inverse_matrix();
 			//self.cam.fill_data( &mut self.envir.data );
@@ -178,8 +182,13 @@ pub impl Scene	{
 		}
 		let c1 = if el.environment	{
 			let e = &self.envir;
+			let out = gr_mid::call::Output	{
+				fb	: fbo,
+				pmap: copy pmap,
+				rast: copy e.rast,
+			};
 			gr_mid::call::CallDraw(
-				copy e.input, (fbo,copy pmap,copy e.rast),
+				copy e.input, out,
 				e.prog, copy e.data )
 		}else	{
 			gr_mid::call::CallEmpty
@@ -252,11 +261,11 @@ pub impl Scene	{
 				queue.push( tech.process( ent, copy out_solid, Some( &mut self.cache ), ct, lg ) );
 			}
 			for self.gr_cape.each() |ent|	{
-				let out = (fbo, copy pmap, copy self.rast_cloak );
+				let out = gr_mid::call::Output{ fb:fbo, pmap:copy pmap, rast:copy self.rast_cloak };
 				queue.push( tech.process( ent, out, Some( &mut self.cache ), ct, lg ) );	
 			}
 			for self.gr_hair.each() |ent|	{
-				let out = (fbo, copy pmap, copy self.rast_alpha );
+				let out = gr_mid::call::Output{ fb:fbo, pmap:copy pmap, rast:copy self.rast_alpha };
 				queue.push( tech.process( ent, out, Some( &mut self.cache ), ct, lg ) );
 			}
 		}
@@ -350,10 +359,10 @@ pub fn make_scene( el : &main::Elements, ct : &mut gr_low::context::Context, asp
 		let mut rast = copy ct.default_rast;
 		//rast.set_depth( ~"<=", false );
 		Envir{
-			input:(vao,mesh,mesh.get_range()),
-			prog:prog,
-			data:data,
-			rast:rast,
+			input	: gr_mid::call::Input::new( vao, mesh ),
+			prog	: prog,
+			data	: data,
+			rast	: rast,
 		}		
 	};
 	// load char HUD
@@ -364,9 +373,14 @@ pub fn make_scene( el : &main::Elements, ct : &mut gr_low::context::Context, asp
 		let mut hud_rast = copy ct.default_rast;
 		hud_rast.set_blend( ~"s+d", ~"Sa", ~"1-Sa" );
 		let quad = @gr_mid::mesh::create_quad(ct);
+		let out = gr_mid::call::Output	{
+			fb	: ct.default_frame_buffer,
+			pmap: copy pmap,
+			rast: hud_rast,
+		};
 		hud::Context{
-			input	: (vao,quad,quad.get_range()),
-			output	: (ct.default_frame_buffer, copy pmap, hud_rast),
+			input	: gr_mid::call::Input::new( vao, quad ),
+			output	: out,
 			size	: ct.screen_size,
 		}
 	};

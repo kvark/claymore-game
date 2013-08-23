@@ -465,13 +465,14 @@ pub impl SceneContext	{
 			};
 			let mesh = self.query_mesh( &ient.mesh, gc, lg );
 			let (r_min,r_max) = ient.range;
-			let range = gr_mid::mesh::Range{
+			let mut in = gr_mid::call::Input::new( vao, mesh );
+			in.range = gr_mid::mesh::Range{
 				start	:r_min,
 				num		:r_max-r_min,
 			};
 			let ent = engine::object::Entity{
 				node	: root,
-				input	: (vao,mesh,range),
+				input	: in,
 				data	: data,
 				modifier: skel,
 				material: mat,

@@ -37,21 +37,49 @@ pub struct ClearData	{
 	stencil	: Option<uint>,
 }
 
-pub type DrawInput = (@mut buf::VertexArray, @mesh::Mesh, mesh::Range);
-pub type DrawOutput = (@mut frame::Buffer, PlaneMap, rast::State);
+pub struct Input	{
+	va		: @mut buf::VertexArray,
+	mesh	: @mesh::Mesh,
+	range	: mesh::Range,
+}
+
+pub impl Input	{
+	fn new( va : @mut buf::VertexArray, m : @mesh::Mesh )-> Input	{
+		Input	{
+			va		: va,
+			mesh	: m,
+			range	: m.get_range(),
+		}
+	}
+}
+
+
+pub struct Output	{
+	fb		: @mut frame::Buffer,
+	pmap	: PlaneMap,
+	rast	: rast::State,
+}
+
+pub impl Output	{
+	fn check( &self )	{
+		assert!( !self.rast.stencil.test	|| self.pmap.stencil	!= frame::TarEmpty );
+		assert!( !self.rast.depth.test		|| self.pmap.depth		!= frame::TarEmpty );
+		assert!( !self.rast.blend.on		|| !self.pmap.colors.is_empty() );
+	}
+}
+
 
 pub enum Call	{
 	CallEmpty,
 	CallClear( @mut frame::Buffer, PlaneMap, ClearData, rast::Scissor, rast::Mask ),
 	CallBlit( @mut frame::Buffer, PlaneMap, @mut frame::Buffer, PlaneMap, rast::Scissor ),
-	CallDraw( DrawInput, DrawOutput, @shade::Program, shade::DataMap ),
+	CallDraw( Input, Output, @shade::Program, shade::DataMap ),
 	CallTransfrom(),	//FIXME
 }
 
 pub impl ClearData	{
-	fn gen_call( &self, output : DrawOutput )-> Call	{
-		let (fbo,pmap,rast) = output;
-		CallClear( fbo, pmap, copy *self, rast.scissor, rast.mask )
+	fn gen_call( &self, out : &Output )-> Call	{
+		CallClear( out.fb, copy out.pmap, copy *self, copy out.rast.scissor, copy out.rast.mask )
 	}
 }
 
@@ -134,31 +162,27 @@ pub impl context::Context	{
 						0, 0, wid2 as glcore::GLint, het2 as glcore::GLint,
 						flags, filter );
 				},
-				CallDraw(input,output,prog,data)	=> {
-					let &(fb,pmap,rast) = &output;
+				CallDraw(in,out,prog,data)	=> {
 					// bind FBO
-					let mut attaches = vec::from_elem( pmap.colors.len(), frame::TarEmpty );
-					for pmap.colors.each() |&(name,target)|	{
+					let mut attaches = vec::from_elem( out.pmap.colors.len(), frame::TarEmpty );
+					for out.pmap.colors.each() |&(name,target)|	{
 						let loc = prog.find_output( name );
 						assert!( loc < attaches.len() && attaches[loc] == frame::TarEmpty );
 						attaches[loc] = *target;
 					}
-					self.bind_frame_buffer( fb, true, pmap.stencil, pmap.depth, attaches );
+					self.bind_frame_buffer( out.fb, true, out.pmap.stencil, out.pmap.depth, attaches );
 					// check & activate raster
-					let rect = if *fb.handle != 0	{
-						assert!( !rast.stencil.test	|| pmap.stencil	!= frame::TarEmpty );
-						assert!( !rast.depth.test	|| pmap.depth	!= frame::TarEmpty );
-						assert!( !rast.blend.on		|| !pmap.colors.is_empty() );
-						let (wid,het,_dep,_sam) = fb.check_size();
+					let rect = if *out.fb.handle != 0	{
+						out.check();
+						let (wid,het,_dep,_sam) = out.fb.check_size();
 						frame::Rect::new(wid,het)
 					}else	{
 						*self.default_rast.view
 					};
-					let (_,mesh,_) = input;
-					self.rast.activate( &rast, mesh.get_poly_size() );
+					self.rast.activate( &out.rast, in.mesh.get_poly_size() );
 					assert!( *self.rast.view == rect );
 					// draw
-					self.draw_mesh( input, prog, &data );
+					self.draw_mesh( in, prog, &data );
 				},
 				_	=> fail!(~"Unsupported call!")
 			}

@@ -13,7 +13,7 @@ pub struct Data	{
 	call_clear	: gr_mid::call::Call,
 	tech_solid	: gr_mid::draw::Technique,
 	tech_alpha	: gr_mid::draw::Technique,
-	output		: gr_mid::call::DrawOutput,
+	output		: gr_mid::call::Output,
 	par_shadow	: gr_low::shade::Uniform,
 }
 
@@ -38,10 +38,14 @@ pub fn create_data( ct : &mut gr_low::context::Context, light : @scene::Light, s
 	let mut samp = gr_low::texture::Sampler::new( 2u, 0 );
 	samp.compare = Some( gr_low::rast::map_comparison(~"<") );
 	let par = gr_low::shade::UniTexture( 0u, shadow, Some(samp) );
-	let out = (fbo,pmap,rast);
+	let out = gr_mid::call::Output{
+		fb	: fbo,
+		pmap: pmap,
+		rast: rast
+	};
 	Data{
 		light		: light,
-		call_clear	: cdata.gen_call( copy out ),
+		call_clear	: cdata.gen_call( &out ),
 		tech_solid	: t_solid,
 		tech_alpha	: t_alpha,
 		output		: out,

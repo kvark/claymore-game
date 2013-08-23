@@ -26,7 +26,7 @@ struct Game	{
 	sound_source: @mut engine::audio::Source,
 	frames		: uint,
 	technique	: gr_mid::draw::Technique,
-	output		: gr_mid::call::DrawOutput,
+	output		: gr_mid::call::Output,
 	s_intro		: scene::intro::Scene,
 	s_editor	: scene::chared::Scene,
 	s_battle	: scene::battle::Scene,
@@ -55,12 +55,15 @@ pub impl Game	{
 		//src.play();
 		// create a forward light technique
 		let tech = gr_mid::draw::load_technique( ~"data/code/tech/forward/light" );
-		let out = {
-			let pmap = gr_mid::call::PlaneMap::new_simple( ~"o_Color", gr_low::frame::TarEmpty );
-			let mut rast = copy ct.default_rast;
-			rast.set_depth(~"<=",true);
-			rast.prime.cull = true;
-			(ct.default_frame_buffer, pmap, rast)
+		let out = gr_mid::call::Output{
+			fb		: ct.default_frame_buffer,
+			pmap	: gr_mid::call::PlaneMap::new_simple( ~"o_Color", gr_low::frame::TarEmpty ),
+			rast	: {
+				let mut r = copy ct.default_rast;
+				r.set_depth(~"<=",true);
+				r.prime.cull = true;
+				r
+			}
 		};
 		// done
 		ct.check(~"init");
@@ -102,7 +105,7 @@ pub impl Game	{
 						color	:Some( gr_low::rast::Color::new(0x8080FFFF) ),
 						depth	:Some( 1f ),
 						stencil	:Some( 0u ),
-					}.gen_call( copy self.output );
+					}.gen_call( &self.output );
 				self.context.flush(~[c0]);
 				// draw battle
 				self.s_battle.render( &mut self.context, &self.technique, copy self.output, &self.journal );

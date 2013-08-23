@@ -112,20 +112,20 @@ pub impl Rect	{
 
 
 pub struct Context	{
-	input	: call::DrawInput,
-	output	: call::DrawOutput,
+	input	: call::Input,
+	output	: call::Output,
 	size	: (uint,uint),
 }
 
 pub impl Context	{
 	fn call( &self, prog : @gr_low::shade::Program, data : gr_low::shade::DataMap,
 		rast_override : Option<&gr_low::rast::State> )-> call::Call	{
-		let &(fbo,pmap,rast_orig) = &self.output;
-		let r = copy match rast_override	{
-			Some(ro)	=> *ro,
-			None		=> rast_orig,
+		let mut out = copy self.output;
+		match rast_override	{
+			Some(ro)	=> out.rast = copy *ro,
+			None		=> ()
 		};
-		call::CallDraw( copy self.input, (fbo,pmap,r), prog, data )
+		call::CallDraw( copy self.input, out, prog, data )
 	}
 
 	fn transform( &self, r : &Rect )-> gr_low::shade::Uniform	{

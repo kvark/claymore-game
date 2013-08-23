@@ -112,53 +112,52 @@ pub impl gr_low::context::Context	{
 		}
 	}
 
-	fn draw_mesh( &mut self, input : gr_mid::call::DrawInput, prog : @gr_low::shade::Program, data : &gr_low::shade::DataMap )-> bool	{
-		let &(va,m,range) = &input;
-		assert!( *va.handle as int != 0 );
+	fn draw_mesh( &mut self, in : gr_mid::call::Input, prog : @gr_low::shade::Program, data : &gr_low::shade::DataMap )-> bool	{
+		assert!( *in.va.handle as int != 0 );
 		// check black list
-		if m.black_list.find( |&p| managed::ptr_eq(p,prog) ).is_some()	{
+		if in.mesh.black_list.find( |&p| managed::ptr_eq(p,prog) ).is_some()	{
 			return false;
 		}
 		// bind program
 		if !self.bind_program( prog, data )	{
-			m.black_list.push( prog );
+			in.mesh.black_list.push( prog );
 			io::println(fmt!( "Unable to activate program #%d", *prog.handle as int ));
 			return false;
 		}
 		// bind attributes
-		self.bind_vertex_array( va );
-		let mut va_clean_mask = va.get_mask();
+		self.bind_vertex_array( in.va );
+		let mut va_clean_mask = in.va.get_mask();
 		for prog.attribs.each |&(name,pat)|	{
-			match m.attribs.find(name)	{
+			match in.mesh.attribs.find(name)	{
 				Some(sat) => {
 					if !sat.compatible(pat)	{
-						m.black_list.push( prog );
+						in.mesh.black_list.push( prog );
 						io::println(fmt!( "Mesh attibute '%s' is incompatible with program #%d",
 							*name, *prog.handle as int ));
 						return false;
 					}
 					va_clean_mask &= !(1<<pat.loc);
-					self.bind_mesh_attrib( va, pat.loc, sat, pat.is_integer() );
+					self.bind_mesh_attrib( in.va, pat.loc, sat, pat.is_integer() );
 				},
 				None => {
-					m.black_list.push( prog );
+					in.mesh.black_list.push( prog );
 					io::println(fmt!( "Mesh '%s' doesn't contain required attribute '%s', needed for program #%d",
-						m.name, *name, *prog.handle as int ));
+						in.mesh.name, *name, *prog.handle as int ));
 					return false;
 				}
 			}
 		}
-		self.disable_mesh_attribs( va, va_clean_mask );
+		self.disable_mesh_attribs( in.va, va_clean_mask );
 		// call draw
-		match m.index	{
+		match in.mesh.index	{
 			Some(el) =>	{
-				self.bind_element_buffer( va, el.buffer );
-				assert!( range.start + range.num <= m.num_ind );
-				glcore::glDrawElements( m.poly_type, range.num as glcore::GLsizei, el.kind, range.start as *glcore::GLvoid );
+				self.bind_element_buffer( in.va, el.buffer );
+				assert!( in.range.start + in.range.num <= in.mesh.num_ind );
+				glcore::glDrawElements( in.mesh.poly_type, in.range.num as glcore::GLsizei, el.kind, in.range.start as *glcore::GLvoid );
 			},
 			None =>	{
-				assert!( range.start + range.num <= m.num_vert );
-				glcore::glDrawArrays( m.poly_type, range.start as glcore::GLint, range.num as glcore::GLsizei );
+				assert!( in.range.start + in.range.num <= in.mesh.num_vert );
+				glcore::glDrawArrays( in.mesh.poly_type, in.range.start as glcore::GLint, in.range.num as glcore::GLsizei );
 			}
 		}
 		true

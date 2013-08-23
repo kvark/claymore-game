@@ -112,7 +112,7 @@ pub impl Scene	{
 		}
 		self.hero.update() && self.view.update( cam_dir ) && ok
 	}
-	fn render( &mut self, ct : &mut gr_low::context::Context, tech : &gr_mid::draw::Technique, output : gr_mid::call::DrawOutput, lg : &engine::journal::Log )	{
+	fn render( &mut self, ct : &mut gr_low::context::Context, tech : &gr_mid::draw::Technique, output : gr_mid::call::Output, lg : &engine::journal::Log )	{
 		{// update matrices
 			let light_pos	= vec4::new( 4f32, 1f32, 6f32, 1f32 );
 			for [ &mut self.land, &mut self.hero.entity ].each |ent|	{
@@ -125,9 +125,7 @@ pub impl Scene	{
 		}
 		let c_land = tech.process( &self.land, copy output, None, ct, lg );
 		let c_hero = tech.process( &self.hero.entity, copy output, None, ct, lg );
-		let (fbo,pmap,_) = output;
-		let (vao,_,_) = self.land.input;
-		let c_grid = self.grid.call( fbo, copy pmap, vao );
+		let c_grid = self.grid.call( output.fb, copy output.pmap, self.land.input.va );
 		ct.flush( ~[c_land,c_hero,c_grid] );
 	}
 	 fn debug_move( &self, _rot : bool, _x : int, _y : int )	{
@@ -197,7 +195,7 @@ pub fn make_scene( ct : &mut gr_low::context::Context, aspect : float, lg : &eng
 		};
 		engine::object::Entity{
 			node	: node,
-			input	: (vao, mesh, mesh.get_range()),
+			input	: gr_mid::call::Input::new( vao, mesh ),
 			data	: gr_low::shade::make_data(),
 			modifier: @() as @gr_mid::draw::Mod,
 			material: mat,
@@ -221,7 +219,7 @@ pub fn make_scene( ct : &mut gr_low::context::Context, aspect : float, lg : &eng
 		};
 		let mut ent = engine::object::Entity{
 			node	: node,
-			input	: (vao,mesh,mesh.get_range()),
+			input	: gr_mid::call::Input::new( vao, mesh ),
 			data	: gr_low::shade::make_data(),
 			modifier: skel as @gr_mid::draw::Mod,
 			material: mat,

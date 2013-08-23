@@ -99,7 +99,11 @@ pub impl Context	{
 		//rast.prime.front_cw = true;
 		rast.set_blend( ~"s+d", ~"1", ~"1" );
 		rast.set_depth( ~"<=", false );
-		let output = ( self.fbo, pmap, rast );
+		let output = gr_mid::call::Output{
+			fb	: self.fbo,
+			pmap: pmap,
+			rast: rast,
+		};
 		let mut data = gr_low::shade::make_data();
 		{	// fill data
 			let sampler = Some( gr_low::texture::Sampler::new(2u,0) );
@@ -115,7 +119,7 @@ pub impl Context	{
 				color	: Some( gr_low::rast::Color::new(0x00000001u) ),
 				depth	: None,
 				stencil	: None,
-			}.gen_call( copy output );
+			}.gen_call( &output );
 		let mut queue = do vec::map(lights) |lit|	{
 			let (mesh,mat) = vol.query( lit.kind );
 			lit.fill_data( &mut data, 1f32, 30f32 );
@@ -123,7 +127,7 @@ pub impl Context	{
 			data.insert( ~"u_World",	gr_low::shade::UniMatrix(false,mw) );
 			let e = engine::object::Entity	{
 				node	: lit.node,
-				input	: ( self.vao, mesh, mesh.get_range() ),
+				input	: gr_mid::call::Input::new( self.vao, mesh ),
 				data	: copy data,
 				modifier: @() as @gr_mid::draw::Mod,
 				material: mat,

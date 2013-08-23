@@ -6,7 +6,7 @@ use engine::gr_mid;
 pub struct Data	{
 	texture		: @gr_low::texture::Texture,
 	tech_solid	: gr_mid::draw::Technique,
-	output		: gr_mid::call::DrawOutput,
+	output		: gr_mid::call::Output,
 	call_clear	: gr_mid::call::Call,
 }
 
@@ -20,10 +20,14 @@ pub impl Data	{
 		let mut rast = copy gc.default_rast;
 		rast.prime.cull = true;
 		rast.set_depth( ~"<=", true );
-		let out = ( gc.create_frame_buffer(), pmap, rast );
+		let out = gr_mid::call::Output{
+			fb	: gc.create_frame_buffer(),
+			pmap: pmap,
+			rast: rast,
+		};
 		let clear = gr_mid::call::ClearData{
 				color:None, depth:Some(1f), stencil:None
-			}.gen_call( copy out );
+			}.gen_call( &out );
 		Data{
 			texture		: texture,
 			tech_solid	: gr_mid::draw::load_technique( ~"data/code/tech/pure/solid" ),
