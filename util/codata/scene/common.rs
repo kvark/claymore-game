@@ -30,8 +30,8 @@ pub struct Texture	{
 	path	: Path,
 	filter	: uint,
 	wrap	: int,
-	scale	: Vector2,
-	offset	: Vector2,
+	scale	: Vector3,
+	offset	: Vector3,
 }
 
 pub struct Material	{

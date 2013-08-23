@@ -164,9 +164,9 @@ def export_value(elem,ofile,num_format,level):
 def export_doc(document,filename,num_format):
 	ofile = open(filename+'.rs','w')
 	ofile.write('use common::*;\n')
-	ofile.write('pub fn load()-> Scene	{\n\t')
+	ofile.write('pub fn load()-> Scene	{')
 	export_value(document, ofile, num_format, 1)
-	ofile.write('\n}\n')
+	ofile.write('}\n')
 	ofile.close()
 
 

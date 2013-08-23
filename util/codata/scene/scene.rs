@@ -7,4 +7,6 @@
 #[crate_type = "lib"];
 
 pub mod common;
-pub mod untitled;
+pub mod chared	{
+	pub mod main;
+}
