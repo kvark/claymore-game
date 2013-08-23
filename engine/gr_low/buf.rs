@@ -2,8 +2,7 @@ extern mod glcore;
 
 use core::managed;
 
-use gr_low::context;
-use gr_mid::mesh;
+use gr_low;
 
 
 static MAX_VERTEX_ATTRIBS	:uint	= 8;
@@ -32,7 +31,7 @@ pub struct Binding	{
 	priv active	: Option<@Object>,
 }
 
-impl context::ProxyState for Binding	{
+impl gr_low::context::ProxyState for Binding	{
 	fn sync_back( &mut self )-> bool	{
 		let query =
 			if *self.target == glcore::GL_ARRAY_BUFFER	{
@@ -79,9 +78,71 @@ pub impl Binding	{
 }
 
 
+#[deriving(Eq)]
+pub struct Attribute	{
+	// semantics
+	kind			: glcore::GLenum,
+	count			: uint,
+	normalized		: bool,
+	interpolated	: bool,
+	// location
+	buffer			: @Object,
+	stride			: uint,
+	offset			: uint,
+}
+
+pub impl Attribute	{
+	fn new( format : &str, buffer : @Object, stride : uint, offset : uint )-> (Attribute,uint)	{
+		assert!( (format.len()==3u && ['.','!'].contains(&format.char_at(2))) ||
+			format.len()==2u || (format.len()==4u && str::substr(format,2,2)==~".!") );
+		let count = (format[0] - "0"[0]) as uint;
+		let is_fixed_point	= format.len()>2u	&& format.char_at(2)=='.';
+		let can_interpolate	= format.len()<=2u	|| format.char_at(format.len()-1u)!='!';
+		let (el_size,el_type) = match format.char_at(1)	{
+			'b'	=> (1u,glcore::GL_BYTE),
+			'B'	=> (1u,glcore::GL_UNSIGNED_BYTE),
+			'h'	=> (2u,glcore::GL_SHORT),
+			'H'	=> (2u,glcore::GL_UNSIGNED_SHORT),
+			'i'	=> (4u,glcore::GL_INT),
+			'I'	=> (4u,glcore::GL_UNSIGNED_INT),
+			'f'	=> (4u,glcore::GL_FLOAT),
+			_	=> fail!(fmt!( "Unknown attribute format: %s", format ))
+		};
+		(Attribute{
+			kind			: el_type,
+			count			: count,
+			normalized		: is_fixed_point,
+			interpolated	: can_interpolate,
+			buffer			: buffer,
+			stride			: stride,
+			offset			: offset,
+		}, count * el_size)
+	}
+
+	fn new_index( format : &str, buffer : @Object )-> (Attribute,uint)	{
+		Attribute::new( format, buffer, 0u, 0u )
+	}
+
+	fn compatible( &self, at : &gr_low::shade::Attribute )-> bool	{
+		//io::println(fmt!( "Checking compatibility: kind=0x%x, count=%u, storage=0x%x",
+		//	self.kind as uint, self.count, at.storage as uint ));
+		let (count,unit) = at.decompose();
+		count == self.count && if at.is_integer()	{
+			if unit == glcore::GL_INT	{
+				[glcore::GL_BYTE,glcore::GL_SHORT,glcore::GL_INT]		.contains( &self.kind ) ||
+				[glcore::GL_UNSIGNED_BYTE,glcore::GL_UNSIGNED_SHORT]	.contains( &self.kind )
+			}else
+			if unit == glcore::GL_UNSIGNED_INT	{
+				[glcore::GL_UNSIGNED_BYTE,glcore::GL_UNSIGNED_SHORT,glcore::GL_UNSIGNED_INT].contains( &self.kind )
+			}else	{false}
+		}else {true}
+	}
+}
+
+
 struct VertexData	{
 	enabled	: bool,
-	attrib	: Option<mesh::Attribute>,
+	attrib	: Option<Attribute>,
 }
 
 pub struct VertexArray	{
@@ -98,7 +159,7 @@ impl Drop for ArrayHandle	{
 	}
 }
 
-impl context::ProxyState for VertexArray	{
+impl gr_low::context::ProxyState for VertexArray	{
 	fn sync_back( &mut self )->bool	{
 		//FIXME
 		true
@@ -149,7 +210,7 @@ impl VaBinding	{
 }
 
 
-pub impl context::Context	{
+pub impl gr_low::context::Context	{
 	fn create_vertex_array( &self )-> @mut VertexArray	{
 		let mut hid = 0 as glcore::GLuint;
 		glcore::glGenVertexArrays( 1, ptr::addr_of(&hid) );
@@ -213,5 +274,17 @@ pub impl context::Context	{
 		let obj = self.create_buffer();
 		self.load_buffer( obj, data, false );
 		obj
+	}
+
+	fn create_attribute<T:gr_low::context::GLType>( &mut self, vdata : &[T], count : uint, norm : bool )-> Attribute	{
+		Attribute{
+			kind: vdata[0].to_gl_type(),
+			count: count,
+			normalized: norm,
+			interpolated: true,
+			buffer: self.create_buffer_loaded( vdata ),
+			stride: count * sys::size_of::<T>(),
+			offset: 0u
+		}
 	}
 }

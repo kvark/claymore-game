@@ -7,9 +7,7 @@ use core::io::ReaderUtil;
 use lmath::vec::vec3;
 use lmath::quat::quat;
 
-use gr_low::context;
-use gr_low::shade;
-use gr_low::texture;
+use gr_low::{buf,context,shade,texture};
 use gr_mid::mesh;
 use anim;
 use journal;
@@ -205,7 +203,7 @@ pub fn read_mesh( br : &mut Reader, context : &mut context::Context, lg : &journ
 			if br.get_bool()	{ fm += ~"."; }
 			if !br.get_bool()	{ fm += ~"!"; }
 			lg.add(fmt!( "\t\tname:%s,\ttype:%s", name, fm ));
-			let (at,size) = mesh::Attribute::new( fm, buffer, stride, offset );
+			let (at,size) = buf::Attribute::new( fm, buffer, stride, offset );
 			if stride == 0u	{
 				assert!( at.count == 1u );
 				mesh.index = Some( at );
