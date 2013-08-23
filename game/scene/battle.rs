@@ -123,8 +123,8 @@ pub impl Scene	{
 				d.insert( ~"u_World",		gr_low::shade::UniMatrix(false,world) );
 			}
 		}
-		let c_land = tech.process( &self.land, copy output, ct, lg );
-		let c_hero = tech.process( &self.hero.entity, copy output, ct, lg );
+		let c_land = tech.process( &self.land, copy output, None, ct, lg );
+		let c_hero = tech.process( &self.hero.entity, copy output, None, ct, lg );
 		let (fbo,pmap,_) = output;
 		let (vao,_,_) = self.land.input;
 		let c_grid = self.grid.call( fbo, copy pmap, vao );

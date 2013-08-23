@@ -128,7 +128,7 @@ pub impl Context	{
 				modifier: @() as @gr_mid::draw::Mod,
 				material: mat,
 			};
-			self.tech_bake.process( &e, copy output, gc, lg )
+			self.tech_bake.process( &e, copy output, None, gc, lg )
 		};
 		//todo: functional style in Rust-0.6
 		queue.insert( 0u, clear );

@@ -83,6 +83,7 @@ pub struct Scene	{
 	lights	: ~[@scene::Light],
 	envir	: Envir,
 	technique	: @gr_mid::draw::Technique,
+	cache		: gr_mid::draw::Cache,
 	rast_solid	: gr_low::rast::State,
 	rast_cloak	: gr_low::rast::State,
 	rast_alpha	: gr_low::rast::State,
@@ -216,7 +217,7 @@ pub impl Scene	{
 			if el.character	{
 				for [&self.gr_main,&self.gr_cape,&self.gr_hair].each() |group|	{
 					for group.each() |ent|	{
-						queue.push( self.shadow.tech_solid.process( ent, copy self.shadow.output, ct, lg ));
+						queue.push( self.shadow.tech_solid.process( ent, copy self.shadow.output, Some( &mut self.cache ), ct, lg ));
 					}
 				}
 				/*for [&self.gr_hair].each() |group|	{
@@ -231,7 +232,7 @@ pub impl Scene	{
 				queue.push( copy self.depth.call_clear );
 				for [&mut self.gr_main,&mut self.gr_cape,&mut self.gr_hair].each() |group|	{
 					for group.each_mut() |ent|	{
-						queue.push( self.depth.tech_solid.process( ent, copy self.depth.output, ct, lg ));
+						queue.push( self.depth.tech_solid.process( ent, copy self.depth.output, Some( &mut self.cache ), ct, lg ));
 						lbuf.fill_data( &mut ent.data );
 					}
 				}
@@ -248,20 +249,20 @@ pub impl Scene	{
 		};
 		if el.character	{
 			for self.gr_main.each() |ent|	{
-				queue.push( tech.process( ent, copy out_solid, ct, lg ) );
+				queue.push( tech.process( ent, copy out_solid, Some( &mut self.cache ), ct, lg ) );
 			}
 			for self.gr_cape.each() |ent|	{
 				let out = (fbo, copy pmap, copy self.rast_cloak );
-				queue.push( tech.process( ent, out, ct, lg ) );	
+				queue.push( tech.process( ent, out, Some( &mut self.cache ), ct, lg ) );	
 			}
 			for self.gr_hair.each() |ent|	{
 				let out = (fbo, copy pmap, copy self.rast_alpha );
-				queue.push( tech.process( ent, out, ct, lg ) );
+				queue.push( tech.process( ent, out, Some( &mut self.cache ), ct, lg ) );
 			}
 		}
 		if el.shadow	{
 			for self.gr_other.each() |ent|	{
-				queue.push( tech.process( ent, copy out_solid, ct, lg ) );
+				queue.push( tech.process( ent, copy out_solid, Some( &mut self.cache ), ct, lg ) );
 			}
 		}
 		if el.hud	{
@@ -412,6 +413,7 @@ pub fn make_scene( el : &main::Elements, ct : &mut gr_low::context::Context, asp
 		lights	: lights,
 		envir	: envir,
 		technique	: tech,
+		cache		: gr_mid::draw::make_cache(),
 		rast_solid	: r_solid,
 		rast_cloak	: r_cloak,
 		rast_alpha	: r_alpha,

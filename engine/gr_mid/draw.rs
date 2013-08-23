@@ -1,3 +1,4 @@
+use core::hash::HashUtil;
 use core::hashmap::linear::LinearMap;
 use core::to_bytes;
 
@@ -36,18 +37,6 @@ struct CacheEntry	{
 	technique	: ~[~str],
 }
 
-impl cmp::Eq for CacheEntry	{
-	fn eq( &self, other : &CacheEntry )-> bool	{
-		self.material.code_vertex == other.material.code_vertex &&
-		self.material.code_fragment == other.material.code_fragment &&
-		self.modifier.get_code() == other.modifier.get_code();
-		self.technique == other.technique
-	}
-	fn ne( &self, other : &CacheEntry )-> bool	{
-		!self.ne(other)
-	}
-}
-
 impl to_bytes::IterBytes for CacheEntry	{
 	fn iter_bytes( &self, lsb0 : bool, f : to_bytes::Cb )	{
 		self.material.name.iter_bytes( lsb0, f );
@@ -57,7 +46,7 @@ impl to_bytes::IterBytes for CacheEntry	{
 }
 
 
-pub type Cache = LinearMap< CacheEntry, Option<@shade::Program> >;
+pub type Cache = LinearMap< u64, Option<@shade::Program> >;
 pub fn make_cache()-> Cache	{
 	LinearMap::new()
 }
@@ -69,7 +58,6 @@ pub struct Technique	{
 	meta_fragment	: ~[~str],
 	code_vertex		: ~str,
 	code_fragment	: ~str,
-	priv cache		: @mut Cache,
 }
 
 
@@ -121,18 +109,17 @@ pub impl Technique	{
 		Some( ct.create_program(shaders,lg) )
 	}
 
-	fn get_program( &self, mat : @Material, modifier : @Mod, ct : &context::Context, lg : &journal::Log )-> Option<@shade::Program>	{
-		let ce = CacheEntry{ material:mat, modifier:modifier,
+	fn get_program( &self, mat : @Material, modifier : @Mod, cache : &mut Cache, ct : &context::Context, lg : &journal::Log )-> Option<@shade::Program>	{
+		let hash = CacheEntry{ material:mat, modifier:modifier,
 			technique:~[copy self.code_vertex,copy self.code_fragment]
-		};
-		match self.cache.find(&ce)	{
-			Some(p)	=> *p,
-			None =>	{
-				let p = self.link( mat, modifier, ct, lg );
-				self.cache.insert( ce, p );
-				p
-			}
+		}.hash();
+		match cache.find(&hash)	{
+			Some(p)	=> return *p,
+			_	=> ()
 		}
+		let p = self.link( mat, modifier, ct, lg );
+		cache.insert( hash, p );
+		p
 	}
 }
 
@@ -171,6 +158,5 @@ pub fn load_technique( path : ~str )-> Technique	{
 		meta_fragment	:extract_metas(s_frag),
 		code_vertex		:s_vert,
 		code_fragment	:s_frag,
-		cache : @mut make_cache(),
 	}
 }
