@@ -348,7 +348,7 @@ pub struct LightInfo	{
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -//
 //	Scene
 
-pub struct EntityGroup( ~[gr_mid::draw::Entity] );
+pub struct EntityGroup( ~[engine::object::Entity] );
 
 pub impl EntityGroup	{
 	fn divide( &mut self, name : &~str )-> EntityGroup	{
@@ -363,14 +363,14 @@ pub impl EntityGroup	{
 		}
 		rez	
 	}
-	//pub fn with<T>( &mut self, name : &~str, fun : fn(&mut gr_mid::draw::Entity)->T )-> Option<T>	{
+	//pub fn with<T>( &mut self, name : &~str, fun : fn(&mut engine::object::Entity)->T )-> Option<T>	{
 	//	let opt_pos = do self.position() |ent|	{ent.node.name == *name};
 	//	match opt_pos	{
 	//		Some(p)	=> Some( fun(&mut self[p]) ),
 	//		None	=> None,
 	//	}
 	//}
-	pub fn change_detail( &mut self, detail : gr_mid::draw::Entity )-> Option<gr_mid::draw::Entity>	{
+	pub fn change_detail( &mut self, detail : engine::object::Entity )-> Option<engine::object::Entity>	{
 		let opt_pos = self.position( |ent|	{managed::mut_ptr_eq(ent.node,detail.node)} );
 		self.push( detail );
 		match opt_pos	{
@@ -469,7 +469,7 @@ pub impl SceneContext	{
 				start	:r_min,
 				num		:r_max-r_min,
 			};
-			let ent = gr_mid::draw::Entity{
+			let ent = engine::object::Entity{
 				node	: root,
 				input	: (vao,mesh,range),
 				data	: data,

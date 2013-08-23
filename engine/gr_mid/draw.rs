@@ -2,11 +2,8 @@ use core::hashmap::linear::LinearMap;
 use core::to_bytes;
 
 use gr_low::{context,shade};
-use gr_mid::call;
 use journal;
 use load;
-use space;
-use space::Space;
 
 
 pub trait Mod	{
@@ -30,23 +27,6 @@ pub struct Material	{
 	meta_fragment	: ~[~str],
 	code_vertex		: ~str,
 	code_fragment	: ~str,
-}
-
-
-pub struct Entity	{
-	node	: @mut space::Node,
-	//body	: @node::Body,
-	input	: call::DrawInput,
-	data	: shade::DataMap,
-	modifier: @Mod,
-	material: @Material,
-}
-
-pub impl Entity	{
-	fn update_world( &mut self )	{
-		let world = self.node.world_space().to_matrix();
-		self.data.insert( ~"u_World", shade::UniMatrix(false,world) );
-	}
 }
 
 
@@ -96,7 +76,7 @@ pub struct Technique	{
 pub impl Technique	{
 	fn get_header( &self )-> ~str	{~"#version 150 core"}
 	
-	fn make_vertex( &self, material : @Material, modifier : @Mod )-> ~str	{
+	fn make_vertex( &self, material : &Material, modifier : @Mod )-> ~str	{
 		str::connect([
 			self.get_header(),
 			fmt!( "//--- Modifier: %s ---//", modifier.get_name() ),
@@ -108,7 +88,7 @@ pub impl Technique	{
 		], "\n")
 	}
 	
-	fn make_fragment( &self, mat : @Material )-> ~str	{
+	fn make_fragment( &self, mat : &Material )-> ~str	{
 		str::connect([ self.get_header(),
 			fmt!("//--- Material: %s ---//",mat.name),
 			copy mat.code_fragment,
@@ -117,15 +97,15 @@ pub impl Technique	{
 		], "\n")
 	}
 	
-	fn link( &self, e : &Entity, ct : &context::Context, lg : &journal::Log )-> Option<@shade::Program>	{
-		if !vec::all(self.meta_vertex,	|m|	{ e.material.meta_vertex.contains(m) 	})
-		|| !vec::all(self.meta_fragment,|m|	{ e.material.meta_fragment.contains(m)	})	{
-			lg.add(fmt!( "Material '%s' rejected by '%s'", e.material.name, self.name ));
+	fn link( &self, mat : &Material, modifier : @Mod, ct : &context::Context, lg : &journal::Log )-> Option<@shade::Program>	{
+		if !vec::all(self.meta_vertex,	|m|	{ mat.meta_vertex.contains(m) 	})
+		|| !vec::all(self.meta_fragment,|m|	{ mat.meta_fragment.contains(m)	})	{
+			lg.add(fmt!( "Material '%s' rejected by '%s'", mat.name, self.name ));
 			return None;
 		}
-		lg.add(fmt!( "Linking material '%s' with technique '%s'", e.material.name, self.name ));
-		let s_vert = self.make_vertex( e.material, e.modifier );
-		let s_frag = self.make_fragment( e.material );
+		lg.add(fmt!( "Linking material '%s' with technique '%s'", mat.name, self.name ));
+		let s_vert = self.make_vertex( mat, modifier );
+		let s_frag = self.make_fragment( mat );
 		let shaders = if false	{
 			lg.add(~"Compiling vert");
 			lg.add(copy s_vert);
@@ -141,24 +121,17 @@ pub impl Technique	{
 		Some( ct.create_program(shaders,lg) )
 	}
 
-	fn get_program( &self, e : &Entity, ct : &context::Context, lg : &journal::Log )-> Option<@shade::Program>	{
-		let ce = CacheEntry{ material:e.material, modifier:e.modifier,
+	fn get_program( &self, mat : @Material, modifier : @Mod, ct : &context::Context, lg : &journal::Log )-> Option<@shade::Program>	{
+		let ce = CacheEntry{ material:mat, modifier:modifier,
 			technique:~[copy self.code_vertex,copy self.code_fragment]
 		};
 		match self.cache.find(&ce)	{
 			Some(p)	=> *p,
 			None =>	{
-				let p = self.link( e, ct, lg );
+				let p = self.link( mat, modifier, ct, lg );
 				self.cache.insert( ce, p );
 				p
 			}
-		}
-	}
-
-	fn process( &self, e : &Entity, output	: call::DrawOutput, ct : &context::Context, lg : &journal::Log )-> call::Call	{
-		match self.get_program(e,ct,lg)	{
-			Some(p)	=> call::CallDraw( copy e.input, output, p, copy e.data ),
-			None => call::CallEmpty
 		}
 	}
 }

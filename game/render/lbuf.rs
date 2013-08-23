@@ -121,7 +121,7 @@ pub impl Context	{
 			lit.fill_data( &mut data, 1f32, 30f32 );
 			let mw = lit.node.world_space().to_matrix();
 			data.insert( ~"u_World",	gr_low::shade::UniMatrix(false,mw) );
-			let e = gr_mid::draw::Entity	{
+			let e = engine::object::Entity	{
 				node	: lit.node,
 				input	: ( self.vao, mesh, mesh.get_range() ),
 				data	: copy data,

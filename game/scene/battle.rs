@@ -15,7 +15,7 @@ use scene = scene::common;
 
 
 pub struct Character	{
-	entity		: engine::gr_mid::draw::Entity,
+	entity		: engine::object::Entity,
 	skeleton	: @mut engine::space::Armature,
 	record		: @engine::space::ArmatureRecord,
 	priv start_time	: float,
@@ -75,7 +75,7 @@ pub impl View	{
 
 pub struct Scene	{
 	view	: View,
-	land	: gr_mid::draw::Entity,
+	land	: engine::object::Entity,
 	grid	: grid::Grid,
 	hero	: Character,
 }
@@ -195,7 +195,7 @@ pub fn make_scene( ct : &mut gr_low::context::Context, aspect : float, lg : &eng
 			parent	: None,
 			actions	: ~[],
 		};
-		gr_mid::draw::Entity{
+		engine::object::Entity{
 			node	: node,
 			input	: (vao, mesh, mesh.get_range()),
 			data	: gr_low::shade::make_data(),
@@ -219,7 +219,7 @@ pub fn make_scene( ct : &mut gr_low::context::Context, aspect : float, lg : &eng
 			parent	: Some(arm_node),
 			actions	: ~[],
 		};
-		let mut ent = gr_mid::draw::Entity{
+		let mut ent = engine::object::Entity{
 			node	: node,
 			input	: (vao,mesh,mesh.get_range()),
 			data	: gr_low::shade::make_data(),
