@@ -60,7 +60,7 @@ def cook_node(ob,log):
 		'name'	: ob.name,
 		'space'	: ('QuatSpace',{
 			'pos'	: list(pos),
-			'rot'	: list(rot),
+			'rot'	: [rot.x,rot.y,rot.z,rot.w],
 			'scale'	: scale
 		}),
 		'children'	: []
