@@ -2,8 +2,7 @@ extern mod engine;
 extern mod cgmath;
 extern mod lmath;
 
-use engine::gr_low;
-use engine::gr_mid;
+use engine::{gr_low,gr_mid};
 
 use scene = scene::common;
 
@@ -14,6 +13,7 @@ pub struct Data	{
 	tech_solid	: gr_mid::draw::Technique,
 	tech_alpha	: gr_mid::draw::Technique,
 	output		: gr_mid::call::Output,
+	rast		: gr_low::rast::State,
 	par_shadow	: gr_low::shade::Uniform,
 }
 
@@ -38,17 +38,15 @@ pub fn create_data( ct : &mut gr_low::context::Context, light : @scene::Light, s
 	let mut samp = gr_low::texture::Sampler::new( 2u, 0 );
 	samp.compare = Some( gr_low::rast::map_comparison(~"<") );
 	let par = gr_low::shade::UniTexture( 0u, shadow, Some(samp) );
-	let out = gr_mid::call::Output{
-		fb	: fbo,
-		pmap: pmap,
-		rast: rast
-	};
+	let out = gr_mid::call::Output::new( fbo, pmap );
+	let c0 = gr_mid::call::CallClear( copy out, cdata, rast.mask );
 	Data{
 		light		: light,
-		call_clear	: cdata.gen_call( &out ),
+		call_clear	: c0,
 		tech_solid	: t_solid,
 		tech_alpha	: t_alpha,
 		output		: out,
+		rast		: rast,
 		par_shadow	: par,
 	}
 }

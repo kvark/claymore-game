@@ -55,16 +55,8 @@ pub impl Game	{
 		//src.play();
 		// create a forward light technique
 		let tech = gr_mid::draw::load_technique( ~"data/code/tech/forward/light" );
-		let out = gr_mid::call::Output{
-			fb		: ct.default_frame_buffer,
-			pmap	: gr_mid::call::PlaneMap::new_simple( ~"o_Color", gr_low::frame::TarEmpty ),
-			rast	: {
-				let mut r = copy ct.default_rast;
-				r.set_depth(~"<=",true);
-				r.prime.cull = true;
-				r
-			}
-		};
+		let pmap = gr_mid::call::PlaneMap::new_simple( ~"o_Color", gr_low::frame::TarEmpty );
+		let out = gr_mid::call::Output::new( ct.default_frame_buffer, pmap );
 		// done
 		ct.check(~"init");
 		let aspect = (wid as float) / (het as float);
@@ -100,12 +92,12 @@ pub impl Game	{
 			ScreenChar	=> self.s_editor.render( el, &mut self.context, &self.journal ),
 			ScreenBattle	=> {
 				// clear screen
-				let c0 =
-					gr_mid::call::ClearData{
-						color	:Some( gr_low::rast::Color::new(0x8080FFFF) ),
-						depth	:Some( 1f ),
-						stencil	:Some( 0u ),
-					}.gen_call( &self.output );
+				let cd = gr_mid::call::ClearData{
+					color	:Some( gr_low::rast::Color::new(0x8080FFFF) ),
+					depth	:Some( 1f ),
+					stencil	:Some( 0u ),
+				};
+				let c0 = gr_mid::call::CallClear( copy self.output, cd, copy self.context.default_rast.mask );
 				self.context.flush(~[c0]);
 				// draw battle
 				self.s_battle.render( &mut self.context, &self.technique, copy self.output, &self.journal );

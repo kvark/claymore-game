@@ -28,6 +28,11 @@ pub impl PlaneMap	{
 		pm.colors.insert( name, col );
 		pm
 	}
+	fn check( &self, rast : &rast::State )	{
+		assert!( !rast.stencil.test	|| self.stencil	!= frame::TarEmpty );
+		assert!( !rast.depth.test	|| self.depth	!= frame::TarEmpty );
+		assert!( !rast.blend.on		|| !self.colors.is_empty() );
+	}
 }
 
 
@@ -57,30 +62,32 @@ pub impl Input	{
 pub struct Output	{
 	fb		: @mut frame::Buffer,
 	pmap	: PlaneMap,
-	rast	: rast::State,
+	area	: frame::Rect,
 }
 
 pub impl Output	{
-	fn check( &self )	{
-		assert!( !self.rast.stencil.test	|| self.pmap.stencil	!= frame::TarEmpty );
-		assert!( !self.rast.depth.test		|| self.pmap.depth		!= frame::TarEmpty );
-		assert!( !self.rast.blend.on		|| !self.pmap.colors.is_empty() );
+	fn new( fb : @mut frame::Buffer, pmap : PlaneMap )-> Output	{
+		Output	{
+			fb	: fb,
+			pmap: pmap,
+			area: frame::Rect::new(0x10000,0x10000),
+		}
+	}
+	fn gen_scissor( &self )-> rast::Scissor	{
+		rast::Scissor	{
+			test: self.area.w>0u || self.area.h>0u,
+			area: copy self.area,
+		}
 	}
 }
 
 
 pub enum Call	{
 	CallEmpty,
-	CallClear( @mut frame::Buffer, PlaneMap, ClearData, rast::Scissor, rast::Mask ),
-	CallBlit( @mut frame::Buffer, PlaneMap, @mut frame::Buffer, PlaneMap, rast::Scissor ),
-	CallDraw( Input, Output, @shade::Program, shade::DataMap ),
+	CallClear( Output, ClearData, rast::Mask ),
+	CallBlit( Output, Output ),
+	CallDraw( Input, Output, rast::State, @shade::Program, shade::DataMap ),
 	CallTransfrom(),	//TODO
-}
-
-pub impl ClearData	{
-	fn gen_call( &self, out : &Output )-> Call	{
-		CallClear( out.fb, copy out.pmap, copy *self, copy out.rast.scissor, copy out.rast.mask )
-	}
 }
 
 
@@ -89,14 +96,14 @@ pub impl context::Context	{
 		for vec::each_const(queue)	|&call|	{
 			match call	{
 				CallEmpty => {},
-				CallClear(fb,pmap,data,scissor,mask)	=> {
+				CallClear(out,data,mask)	=> {
 					let mut colors : ~[frame::Target] = ~[];
-					for pmap.colors.each_value() |target|	{
+					for out.pmap.colors.each_value() |target|	{
 						colors.push( *target );
 					}
-					let has_color = colors.len()!=0 && (*fb.handle==0 || colors[0]!=frame::TarEmpty);
-					self.bind_frame_buffer( fb, true, pmap.stencil, pmap.depth, colors );
-					self.rast.scissor.activate( &scissor, 0 );
+					let has_color = colors.len()!=0 && (*out.fb.handle==0 || colors[0]!=frame::TarEmpty);
+					self.bind_frame_buffer( out.fb, true, out.pmap.stencil, out.pmap.depth, colors );
+					self.rast.scissor.activate( &out.gen_scissor(), 0 );
 					self.rast.mask.activate( &mask, 0 );
 					let mut flags = 0 as glcore::GLenum;
 					//FIXME: cache this
@@ -109,51 +116,51 @@ pub impl context::Context	{
 					}
 					match data.depth	{
 						Some(d) => 	{
-							assert!( *fb.handle==0 || pmap.depth!=frame::TarEmpty );
+							assert!( *out.fb.handle==0 || out.pmap.depth!=frame::TarEmpty );
 							flags |= glcore::GL_DEPTH_BUFFER_BIT;
 							self.set_clear_depth( d );
 						},None	=> 	{}
 					}
 					match data.stencil	{
 						Some(s)	=>	{
-							assert!( *fb.handle==0 || pmap.stencil!=frame::TarEmpty );
+							assert!( *out.fb.handle==0 || out.pmap.stencil!=frame::TarEmpty );
 							flags |= glcore::GL_STENCIL_BUFFER_BIT;
 							self.set_clear_stencil( s );
 						},None	=>	{}
 					}
 					glcore::glClear( flags );
 				},
-				CallBlit(f1,pm1,f2,pm2,scissor)	=>	{
-					assert!( *f1.handle != *f2.handle );
+				CallBlit(src,dst)	=>	{
+					assert!( *src.fb.handle != *dst.fb.handle );
 					// bind frame buffers
 					let mut colors : ~[frame::Target] = ~[];
-					for pm1.colors.each_value() |target|	{
+					for src.pmap.colors.each_value() |target|	{
 						colors.push( *target );
 					}
-					self.bind_frame_buffer( f1, false, pm1.stencil, pm1.depth, colors );
+					self.bind_frame_buffer( src.fb, false, src.pmap.stencil, src.pmap.depth, colors );
 					colors = ~[];
-					for pm2.colors.each_value() |target|	{
+					for dst.pmap.colors.each_value() |target|	{
 						colors.push( *target );
 					}
-					self.bind_frame_buffer( f2, true, pm2.stencil, pm2.depth, colors );
+					self.bind_frame_buffer( dst.fb, true, dst.pmap.stencil, dst.pmap.depth, colors );
 					// set state
-					self.rast.scissor.activate( &scissor, 0 );
+					self.rast.scissor.activate( &dst.gen_scissor(), 0 );
 					let mut flags = 0 as glcore::GLenum;
 					let mut only_color = true;
-					if !pm1.colors.is_empty() || !pm2.colors.is_empty()	{
+					if !src.pmap.colors.is_empty() || !dst.pmap.colors.is_empty()	{
 						flags |= glcore::GL_COLOR_BUFFER_BIT;
 					}
-					if pm1.depth != frame::TarEmpty || pm2.depth != frame::TarEmpty	{
+					if src.pmap.depth != frame::TarEmpty || dst.pmap.depth != frame::TarEmpty	{
 						flags |= glcore::GL_DEPTH_BUFFER_BIT;
 						only_color = false;
 					}
-					if pm1.stencil != frame::TarEmpty || pm2.stencil != frame::TarEmpty	{
+					if src.pmap.stencil != frame::TarEmpty || dst.pmap.stencil != frame::TarEmpty	{
 						flags |= glcore::GL_STENCIL_BUFFER_BIT;
 						only_color = false;
 					}
 					// prepare
-					let (wid1,het1,_dep1,sam1) = f1.check_size();
-					let (wid2,het2,_dep2,sam2) = f2.check_size();
+					let (wid1,het1,_dep1,sam1) = src.fb.check_size();
+					let (wid2,het2,_dep2,sam2) = dst.fb.check_size();
 					assert!( sam1 == sam2 || (sam1*sam2==0 && only_color) );
 					let filter = if (only_color && sam1==0) {glcore::GL_LINEAR} else {glcore::GL_NEAREST};
 					// call blit
@@ -162,7 +169,7 @@ pub impl context::Context	{
 						0, 0, wid2 as glcore::GLint, het2 as glcore::GLint,
 						flags, filter );
 				},
-				CallDraw(in,out,prog,data)	=> {
+				CallDraw(in,out,rast,prog,data)	=> {
 					// bind FBO
 					let mut attaches = vec::from_elem( out.pmap.colors.len(), frame::TarEmpty );
 					for out.pmap.colors.each() |&(name,target)|	{
@@ -173,13 +180,15 @@ pub impl context::Context	{
 					self.bind_frame_buffer( out.fb, true, out.pmap.stencil, out.pmap.depth, attaches );
 					// check & activate raster
 					let rect = if *out.fb.handle != 0	{
-						out.check();
+						out.pmap.check( &rast );
 						let (wid,het,_dep,_sam) = out.fb.check_size();
 						frame::Rect::new(wid,het)
 					}else	{
 						*self.default_rast.view
 					};
-					self.rast.activate( &out.rast, in.mesh.get_poly_size() );
+					let mut r2 = rast;
+					r2.scissor = out.gen_scissor();
+					self.rast.activate( &r2, in.mesh.get_poly_size() );
 					assert!( *self.rast.view == rect );
 					// draw
 					self.draw_mesh( in, prog, &data );

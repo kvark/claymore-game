@@ -161,19 +161,14 @@ pub impl Scene	{
 
 	fn render( &mut self, el : &main::Elements, ct : &mut gr_low::context::Context, lg : &engine::journal::Log  )	{
 		// clear screen
-		let fbo = ct.default_frame_buffer;
 		let pmap = gr_mid::call::PlaneMap::new_simple( ~"o_Color", gr_low::frame::TarEmpty );
-		let out_solid = gr_mid::call::Output{
-			fb	: fbo,
-			pmap: copy pmap,
-			rast: copy self.rast_solid
+		let output = gr_mid::call::Output::new( ct.default_frame_buffer, pmap );
+		let cdata = gr_mid::call::ClearData{
+			color	:Some( gr_low::rast::Color::new(0x8080FFFF) ),
+			depth	:Some( 1f ),
+			stencil	:Some( 0u ),
 		};
-		let c0 =
-			gr_mid::call::ClearData{
-				color	:Some( gr_low::rast::Color::new(0x8080FFFF) ),
-				depth	:Some( 1f ),
-				stencil	:Some( 0u ),
-			}.gen_call( &out_solid );
+		let c0 = gr_mid::call::CallClear( copy output, cdata, copy self.rast_solid.mask );
 		if el.environment	{
 			let vpi = self.cam.get_inverse_matrix();
 			//self.cam.fill_data( &mut self.envir.data );
@@ -182,14 +177,8 @@ pub impl Scene	{
 		}
 		let c1 = if el.environment	{
 			let e = &self.envir;
-			let out = gr_mid::call::Output	{
-				fb	: fbo,
-				pmap: copy pmap,
-				rast: copy e.rast,
-			};
 			gr_mid::call::CallDraw(
-				copy e.input, out,
-				e.prog, copy e.data )
+				copy e.input, copy output, copy e.rast, e.prog, copy e.data )
 		}else	{
 			gr_mid::call::CallEmpty
 		};
@@ -226,7 +215,9 @@ pub impl Scene	{
 			if el.character	{
 				for [&self.gr_main,&self.gr_cape,&self.gr_hair].each() |group|	{
 					for group.each() |ent|	{
-						queue.push( self.shadow.tech_solid.process( ent, copy self.shadow.output, Some( &mut self.cache ), ct, lg ));
+						queue.push( self.shadow.tech_solid.process( ent,
+							copy self.shadow.output, copy self.shadow.rast,
+							Some( &mut self.cache ), ct, lg ));
 					}
 				}
 				/*for [&self.gr_hair].each() |group|	{
@@ -241,7 +232,9 @@ pub impl Scene	{
 				queue.push( copy self.depth.call_clear );
 				for [&mut self.gr_main,&mut self.gr_cape,&mut self.gr_hair].each() |group|	{
 					for group.each_mut() |ent|	{
-						queue.push( self.depth.tech_solid.process( ent, copy self.depth.output, Some( &mut self.cache ), ct, lg ));
+						queue.push( self.depth.tech_solid.process( ent,
+							copy self.depth.output, copy self.depth.rast,
+							Some( &mut self.cache ), ct, lg ));
 						lbuf.fill_data( &mut ent.data );
 					}
 				}
@@ -258,20 +251,18 @@ pub impl Scene	{
 		};
 		if el.character	{
 			for self.gr_main.each() |ent|	{
-				queue.push( tech.process( ent, copy out_solid, Some( &mut self.cache ), ct, lg ) );
+				queue.push( tech.process( ent, copy output, copy self.rast_solid, Some( &mut self.cache ), ct, lg ) );
 			}
 			for self.gr_cape.each() |ent|	{
-				let out = gr_mid::call::Output{ fb:fbo, pmap:copy pmap, rast:copy self.rast_cloak };
-				queue.push( tech.process( ent, out, Some( &mut self.cache ), ct, lg ) );	
+				queue.push( tech.process( ent, copy output, copy self.rast_cloak, Some( &mut self.cache ), ct, lg ) );	
 			}
 			for self.gr_hair.each() |ent|	{
-				let out = gr_mid::call::Output{ fb:fbo, pmap:copy pmap, rast:copy self.rast_alpha };
-				queue.push( tech.process( ent, out, Some( &mut self.cache ), ct, lg ) );
+				queue.push( tech.process( ent, copy output, copy self.rast_alpha, Some( &mut self.cache ), ct, lg ) );
 			}
 		}
 		if el.shadow	{
 			for self.gr_other.each() |ent|	{
-				queue.push( tech.process( ent, copy out_solid, Some( &mut self.cache ), ct, lg ) );
+				queue.push( tech.process( ent, copy output, copy self.rast_solid, Some( &mut self.cache ), ct, lg ) );
 			}
 		}
 		if el.hud	{
@@ -325,7 +316,6 @@ pub fn make_scene( el : &main::Elements, ct : &mut gr_low::context::Context, asp
 	let mut details = scene.context.parse_group( detail_info, ct, Some(vao), lg );
 	// techniques & rast states
 	let tech = @gr_mid::draw::load_technique( ~"data/code/tech/forward/spot-shadow" );
-	let pmap = gr_mid::call::PlaneMap::new_simple( ~"o_Color", gr_low::frame::TarEmpty );
 	let mut rast = copy ct.default_rast;
 	rast.depth.test = true;
 	rast.prime.cull = true;
@@ -373,14 +363,12 @@ pub fn make_scene( el : &main::Elements, ct : &mut gr_low::context::Context, asp
 		let mut hud_rast = copy ct.default_rast;
 		hud_rast.set_blend( ~"s+d", ~"Sa", ~"1-Sa" );
 		let quad = @gr_mid::mesh::create_quad(ct);
-		let out = gr_mid::call::Output	{
-			fb	: ct.default_frame_buffer,
-			pmap: copy pmap,
-			rast: hud_rast,
-		};
+		let pmap = gr_mid::call::PlaneMap::new_simple( ~"o_Color", gr_low::frame::TarEmpty );
+		let out = gr_mid::call::Output::new( ct.default_frame_buffer, pmap );
 		hud::Context{
 			input	: gr_mid::call::Input::new( vao, quad ),
 			output	: out,
+			rast	: hud_rast,
 			size	: ct.screen_size,
 		}
 	};

@@ -76,14 +76,10 @@ pub impl Grid	{
 
 	fn call( &self, fbo : @mut gr_low::frame::Buffer, pmap : gr_mid::call::PlaneMap,
 			vao : @mut gr_low::buf::VertexArray )-> gr_mid::call::Call	{
-		let out = gr_mid::call::Output	{
-			fb	: fbo,
-			pmap: pmap,
-			rast: copy self.rast,
-		};
 		gr_mid::call::CallDraw(
 			gr_mid::call::Input::new( vao, self.mesh ),
-			out, self.program, copy self.data )
+			gr_mid::call::Output::new( fbo, pmap ),
+			copy self.rast, self.program, copy self.data )
 	}
 
 	priv fn upload_all_cells( &self, tb : &mut gr_low::texture::Binding )	{

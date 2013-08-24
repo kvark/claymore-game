@@ -112,7 +112,8 @@ pub impl Scene	{
 		}
 		self.hero.update() && self.view.update( cam_dir ) && ok
 	}
-	fn render( &mut self, ct : &mut gr_low::context::Context, tech : &gr_mid::draw::Technique, output : gr_mid::call::Output, lg : &engine::journal::Log )	{
+	fn render( &mut self, gc : &mut gr_low::context::Context, tech : &gr_mid::draw::Technique,
+			output : gr_mid::call::Output, lg : &engine::journal::Log )	{
 		{// update matrices
 			let light_pos	= vec4::new( 4f32, 1f32, 6f32, 1f32 );
 			for [ &mut self.land, &mut self.hero.entity ].each |ent|	{
@@ -123,10 +124,13 @@ pub impl Scene	{
 				d.insert( ~"u_World",		gr_low::shade::UniMatrix(false,world) );
 			}
 		}
-		let c_land = tech.process( &self.land, copy output, None, ct, lg );
-		let c_hero = tech.process( &self.hero.entity, copy output, None, ct, lg );
+		let mut rast = gc.default_rast;
+		rast.set_depth( ~"<=", true );
+		rast.prime.cull = true;
+		let c_land = tech.process( &self.land, copy output, copy rast, None, gc, lg );
+		let c_hero = tech.process( &self.hero.entity, copy output, copy rast, None, gc, lg );
 		let c_grid = self.grid.call( output.fb, copy output.pmap, self.land.input.va );
-		ct.flush( ~[c_land,c_hero,c_grid] );
+		gc.flush( ~[c_land,c_hero,c_grid] );
 	}
 	 fn debug_move( &self, _rot : bool, _x : int, _y : int )	{
 		//empty

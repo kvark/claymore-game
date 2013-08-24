@@ -22,13 +22,15 @@ pub impl Entity	{
 }
 
 pub impl gr_mid::draw::Technique	{
-	fn process( &self, e : &Entity, output : gr_mid::call::Output, cache : Option<&mut gr_mid::draw::Cache>, ct : &gr_low::context::Context, lg : &journal::Log )-> gr_mid::call::Call	{
+	fn process( &self, e : &Entity, output : gr_mid::call::Output, rast : gr_low::rast::State,
+			cache : Option<&mut gr_mid::draw::Cache>, ct : &gr_low::context::Context,
+			lg : &journal::Log )-> gr_mid::call::Call	{
 		let op = match cache	{
 			Some(c)	=> self.get_program( e.material, e.modifier, c, ct, lg ),
 			None	=> self.link( e.material, e.modifier, ct, lg ),
 		};
 		match op	{
-			Some(p)	=> gr_mid::call::CallDraw( copy e.input, output, p, copy e.data ),
+			Some(p)	=> gr_mid::call::CallDraw( copy e.input, output, rast, p, copy e.data ),
 			None => gr_mid::call::CallEmpty
 		}
 	}

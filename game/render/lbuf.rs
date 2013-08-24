@@ -73,10 +73,9 @@ pub impl Context	{
 		let mut pm2 = gr_mid::call::PlaneMap::new_empty();
 		pm1.depth = gr_low::frame::TarTexture( depth, 0 );
 		pm2.depth = gr_low::frame::TarTexture( self.t_depth, 0 );
-		let scissor = gr_low::rast::Scissor{
-			test:false, area:gr_low::frame::Rect::new(0,0)
-		};
-		gr_mid::call::CallBlit( self.fbo_alt, pm1, self.fbo, pm2, scissor )
+		let src = gr_mid::call::Output::new( self.fbo_alt, pm1 );
+		let dst = gr_mid::call::Output::new( self.fbo, pm2 );
+		gr_mid::call::CallBlit( src, dst )
 	}
 
 	fn bake_layer( &self, layer : uint, lights : &[@scene::Light], vol : &LightVolume, cam : &scene::Camera,
@@ -99,11 +98,7 @@ pub impl Context	{
 		//rast.prime.front_cw = true;
 		rast.set_blend( ~"s+d", ~"1", ~"1" );
 		rast.set_depth( ~"<=", false );
-		let output = gr_mid::call::Output{
-			fb	: self.fbo,
-			pmap: pmap,
-			rast: rast,
-		};
+		let output = gr_mid::call::Output::new( self.fbo, pmap );
 		let mut data = gr_low::shade::make_data();
 		{	// fill data
 			let sampler = Some( gr_low::texture::Sampler::new(2u,0) );
@@ -115,11 +110,12 @@ pub impl Context	{
 			cam.fill_data( &mut data );
 			data.insert( ~"u_ViewProjInverse",	gr_low::shade::UniMatrix(false,vpi) );
 		}
-		let clear = gr_mid::call::ClearData	{
-				color	: Some( gr_low::rast::Color::new(0x00000001u) ),
-				depth	: None,
-				stencil	: None,
-			}.gen_call( &output );
+		let cdata = gr_mid::call::ClearData	{
+			color	: Some( gr_low::rast::Color::new(0x00000001u) ),
+			depth	: None,
+			stencil	: None,
+		};
+		let clear = gr_mid::call::CallClear( copy output, cdata, rast.mask );
 		let mut queue = do vec::map(lights) |lit|	{
 			let (mesh,mat) = vol.query( lit.kind );
 			lit.fill_data( &mut data, 1f32, 30f32 );
@@ -132,7 +128,7 @@ pub impl Context	{
 				modifier: @() as @gr_mid::draw::Mod,
 				material: mat,
 			};
-			self.tech_bake.process( &e, copy output, None, gc, lg )
+			self.tech_bake.process( &e, copy output, copy rast, None, gc, lg )
 		};
 		//todo: functional style in Rust-0.6
 		queue.insert( 0u, clear );
