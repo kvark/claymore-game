@@ -247,6 +247,17 @@ pub struct Armature	{
 	max_bones	: uint,
 }
 
+pub impl Armature	{
+	fn change_root( &mut self, root : @mut Node )	{
+		for self.bones.each() |bone|	{
+			if bone.parent_id.is_none()	{
+				bone.node.parent = Some(root);
+			}
+		}
+		self.root = root;
+	}
+}
+
 impl draw::Mod for Armature	{
 	fn get_name( &self )-> ~str	{ ~"Arm" }
 	fn get_code( &self )-> ~str	{ copy self.code }

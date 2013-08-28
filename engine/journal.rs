@@ -13,7 +13,8 @@ pub impl Log	{
 	fn add( &self, message : ~str )	{
 		let d = str::find(message,char::is_alphanumeric).expect(~"Bad log record");
 		if d<self.depth	{
-			self.wr.write_line(message)
+			self.wr.write_line(message);
+			//self.wr.flush();
 		}
 	}
 }

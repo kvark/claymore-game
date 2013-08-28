@@ -22,8 +22,7 @@ def cook_mat(mat,log):
 			log.log(2,'w','Texture "%s": image is not assigned' % (it.name))
 			continue
 		textures.append(('Texture',{
-			#'name'	: mt.name,
-			'name'	: 'Main',
+			'name'	: mt.name,
 			'path'	: it.image.filepath,
 			'filter': (1,(2,3)[it.use_mipmap])[it.use_interpolation],
 			'wrap'	: 0,

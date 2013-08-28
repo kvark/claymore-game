@@ -469,7 +469,10 @@ pub impl SceneContext	{
 			let name = rd.get_string();
 			let node_name = rd.get_string();
 			let dual_quat = rd.get_bool();
-			let root = *self.nodes.get( &node_name );
+			let root = match self.nodes.find( &node_name )	{
+				Some(n)	=> *n,
+				None	=> @mut engine::space::Node::new( copy node_name )
+			};
 			let arm = @mut engine::load::read_armature( &mut rd, root, dual_quat, lg );
 			self.armatures.insert( name, arm );
 			rd.leave();
@@ -528,7 +531,7 @@ pub impl SceneContext	{
 pub struct Scene	{
 	context		: SceneContext,
 	entities	: EntityGroup,
-	cameras		: Dict<@Camera>,
+	cameras		: Dict<@mut Camera>,
 	lights		: Dict<@Light>,
 }
 
@@ -605,11 +608,11 @@ pub fn load_scene( path : ~str, gc : &mut gr_low::context::Context,
 	// entities
 	let entity_group = context.parse_group( scene.entities, gc, opt_vao, lg );
 	// cameras
-	let mut map_camera : LinearMap<~str,@Camera> = LinearMap::new();
+	let mut map_camera : Dict<@mut Camera> = LinearMap::new();
 	for scene.cameras.each() |icam|	{
 		let root = *context.nodes.get( &icam.node );
 		map_camera.insert( copy root.name,
-			@Camera{ node:root,
+			@mut Camera{ node:root,
 				proj:icam.proj.spawn(aspect),
 				ear:engine::audio::Listener{ volume:0f },
 			}

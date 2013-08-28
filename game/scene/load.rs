@@ -10,7 +10,7 @@ use scene::common;
 use gen = gen_scene::common;
 
 
-priv fn parse_shader_data( mat : &gen::Material, tex_cache : &LinearMap<~str,@gr_low::texture::Texture> )-> gr_low::shade::DataMap	{
+priv fn parse_shader_data( imat : &gen::Material, tex_cache : &LinearMap<~str,@gr_low::texture::Texture> )-> gr_low::shade::DataMap	{
 	let mut out = gr_low::shade::make_data();
 	fn color2vec(v : [f32, ..3])-> vec::vec4	{
 		let kf = 1f32 / 255f32;
@@ -20,7 +20,7 @@ priv fn parse_shader_data( mat : &gen::Material, tex_cache : &LinearMap<~str,@gr
 		let kf = 1f32 / 255f32;
 		vec::vec4::new( (c>>24) as f32 * kf, ((c>>16)&0xFF) as f32 * kf, ((c>>8)&0xFF) as f32 * kf, (c&0xFF) as f32 * kf )
 	}
-	for mat.data.each() |&(name,di)|	{
+	for imat.data.each() |&(name,di)|	{
 		let uni = match copy di	{
 			gen::DataInt(v)		=> ( gr_low::shade::UniInt(v) ),
 			gen::DataScalar(v)	=> ( gr_low::shade::UniFloat(v as float) ),
@@ -29,10 +29,14 @@ priv fn parse_shader_data( mat : &gen::Material, tex_cache : &LinearMap<~str,@gr
 		};
 		out.insert( ~"u_" + name, uni );
 	}
-	for mat.textures.eachi() |i,ti|	{
+	for imat.textures.eachi() |i,ti|	{
 		let tex = *tex_cache.get( &ti.path );
 		let s_opt = Some(gr_low::texture::Sampler::new( ti.filter, ti.wrap ));
-		out.insert( ~"t_"+ti.name, gr_low::shade::UniTexture(0,tex,s_opt) );
+		let name = match (i,imat.kind)	{
+			(0,gen::KindPhong)	=> ~"Main",	//that's what the shader expects
+			_					=> copy ti.name
+		};
+		out.insert( ~"t_" + name, gr_low::shade::UniTexture(0,tex,s_opt) );
 		let u_transform = vec::vec4::new( ti.scale[0], ti.scale[1], ti.offset[0], ti.offset[1] );
 		out.insert( fmt!("u_Tex%uTransform",i), gr_low::shade::UniFloatVec(u_transform) );
 	}
@@ -45,8 +49,12 @@ priv fn parse_materials( materials : &[gen::Material], ctx : &mut common::SceneC
 	for materials.each() |imat|	{
 		let mat_source = match imat.kind	{
 			gen::KindFlat			=> ~"flat",
+			gen::KindPhong if imat.textures.is_empty()	=>	{
+				lg.add( ~"Forcing material " + imat.name + " kind to flat due to no textures" );
+				~"flat"
+			},
 			gen::KindPhong			=> ~"phong",
-			gen::KindAnisotropic	=> ~"aniso"
+			gen::KindAnisotropic	=> ~"aniso",
 		};
 		let mat = @gr_mid::draw::load_material( ~"data/code/mat/" + mat_source );
 		if !ctx.materials.contains_key( &imat.name )	{
@@ -112,7 +120,7 @@ priv fn parse_child( child : &gen::NodeChild, parent : Option<@mut space::Node>,
 			});
 		},
 		&gen::ChildCamera(ref icam)	=>	{
-			scene.cameras.insert( copy icam.name, @common::Camera{
+			scene.cameras.insert( copy icam.name, @mut common::Camera{
 				node	: parent.expect("Camera parent has to exist"),
 				proj	: projection::PerspectiveSym	{
 					vfov	: icam.fov_y.degrees(),
@@ -142,6 +150,7 @@ priv fn parse_child( child : &gen::NodeChild, parent : Option<@mut space::Node>,
 
 pub fn parse( path : ~str, iscene : &gen::Scene, custom : &[gen::Material], gc : &mut gr_low::context::Context,
 		opt_vao : Option<@mut gr_low::buf::VertexArray>, lg : &engine::journal::Log )-> common::Scene	{
+	lg.add( ~"Loading scene: " + path );
 	let mut scene = common::Scene	{
 		context		: common::SceneContext::new( copy path ),
 		entities	: common::EntityGroup(~[]),
@@ -151,7 +160,7 @@ pub fn parse( path : ~str, iscene : &gen::Scene, custom : &[gen::Material], gc :
 	// materials
 	parse_materials( custom, &mut scene.context, gc, lg );
 	parse_materials( iscene.materials, &mut scene.context, gc, lg );
-	// armatures	
+	// armatures-0
 	scene.context.read_armatures( &path, lg );
 	// nodes and stuff
 	let get_input = |mesh_name : ~str|	{
@@ -164,6 +173,13 @@ pub fn parse( path : ~str, iscene : &gen::Scene, custom : &[gen::Material], gc :
 	};
 	for iscene.nodes.each() |child|	{
 		parse_child( child, None, &mut scene, get_input );
+	}
+	// armatures-1
+	for scene.context.armatures.each_value() |arm|	{
+		let name = copy arm.root.name;
+		let root = *scene.context.nodes.find( &name ).
+			expect( ~"Unable to find armature root " + name );
+		arm.change_root( root );
 	}
 	// done
 	scene
