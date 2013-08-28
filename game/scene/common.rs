@@ -424,6 +424,7 @@ pub impl SceneContext	{
 			armatures	: LinearMap::new(),
 		}
 	}
+
 	fn query_mesh( &mut self, mesh_name : &~str, gc : &mut gr_low::context::Context,
 			lg : &engine::journal::Log )-> @gr_mid::mesh::Mesh	{
 		match self.meshes.find(mesh_name)	{
@@ -458,6 +459,22 @@ pub impl SceneContext	{
 			self.meshes.insert( copy *mesh_name, mesh );
 			mesh
 		}
+	}
+
+	fn read_armatures( &mut self, path : &~str, lg : &engine::journal::Log )	{
+		let mut rd = engine::load::Reader::create_std( *path + ".k3arm" );	
+		assert!( rd.enter() == ~"*arm" );
+		while rd.has_more()!=0u	{
+			assert!( rd.enter() == ~"meta" );
+			let name = rd.get_string();
+			let node_name = rd.get_string();
+			let dual_quat = rd.get_bool();
+			let root = *self.nodes.get( &node_name );
+			let arm = @mut engine::load::read_armature( &mut rd, root, dual_quat, lg );
+			self.armatures.insert( name, arm );
+			rd.leave();
+		}
+		rd.leave();
 	}
 
 	fn parse_group( &mut self, info_array : &[EntityInfo],
@@ -573,24 +590,6 @@ pub fn load_scene( path : ~str, gc : &mut gr_low::context::Context,
 	// nodes
 	let mut map_node : LinearMap<~str,@mut engine::space::Node> = LinearMap::new();
 	make_nodes( &scene.nodes, None, &mut map_node );
-	// armatures
-	let mut map_armature = {
-		let mut map : LinearMap<~str,@mut engine::space::Armature> = LinearMap::new();
-		let mut rd = engine::load::Reader::create_std( path+".k3arm" );	
-		assert!( rd.enter() == ~"*arm" );
-		while rd.has_more()!=0u	{
-			assert!( rd.enter() == ~"meta" );
-			let name = rd.get_string();
-			let node_name = rd.get_string();
-			let dual_quat = rd.get_bool();
-			let root = *map_node.get( &node_name );
-			let arm = @mut engine::load::read_armature( &mut rd, root, dual_quat, lg );
-			map.insert( name, arm );
-			rd.leave();
-		}
-		rd.leave();
-		map
-	};
 	// context
 	let mut context = SceneContext{
 		prefix		: copy path,
@@ -599,8 +598,10 @@ pub fn load_scene( path : ~str, gc : &mut gr_low::context::Context,
 		textures	: tex_cache,
 		nodes		: map_node,
 		meshes		: LinearMap::new(),
-		armatures	: map_armature,
+		armatures	: LinearMap::new(),
 	};
+	// armatures
+	context.read_armatures( &path, lg );
 	// entities
 	let entity_group = context.parse_group( scene.entities, gc, opt_vao, lg );
 	// cameras

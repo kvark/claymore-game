@@ -69,7 +69,8 @@ priv fn parse_materials( materials : &[gen::Material], ctx : &mut common::SceneC
 }
 
 
-priv fn parse_child( child : &gen::NodeChild, parent : Option<@mut space::Node>, scene : &mut common::Scene )	{
+priv fn parse_child( child : &gen::NodeChild, parent : Option<@mut space::Node>, scene : &mut common::Scene,
+		get_input : &fn(~str)->gr_mid::call::Input )	{
 	match child	{
 		&gen::ChildNode(ref inode)	=>	{
 			let qs = space::QuatSpace	{
@@ -85,10 +86,31 @@ priv fn parse_child( child : &gen::NodeChild, parent : Option<@mut space::Node>,
 			};
 			scene.context.nodes.insert( copy n.name, n );
 			for inode.children.each() |child|	{
-				parse_child( child, Some(n), scene );
+				parse_child( child, Some(n), scene, get_input );
 			}
 		},
-		&gen::ChildEntity(ref _ent)	=> (),
+		&gen::ChildEntity(ref ient)	=>	{
+			let mut input = get_input( copy ient.mesh );
+			input.range.start = ient.range[0];
+			input.range.num = ient.range[1] - ient.range[0];
+			let skel = if ient.armature.is_empty()	{
+				@()	as @gr_mid::draw::Mod
+			}else	{
+				*scene.context.armatures.find( &ient.armature ).
+					expect( ~"Armature not found: " + ient.armature )
+					as @gr_mid::draw::Mod
+			};
+			scene.entities.push( engine::object::Entity{
+				node	: parent.expect("Entity parent has to exist"),
+				//body	: @node::Body,
+				input	: input,
+				data	: copy *scene.context.mat_data.find( &ient.material ).
+					expect( ~"Material data not found: " + ient.material ),
+				modifier: skel,
+				material: *scene.context.materials.find( &ient.material ).
+					expect( ~"Material not found: " + ient.material ),
+			});
+		},
 		&gen::ChildCamera(ref icam)	=>	{
 			scene.cameras.insert( copy icam.name, @common::Camera{
 				node	: parent.expect("Camera parent has to exist"),
@@ -103,7 +125,7 @@ priv fn parse_child( child : &gen::NodeChild, parent : Option<@mut space::Node>,
 		},
 		&gen::ChildLight(ref ilit)	=>	{
 			scene.lights.insert( copy ilit.name, @common::Light{
-				node	: parent.expect("Camera parent has to exist"),
+				node	: parent.expect("Light parent has to exist"),
 				color	: gr_low::rast::Color::from_array3( ilit.color ),
 				attenu	: [1f32 / ilit.energy, ilit.attenuation[0], ilit.attenuation[1]],
 				distance: ilit.distance,
@@ -118,18 +140,31 @@ priv fn parse_child( child : &gen::NodeChild, parent : Option<@mut space::Node>,
 }
 
 
-pub fn parse( iscene : &gen::Scene, custom : &[gen::Material], gc : &mut gr_low::context::Context,
-		_opt_vao : Option<@mut gr_low::buf::VertexArray>, lg : &engine::journal::Log )-> common::Scene	{
+pub fn parse( path : ~str, iscene : &gen::Scene, custom : &[gen::Material], gc : &mut gr_low::context::Context,
+		opt_vao : Option<@mut gr_low::buf::VertexArray>, lg : &engine::journal::Log )-> common::Scene	{
 	let mut scene = common::Scene	{
-		context		: common::SceneContext::new(~""),
+		context		: common::SceneContext::new( copy path ),
 		entities	: common::EntityGroup(~[]),
 		cameras		: LinearMap::new(),
 		lights		: LinearMap::new()
 	};
+	// materials
 	parse_materials( custom, &mut scene.context, gc, lg );
 	parse_materials( iscene.materials, &mut scene.context, gc, lg );
+	// armatures	
+	scene.context.read_armatures( &path, lg );
+	// nodes and stuff
+	let get_input = |mesh_name : ~str|	{
+		let vao = match opt_vao	{
+			Some(va)	=> va,
+			None		=> gc.create_vertex_array(),
+		};
+		let mesh = scene.context.query_mesh( &mesh_name, gc, lg );
+		gr_mid::call::Input::new( vao, mesh )
+	};
 	for iscene.nodes.each() |child|	{
-		parse_child( child, None, &mut scene );
+		parse_child( child, None, &mut scene, get_input );
 	}
+	// done
 	scene
 }
