@@ -19,10 +19,10 @@ pub enum MaterialKind	{
 }
 
 pub enum MaterialData	{
-	DataInt(~str,int),
-	DataScalar(~str,Scalar),
-	DataVector(~str,Vector4),
-	DataColor(~str,Vector3),
+	DataInt(int),
+	DataScalar(Scalar),
+	DataVector(Vector4),
+	DataColor(Vector3),
 }
 
 pub struct Texture	{
@@ -37,7 +37,7 @@ pub struct Texture	{
 pub struct Material	{
 	name		: Name,
 	kind		: MaterialKind,
-	data		: ~[MaterialData],
+	data		: ~[(~str,MaterialData)],
 	textures	: ~[Texture],
 }
 

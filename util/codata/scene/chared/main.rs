@@ -1,169 +1,14 @@
 use common::*;
 pub fn load()-> Scene	{Scene{
-		global	: Global{
-			gravity	: [0.00, 0.00, -9.81],
-		},
-		materials	: ~[
-			Material{
-				kind	: KindPhong,
-				name	: ~"anisotropic1",
-				textures	: ~[],
-				data	: ~[
-					DataScalar(	~"Ambient",	1.00),
-					DataColor(	~"DiffuseColor",	[0.09, 0.09, 0.08]),
-					DataVector(	~"DiffuseParams",	[0.80, 0.00, 0.00, 1.00]),
-					DataColor(	~"SpecularColor",	[1.00, 1.00, 1.00]),
-					DataVector(	~"SpecularParams",	[0.50, 50.00, 0.00, 1.00])
-				],
-			},
-			Material{
-				kind	: KindPhong,
-				name	: ~"armor",
-				textures	: ~[
-					Texture{
-						name	: ~"Main",
-						offset	: [0.00, 0.00, 0.00],
-						scale	: [1.00, 1.00, 1.00],
-						filter	: 3,
-						path	: ~"//Metal_R-Spec_G-Bump_B-Reflect.jpg",
-						wrap	: 0,
-					}
-				],
-				data	: ~[
-					DataScalar(	~"Ambient",	1.00),
-					DataColor(	~"DiffuseColor",	[0.80, 0.80, 0.80]),
-					DataVector(	~"DiffuseParams",	[0.80, 0.00, 0.00, 1.00]),
-					DataColor(	~"SpecularColor",	[1.00, 1.00, 1.00]),
-					DataVector(	~"SpecularParams",	[0.50, 50.00, 0.00, 1.00])
-				],
-			},
-			Material{
-				kind	: KindPhong,
-				name	: ~"cloak",
-				textures	: ~[],
-				data	: ~[
-					DataScalar(	~"Ambient",	1.00),
-					DataColor(	~"DiffuseColor",	[0.80, 0.80, 0.80]),
-					DataVector(	~"DiffuseParams",	[0.80, 0.00, 0.00, 1.00]),
-					DataColor(	~"SpecularColor",	[1.00, 1.00, 1.00]),
-					DataVector(	~"SpecularParams",	[0.50, 50.00, 0.00, 1.00])
-				],
-			},
-			Material{
-				kind	: KindPhong,
-				name	: ~"cornea",
-				textures	: ~[],
-				data	: ~[
-					DataScalar(	~"Ambient",	1.00),
-					DataColor(	~"DiffuseColor",	[0.00, 0.00, 0.00]),
-					DataVector(	~"DiffuseParams",	[0.80, 0.00, 0.00, 1.00]),
-					DataColor(	~"SpecularColor",	[0.50, 0.50, 0.50]),
-					DataVector(	~"SpecularParams",	[0.50, 1.00, 0.00, 1.00])
-				],
-			},
-			Material{
-				kind	: KindPhong,
-				name	: ~"EyeLashes",
-				textures	: ~[],
-				data	: ~[
-					DataScalar(	~"Ambient",	1.00),
-					DataColor(	~"DiffuseColor",	[0.00, 0.00, 0.00]),
-					DataVector(	~"DiffuseParams",	[0.80, 0.00, 0.00, 1.00]),
-					DataColor(	~"SpecularColor",	[1.00, 1.00, 1.00]),
-					DataVector(	~"SpecularParams",	[0.50, 50.00, 0.00, 1.00])
-				],
-			},
-			Material{
-				kind	: KindPhong,
-				name	: ~"Eyes",
-				textures	: ~[],
-				data	: ~[
-					DataScalar(	~"Ambient",	1.00),
-					DataColor(	~"DiffuseColor",	[0.44, 0.44, 0.54]),
-					DataVector(	~"DiffuseParams",	[0.80, 0.00, 0.00, 1.00]),
-					DataColor(	~"SpecularColor",	[0.49, 0.49, 0.49]),
-					DataVector(	~"SpecularParams",	[0.50, 1.00, 0.00, 1.00])
-				],
-			},
-			Material{
-				kind	: KindPhong,
-				name	: ~"Material",
-				textures	: ~[],
-				data	: ~[
-					DataScalar(	~"Ambient",	1.00),
-					DataColor(	~"DiffuseColor",	[0.80, 0.80, 0.80]),
-					DataVector(	~"DiffuseParams",	[0.80, 0.00, 0.00, 1.00]),
-					DataColor(	~"SpecularColor",	[1.00, 1.00, 1.00]),
-					DataVector(	~"SpecularParams",	[0.50, 50.00, 0.00, 1.00])
-				],
-			},
-			Material{
-				kind	: KindPhong,
-				name	: ~"Pupil_SS",
-				textures	: ~[],
-				data	: ~[
-					DataScalar(	~"Ambient",	1.00),
-					DataColor(	~"DiffuseColor",	[0.00, 0.00, 0.00]),
-					DataVector(	~"DiffuseParams",	[0.80, 0.00, 0.00, 1.00]),
-					DataColor(	~"SpecularColor",	[1.00, 1.00, 1.00]),
-					DataVector(	~"SpecularParams",	[0.50, 50.00, 0.00, 1.00])
-				],
-			},
-			Material{
-				kind	: KindPhong,
-				name	: ~"skin",
-				textures	: ~[
-					Texture{
-						name	: ~"Main",
-						offset	: [0.00, 0.00, 0.00],
-						scale	: [1.00, 1.00, 1.00],
-						filter	: 3,
-						path	: ~"//Skin_Diffuse.jpg",
-						wrap	: 0,
-					}
-				],
-				data	: ~[
-					DataScalar(	~"Ambient",	1.00),
-					DataColor(	~"DiffuseColor",	[0.80, 0.80, 0.80]),
-					DataVector(	~"DiffuseParams",	[0.80, 0.00, 0.00, 1.00]),
-					DataColor(	~"SpecularColor",	[1.00, 1.00, 1.00]),
-					DataVector(	~"SpecularParams",	[0.50, 1.00, 0.00, 1.00])
-				],
-			},
-			Material{
-				kind	: KindPhong,
-				name	: ~"Teeth",
-				textures	: ~[],
-				data	: ~[
-					DataScalar(	~"Ambient",	1.00),
-					DataColor(	~"DiffuseColor",	[0.75, 0.75, 0.75]),
-					DataVector(	~"DiffuseParams",	[0.80, 0.00, 0.00, 1.00]),
-					DataColor(	~"SpecularColor",	[1.00, 1.00, 1.00]),
-					DataVector(	~"SpecularParams",	[0.50, 50.00, 0.00, 1.00])
-				],
-			},
-			Material{
-				kind	: KindPhong,
-				name	: ~"Tongue",
-				textures	: ~[],
-				data	: ~[
-					DataScalar(	~"Ambient",	1.00),
-					DataColor(	~"DiffuseColor",	[0.40, 0.08, 0.08]),
-					DataVector(	~"DiffuseParams",	[0.80, 0.00, 0.00, 1.00]),
-					DataColor(	~"SpecularColor",	[0.50, 0.50, 0.50]),
-					DataVector(	~"SpecularParams",	[0.50, 1.00, 0.00, 1.00])
-				],
-			}
-		],
 		nodes	: ~[
 			ChildNode(Node{
 				name	: ~"Plane",
 				children	: ~[
 					ChildEntity(Entity{
-						mesh	: ~"Plane@",
-						material	: ~"Material",
 						armature	: ~"",
 						range	: [0, 6],
+						material	: ~"Material",
+						mesh	: ~"Plane@",
 					})
 				],
 				space	: QuatSpace{
@@ -176,9 +21,9 @@ pub fn load()-> Scene	{Scene{
 				name	: ~"Camera",
 				children	: ~[
 					ChildCamera(Camera{
-						fov_y	: 0.87,
 						name	: ~"Camera",
 						range	: [10.00, 300.00],
+						fov_y	: 0.87,
 					})
 				],
 				space	: QuatSpace{
@@ -1537,10 +1382,10 @@ pub fn load()-> Scene	{Scene{
 										name	: ~"tongue_geo1",
 										children	: ~[
 											ChildEntity(Entity{
-												mesh	: ~"tongue_geo1Shape@",
-												material	: ~"Tongue",
 												armature	: ~"",
 												range	: [0, 528],
+												material	: ~"Tongue",
+												mesh	: ~"tongue_geo1Shape@",
 											})
 										],
 										space	: QuatSpace{
@@ -1553,10 +1398,10 @@ pub fn load()-> Scene	{Scene{
 										name	: ~"polySurface172",
 										children	: ~[
 											ChildEntity(Entity{
-												mesh	: ~"polySurfaceShape174@",
-												material	: ~"cloak",
 												armature	: ~"",
 												range	: [0, 15252],
+												material	: ~"cloak",
+												mesh	: ~"polySurfaceShape174@",
 											})
 										],
 										space	: QuatSpace{
@@ -1569,10 +1414,10 @@ pub fn load()-> Scene	{Scene{
 										name	: ~"topJaw_geo2",
 										children	: ~[
 											ChildEntity(Entity{
-												mesh	: ~"topJaw_geo2Shape@",
-												material	: ~"Teeth",
 												armature	: ~"",
 												range	: [0, 4656],
+												material	: ~"Teeth",
+												mesh	: ~"topJaw_geo2Shape@",
 											})
 										],
 										space	: QuatSpace{
@@ -1585,10 +1430,10 @@ pub fn load()-> Scene	{Scene{
 										name	: ~"lowerJaw_geo2",
 										children	: ~[
 											ChildEntity(Entity{
-												mesh	: ~"lowerJaw_geo2Shape@",
-												material	: ~"Teeth",
 												armature	: ~"",
 												range	: [0, 4248],
+												material	: ~"Teeth",
+												mesh	: ~"lowerJaw_geo2Shape@",
 											})
 										],
 										space	: QuatSpace{
@@ -1601,10 +1446,10 @@ pub fn load()-> Scene	{Scene{
 										name	: ~"L_upper_lash1",
 										children	: ~[
 											ChildEntity(Entity{
-												mesh	: ~"L_upper_lash1Shape@",
-												material	: ~"EyeLashes",
 												armature	: ~"",
 												range	: [0, 13716],
+												material	: ~"EyeLashes",
+												mesh	: ~"L_upper_lash1Shape@",
 											})
 										],
 										space	: QuatSpace{
@@ -1617,10 +1462,10 @@ pub fn load()-> Scene	{Scene{
 										name	: ~"L_lower_lash1",
 										children	: ~[
 											ChildEntity(Entity{
-												mesh	: ~"L_lower_lash1Shape@",
-												material	: ~"EyeLashes",
 												armature	: ~"",
 												range	: [0, 8964],
+												material	: ~"EyeLashes",
+												mesh	: ~"L_lower_lash1Shape@",
 											})
 										],
 										space	: QuatSpace{
@@ -1633,10 +1478,10 @@ pub fn load()-> Scene	{Scene{
 										name	: ~"R_upper_lash1",
 										children	: ~[
 											ChildEntity(Entity{
-												mesh	: ~"R_upper_lash1Shape@",
-												material	: ~"EyeLashes",
 												armature	: ~"",
 												range	: [0, 13716],
+												material	: ~"EyeLashes",
+												mesh	: ~"R_upper_lash1Shape@",
 											})
 										],
 										space	: QuatSpace{
@@ -1649,10 +1494,10 @@ pub fn load()-> Scene	{Scene{
 										name	: ~"R_lower_lash1",
 										children	: ~[
 											ChildEntity(Entity{
-												mesh	: ~"R_lower_lash1Shape@",
-												material	: ~"EyeLashes",
 												armature	: ~"",
 												range	: [0, 8964],
+												material	: ~"EyeLashes",
+												mesh	: ~"R_lower_lash1Shape@",
 											})
 										],
 										space	: QuatSpace{
@@ -1665,22 +1510,22 @@ pub fn load()-> Scene	{Scene{
 										name	: ~"L_eye_geo1",
 										children	: ~[
 											ChildEntity(Entity{
-												mesh	: ~"L_eye_geo1Shape@",
-												material	: ~"Eyes",
 												armature	: ~"",
 												range	: [0, 2784],
+												material	: ~"Eyes",
+												mesh	: ~"L_eye_geo1Shape@",
 											}),
 											ChildEntity(Entity{
-												mesh	: ~"L_eye_geo1Shape@",
-												material	: ~"Pupil_SS",
 												armature	: ~"",
 												range	: [2784, 3264],
+												material	: ~"Pupil_SS",
+												mesh	: ~"L_eye_geo1Shape@",
 											}),
 											ChildEntity(Entity{
-												mesh	: ~"L_eye_geo1Shape@",
-												material	: ~"cornea",
 												armature	: ~"",
 												range	: [3264, 5568],
+												material	: ~"cornea",
+												mesh	: ~"L_eye_geo1Shape@",
 											})
 										],
 										space	: QuatSpace{
@@ -1693,22 +1538,22 @@ pub fn load()-> Scene	{Scene{
 										name	: ~"R_eye_geo1",
 										children	: ~[
 											ChildEntity(Entity{
-												mesh	: ~"R_eye_geo1Shape@",
-												material	: ~"Eyes",
 												armature	: ~"",
 												range	: [0, 2784],
+												material	: ~"Eyes",
+												mesh	: ~"R_eye_geo1Shape@",
 											}),
 											ChildEntity(Entity{
-												mesh	: ~"R_eye_geo1Shape@",
-												material	: ~"Pupil_SS",
 												armature	: ~"",
 												range	: [2784, 3264],
+												material	: ~"Pupil_SS",
+												mesh	: ~"R_eye_geo1Shape@",
 											}),
 											ChildEntity(Entity{
-												mesh	: ~"R_eye_geo1Shape@",
-												material	: ~"cornea",
 												armature	: ~"",
 												range	: [3264, 5568],
+												material	: ~"cornea",
+												mesh	: ~"R_eye_geo1Shape@",
 											})
 										],
 										space	: QuatSpace{
@@ -1721,10 +1566,10 @@ pub fn load()-> Scene	{Scene{
 										name	: ~"Hair_Geo2",
 										children	: ~[
 											ChildEntity(Entity{
-												mesh	: ~"Hair_Geo2Shape@",
-												material	: ~"anisotropic1",
 												armature	: ~"",
 												range	: [0, 6954],
+												material	: ~"anisotropic1",
+												mesh	: ~"Hair_Geo2Shape@",
 											})
 										],
 										space	: QuatSpace{
@@ -1737,10 +1582,10 @@ pub fn load()-> Scene	{Scene{
 										name	: ~"Body_geo8",
 										children	: ~[
 											ChildEntity(Entity{
-												mesh	: ~"Body_geo8Shape@",
-												material	: ~"skin",
 												armature	: ~"",
 												range	: [0, 50496],
+												material	: ~"skin",
+												mesh	: ~"Body_geo8Shape@",
 											})
 										],
 										space	: QuatSpace{
@@ -1763,10 +1608,10 @@ pub fn load()-> Scene	{Scene{
 										name	: ~"boots",
 										children	: ~[
 											ChildEntity(Entity{
-												mesh	: ~"R_boot1Shape@",
-												material	: ~"armor",
 												armature	: ~"",
 												range	: [0, 9042],
+												material	: ~"armor",
+												mesh	: ~"R_boot1Shape@",
 											})
 										],
 										space	: QuatSpace{
@@ -1779,10 +1624,10 @@ pub fn load()-> Scene	{Scene{
 										name	: ~"backShealth1",
 										children	: ~[
 											ChildEntity(Entity{
-												mesh	: ~"backShealth1Shape@",
-												material	: ~"armor",
 												armature	: ~"",
 												range	: [0, 5550],
+												material	: ~"armor",
+												mesh	: ~"backShealth1Shape@",
 											})
 										],
 										space	: QuatSpace{
@@ -1795,16 +1640,16 @@ pub fn load()-> Scene	{Scene{
 										name	: ~"skirt",
 										children	: ~[
 											ChildEntity(Entity{
-												mesh	: ~"R_skirt_06Shape@",
-												material	: ~"armor",
 												armature	: ~"",
 												range	: [0, 10236],
+												material	: ~"armor",
+												mesh	: ~"R_skirt_06Shape@",
 											}),
 											ChildEntity(Entity{
-												mesh	: ~"R_skirt_06Shape@",
-												material	: ~"skin",
 												armature	: ~"",
 												range	: [10236, 12102],
+												material	: ~"skin",
+												mesh	: ~"R_skirt_06Shape@",
 											})
 										],
 										space	: QuatSpace{
@@ -1817,10 +1662,10 @@ pub fn load()-> Scene	{Scene{
 										name	: ~"bracket",
 										children	: ~[
 											ChildEntity(Entity{
-												mesh	: ~"bracket_05_geo1Shape@",
-												material	: ~"skin",
 												armature	: ~"",
 												range	: [0, 8448],
+												material	: ~"skin",
+												mesh	: ~"bracket_05_geo1Shape@",
 											})
 										],
 										space	: QuatSpace{
@@ -1833,10 +1678,10 @@ pub fn load()-> Scene	{Scene{
 										name	: ~"bracers",
 										children	: ~[
 											ChildEntity(Entity{
-												mesh	: ~"L_bracer1Shape@",
-												material	: ~"armor",
 												armature	: ~"",
 												range	: [0, 2304],
+												material	: ~"armor",
+												mesh	: ~"L_bracer1Shape@",
 											})
 										],
 										space	: QuatSpace{
@@ -1849,10 +1694,10 @@ pub fn load()-> Scene	{Scene{
 										name	: ~"spaulders",
 										children	: ~[
 											ChildEntity(Entity{
-												mesh	: ~"R_subSpaulder1Shape@",
-												material	: ~"armor",
 												armature	: ~"",
 												range	: [0, 6960],
+												material	: ~"armor",
+												mesh	: ~"R_subSpaulder1Shape@",
 											})
 										],
 										space	: QuatSpace{
@@ -1895,15 +1740,15 @@ pub fn load()-> Scene	{Scene{
 				name	: ~"Lamp",
 				children	: ~[
 					ChildLight(Light{
-						color	: [1.00, 1.00, 1.00, 1.00],
-						energy	: 3.00,
-						kind	: KindSpot(Spot{
-							blend	: 0.15,
-							size	: 1.31,
-						}),
 						distance	: 100.00,
+						color	: [1.00, 1.00, 1.00, 1.00],
 						attenuation	: [0.00, 1.00],
+						kind	: KindSpot(Spot{
+							size	: 1.31,
+							blend	: 0.15,
+						}),
 						spherical	: false,
+						energy	: 3.00,
 					})
 				],
 				space	: QuatSpace{
@@ -1912,5 +1757,160 @@ pub fn load()-> Scene	{Scene{
 					rot	: [0.27, 0.31, 0.78, 0.47],
 				},
 			})
+		],
+		global	: Global{
+			gravity	: [0.00, 0.00, -9.81],
+		},
+		materials	: ~[
+			Material{
+				name	: ~"anisotropic1",
+				data	: ~[
+					(	~"Ambient",	DataScalar(	1.00)),
+					(	~"DiffuseColor",	DataColor(	[0.09, 0.09, 0.08])),
+					(	~"DiffuseParams",	DataVector(	[0.80, 0.00, 0.00, 1.00])),
+					(	~"SpecularColor",	DataColor(	[1.00, 1.00, 1.00])),
+					(	~"SpecularParams",	DataVector(	[0.50, 50.00, 0.00, 1.00]))
+				],
+				kind	: KindPhong,
+				textures	: ~[],
+			},
+			Material{
+				name	: ~"armor",
+				data	: ~[
+					(	~"Ambient",	DataScalar(	1.00)),
+					(	~"DiffuseColor",	DataColor(	[0.80, 0.80, 0.80])),
+					(	~"DiffuseParams",	DataVector(	[0.80, 0.00, 0.00, 1.00])),
+					(	~"SpecularColor",	DataColor(	[1.00, 1.00, 1.00])),
+					(	~"SpecularParams",	DataVector(	[0.50, 50.00, 0.00, 1.00]))
+				],
+				kind	: KindPhong,
+				textures	: ~[
+					Texture{
+						name	: ~"Main",
+						scale	: [1.00, 1.00, 1.00],
+						path	: ~"//Metal_R-Spec_G-Bump_B-Reflect.jpg",
+						filter	: 3,
+						wrap	: 0,
+						offset	: [0.00, 0.00, 0.00],
+					}
+				],
+			},
+			Material{
+				name	: ~"cloak",
+				data	: ~[
+					(	~"Ambient",	DataScalar(	1.00)),
+					(	~"DiffuseColor",	DataColor(	[0.80, 0.80, 0.80])),
+					(	~"DiffuseParams",	DataVector(	[0.80, 0.00, 0.00, 1.00])),
+					(	~"SpecularColor",	DataColor(	[1.00, 1.00, 1.00])),
+					(	~"SpecularParams",	DataVector(	[0.50, 50.00, 0.00, 1.00]))
+				],
+				kind	: KindPhong,
+				textures	: ~[],
+			},
+			Material{
+				name	: ~"cornea",
+				data	: ~[
+					(	~"Ambient",	DataScalar(	1.00)),
+					(	~"DiffuseColor",	DataColor(	[0.00, 0.00, 0.00])),
+					(	~"DiffuseParams",	DataVector(	[0.80, 0.00, 0.00, 1.00])),
+					(	~"SpecularColor",	DataColor(	[0.50, 0.50, 0.50])),
+					(	~"SpecularParams",	DataVector(	[0.50, 1.00, 0.00, 1.00]))
+				],
+				kind	: KindPhong,
+				textures	: ~[],
+			},
+			Material{
+				name	: ~"EyeLashes",
+				data	: ~[
+					(	~"Ambient",	DataScalar(	1.00)),
+					(	~"DiffuseColor",	DataColor(	[0.00, 0.00, 0.00])),
+					(	~"DiffuseParams",	DataVector(	[0.80, 0.00, 0.00, 1.00])),
+					(	~"SpecularColor",	DataColor(	[1.00, 1.00, 1.00])),
+					(	~"SpecularParams",	DataVector(	[0.50, 50.00, 0.00, 1.00]))
+				],
+				kind	: KindPhong,
+				textures	: ~[],
+			},
+			Material{
+				name	: ~"Eyes",
+				data	: ~[
+					(	~"Ambient",	DataScalar(	1.00)),
+					(	~"DiffuseColor",	DataColor(	[0.44, 0.44, 0.54])),
+					(	~"DiffuseParams",	DataVector(	[0.80, 0.00, 0.00, 1.00])),
+					(	~"SpecularColor",	DataColor(	[0.49, 0.49, 0.49])),
+					(	~"SpecularParams",	DataVector(	[0.50, 1.00, 0.00, 1.00]))
+				],
+				kind	: KindPhong,
+				textures	: ~[],
+			},
+			Material{
+				name	: ~"Material",
+				data	: ~[
+					(	~"Ambient",	DataScalar(	1.00)),
+					(	~"DiffuseColor",	DataColor(	[0.80, 0.80, 0.80])),
+					(	~"DiffuseParams",	DataVector(	[0.80, 0.00, 0.00, 1.00])),
+					(	~"SpecularColor",	DataColor(	[1.00, 1.00, 1.00])),
+					(	~"SpecularParams",	DataVector(	[0.50, 50.00, 0.00, 1.00]))
+				],
+				kind	: KindPhong,
+				textures	: ~[],
+			},
+			Material{
+				name	: ~"Pupil_SS",
+				data	: ~[
+					(	~"Ambient",	DataScalar(	1.00)),
+					(	~"DiffuseColor",	DataColor(	[0.00, 0.00, 0.00])),
+					(	~"DiffuseParams",	DataVector(	[0.80, 0.00, 0.00, 1.00])),
+					(	~"SpecularColor",	DataColor(	[1.00, 1.00, 1.00])),
+					(	~"SpecularParams",	DataVector(	[0.50, 50.00, 0.00, 1.00]))
+				],
+				kind	: KindPhong,
+				textures	: ~[],
+			},
+			Material{
+				name	: ~"skin",
+				data	: ~[
+					(	~"Ambient",	DataScalar(	1.00)),
+					(	~"DiffuseColor",	DataColor(	[0.80, 0.80, 0.80])),
+					(	~"DiffuseParams",	DataVector(	[0.80, 0.00, 0.00, 1.00])),
+					(	~"SpecularColor",	DataColor(	[1.00, 1.00, 1.00])),
+					(	~"SpecularParams",	DataVector(	[0.50, 1.00, 0.00, 1.00]))
+				],
+				kind	: KindPhong,
+				textures	: ~[
+					Texture{
+						name	: ~"Main",
+						scale	: [1.00, 1.00, 1.00],
+						path	: ~"//Skin_Diffuse.jpg",
+						filter	: 3,
+						wrap	: 0,
+						offset	: [0.00, 0.00, 0.00],
+					}
+				],
+			},
+			Material{
+				name	: ~"Teeth",
+				data	: ~[
+					(	~"Ambient",	DataScalar(	1.00)),
+					(	~"DiffuseColor",	DataColor(	[0.75, 0.75, 0.75])),
+					(	~"DiffuseParams",	DataVector(	[0.80, 0.00, 0.00, 1.00])),
+					(	~"SpecularColor",	DataColor(	[1.00, 1.00, 1.00])),
+					(	~"SpecularParams",	DataVector(	[0.50, 50.00, 0.00, 1.00]))
+				],
+				kind	: KindPhong,
+				textures	: ~[],
+			},
+			Material{
+				name	: ~"Tongue",
+				data	: ~[
+					(	~"Ambient",	DataScalar(	1.00)),
+					(	~"DiffuseColor",	DataColor(	[0.40, 0.08, 0.08])),
+					(	~"DiffuseParams",	DataVector(	[0.80, 0.00, 0.00, 1.00])),
+					(	~"SpecularColor",	DataColor(	[0.50, 0.50, 0.50])),
+					(	~"SpecularParams",	DataVector(	[0.50, 1.00, 0.00, 1.00]))
+				],
+				kind	: KindPhong,
+				textures	: ~[],
+			}
 		],
 	}}

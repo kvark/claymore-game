@@ -41,11 +41,11 @@ def cook_mat(mat,log):
 		'name'	: mat.name,
 		'kind' 	: kind,
 		'data'		: [
-			('DataScalar',	'Ambient',			mat.ambient ),
-			('DataColor',	'DiffuseColor', 	list(mat.diffuse_color) ),
-			('DataVector',	'DiffuseParams',	diff_params ),
-			('DataColor',	'SpecularColor',	list(mat.specular_color) ),
-			('DataVector',	'SpecularParams',	spec_params ),
+			((), 'Ambient',			('DataScalar',	mat.ambient )),
+			((), 'DiffuseColor',	('DataColor',	list(mat.diffuse_color) )),
+			((), 'DiffuseParams',	('DataVector',	diff_params )),
+			((), 'SpecularColor',	('DataColor',	list(mat.specular_color) )),
+			((), 'SpecularParams',	('DataVector',	spec_params )),
 		],
 		'textures'	: textures
 	})
@@ -122,8 +122,9 @@ def export_value(elem,ofile,num_format,level):
 				ofile.write( new_line + '}' )
 			if len(elem) == 3:
 				ofile.write( ')' )
-		else:	# enum element
-			ofile.write( elem[0] )
+		else:
+			if type(elem[0]) is str:	# enum element
+				ofile.write( elem[0] )
 			if len(elem)>1:
 				ofile.write( '(\t' )
 				for sub in elem[1:]:
@@ -131,6 +132,8 @@ def export_value(elem,ofile,num_format,level):
 					if not (sub is last):
 						ofile.write(',\t')
 				ofile.write( ')' )
+		#else:
+			#raise Exception( 'Composite element %s is unknown' % (str(elem)))
 	elif tip is bool:
 		ofile.write( ('false','true')[elem] )
 	elif tip is int:
