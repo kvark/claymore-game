@@ -69,56 +69,67 @@ priv fn parse_materials( materials : &[gen::Material], ctx : &mut common::SceneC
 }
 
 
-priv fn parse_child( child : &gen::NodeChild, parent : Option<@mut space::Node>, ctx : &mut common::SceneContext )	{
+priv fn parse_child( child : &gen::NodeChild, parent : Option<@mut space::Node>, scene : &mut common::Scene )	{
 	match child	{
-		&gen::ChildNode(ref node)	=>	{
+		&gen::ChildNode(ref inode)	=>	{
 			let qs = space::QuatSpace	{
-				position	: vec::vec3::from_array( node.space.pos ),
-				orientation	: quat::quat::from_array( node.space.rot ),
-				scale		: node.space.scale,
+				position	: vec::vec3::from_array( inode.space.pos ),
+				orientation	: quat::quat::from_array( inode.space.rot ),
+				scale		: inode.space.scale,
 			};
 			let n = @mut space::Node	{
-				name	: copy node.name,
+				name	: copy inode.name,
 				space	: qs,
 				parent	: parent,
 				actions	: ~[],
 			};
-			ctx.nodes.insert( copy n.name, n );
-			for node.children.each() |child|	{
-				parse_child( child, Some(n),ctx );
+			scene.context.nodes.insert( copy n.name, n );
+			for inode.children.each() |child|	{
+				parse_child( child, Some(n), scene );
 			}
 		},
 		&gen::ChildEntity(ref _ent)	=> (),
-		&gen::ChildCamera(ref cam)	=>	{
-			let _c = @common::Camera	{
+		&gen::ChildCamera(ref icam)	=>	{
+			scene.cameras.insert( copy icam.name, @common::Camera{
 				node	: parent.expect("Camera parent has to exist"),
 				proj	: projection::PerspectiveSym	{
-					vfov	: cam.fov_y.degrees(),
+					vfov	: icam.fov_y.degrees(),
 					aspect	: 1f32,	//fixme
-					near	: cam.range[0],
-					far		: cam.range[1],
+					near	: icam.range[0],
+					far		: icam.range[1],
 				},
 				ear		: engine::audio::Listener{ volume:0f },
-			};
+			});
 		},
-		&gen::ChildLight(ref _lit)	=> (),
+		&gen::ChildLight(ref ilit)	=>	{
+			scene.lights.insert( copy ilit.name, @common::Light{
+				node	: parent.expect("Camera parent has to exist"),
+				color	: gr_low::rast::Color::from_array3( ilit.color ),
+				attenu	: [1f32 / ilit.energy, ilit.attenuation[0], ilit.attenuation[1]],
+				distance: ilit.distance,
+				bounded	: ilit.spherical,
+				kind	: match ilit.kind	{
+					gen::KindOmni(_)	=> common::LiPoint,
+					gen::KindSpot(spot)	=> common::LiSpot( spot.size.degrees(), spot.blend as float ),
+				},
+			});
+		},
 	}
 }
 
 
-pub fn parse( scene : &gen::Scene, custom : &[gen::Material], gc : &mut gr_low::context::Context,
+pub fn parse( iscene : &gen::Scene, custom : &[gen::Material], gc : &mut gr_low::context::Context,
 		_opt_vao : Option<@mut gr_low::buf::VertexArray>, lg : &engine::journal::Log )-> common::Scene	{
-	let mut context = common::SceneContext::new( ~"" );
-	parse_materials( custom, &mut context, gc, lg );
-	parse_materials( scene.materials, &mut context, gc, lg );
-	let mut entities : ~[engine::object::Entity] = ~[];
-	for scene.nodes.each() |child|	{
-		parse_child( child, None, &mut context );
-	}
-	common::Scene	{
-		context		: context,
-		entities	: common::EntityGroup(entities),
+	let mut scene = common::Scene	{
+		context		: common::SceneContext::new(~""),
+		entities	: common::EntityGroup(~[]),
 		cameras		: LinearMap::new(),
 		lights		: LinearMap::new()
+	};
+	parse_materials( custom, &mut scene.context, gc, lg );
+	parse_materials( iscene.materials, &mut scene.context, gc, lg );
+	for iscene.nodes.each() |child|	{
+		parse_child( child, None, &mut scene );
 	}
+	scene
 }

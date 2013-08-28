@@ -6,7 +6,7 @@ type Vector2 = [Scalar, ..2];
 type Vector3 = [Scalar, ..3];
 type Vector4 = [Scalar, ..4];
 type Quaternion = [Scalar, ..4];
-type Color	= Vector4;	//uint
+type Color	= Vector3;
 
 pub struct Global	{
 	gravity		: Vector3,
@@ -22,7 +22,7 @@ pub enum MaterialData	{
 	DataInt(int),
 	DataScalar(Scalar),
 	DataVector(Vector4),
-	DataColor(Vector3),
+	DataColor(Color),
 }
 
 pub struct Texture	{
@@ -67,11 +67,12 @@ pub enum LightKind	{
 }
 
 pub struct Light	{
+	name		: Name,
 	kind		: LightKind,
 	color		: Color,
-	distance	: Scalar,
 	energy		: Scalar,
 	attenuation	: Vector2,
+	distance	: Scalar,
 	spherical	: bool,
 }
 

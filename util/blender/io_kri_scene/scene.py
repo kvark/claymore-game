@@ -90,11 +90,12 @@ def cook_lamp(lamp,log):
 		#kind = ('KindOmni')
 		params = [lamp.size,lamp.size_y,0.1]
 	return ('ChildLight','Light',{
+		'name'			: lamp.name,
 		'kind'			: kind,
-		'color'			: list(lamp.color)+[1.0],
-		'distance'		: lamp.distance,
+		'color'			: list(lamp.color),
 		'energy'		: lamp.energy,
 		'attenuation'	: attenu,
+		'distance'		: lamp.distance,
 		'spherical'		: sphere,
 		})
 

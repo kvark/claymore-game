@@ -12,10 +12,18 @@ pub impl Color	{
 	fn new( hex : uint )-> Color	{
 		let k = 1f32/255f32;
 		Color{
-			r : (((hex>>24)&0xFF) as f32) * k,
-			g : (((hex>>16)&0xFF) as f32) * k,
-			b : (((hex>> 8)&0xFF) as f32) * k,
-			a : (((hex>> 0)&0xFF) as f32) * k,
+			r	: (((hex>>24)&0xFF) as f32) * k,
+			g	: (((hex>>16)&0xFF) as f32) * k,
+			b	: (((hex>> 8)&0xFF) as f32) * k,
+			a	: (((hex>> 0)&0xFF) as f32) * k,
+		}
+	}
+	fn from_array3( a : &[f32] )-> Color	{
+		Color{
+			r	: a[0],
+			g	: a[1],
+			b	: a[2],
+			a	: 1f32,
 		}
 	}
 }

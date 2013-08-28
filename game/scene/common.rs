@@ -269,25 +269,37 @@ pub enum LightKind	{
 pub struct Light	{
 	node	: NodeRef,
 	color	: gr_low::rast::Color,
-	attenu	: Vec4<f32>,
+	attenu	: [f32, ..3],
+	distance: f32,
+	bounded	: bool,
 	kind	: LightKind,
 }
 
 pub type ProjectorBlend = (@Projection<f32>,float);
 
 pub impl Light	{
+	fn get_attenuation( &self )-> Vec4<f32>	{
+		assert!( self.distance>0f32 );
+		let kd = 1f32 / self.distance;
+		vec4::new( 1f32 / self.attenu[0],
+			self.attenu[1]*kd, self.attenu[2]*kd*kd,
+			if self.bounded {kd} else {0f32}
+			)
+	}
 	fn get_far_distance( &self, threshold : f32 )-> f32	{
-		assert!( self.attenu.w == 0f32 );
-		let E = self.attenu.x, a1 = self.attenu.y, a2 = self.attenu.z;
-		if a2>0f32 {
-			assert!( a1>=0f32 );
-			let D = a1*a1 - 4f32*a2*(1f32 - E/threshold);
+		if self.bounded	{
+			return self.distance
+		}
+		let kE = (1f32 - 1f32 / (self.attenu[0] * threshold));
+		if self.attenu[2]>0f32 {
+			assert!( self.attenu[1]>=0f32 );
+			let D = self.attenu[1]*self.attenu[1] - 4f32*self.attenu[2]*kE;
 			if D>=0f32	{
-				0.5f32 * (f32::sqrt(D) - a1) / a2
+				0.5f32 * (f32::sqrt(D) - self.attenu[1]) / self.attenu[2]
 			}else	{fail!( ~"Bad attenuation: " /*+ self.attenu.to_str()*/ )}
-		}else if a1>0f32	{
-			assert!( a2==0f32 );
-			(E/threshold - 1f32) / a1
+		}else if self.attenu[1]>0f32	{
+			assert!( self.attenu[2] == 0f32 );
+			-kE / self.attenu[1]
 		}else	{
 			0f32
 		}
@@ -329,7 +341,8 @@ pub impl Light	{
 		}
 		data.insert( ~"u_LightPos",			gr_low::shade::UniFloatVec(pos) );
 		data.insert( ~"u_LightColor",		gr_low::shade::UniFloatVec(col) );
-		data.insert( ~"u_LightAttenuation",	gr_low::shade::UniFloatVec(self.attenu) );
+		let vat = self.get_attenuation();
+		data.insert( ~"u_LightAttenuation",	gr_low::shade::UniFloatVec(vat) );
 		data.insert( ~"u_LightRange",		gr_low::shade::UniFloatVec(range) );
 	}
 }
@@ -618,19 +631,14 @@ pub fn load_scene( path : ~str, gc : &mut gr_low::context::Context,
 			_	=> fail!( ~"Unknown light type: " + ilight.kind ),
 		};
 		let (a1,a2) = ilight.attenu;
-		assert!( ilight.distance>0f );
-		let kd = 1f / ilight.distance;
-		let attenu = vec4::new( ilight.energy as f32,
-			a1*kd as f32, a2*kd*kd as f32,
-			if ilight.sphere {kd as f32} else {0f32}
-			);
-		map_light.insert( copy root.name,
-			@Light{ node:root,
-				color:col,
-				attenu:attenu,
-				kind:data,
-			}
-		);
+		map_light.insert( copy root.name, @Light{
+			node	: root,
+			color	: col,
+			attenu	: [1f/ilight.energy as f32,a1 as f32,a2 as f32],
+			distance: ilight.distance as f32,
+			bounded	: ilight.sphere,
+			kind	: data,
+		});
 	}
 	// done
 	Scene{
