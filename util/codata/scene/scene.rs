@@ -9,4 +9,5 @@
 pub mod common;
 pub mod chared	{
 	pub mod main;
+	pub mod custom;
 }

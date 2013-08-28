@@ -40,6 +40,35 @@ priv fn parse_shader_data( mat : &gen::Material, tex_cache : &LinearMap<~str,@gr
 }
 
 
+priv fn parse_materials( materials : &[gen::Material], ctx : &mut common::SceneContext,
+		gc : &mut gr_low::context::Context, lg : &engine::journal::Log)	{
+	for materials.each() |imat|	{
+		let mat_source = match imat.kind	{
+			gen::KindFlat			=> ~"flat",
+			gen::KindPhong			=> ~"phong",
+			gen::KindAnisotropic	=> ~"aniso"
+		};
+		let mat = @gr_mid::draw::load_material( ~"data/code/mat/" + mat_source );
+		if !ctx.materials.contains_key( &imat.name )	{
+			lg.add( ~"\tMaterial: " + imat.name );
+			ctx.materials.insert( copy imat.name, mat );
+		}
+		for imat.textures.each() |itex|	{
+			if !ctx.textures.contains_key( &itex.path )	{
+				let path = ~"data/texture/" + itex.path;
+				let tex = match ctx.textures.find(&path)	{
+					Some(t) => *t,
+					None	=> engine::load::load_texture_2D( gc, &path, true ),
+				};
+				ctx.textures.insert( copy itex.path, tex );
+			}
+		}
+		let data = parse_shader_data( imat, &ctx.textures );
+		ctx.mat_data.insert( copy imat.name, data );
+	}
+}
+
+
 priv fn parse_child( child : &gen::NodeChild, parent : Option<@mut space::Node>, ctx : &mut common::SceneContext )	{
 	match child	{
 		&gen::ChildNode(ref node)	=>	{
@@ -77,33 +106,11 @@ priv fn parse_child( child : &gen::NodeChild, parent : Option<@mut space::Node>,
 }
 
 
-pub fn parse( scene : &gen::Scene, gc : &mut gr_low::context::Context,
+pub fn parse( scene : &gen::Scene, custom : &[gen::Material], gc : &mut gr_low::context::Context,
 		_opt_vao : Option<@mut gr_low::buf::VertexArray>, lg : &engine::journal::Log )-> common::Scene	{
 	let mut context = common::SceneContext::new( ~"" );
-	for scene.materials.each() |imat|	{
-		let mat_source = match imat.kind	{
-			gen::KindFlat			=> ~"flat",
-			gen::KindPhong			=> ~"phong",
-			gen::KindAnisotropic	=> ~"aniso"
-		};
-		let mat = @gr_mid::draw::load_material( ~"data/code/mat/" + mat_source );
-		if !context.materials.contains_key( &imat.name )	{
-			lg.add( ~"\tStandard material: " + imat.name );
-			context.materials.insert( copy imat.name, mat );
-		}
-		for imat.textures.each() |itex|	{
-			if !context.textures.contains_key( &itex.path )	{
-				let path = ~"data/texture/" + itex.path;
-				let tex = match context.textures.find(&path)	{
-					Some(t) => *t,
-					None	=> engine::load::load_texture_2D( gc, &path, true ),
-				};
-				context.textures.insert( copy itex.path, tex );
-			}
-		}
-		let data = parse_shader_data( imat, &context.textures );
-		context.mat_data.insert( copy imat.name, data );
-	}
+	parse_materials( custom, &mut context, gc, lg );
+	parse_materials( scene.materials, &mut context, gc, lg );
 	let mut entities : ~[engine::object::Entity] = ~[];
 	for scene.nodes.each() |child|	{
 		parse_child( child, None, &mut context );
