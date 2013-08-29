@@ -99,10 +99,10 @@ pub impl Grid	{
 		tb.load_sub_2D(	self.texture, 0u, &r, fm_pix, component, &[col] );
 	}
 
-	priv fn get_cell_selected( &self, cam : &scene::Camera, nx : float, ny : float )-> (uint,uint)	{
+	priv fn get_cell_selected( &self, cam : &scene::Camera, aspect : f32, nx : float, ny : float )-> (uint,uint)	{
 		let ndc = vec3::new( (nx as f32)*2f32-1f32, 1f32-(ny as f32)*2f32, 0f32 );
 		let origin = cam.node.world_space().position;
-		let ray = cam.get_matrix().invert().transform( &ndc ).sub_v( &origin );
+		let ray = cam.get_matrix(aspect).invert().transform( &ndc ).sub_v( &origin );
 		let (x_unit,y_unit) = self.get_cell_size();
 		let k = (self.v_scale.z - origin.z) / ray.z;
 		let x = (origin.x + ray.x*k + self.v_scale.x) / x_unit;
@@ -120,10 +120,10 @@ pub impl Grid	{
 		// set up texture
 	}
 
-	fn update( &mut self, tb : &mut gr_low::texture::Binding, cam : &scene::Camera, nx : float, ny : float )-> (uint,uint,bool)	{
-		let view_proj = cam.get_matrix();
+	fn update( &mut self, tb : &mut gr_low::texture::Binding, cam : &scene::Camera, aspect : f32, nx : float, ny : float )-> (uint,uint,bool)	{
+		let view_proj = cam.get_matrix( aspect );
 		self.data.insert( ~"u_ViewProj", gr_low::shade::UniMatrix(false,view_proj) );
-		let (sx,sy) = self.get_cell_selected( cam, nx, ny );
+		let (sx,sy) = self.get_cell_selected( cam, aspect, nx, ny );
 		if sx<self.nseg && sy<self.nseg && self.selected != (sx,sy)	{
 			let (ox,oy) = self.selected;
 			self.cells[ox + oy*self.nseg] = gr_low::rast::Color::new(CELL_EMPTY);

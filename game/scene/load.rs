@@ -120,11 +120,11 @@ priv fn parse_child( child : &gen::NodeChild, parent : Option<@mut space::Node>,
 			});
 		},
 		&gen::ChildCamera(ref icam)	=>	{
-			scene.cameras.insert( copy icam.name, @mut common::Camera{
+			scene.cameras.insert( copy icam.name, @common::Camera{
 				node	: parent.expect("Camera parent has to exist"),
 				proj	: projection::PerspectiveSym	{
 					vfov	: icam.fov_y.degrees(),
-					aspect	: 1f32,	//fixme
+					aspect	: 1f32,
 					near	: icam.range[0],
 					far		: icam.range[1],
 				},

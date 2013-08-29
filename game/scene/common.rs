@@ -192,12 +192,12 @@ pub struct ProjectorInfo	{
 }
 
 pub impl ProjectorInfo	{
-	fn spawn( &self, aspect : float )-> Projector	{
+	fn spawn( &self )-> Projector	{
 		let (r0,r1) = self.range;
 		let vfov = self.fov as f32;
 		PerspectiveSym{
 			vfov	: vfov.degrees(),
-			aspect	: aspect as f32,
+			aspect	: 1f32,
 			near	: r0 as f32,
 			far		: r1 as f32,
 		}
@@ -214,18 +214,18 @@ pub struct Camera	{
 }
 
 pub impl Camera	{
-	fn get_proj_matrix( &self )-> mat4	{
+	fn get_proj_matrix( &self, aspect : f32 )-> mat4	{
 		//self.proj.to_mat4().unwrap()	//ICE on Rust-0.6
 		let p = &self.proj;
-		lmath::projection::perspective( p.vfov, p.aspect, p.near, p.far )
+		lmath::projection::perspective( p.vfov, aspect, p.near, p.far )
 	}
-	fn get_matrix( &self )-> mat4	{
-		let proj = self.get_proj_matrix();
+	fn get_matrix( &self, aspect : f32 )-> mat4	{
+		let proj = self.get_proj_matrix( aspect );
 		//proj * self.node.world_space().invert().to_matrix()
 		proj.mul_m( &self.node.world_space().invert().to_matrix() )
 	}
-	fn get_inverse_matrix( &self )-> mat4	{
-		let proj = self.get_proj_matrix();
+	fn get_inverse_matrix( &self, aspect : f32 )-> mat4	{
+		let proj = self.get_proj_matrix( aspect );
 		//self.node.world_space().to_matrix() * proj.invert()
 		self.node.world_space().to_matrix().mul_m( &proj.invert() )
 	}
@@ -241,9 +241,10 @@ pub impl Camera	{
 		let v = vec3::new( 1f32,0f32,0f32 );
 		self.node.world_space().orientation.mul_v( &v )
 	}
-	fn fill_data( &self, data : &mut gr_low::shade::DataMap )	{
+	fn fill_data( &self, data : &mut gr_low::shade::DataMap, aspect : f32 )	{
 		let sw = self.node.world_space();
-		data.insert( ~"u_ViewProj",		gr_low::shade::UniMatrix(false,self.get_matrix()) );
+		let pm = self.get_matrix(aspect);
+		data.insert( ~"u_ViewProj",		gr_low::shade::UniMatrix(false,pm) );
 		data.insert( ~"u_CameraPos",	gr_low::shade::UniFloatVec(sw.get_pos_scale()) );
 		data.insert( ~"u_CameraRot",	gr_low::shade::UniFloatVec(sw.get_orientation()) );
 	}
@@ -531,7 +532,7 @@ pub impl SceneContext	{
 pub struct Scene	{
 	context		: SceneContext,
 	entities	: EntityGroup,
-	cameras		: Dict<@mut Camera>,
+	cameras		: Dict<@Camera>,
 	lights		: Dict<@Light>,
 }
 
@@ -547,8 +548,7 @@ pub struct SceneInfo	{
 
 
 pub fn load_scene( path : ~str, gc : &mut gr_low::context::Context,
-		opt_vao : Option<@mut gr_low::buf::VertexArray>, aspect : float,
-		lg : &engine::journal::Log )-> Scene	{
+		opt_vao : Option<@mut gr_low::buf::VertexArray>, lg : &engine::journal::Log )-> Scene	{
 	lg.add( ~"Loading scene: " + path );
 	let scene = load_config::<SceneInfo>( path + ~".json" );
 	let mat_config = load_config::<~[MaterialInfo]>( path + ~".mat.json" );
@@ -608,12 +608,12 @@ pub fn load_scene( path : ~str, gc : &mut gr_low::context::Context,
 	// entities
 	let entity_group = context.parse_group( scene.entities, gc, opt_vao, lg );
 	// cameras
-	let mut map_camera : Dict<@mut Camera> = LinearMap::new();
+	let mut map_camera : Dict<@Camera> = LinearMap::new();
 	for scene.cameras.each() |icam|	{
 		let root = *context.nodes.get( &icam.node );
 		map_camera.insert( copy root.name,
-			@mut Camera{ node:root,
-				proj:icam.proj.spawn(aspect),
+			@Camera{ node:root,
+				proj:icam.proj.spawn(),
 				ear:engine::audio::Listener{ volume:0f },
 			}
 		);

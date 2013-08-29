@@ -81,7 +81,7 @@ pub struct Scene	{
 }
 
 pub impl Scene	{
-	fn update( &mut self, input : &input::State, tb : &mut gr_low::texture::Binding )-> bool	{
+	fn update( &mut self, input : &input::State, tb : &mut gr_low::texture::Binding, aspect : f32 )-> bool	{
 		/*let (_,scroll_y) = window.get_scroll_offset(); //FIXME
 		let scroll_y = 0;
 		let shift = window.get_key(glfw::KEY_LEFT_SHIFT)!=0;
@@ -102,7 +102,7 @@ pub impl Scene	{
 		let _cam_dir = (window.get_key(glfw::KEY_E) - window.get_key(glfw::KEY_Q)) as int;
 		*/
 		let cam_dir = 0;
-		let (i,j,ok) = self.grid.update( tb, &self.view.cam, input.mouse.x, input.mouse.y );
+		let (i,j,ok) = self.grid.update( tb, &self.view.cam, aspect, input.mouse.x, input.mouse.y );
 		let mouse_hit = (input.mouse.buttons & 1) != 0;
 		if mouse_hit && self.grid.get_rectangle().contains(i,j)	{
 			let sp = &mut self.hero.entity.node.space;
@@ -114,11 +114,12 @@ pub impl Scene	{
 	}
 	fn render( &mut self, gc : &mut gr_low::context::Context, tech : &gr_mid::draw::Technique,
 			output : gr_mid::call::Output, lg : &engine::journal::Log )	{
+		let aspect = output.area.aspect();
 		{// update matrices
 			let light_pos	= vec4::new( 4f32, 1f32, 6f32, 1f32 );
 			for [ &mut self.land, &mut self.hero.entity ].each |ent|	{
 				let d = &mut ent.data;
-				self.view.cam.fill_data( d );
+				self.view.cam.fill_data( d, aspect );
 				d.insert( ~"u_LightPos",	gr_low::shade::UniFloatVec(light_pos) );
 				let world = ent.node.world_space().to_matrix();
 				d.insert( ~"u_World",		gr_low::shade::UniMatrix(false,world) );
@@ -138,7 +139,7 @@ pub impl Scene	{
 }
 
 
-pub fn make_scene( ct : &mut gr_low::context::Context, aspect : float, lg : &engine::journal::Log )-> Scene	{
+pub fn make_scene( ct : &mut gr_low::context::Context, lg : &engine::journal::Log )-> Scene	{
 	// create view
 	let view = 	{
 		// create camera
@@ -158,7 +159,7 @@ pub fn make_scene( ct : &mut gr_low::context::Context, aspect : float, lg : &eng
 				node	: cam_node,
 				proj	: projection::PerspectiveSym{
 					vfov	: 45f32,
-					aspect	: aspect as f32,
+					aspect	: 1f32,
 					near	: 1f32,
 					far		: 25f32,
 				},

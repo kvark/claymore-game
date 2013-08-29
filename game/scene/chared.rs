@@ -79,7 +79,7 @@ pub struct Scene	{
 	gr_other: scene::common::EntityGroup,
 	details	: scene::common::EntityGroup,
 	skel	: @mut engine::space::Armature,
-	cam		: @mut scene::common::Camera,
+	cam		: @scene::common::Camera,
 	control	: CamControl,
 	lights	: ~[@scene::common::Light],
 	envir	: Envir,
@@ -170,8 +170,9 @@ pub impl Scene	{
 			stencil	:Some( 0u ),
 		};
 		let c0 = gr_mid::call::CallClear( copy output, cdata, copy self.rast_solid.mask );
+		let aspect = ct.get_aspect();
 		if el.environment	{
-			let vpi = self.cam.get_inverse_matrix();
+			let vpi = self.cam.get_inverse_matrix( aspect );
 			//self.cam.fill_data( &mut self.envir.data );
 			self.envir.data.insert( ~"u_ViewProjInverse",
 				gr_low::shade::UniMatrix(false,vpi) );
@@ -205,7 +206,7 @@ pub impl Scene	{
 						self.shadow.light.fill_data( gd, 1f32, 200f32 );
 						gd.insert( ~"t_Shadow", copy self.shadow.par_shadow );
 						gd.insert( ~"u_TargetSize",	copy par_ts );
-						self.cam.fill_data( gd );
+						self.cam.fill_data( gd, aspect );
 						//self.skel.fill_data( gd );
 					}
 				}	
@@ -310,14 +311,14 @@ pub impl Scene	{
 }
 
 
-pub fn make_scene( el : &main::Elements, ct : &mut gr_low::context::Context, aspect : float, lg : &engine::journal::Log )-> Scene	{
+pub fn make_scene( el : &main::Elements, ct : &mut gr_low::context::Context, lg : &engine::journal::Log )-> Scene	{
 	let vao = ct.create_vertex_array();
 	let mut scene = if true	{ //new method
 		let iscene = gen_scene::chared::main::load();
 		let icustom = gen_scene::chared::custom::load();
 		scene::load::parse( ~"data/claymore-2a", &iscene, icustom, ct, Some(vao), lg )
 	}else	{
-		scene::common::load_scene( ~"data/claymore-2a", ct, Some(vao), aspect, lg )
+		scene::common::load_scene( ~"data/claymore-2a", ct, Some(vao), lg )
 	};
 	let detail_info = scene::common::load_config::<~[scene::common::EntityInfo]>( ~"data/details.json" );
 	let mut details = scene.context.parse_group( detail_info, ct, Some(vao), lg );
@@ -390,12 +391,10 @@ pub fn make_scene( el : &main::Elements, ct : &mut gr_low::context::Context, asp
 	let shadow = render::shadow::create_data( ct, *scene.lights.get(&~"Lamp"), 0x200u );
 	// load camera
 	let cam = *scene.cameras.get(&~"Camera");
-	cam.proj.aspect = aspect as f32;
 	//cam.proj = copy shadow.light.proj;
 	//cam.node = shadow.light.node;
-	lg.add(fmt!( "Camera fov:%f, aspect:%f, range:%f-%f",
-		(copy cam.proj.vfov).degrees() as float,
-		cam.proj.aspect as float,
+	lg.add(fmt!( "Camera fov:%f, range:%f-%f",
+		cam.proj.vfov.degrees() as float,
 		cam.proj.near as float,
 		cam.proj.far as float ));
 	lg.add( ~"\tWorld :" + cam.node.world_space().to_str() );

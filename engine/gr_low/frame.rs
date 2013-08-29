@@ -148,6 +148,9 @@ pub impl Rect	{
 		r.x>=self.x && r.x+r.w<=self.x+self.w &&
 		r.y>=self.y && r.y+r.h<=self.y+self.w
 	}
+	fn aspect( &self )-> f32	{
+		(self.w as f32) / (self.h as f32)
+	}
 }
 
 pub struct BufferHandle( glcore::GLuint );

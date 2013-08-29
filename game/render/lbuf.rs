@@ -101,13 +101,14 @@ pub impl Context	{
 		let output = gr_mid::call::Output::new( self.fbo, pmap );
 		let mut data = gr_low::shade::make_data();
 		{	// fill data
+			let aspect = (wid as f32) / (het as f32);
 			let sampler = Some( gr_low::texture::Sampler::new(2u,0) );
 			data.insert( ~"t_Depth", gr_low::shade::UniTexture(0,self.t_depth,sampler) );
 			let target_size = vec4::new( wid as f32, het as f32,
 				1f32/(wid as f32), 1f32/(het as f32) );
 			data.insert( ~"u_TargetSize",		gr_low::shade::UniFloatVec(target_size) );
-			let vpi = cam.get_inverse_matrix();
-			cam.fill_data( &mut data );
+			let vpi = cam.get_inverse_matrix( aspect );
+			cam.fill_data( &mut data, aspect );
 			data.insert( ~"u_ViewProjInverse",	gr_low::shade::UniMatrix(false,vpi) );
 		}
 		let cdata = gr_mid::call::ClearData	{

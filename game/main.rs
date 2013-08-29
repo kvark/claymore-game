@@ -59,10 +59,9 @@ pub impl Game	{
 		let out = gr_mid::call::Output::new( ct.default_frame_buffer, pmap );
 		// done
 		ct.check(~"init");
-		let aspect = (wid as float) / (het as float);
 		let intro = scene::intro::Scene{ active:false };
-		let editor = scene::chared::make_scene( el, &mut ct, aspect, &lg );
-		let battle = scene::battle::make_scene( &mut ct, aspect, &lg );
+		let editor = scene::chared::make_scene( el, &mut ct, &lg );
+		let battle = scene::battle::make_scene( &mut ct, &lg );
 		Game{ context:ct, audio:ac, journal:lg,
 			sound_source:src, frames:0u,
 			technique:tech, output:out,
@@ -72,9 +71,10 @@ pub impl Game	{
 	}
 
 	fn update( &mut self, input : &input::State )-> bool	{
+		let aspect = self.output.area.aspect();
 		match self.screen	{
 			ScreenChar		=> self.s_editor.update( input, &self.journal ),
-			ScreenBattle	=> self.s_battle.update( input, &mut self.context.texture ),
+			ScreenBattle	=> self.s_battle.update( input, &mut self.context.texture, aspect ),
 			_ => true
 		}
 	}

@@ -171,4 +171,8 @@ pub impl Context	{
 			glcore::glClearStencil( s as glcore::GLint );
 		}
 	}
+	fn get_aspect( &self )-> f32	{
+		let (w,h) = self.screen_size;
+		(w as f32) / (h as f32)
+	}
 }
