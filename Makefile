@@ -24,7 +24,7 @@ run-memtest: game
 
 game: build/claymore
 
-build/claymore:	lib/engine.dummy lib/codata.dummy lib/glfw3.dummy lib/numeric.dummy lib/lmath.dummy lib/cgmath.dummy game/*.rs game/render/*.rs game/scene/*.rs
+build/claymore:	lib/engine.dummy lib/codata-scene.dummy lib/codata-hud.dummy lib/glfw3.dummy lib/numeric.dummy lib/lmath.dummy lib/cgmath.dummy game/*.rs game/render/*.rs game/scene/*.rs
 	${RUST} game/claymore.rs -L lib --out-dir build
 
 engine: lib/engine.dummy
@@ -34,11 +34,15 @@ lib/engine.dummy: lib/glcore.dummy lib/lmath.dummy lib/openal.dummy lib/freetype
 	touch $@
 
 
-codata: lib/codata.dummy
+codata: lib/codata-scene.dummy lib/codata-hud.dummy
 
-lib/codata.dummy: ${CODATA}/scene/*.rs ${CODATA}/scene/chared/*.rs
+lib/codata-scene.dummy: ${CODATA}/scene/*.rs ${CODATA}/scene/chared/*.rs
 	${RUST} ${CODATA}/scene/scene.rs --out-dir lib
 	touch $@
+
+lib/codata-hud.dummy: ${CODATA}/hud/*.rs
+	${RUST} ${CODATA}/hud/hud.rs --out-dir lib
+	touch $@	
 
 
 demo-03: lib/engine.dummy util/sample/$@*.rs

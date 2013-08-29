@@ -1,15 +1,19 @@
-#[link(name = "engine", 
-       vers = "0.1", 
-       author = "Dzmitry Malyshau")];
+#[link(
+	name = "engine", 
+	vers = "0.1", 
+	author = "Dzmitry Malyshau"
+)];
 
 #[comment = "Graphics engine for Claymore game"];
 #[license = "MIT"];
 #[crate_type = "lib"];
 
+
 extern mod freetype;
 extern mod stb_image;
 extern mod lmath;
 extern mod openal;
+
 
 pub mod gr_low	{
 	pub mod buf;
