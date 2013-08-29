@@ -9,8 +9,7 @@ use std::serialize::Decoder;
 use lmath::vec::vec4;
 use engine::gr_low;
 use engine::gr_mid::{call,font};
-
-use scene = scene::common;
+use scene;
 
 
 pub enum Anchor	{
@@ -437,7 +436,7 @@ pub struct Screen    {
 pub fn load_screen( path : ~str, ct : &mut gr_low::context::Context,
 		ft : @font::Context, lg : &engine::journal::Log )-> Screen	{
 	lg.add( ~"Loading HUD screen: " + path );
-	let iscreen = scene::load_config::<ScreenInfo>( path );
+	let iscreen = scene::load_json::load_config::<ScreenInfo>( path );
 	let (wid,het) = ct.screen_size;
 	let size = (wid as int,het as int);
 	let mut root = Frame{

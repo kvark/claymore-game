@@ -31,4 +31,5 @@ pub mod scene	{
 	pub mod grid;
 	pub mod intro;
 	pub mod load;
+	pub mod load_json;
 }

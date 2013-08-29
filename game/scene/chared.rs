@@ -318,10 +318,10 @@ pub fn make_scene( el : &main::Elements, ct : &mut gr_low::context::Context, lg 
 		let icustom = gen_scene::chared::custom::load();
 		scene::load::parse( ~"data/claymore-2a", &iscene, icustom, ct, Some(vao), lg )
 	}else	{
-		scene::common::load_scene( ~"data/claymore-2a", ct, Some(vao), lg )
+		scene::load_json::load_scene( ~"data/claymore-2a", ct, Some(vao), lg )
 	};
-	let detail_info = scene::common::load_config::<~[scene::common::EntityInfo]>( ~"data/details.json" );
-	let mut details = scene.context.parse_group( detail_info, ct, Some(vao), lg );
+	let detail_info = scene::load_json::load_config::<~[scene::load_json::EntityInfo]>( ~"data/details.json" );
+	let mut details = scene::load_json::parse_group( &mut scene.context, detail_info, ct, Some(vao), lg );
 	// techniques & rast states
 	let tech = @gr_mid::draw::load_technique( ~"data/code/tech/forward/spot-shadow" );
 	let mut rast = copy ct.default_rast;

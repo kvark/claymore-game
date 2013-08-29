@@ -142,7 +142,7 @@ fn main()	{
 		fail!(fmt!( "GLFW Error: %s", description ))
 	}
 	do glfw::spawn {
-		let config = scene::common::load_config::<Config>( ~"data/config.json" );
+		let config = scene::load_json::load_config::<Config>( ~"data/config.json" );
 		let lg = engine::journal::Log::create( copy config.journal.path, config.journal.depth );
 		lg.add(~"--- Claymore ---");
 
