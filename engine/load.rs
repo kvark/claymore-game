@@ -3,6 +3,7 @@ extern mod lmath;
 extern mod stb_image;
 
 use core::io::ReaderUtil;
+use std::future;
 
 use lmath::vec::vec3;
 use lmath::quat::quat;
@@ -149,6 +150,10 @@ pub fn load_program( ct : &context::Context, path : ~str, lg : &journal::Log )->
 	ct.create_program( ~[sv,sf], lg )
 }
 
+
+//- - - - - - - - - - - - - - - - - - - - - - - - - - - //
+//		Texture											//
+
 fn create_texture_2D<T>( ct : &mut context::Context, image : &stb_image::image::Image<T>, mipmap : bool,
 	int_format : glcore::GLenum, pix_type : glcore::GLenum )-> @texture::Texture	{
 	//assert (image.width | image.height) & 3u == 0u;
@@ -166,14 +171,41 @@ fn create_texture_2D<T>( ct : &mut context::Context, image : &stb_image::image::
 	t
 }
 
+pub fn load_texture_2D_image( ct : &mut context::Context, result : &stb_image::image::LoadResult, mipmap : bool, name : &str )-> @texture::Texture	{
+	match result	{
+		&stb_image::image::ImageU8(ref img)		=>
+			create_texture_2D( ct, img, mipmap, glcore::GL_RGBA, glcore::GL_UNSIGNED_BYTE ),
+		&stb_image::image::ImageF32(ref img)	=>
+			create_texture_2D( ct, img, mipmap, glcore::GL_RGB16F, glcore::GL_FLOAT ),
+		&stb_image::image::Error			=>
+			fail!(fmt!( "Unable to load image: %s", name ))
+	}
+}
+
 pub fn load_texture_2D( ct : &mut context::Context, path : &~str, mipmap : bool )-> @texture::Texture	{
-	match stb_image::image::load(copy *path)	{
-		stb_image::image::ImageU8(img)	=>
-			create_texture_2D( ct, &img, mipmap, glcore::GL_RGBA, glcore::GL_UNSIGNED_BYTE ),
-		stb_image::image::ImageF32(img)	=>
-			create_texture_2D( ct, &img, mipmap, glcore::GL_RGB16F, glcore::GL_FLOAT ),
-		stb_image::image::Error			=>
-			fail!(fmt!( "Unable to load image: %s", *path ))
+	let result = stb_image::image::load(copy *path);
+	load_texture_2D_image( ct, &result, mipmap, *path )
+}
+
+pub struct TextureFuture	{
+	name	: ~str,
+	image	: future::Future<stb_image::image::LoadResult>,
+	mipmap	: bool,
+}
+
+pub impl TextureFuture	{
+	fn get( &self, ct : &mut context::Context )-> @texture::Texture	{
+		let result = self.image.get();
+		load_texture_2D_image( ct, &result, self.mipmap, self.name )
+	}
+}
+
+pub fn future_texture_2D( path : &~str, mipmap : bool )-> TextureFuture	{
+	let p = copy *path;
+	TextureFuture	{
+		name	: copy p,
+		image	: future::spawn(|| {stb_image::image::load(copy p)} ),
+		mipmap	: mipmap,
 	}
 }
 

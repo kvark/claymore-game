@@ -32,6 +32,7 @@ priv fn parse_shader_data( imat : &gen::Material, tex_cache : &LinearMap<~str,@g
 	}
 	let phong_texture = ~"Main";
 	for imat.textures.eachi() |i,ti|	{
+		//print(fmt!( "\tLooking for texture %s\n", ti.path ));
 		let tex = *tex_cache.get( &ti.path );
 		let s_opt = Some(gr_low::texture::Sampler::new( ti.filter, ti.wrap ));
 		let mut name = copy ti.name;
@@ -50,6 +51,8 @@ priv fn parse_shader_data( imat : &gen::Material, tex_cache : &LinearMap<~str,@g
 priv fn parse_materials( materials : &[gen::Material], prefix : ~str, ctx : &mut common::SceneContext,
 		gc : &mut gr_low::context::Context, lg : &engine::journal::Log)	{
 	let flat_mat = ~"flat";
+	let mut future_textures : LinearMap<~str,engine::load::TextureFuture> = LinearMap::new();
+	let async = true;
 	for materials.each() |imat|	{
 		let mut source = copy imat.shader;
 		if ctx.materials.contains_key( &imat.name )	{
@@ -66,15 +69,40 @@ priv fn parse_materials( materials : &[gen::Material], prefix : ~str, ctx : &mut
 		for imat.textures.each() |itex|	{
 			if !ctx.textures.contains_key( &itex.path )	{
 				let path = ~"data/texture/" + itex.path;
-				let tex = match ctx.textures.find(&path)	{
-					Some(t) => *t,
-					None	=> engine::load::load_texture_2D( gc, &path, true ),
+				let tex_add = match ctx.textures.find(&path)	{
+					Some(t) => Some(*t),
+					None if !async	=>	{
+						let t = engine::load::load_texture_2D( gc, &path, true );
+						Some(t)
+					},
+					None	=>	{
+						if !future_textures.contains_key( &itex.path )	{
+							let ft = engine::load::future_texture_2D( &path, true );
+							future_textures.insert( copy itex.path, ft );
+						}
+						None
+					}			
 				};
-				ctx.textures.insert( copy itex.path, tex );
+				match tex_add	{
+					Some(t)	=> ctx.textures.insert( copy itex.path, t ),
+					None	=> true
+				};
 			}
 		}
-		let data = parse_shader_data( imat, &ctx.textures, lg );
-		ctx.mat_data.insert( copy imat.name, data );
+		
+	}
+	if async	{
+		for future_textures.each() |&(name,ft)|	{
+			let tex = ft.get( gc );
+			//print(fmt!( "\tDeferred texture: %s\n", *name ));
+			ctx.textures.insert( copy *name, tex );
+		}
+	}
+	for materials.each() |imat|	{
+		if !ctx.mat_data.contains_key( &imat.name )	{
+			let data = parse_shader_data( imat, &ctx.textures, lg );
+			ctx.mat_data.insert( copy imat.name, data );
+		}
 	}
 }
 

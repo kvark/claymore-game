@@ -7,7 +7,7 @@ pub fn load()-> ~[Material]	{~[
 		textures	: ~[
 			Texture{
 				name	: ~"DiffuseDirt",
-				path	: ~"Metal_Diffuse_Dirt.jpg",
+				path	: ~"//Metal_Diffuse_Dirt.jpg",
 				filter	: 3,
 				wrap	: 0,
 				scale	: [1.0,1.0,1.0],
@@ -15,7 +15,7 @@ pub fn load()-> ~[Material]	{~[
 			},
 			Texture{
 				name	: ~"SpecBumpReflect",
-				path	: ~"Metal_R-Spec_G-Bump_B-Reflect.jpg",
+				path	: ~"//Metal_R-Spec_G-Bump_B-Reflect.jpg",
 				filter	: 3,
 				wrap	: 0,
 				scale	: [1.0,1.0,1.0],
@@ -23,7 +23,7 @@ pub fn load()-> ~[Material]	{~[
 			},
 			Texture{
 				name	: ~"Reflection",
-				path	: ~"Topanga_Forest_B_3k.hdr",
+				path	: ~"//Topanga_Forest_B_3k.hdr",
 				filter	: 3,
 				wrap	: 0,
 				scale	: [1.0,1.0,1.0],
@@ -40,7 +40,7 @@ pub fn load()-> ~[Material]	{~[
 		textures	: ~[
 			Texture{
 				name	: ~"Diffuse",
-				path	: ~"Skin_Diffuse.jpg",
+				path	: ~"//Skin_Diffuse.jpg",
 				filter	: 3,
 				wrap	: 0,
 				scale	: [1.0,1.0,1.0],
@@ -57,7 +57,7 @@ pub fn load()-> ~[Material]	{~[
 		textures	: ~[
 			Texture{
 				name	: ~"Normal",
-				path	: ~"HairNormals1024.jpg",
+				path	: ~"//HairNormals1024.jpg",
 				filter	: 3,
 				wrap	: 0,
 				scale	: [1.0,1.0,1.0],
@@ -65,7 +65,7 @@ pub fn load()-> ~[Material]	{~[
 			},
 			Texture{
 				name	: ~"SpecAlphaRefl",
-				path	: ~"Hair_R-spec_G-alpha_B-SSS-Refl-wt1024.jpg",
+				path	: ~"//Hair_R-spec_G-alpha_B-SSS-Refl-wt1024.jpg",
 				filter	: 3,
 				wrap	: 0,
 				scale	: [1.0,1.0,1.0],
