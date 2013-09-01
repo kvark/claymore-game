@@ -29,16 +29,16 @@ def cook_mat(mat,log):
 			'scale'	: list(mt.scale),
 			'offset': list(mt.offset)
 			}))
-	kind = ('KindPhong',)
+	kind = 'phong'
 	if mat.use_shadeless:
-		kind = ('KindFlat',)
+		kind = 'flat'
 	elif mat.use_tangent_shading:
-		kind = ('KindAnisotropic',)
+		kind = 'anisotropic'
 	diff_params = [mat.diffuse_intensity,float(mat.emit),0.0,mat.alpha]
 	spec_params = [mat.specular_intensity,float(mat.specular_hardness),0.0,mat.specular_alpha]
 	return ('Material',{
-		'name'	: mat.name,
-		'kind' 	: kind,
+		'name'		: mat.name,
+		'shader'	: kind,
 		'data'		: [
 			((), 'Ambient',			('DataScalar',	mat.ambient )),
 			((), 'DiffuseColor',	('DataColor',	list(mat.diffuse_color) )),

@@ -12,12 +12,6 @@ pub struct Global	{
 	gravity		: Vector3,
 }
 
-pub enum MaterialKind	{
-	KindFlat,
-	KindPhong,
-	KindAnisotropic,
-}
-
 pub enum MaterialData	{
 	DataInt(int),
 	DataScalar(Scalar),
@@ -36,7 +30,7 @@ pub struct Texture	{
 
 pub struct Material	{
 	name		: Name,
-	kind		: MaterialKind,
+	shader		: Path,
 	data		: ~[(~str,MaterialData)],
 	textures	: ~[Texture],
 }
