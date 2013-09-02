@@ -36,8 +36,8 @@ class ExportScene( bpy.types.Operator, ExportHelper ):
 	export_meshes	= BoolProperty( name='Export meshes',
 		description='Dump mesh binary collection',
 		default=True )
-	export_arms		= BoolProperty( name='Export armatures',
-		description='Dump armatures binary collection',
+	export_actions		= BoolProperty( name='Export actions',
+		description='Dump action binary collections',
 		default=True )
 	num_precision	= IntProperty( name='Numeric precision',
 		description='Number of digit past the dot for numerics',
@@ -99,7 +99,7 @@ class ExportScene( bpy.types.Operator, ExportHelper ):
 		Settings.fakeQuat	= self.properties.quat_fake
 		save_scene( self.properties.filepath, context,
 			self.properties.export_meshes,
-			self.properties.export_arms,
+			self.properties.export_actions,
 			self.properties.num_precision )
 		return {'FINISHED'}
 

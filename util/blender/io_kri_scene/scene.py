@@ -47,30 +47,33 @@ def cook_mat(mat,log):
 			((), 'SpecularParams',	('DataVector',	spec_params )),
 		],
 		'textures'	: textures
-	})
+		})
 
 
-def cook_node(ob,log):
-	pos,rot,sca = ob.matrix_local.decompose()
+def cook_space(matrix):
+	pos,rot,sca = matrix.decompose()
 	scale = (sca.x + sca.y + sca.z)/3.0
 	if sca.x*sca.x+sca.y*sca.y+sca.z*sca.z > 0.01 + sca.x*sca.y+sca.y*sca.z+sca.z*sca.x:
 		log.log(1,'w', 'Non-uniform scale: (%.1f,%.1f,%.1f)' % sca.to_tuple(1))
+	return ('QuatSpace',{
+		'pos'	: list(pos),
+		'rot'	: [rot.x,rot.y,rot.z,rot.w],
+		'scale'	: scale
+		})
+
+def cook_node(ob,log):
 	return ('ChildNode','Node',{
-		'name'	: ob.name,
-		'space'	: ('QuatSpace',{
-			'pos'	: list(pos),
-			'rot'	: [rot.x,rot.y,rot.z,rot.w],
-			'scale'	: scale
-		}),
+		'name'		: ob.name,
+		'space'		: cook_space(ob.matrix_local),
 		'children'	: []
-	})
+		})
 
 def cook_camera(cam,log):
 	return ('ChildCamera','Camera',{	#todo: ortho
 		'name'	: cam.name,
 		'fov_y'	: cam.angle,	#todo: make sure it's vfov
 		'range'	: [cam.clip_start,cam.clip_end]
-	})
+		})
 
 def cook_lamp(lamp,log):
 	attenu = [lamp.linear_attenuation,lamp.quadratic_attenuation]
@@ -96,6 +99,28 @@ def cook_lamp(lamp,log):
 		'attenuation'	: attenu,
 		'distance'		: lamp.distance,
 		'spherical'		: sphere,
+		})
+
+def cook_armature(arm,log):
+	root = ('Bone',{ 'children':[] })
+	bones = { '':root }
+	for b in arm.bones:
+		par = bones['']
+		mx = b.matrix_local
+		if b.parent:
+			par = bones[b.parent.name]
+			mx = b.parent.matrix_local.copy().inverted() * mx
+		ob = ('Bone',{
+			'name'		: b.name,
+			'space'		: cook_space(mx),
+			'children'	: []
+			})
+		par[1]['children'].append(ob)
+		bones[b.name] = ob
+	return ('ChildArmature','Armature',{
+		'name'		: arm.name,
+		'dual_quat'	: 'false',
+		'bones'		: root[1]['children'],
 		})
 
 
@@ -187,22 +212,19 @@ def export_json(document,filename,num_format):
 	file.close()
 
 
-def save_scene(filename,context,export_meshes,export_armatures,precision):
+def save_scene(filename,context,export_meshes,export_actions,precision):
 	glob		= ('Global',{})
 	materials	= []
 	nodes		= []
 	# ready...
+	import os
+	os.makedirs(filename)
 	log	= Logger(filename+'.log')
 	if export_meshes:
 		out_mesh	= Writer(filename+'.k3mesh')
 		out_mesh.begin('*mesh')
 	else:
 		out_mesh	= None
-	if export_armatures:
-		out_arm		= Writer(filename+'.k3arm')
-		out_arm.begin('*arm')
-	else:
-		out_arm		= None
 	sc = context.scene
 	print('Exporting Scene...')
 	log.logu(0,'Scene %s' % (filename))
@@ -257,13 +279,10 @@ def save_scene(filename,context,export_meshes,export_armatures,precision):
 					'armature'	: arm_name
 					}))
 				offset += fn
-		elif ob.type == 'ARMATURE' and out_arm != None:
-			out_arm.begin('meta')
-			out_arm.text(ob.data.name)
-			out_arm.text(ob.name)	# root node
-			out_arm.pack('B', 0)	# dual-quat
-			save_arm(out_arm,ob,log)
-			out_arm.end()
+		elif ob.type == 'ARMATURE':
+			children.append( cook_armature(ob.data,log) )
+			if export_actions:
+				save_actions_ext( filename,ob,log )
 		elif ob.type == 'CAMERA':
 			children.append( cook_camera(ob.data,log) )
 		elif ob.type == 'LAMP':
@@ -271,9 +290,6 @@ def save_scene(filename,context,export_meshes,export_armatures,precision):
 	if out_mesh != None:
 		out_mesh.end()
 		out_mesh.close()
-	if out_arm != None:
-		out_arm.end()
-		out_arm.close()
 	# animations
 	# go!
 	document = ('Scene',{

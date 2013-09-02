@@ -16,49 +16,62 @@ def gather_anim(ob,log):
 		all.append( ad.action )
 	return all
 
-
-def save_actions(out,ob,log):
+def save_action(out,act,postfix,log):
 	import re
-	if not ob: return
-	for act in gather_anim(ob,log):
-		offset,nf = act.frame_range
-		rnas,curves = {},set() # [attrib_name][sub_id]
-		indexator,n_empty = None,0
-		# gather all
-		for f in act.fcurves:
-			attrib = f.data_path
-			if not len(attrib):
-				n_empty += 1
-				continue
-			#log.logu(2, 'passed [%d].%s.%d' %(bid,attrib,f.array_index) )
-			if not attrib in rnas:
-				rnas[attrib] = []
-			lis = rnas[attrib]
-			if len(lis)<=f.array_index:
-				while len(lis)<f.array_index:
-					lis.append(None)
-				lis.append(f)
-			else:	lis[f.array_index] = f	
-		# write header or exit
-		if not len(rnas): continue
-		out.begin( 'action' )
-		out.text( act.name )
-		out.pack('f', nf / bpy.context.scene.render.fps )
-		log.logu(1,'+anim: %s, %d frames, %d groups' % ( act.name,nf,len(act.groups) ))
-		if n_empty:
-			log.log(2,'w','%d empty curves detected' % (n_empty))
-		# write in packs
-		for attrib,sub in rnas.items():
-			str = re.sub(r'\".+\"','*',attrib)
-			curves.add( '%s[%d]' % (str,len(sub)) )
-			out.begin('curve')
-			out.text( attrib )
-			out.pack('B', len(sub) )
-			save_curve_pack( out, sub, offset, log )
-			out.end()
-		log.logu(2, ', '.join(curves))
-		out.end()	#action
+	offset,nf = act.frame_range
+	rnas,curves = {},set() # [attrib_name][sub_id]
+	indexator,n_empty = None,0
+	# gather all
+	for f in act.fcurves:
+		attrib = f.data_path
+		if not len(attrib):
+			n_empty += 1
+			continue
+		#log.logu(2, 'passed [%d].%s.%d' %(bid,attrib,f.array_index) )
+		if not attrib in rnas:
+			rnas[attrib] = []
+		lis = rnas[attrib]
+		if len(lis)<=f.array_index:
+			while len(lis)<f.array_index:
+				lis.append(None)
+			lis.append(f)
+		else:	lis[f.array_index] = f	
+	# write header or exit
+	if not len(rnas): return
+	out.begin( 'action' )
+	out.text( act.name + postfix )
+	out.pack('f', nf / bpy.context.scene.render.fps )
+	log.logu(1,'+anim: %s, %d frames, %d groups' % ( act.name,nf,len(act.groups) ))
+	if n_empty:
+		log.log(2,'w','%d empty curves detected' % (n_empty))
+	# write in packs
+	for attrib,sub in rnas.items():
+		str = re.sub(r'\".+\"','*',attrib)
+		curves.add( '%s[%d]' % (str,len(sub)) )
+		out.begin('curve')
+		out.text( attrib )
+		out.pack('B', len(sub) )
+		save_curve_pack( out, sub, offset, log )
+		out.end()
+	log.logu(2, ', '.join(curves))
+	out.end()	#action
 
+def save_actions_int(out,ob,log):
+	if not ob: return []
+	for act in gather_anim(ob,log):
+		save_action(out,act,'',log)
+
+def save_actions_ext(base,ob,log):
+	if not ob: return []
+	all_actions = gather_anim(ob,log)
+	if len(all_actions)==0: return []
+	postfix = '@' + ob.name
+	out = Writer('%s/%s.k3act' % (base,ob.name))
+	out.begin('*action')
+	for act in all_actions:
+		save_action(out,act,postfix,log)
+	out.end()
+	out.close()
 		
 
 ###  ACTION:CURVES   ###

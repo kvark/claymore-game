@@ -25,7 +25,7 @@ def save_arm(out,ob,log):
 		out.pack('B', parid+1)
 		save_matrix(out,mx)
 	# animations
-	save_actions(out,ob,log)
+	save_actions_int(out,ob,log)
 	# done
 	out.end();	#k3arm
 	print('Done.')

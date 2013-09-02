@@ -12,6 +12,12 @@ pub struct Global	{
 	gravity		: Vector3,
 }
 
+pub struct Action	{
+	name	: ~str,
+	length	: float,
+	path	: Path,
+}
+
 pub enum MaterialData	{
 	DataInt(int),
 	DataScalar(Scalar),
@@ -78,6 +84,7 @@ pub struct QuatSpace	{
 
 pub enum NodeChild	{
 	ChildNode(Node),
+	ChildArmature(Armature),
 	ChildEntity(Entity),
 	ChildCamera(Camera),
 	ChildLight(Light),
@@ -87,6 +94,18 @@ pub struct Node	{
 	name		: Name,
 	space		: QuatSpace,
 	children	: ~[NodeChild],
+}
+
+pub struct Bone	{
+	name		: Name,
+	space		: QuatSpace,
+	children	: ~[Bone],
+}
+
+pub struct Armature	{
+	name		: Name,
+	dual_quat	: bool,
+	bones		: ~[Bone],
 }
 
 pub struct Scene	{

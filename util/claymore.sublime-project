@@ -2,25 +2,7 @@
 	"folders":
 	[
 		{
-			"path": "/Users/kvark/Code/rust/claymore-game"
-		},
-		{
-			"path": "/Users/kvark/Code/rust/lmath-rs"
-		},
-		{
-			"path": "/Users/kvark/Code/rust/openal-rs"
-		},
-		{
-			"path": "/Users/kvark/Code/rust/rust-freetype"
-		},
-		{
-			"path": "/Users/kvark/Code/rust/numeric-rs"
-		},
-		{
-			"path": "/Users/kvark/Code/rust/cgmath-rs"
-		},
-		{
-			"path": "/Users/kvark/Code/rust/glfw3-rs"
+			"path": "/mnt/code/claymore"
 		}
 	]
 }
