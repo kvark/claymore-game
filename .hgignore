@@ -6,6 +6,7 @@ data/*.json
 data/font/*
 data/sound/*
 data/texture/*
+data/claymore-2a/*
 *.k3mesh
 *.k3arm
 lib/*.dSYM

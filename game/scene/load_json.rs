@@ -340,6 +340,7 @@ pub fn load_scene( path : ~str, gc : &mut gr_low::context::Context,
 		nodes		: map_node,
 		meshes		: LinearMap::new(),
 		armatures	: LinearMap::new(),
+		actions		: LinearMap::new(),
 	};
 	// armatures
 	context.read_armatures( &path, lg );

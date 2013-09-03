@@ -5,7 +5,6 @@ import mathutils
 import math
 from io_kri.common	import *
 from io_kri.action	import *
-from io_kri_arm.arm		import *
 from io_kri_mesh.mesh	import *
 
 
@@ -120,7 +119,7 @@ def cook_armature(arm,log):
 		bones[b.name] = ob
 	return ('ChildArmature','Armature',{
 		'name'		: arm.name,
-		'dual_quat'	: 'false',
+		'dual_quat'	: False,
 		'bones'		: root[1]['children'],
 		'actions'	: []
 		})
@@ -172,7 +171,7 @@ def export_value(elem,ofile,num_format,level):
 	elif tip is list:
 		if len(elem):
 			subtip = type(elem[0])
-			is_class = subtip in (tuple,dict,list)
+			is_class = subtip in (tuple,dict,list,str)
 			ofile.write( ('[','~[')[is_class] )
 			for i,sub in enumerate(elem):
 				assert type(sub) == subtip
@@ -223,10 +222,14 @@ def save_scene(filepath,context,export_meshes,export_actions,precision):
 	if not os.path.exists(filepath):
 		os.makedirs(filepath)
 	log	= Logger(filepath+'.log')
-	out_mesh = None
+	out_mesh,out_act_node,out_act_arm = None,None,None
+	collection_mesh, collection_node_anim = 'all','nodes'
 	if export_meshes:
-		out_mesh = Writer(filepath+'/all.k3mesh')
-		out_mesh.begin('*mesh')		
+		out_mesh	= Writer('%s/%s.k3mesh' % (filepath,collection_mesh))
+		out_mesh.begin('*mesh')
+	if export_actions:
+		out_act_node= Writer('%s/%s.k3act' % (filepath,collection_node_anim))
+		out_act_node.begin('*action')
 	sc = context.scene
 	print('Exporting Scene...')
 	log.logu(0,'Scene %s' % (filepath))
@@ -253,10 +256,10 @@ def save_scene(filepath,context,export_meshes,export_actions,precision):
 		if len(ob.modifiers):
 			log.log(1,'w','Unapplied modifiers detected on object %s' % (ob.name))
 		node_map[ob.name] = node = cook_node(ob,log)
-		if export_actions:
-			ani_path = '%s/%s' % (filepath,ob.name)
-			anims = save_actions_ext( ani_path,ob,None,log )
-			node[2]['actions'] = anims
+		if out_act_node:
+			anims = save_actions_int( out_act_node,ob,None,log )
+			for ani in anims:
+				node[2]['actions'].append( '%s@%s' % (ani,collection_node_anim) )
 		if ob.parent == None:
 			nodes.append(node)
 		else:
@@ -280,7 +283,7 @@ def save_scene(filepath,context,export_meshes,export_actions,precision):
 				arm_name = ob.parent.data.name if has_arm else ''
 				children.append(('ChildEntity','Entity',{
 					'material'	: s,
-					'mesh'		: ob.data.name + '@',
+					'mesh'		: '%s@%s' % (ob.data.name,collection_mesh),
 					'range'		: [3*offset,3*(offset+fn)],
 					'armature'	: arm_name
 					}))
@@ -289,9 +292,11 @@ def save_scene(filepath,context,export_meshes,export_actions,precision):
 			arm = cook_armature(ob.data,log)
 			children.append(arm)
 			if export_actions:
-				ani_path = '%s/%s' % (filepath,ob.data.name)
+				name = ob.data.name
+				ani_path = '%s/%s' % (filepath,name)
 				anims = save_actions_ext( ani_path,ob,'pose',log )
-				arm[2]['actions'] = anims
+				for ani in anims:
+					arm[2]['actions'].append( '%s@%s' % (ani,name) )
 		elif ob.type == 'CAMERA':
 			children.append( cook_camera(ob.data,log) )
 		elif ob.type == 'LAMP':
@@ -299,6 +304,9 @@ def save_scene(filepath,context,export_meshes,export_actions,precision):
 	if out_mesh != None:
 		out_mesh.end()
 		out_mesh.close()
+	if out_act_node != None:
+		out_act_node.end()
+		out_act_node.close()
 	# animations
 	# go!
 	document = ('Scene',{

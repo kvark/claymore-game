@@ -5,6 +5,7 @@ use lmath::{vec,quat};
 use cgmath::projection;
 use engine;
 use engine::{gr_low,gr_mid,space};
+use engine::space::Space;	//for invert()
 
 use scene::common;
 use gen = gen_scene::common;
@@ -106,26 +107,71 @@ priv fn parse_materials( materials : &[gen::Material], prefix : ~str, ctx : &mut
 	}
 }
 
+priv fn parse_space( s : &gen::QuatSpace )-> space::QuatSpace	{
+	space::QuatSpace	{
+		position	: vec::vec3::from_array( s.pos ),
+		orientation	: quat::quat::from_array( s.rot ),
+		scale		: s.scale,
+	}
+}
 
-priv fn parse_child( child : &gen::NodeChild, parent : Option<@mut space::Node>, scene : &mut common::Scene,
-		get_input : &fn(~str)->gr_mid::call::Input )	{
+priv fn parse_bones( bin : &[gen::Bone], par_id : Option<uint>, par_node : @mut engine::space::Node,
+		bot : &mut ~[engine::space::Bone] )	{
+	for bin.each() |ibone|	{
+		let space = parse_space( &ibone.space );
+		let bind_inv = space.invert();
+		let bind_pose_inv = match par_id	{
+			Some(pid)	=> bind_inv.mul( &bot[pid].bind_pose_inv ),
+			None		=> bind_inv,
+		};
+		let node = @mut space::Node{
+			name	: copy ibone.name,
+			space	: space,
+			parent	: Some(par_node),
+			actions	:~[],
+		};
+		let cid = Some( bot.len() );
+		bot.push(space::Bone{
+			node			: node,
+			bind_space		: space,
+			bind_pose_inv	: bind_pose_inv,
+			transform		: space::QuatSpace::identity(),
+			parent_id		: par_id,
+		});
+		parse_bones( ibone.children, cid, node, bot );
+	}
+}
+
+priv fn parse_child( child : &gen::NodeChild, parent : @mut space::Node, scene : &mut common::Scene,
+		get_input : &fn(~str)->gr_mid::call::Input, lg : &engine::journal::Log )	{
 	match child	{
 		&gen::ChildNode(ref inode)	=>	{
-			let qs = space::QuatSpace	{
-				position	: vec::vec3::from_array( inode.space.pos ),
-				orientation	: quat::quat::from_array( inode.space.rot ),
-				scale		: inode.space.scale,
-			};
 			let n = @mut space::Node	{
 				name	: copy inode.name,
-				space	: qs,
-				parent	: parent,
+				space	: parse_space( &inode.space ),
+				parent	: Some(parent),
 				actions	: ~[],
 			};
 			scene.context.nodes.insert( copy n.name, n );
 			for inode.children.each() |child|	{
-				parse_child( child, Some(n), scene, get_input );
+				parse_child( child, n, scene, get_input, lg );
 			}
+		},
+		&gen::ChildArmature(ref iarm)	=>	{
+			let (shader,max) = engine::load::get_armature_shader( iarm.dual_quat );
+			let a = @mut space::Armature{
+				root	: parent,
+				bones	: ~[],
+				code	: shader,
+				actions	: ~[],
+				max_bones	: max,
+			};
+			parse_bones( iarm.bones, None, parent, &mut a.bones );
+			for iarm.actions.each() |iaction|	{
+				let act = scene.context.query_action( iaction, &mut a.bones, lg );
+				a.actions.push( act );
+			}
+			scene.context.armatures.insert( copy iarm.name, a );
 		},
 		&gen::ChildEntity(ref ient)	=>	{
 			let mut input = get_input( copy ient.mesh );
@@ -139,7 +185,7 @@ priv fn parse_child( child : &gen::NodeChild, parent : Option<@mut space::Node>,
 					as @gr_mid::draw::Mod
 			};
 			scene.entities.push( engine::object::Entity{
-				node	: parent.expect("Entity parent has to exist"),
+				node	: parent,
 				//body	: @node::Body,
 				input	: input,
 				data	: copy *scene.context.mat_data.find( &ient.material ).
@@ -151,7 +197,7 @@ priv fn parse_child( child : &gen::NodeChild, parent : Option<@mut space::Node>,
 		},
 		&gen::ChildCamera(ref icam)	=>	{
 			scene.cameras.insert( copy icam.name, @common::Camera{
-				node	: parent.expect("Camera parent has to exist"),
+				node	: parent,
 				proj	: projection::PerspectiveSym	{
 					vfov	: icam.fov_y.degrees(),
 					aspect	: 1f32,
@@ -163,7 +209,7 @@ priv fn parse_child( child : &gen::NodeChild, parent : Option<@mut space::Node>,
 		},
 		&gen::ChildLight(ref ilit)	=>	{
 			scene.lights.insert( copy ilit.name, @common::Light{
-				node	: parent.expect("Light parent has to exist"),
+				node	: parent,
 				color	: gr_low::rast::Color::from_array3( ilit.color ),
 				attenu	: [1f32 / ilit.energy, ilit.attenuation[0], ilit.attenuation[1]],
 				distance: ilit.distance,
@@ -193,8 +239,6 @@ pub fn parse( path : ~str, iscene : &gen::Scene, custom : &[gen::Material], gc :
 	parse_materials( iscene.materials, ~"data/code/mat/",	&mut scene.context, gc, lg );
 	let c1 = engine::anim::get_time();
 	lg.add(fmt!( "\t[p] Materials: %f sec", c1-c0 ));
-	// armatures-0
-	scene.context.read_armatures( &path, lg );
 	// nodes and stuff
 	let get_input = |mesh_name : ~str|	{
 		let vao = match opt_vao	{
@@ -204,8 +248,9 @@ pub fn parse( path : ~str, iscene : &gen::Scene, custom : &[gen::Material], gc :
 		let mesh = scene.context.query_mesh( &mesh_name, gc, lg );
 		gr_mid::call::Input::new( vao, mesh )
 	};
+	let root = @mut engine::space::Node::new( ~"root" );
 	for iscene.nodes.each() |child|	{
-		parse_child( child, None, &mut scene, get_input );
+		parse_child( child, root, &mut scene, get_input, lg );
 	}
 	let c2 = engine::anim::get_time();
 	lg.add(fmt!( "\t[p] Objects: %f sec", c2-c1 ));

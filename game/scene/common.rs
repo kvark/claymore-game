@@ -209,6 +209,7 @@ pub struct SceneContext	{
 	nodes		: Dict<NodeRef>,
 	meshes		: Dict<@gr_mid::mesh::Mesh>,
 	armatures	: Dict<@mut engine::space::Armature>,
+	actions		: Dict<@engine::space::ArmatureRecord>,
 }
 
 pub impl SceneContext	{
@@ -221,6 +222,7 @@ pub impl SceneContext	{
 			nodes		: LinearMap::new(),
 			meshes		: LinearMap::new(),
 			armatures	: LinearMap::new(),
+			actions		: LinearMap::new(),
 		}
 	}
 
@@ -231,11 +233,11 @@ pub impl SceneContext	{
 			None	=> (),
 		};
 		let split = vec::build(|push|	{
-			mesh_name.each_split_char('@', |word|	{
-				push( word.to_owned() ); true
-			});
+			for mesh_name.each_split_char('@') |word|	{
+				push( word.to_owned() );
+			}
 		});
-		let path = self.prefix + split[split.len()-1u] + ~".k3mesh";
+		let path = fmt!( "%s/%s.k3mesh", self.prefix, split[split.len()-1u] );
 		let mut rd = engine::load::Reader::create_std( path );
 		let mut q_mesh = None::<@gr_mid::mesh::Mesh>;
 		if split.len() > 1	{
@@ -257,6 +259,39 @@ pub impl SceneContext	{
 			let mesh = @engine::load::read_mesh( &mut rd, gc, lg );
 			self.meshes.insert( copy *mesh_name, mesh );
 			mesh
+		}
+	}
+
+	fn query_action( &mut self, act_name : &~str, bones : &mut ~[engine::space::Bone], lg : &engine::journal::Log )-> @engine::space::ArmatureRecord	{
+		match self.actions.find(act_name)	{
+			Some(a)	=> return *a,
+			None	=> (),
+		};
+		let split = vec::build(|push|	{
+			act_name.each_split_char('@', |word|	{
+				push( word.to_owned() ); true
+			});
+		});
+		let path = fmt!( "%s/%s.k3act", self.prefix, split[split.len()-1u] );
+		let mut rd = engine::load::Reader::create_std( path );
+		let mut q_act = None::<@engine::space::ArmatureRecord>;
+		if split.len() > 1	{
+			assert!( rd.enter() == ~"*action" );
+			while rd.has_more()!=0u	{
+				let act = @engine::load::read_action( &mut rd, *bones, lg );
+				rd.leave();
+				let full_name = fmt!( "%s@%s", act.name, split[1] );
+				if full_name == *act_name	{
+					q_act = Some(act);
+				}
+				self.actions.insert( full_name, act );
+			}
+			rd.leave();
+			q_act.expect(fmt!( "Action '%s' not found in the collection", *act_name ))
+		}else	{
+			let act = @engine::load::read_action( &mut rd, *bones, lg );
+			self.actions.insert( copy *act_name, act );
+			act
 		}
 	}
 

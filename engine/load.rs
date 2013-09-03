@@ -296,6 +296,75 @@ pub fn read_curve<T : space::Interpolate>( br : &Reader, fkey : &fn(&Reader)->T 
 }
 
 
+pub fn read_action( br : &mut Reader, bones : &[space::Bone], lg : &journal::Log )-> space::ArmatureRecord	{
+	assert!( br.enter() == ~"action" );
+	let act_name = br.get_string();
+	//final ani.Record rec = a.records[actName] = new ani.Record();
+	let length = br.get_float() as float;
+	lg.add(fmt!( "\tAnim '%s' of length %f", act_name, length as float ));
+	let mut curves : ~[space::ArmatureCurve] = ~[];
+	while br.has_more()!=0u	{
+		assert!( br.enter() == ~"curve" );
+		let curve_name = br.get_string();
+		let dimension = br.get_uint(1u);
+		lg.add( ~"\t\tCurve" + curve_name );
+		let split = vec::build(|push|	{
+			do curve_name.each_split_char('"') |word|	{
+				push( word.to_owned() );
+				true
+			}
+		});
+		if split.len() == 3u	{
+			assert!( split[0] == ~"pose.bones[" );
+			let mut bid = 0u;	//FIXME: vec::position, when Rust allows
+			while bones[bid].node.name != split[1]	{
+				bid += 1;
+				assert!( bid < bones.len() );
+			}
+			if split[2] == ~"].location"	{
+				assert!( dimension == 3u );
+				let c = read_curve( br, read_key_position );
+				curves.push( space::ACuPos(bid,c) );
+			}else
+			if split[2] == ~"].rotation_quaternion"	{
+				assert!( dimension == 4u );
+				let c = read_curve( br, read_key_orientation_quat );
+				curves.push( space::ACuRotQuat(bid,c) );
+			}else
+			if split[2] == ~"].rotation_euler"	{
+				assert!( dimension == 3u );
+				read_curve( br, read_key_position );
+				//curves.push( space)	//FIXME!
+			}else
+			if split[2] == ~"].scale"	{
+				assert!( dimension == 3u );
+				let c = read_curve( br, read_key_scale3 );
+				curves.push( space::ACuScale(bid,c) );
+			}else {
+				fail!(fmt!( "Unable to find curve '%s'", split[2] ))
+			};
+		}
+		br.leave();
+	}
+	br.leave();
+	anim::Record{
+		name:act_name, duration:length, curves:curves
+	}
+}
+
+pub fn get_armature_shader( dual_quat : bool )-> (~str,uint)	{
+	let shader = load_text( if dual_quat
+		{~"data/code/mod/arm_dualquat.glslv"} else
+		{~"data/code/mod/arm.glslv"} );
+	let max = {
+		let start	= str::find_str(shader,~"MAX_BONES")	.expect(~"Has to have MAX_BONES");
+		let end		= str::find_char_from(shader,';',start)	.expect(~"Line has to end");
+		let npos	= str::rfind_char_from(shader,' ',end)	.expect(~"Space is expected");
+		uint::from_str( shader.slice(npos+1,end) )			.expect(~"Unable to parse int")
+	};
+	(shader,max)
+}
+
 pub fn read_armature( br : &mut Reader, root : @mut space::Node, dual_quat : bool, lg : &journal::Log )-> space::Armature	{
 	let signature = br.enter();
 	if signature != ~"k3arm"	{
@@ -323,71 +392,12 @@ pub fn read_armature( br : &mut Reader, root : @mut space::Node, dual_quat : boo
 	// read actions
 	let mut actions : ~[@space::ArmatureRecord] = ~[];
 	while br.has_more()!=0u	{
-		assert!( br.enter() == ~"action" );
-		let act_name = br.get_string();
-		//final ani.Record rec = a.records[actName] = new ani.Record();
-		let length = br.get_float() as float;
-		lg.add(fmt!( "\tAnim '%s' of length %f", act_name, length as float ));
-		let mut curves : ~[space::ArmatureCurve] = ~[];
-		while br.has_more()!=0u	{
-			assert!( br.enter() == ~"curve" );
-			let curve_name = br.get_string();
-			let dimension = br.get_uint(1u);
-			lg.add( ~"\t\tCurve" + curve_name );
-			let split = vec::build(|push|	{
-				do curve_name.each_split_char('"') |word|	{
-					push( word.to_owned() );
-					true
-				}
-			});
-			if split.len() == 3u	{
-				assert!( split[0] == ~"pose.bones[" );
-				let mut bid = 0u;	//FIXME: vec::position, when Rust allows
-				while bones[bid].node.name != split[1]	{
-					bid += 1;
-					assert!( bid < bones.len() );
-				}
-				if split[2] == ~"].location"	{
-					assert!( dimension == 3u );
-					let c = read_curve( br, read_key_position );
-					curves.push( space::ACuPos(bid,c) );
-				}else
-				if split[2] == ~"].rotation_quaternion"	{
-					assert!( dimension == 4u );
-					let c = read_curve( br, read_key_orientation_quat );
-					curves.push( space::ACuRotQuat(bid,c) );
-				}else
-				if split[2] == ~"].rotation_euler"	{
-					assert!( dimension == 3u );
-					read_curve( br, read_key_position );
-					//curves.push( space)	//FIXME!
-				}else
-				if split[2] == ~"].scale"	{
-					assert!( dimension == 3u );
-					let c = read_curve( br, read_key_scale3 );
-					curves.push( space::ACuScale(bid,c) );
-				}else {
-					fail!(fmt!( "Unable to find curve '%s'", split[2] ))
-				};
-			}
-			br.leave();
-		}
-		br.leave();
-		actions.push(@anim::Record{
-			name:act_name, duration:length, curves:curves
-		});
+		let rec = @read_action( br, bones, lg );
+		actions.push(rec);
 	}
 	br.leave();
 	// load shader
-	let shader = load_text( if dual_quat
-		{~"data/code/mod/arm_dualquat.glslv"} else
-		{~"data/code/mod/arm.glslv"} );
-	let max = {
-		let start	= str::find_str(shader,~"MAX_BONES")	.expect(~"Has to have MAX_BONES");
-		let end		= str::find_char_from(shader,';',start)	.expect(~"Line has to end");
-		let npos	= str::rfind_char_from(shader,' ',end)	.expect(~"Space is expected");
-		uint::from_str( shader.slice(npos+1,end) )			.expect(~"Unable to parse int")
-	};
+	let (shader,max) = get_armature_shader( dual_quat );
 	lg.add(fmt!( "\tDetected %u bones", max ));
 	// finish
 	space::Armature{
