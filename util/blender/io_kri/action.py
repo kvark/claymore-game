@@ -16,16 +16,23 @@ def gather_anim(ob,log):
 		all.append( ad.action )
 	return all
 
-def save_action(out,act,postfix,log):
+def save_action(out,act,prefix,log):
 	import re
 	offset,nf = act.frame_range
-	rnas,curves = {},set() # [attrib_name][sub_id]
+	rnas = {} # [attrib_name][sub_id]
 	indexator,n_empty = None,0
 	# gather all
 	for f in act.fcurves:
 		attrib = f.data_path
 		if not len(attrib):
 			n_empty += 1
+			continue
+		pos_dot		= attrib.find('.')
+		pos_array	= attrib.find('[')
+		domain = None
+		if pos_dot>=0 and pos_dot<pos_array:
+			domain = attrib[:pos_dot]
+		if domain != prefix:
 			continue
 		#log.logu(2, 'passed [%d].%s.%d' %(bid,attrib,f.array_index) )
 		if not attrib in rnas:
@@ -37,14 +44,16 @@ def save_action(out,act,postfix,log):
 			lis.append(f)
 		else:	lis[f.array_index] = f	
 	# write header or exit
-	if not len(rnas): return
+	if not len(rnas):
+		return None
 	out.begin( 'action' )
-	out.text( act.name + postfix )
+	out.text( act.name )
 	out.pack('f', nf / bpy.context.scene.render.fps )
 	log.logu(1,'+anim: %s, %d frames, %d groups' % ( act.name,nf,len(act.groups) ))
 	if n_empty:
 		log.log(2,'w','%d empty curves detected' % (n_empty))
 	# write in packs
+	curves = set()
 	for attrib,sub in rnas.items():
 		str = re.sub(r'\".+\"','*',attrib)
 		curves.add( '%s[%d]' % (str,len(sub)) )
@@ -55,23 +64,31 @@ def save_action(out,act,postfix,log):
 		out.end()
 	log.logu(2, ', '.join(curves))
 	out.end()	#action
+	return act.name
 
-def save_actions_int(out,ob,log):
+def save_actions_int(out,ob,prefix,log):
 	if not ob: return []
+	anilist = []
 	for act in gather_anim(ob,log):
-		save_action(out,act,'',log)
+		name = save_action(out,act,prefix,log)
+		if name != None:
+			anilist.append(name)
+	return anilist
 
-def save_actions_ext(base,ob,log):
+def save_actions_ext(path,ob,prefix,log):
 	if not ob: return []
 	all_actions = gather_anim(ob,log)
 	if len(all_actions)==0: return []
-	postfix = '@' + ob.name
-	out = Writer('%s/%s.k3act' % (base,ob.name))
+	anilist = []
+	out = Writer(path + '.k3act')
 	out.begin('*action')
 	for act in all_actions:
-		save_action(out,act,postfix,log)
+		name = save_action(out,act,prefix,log)
+		if name != None:
+			anilist.append(name)
 	out.end()
 	out.close()
+	return anilist
 		
 
 ###  ACTION:CURVES   ###

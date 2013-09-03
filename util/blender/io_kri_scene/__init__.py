@@ -41,7 +41,7 @@ class ExportScene( bpy.types.Operator, ExportHelper ):
 		default=True )
 	num_precision	= IntProperty( name='Numeric precision',
 		description='Number of digit past the dot for numerics',
-		default=3, min=0, max=10)
+		default=2, min=0, max=10)
 	# general settings
 	filepath	= StringProperty( name='File Path',
 		description='Filepath used for exporting the Claymore scene',

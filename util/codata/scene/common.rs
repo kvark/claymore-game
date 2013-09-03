@@ -1,5 +1,6 @@
 type Name = ~str;
 type Path = ~str;
+type Action = ~str;
 type UintRange = [uint, ..2];
 type Scalar = f32;
 type Vector2 = [Scalar, ..2];
@@ -10,12 +11,6 @@ type Color	= Vector3;
 
 pub struct Global	{
 	gravity		: Vector3,
-}
-
-pub struct Action	{
-	name	: ~str,
-	length	: float,
-	path	: Path,
 }
 
 pub enum MaterialData	{
@@ -94,6 +89,7 @@ pub struct Node	{
 	name		: Name,
 	space		: QuatSpace,
 	children	: ~[NodeChild],
+	actions		: ~[Action],
 }
 
 pub struct Bone	{
@@ -106,6 +102,7 @@ pub struct Armature	{
 	name		: Name,
 	dual_quat	: bool,
 	bones		: ~[Bone],
+	actions		: ~[Action],
 }
 
 pub struct Scene	{

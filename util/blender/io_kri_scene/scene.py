@@ -65,7 +65,8 @@ def cook_node(ob,log):
 	return ('ChildNode','Node',{
 		'name'		: ob.name,
 		'space'		: cook_space(ob.matrix_local),
-		'children'	: []
+		'children'	: [],
+		'actions'	: [],
 		})
 
 def cook_camera(cam,log):
@@ -121,6 +122,7 @@ def cook_armature(arm,log):
 		'name'		: arm.name,
 		'dual_quat'	: 'false',
 		'bones'		: root[1]['children'],
+		'actions'	: []
 		})
 
 
@@ -189,8 +191,8 @@ def export_value(elem,ofile,num_format,level):
 		raise Exception( 'Element %s is unknown' % (str(type(elem))) )
 
 
-def export_doc(document,filename,num_format):
-	ofile = open(filename+'.rs','w')
+def export_doc(document,filepath,num_format):
+	ofile = open(filepath+'.rs','w')
 	ofile.write('use common::*;\n')
 	ofile.write('pub fn load()-> Scene	{')
 	export_value(document, ofile, num_format, 1)
@@ -198,7 +200,7 @@ def export_doc(document,filename,num_format):
 	ofile.close()
 
 
-def export_json(document,filename,num_format):
+def export_json(document,filepath,num_format):
 	import json
 	class KriEncoder(json.JSONEncoder):
 		def default(self,obj):
@@ -207,27 +209,27 @@ def export_json(document,filename,num_format):
 			return json.JSONEncoder.default(self,obj)
 	json.encoder.FLOAT_REPR = lambda o: num_format % (o)
 	text = json.dumps(document, indent="\t", allow_nan=False, cls=KriEncoder)
-	file = open(filename+'.json','w')
+	file = open(filepath+'.json','w')
 	file.write(text)
 	file.close()
 
 
-def save_scene(filename,context,export_meshes,export_actions,precision):
+def save_scene(filepath,context,export_meshes,export_actions,precision):
 	glob		= ('Global',{})
 	materials	= []
 	nodes		= []
 	# ready...
 	import os
-	os.makedirs(filename)
-	log	= Logger(filename+'.log')
+	if not os.path.exists(filepath):
+		os.makedirs(filepath)
+	log	= Logger(filepath+'.log')
+	out_mesh = None
 	if export_meshes:
-		out_mesh	= Writer(filename+'.k3mesh')
-		out_mesh.begin('*mesh')
-	else:
-		out_mesh	= None
+		out_mesh = Writer(filepath+'/all.k3mesh')
+		out_mesh.begin('*mesh')		
 	sc = context.scene
 	print('Exporting Scene...')
-	log.logu(0,'Scene %s' % (filename))
+	log.logu(0,'Scene %s' % (filepath))
 	# -globals
 	bDegrees = (sc.unit_settings.system_rotation == 'DEGREES')
 	if not bDegrees:
@@ -251,6 +253,10 @@ def save_scene(filename,context,export_meshes,export_actions,precision):
 		if len(ob.modifiers):
 			log.log(1,'w','Unapplied modifiers detected on object %s' % (ob.name))
 		node_map[ob.name] = node = cook_node(ob,log)
+		if export_actions:
+			ani_path = '%s/%s' % (filepath,ob.name)
+			anims = save_actions_ext( ani_path,ob,None,log )
+			node[2]['actions'] = anims
 		if ob.parent == None:
 			nodes.append(node)
 		else:
@@ -280,9 +286,12 @@ def save_scene(filename,context,export_meshes,export_actions,precision):
 					}))
 				offset += fn
 		elif ob.type == 'ARMATURE':
-			children.append( cook_armature(ob.data,log) )
+			arm = cook_armature(ob.data,log)
+			children.append(arm)
 			if export_actions:
-				save_actions_ext( filename,ob,log )
+				ani_path = '%s/%s' % (filepath,ob.data.name)
+				anims = save_actions_ext( ani_path,ob,'pose',log )
+				arm[2]['actions'] = anims
 		elif ob.type == 'CAMERA':
 			children.append( cook_camera(ob.data,log) )
 		elif ob.type == 'LAMP':
@@ -298,6 +307,6 @@ def save_scene(filename,context,export_meshes,export_actions,precision):
 		'nodes'		: nodes,
 	})
 	num_format = '%' + ('.%df' % precision)
-	export_doc(document, filename, num_format)
+	export_doc(document, filepath, num_format)
 	print('Done.')
 	log.conclude()
