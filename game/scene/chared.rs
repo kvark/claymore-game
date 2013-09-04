@@ -3,7 +3,6 @@ extern mod lmath;
 extern mod engine;
 extern mod gen_scene;
 
-use numeric::Float;
 use lmath::quat::*;
 use lmath::vec::*;
 use engine::anim::{Act,Player};
@@ -316,9 +315,9 @@ pub fn make_scene( el : &main::Elements, ct : &mut gr_low::context::Context, lg 
 	let mut scene = if true	{ //new method
 		let iscene = gen_scene::chared::main::load();
 		let icustom = gen_scene::chared::custom::load();
-		scene::load::parse( ~"data/claymore-2a", &iscene, icustom, ct, Some(vao), lg )
+		scene::load::parse( ~"data/scene/claymore-2a", &iscene, icustom, ct, Some(vao), lg )
 	}else	{
-		scene::load_json::load_scene( ~"data/claymore-2a", ct, Some(vao), lg )
+		scene::load_json::load_scene( ~"data/scene/claymore-2a", ct, Some(vao), lg )
 	};
 	let detail_info = scene::load_json::load_config::<~[scene::load_json::EntityInfo]>( ~"data/details.json" );
 	let mut details = scene::load_json::parse_group( &mut scene.context, detail_info, ct, Some(vao), lg );
@@ -394,7 +393,7 @@ pub fn make_scene( el : &main::Elements, ct : &mut gr_low::context::Context, lg 
 	//cam.proj = copy shadow.light.proj;
 	//cam.node = shadow.light.node;
 	lg.add(fmt!( "Camera fov:%f, range:%f-%f",
-		cam.proj.vfov.degrees() as float,
+		cam.proj.vfov as float,
 		cam.proj.near as float,
 		cam.proj.far as float ));
 	lg.add( ~"\tWorld :" + cam.node.world_space().to_str() );

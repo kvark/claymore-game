@@ -6,9 +6,8 @@ data/*.json
 data/font/*
 data/sound/*
 data/texture/*
-data/claymore-2a/*
-*.k3mesh
-*.k3arm
+data/scene/*
+*.k3*
 lib/*.dSYM
 lib/*.dummy
 lib/libengine-*

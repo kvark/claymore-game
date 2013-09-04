@@ -213,6 +213,7 @@ pub fn future_texture_2D( path : &~str, mipmap : bool )-> TextureFuture	{
 //		Mesh											//
 
 pub fn read_mesh( br : &mut Reader, context : &mut context::Context, lg : &journal::Log )-> mesh::Mesh	{
+	lg.add(fmt!( "Loading mesh from %s", br.path ));
 	let signature = br.enter();
 	if signature != ~"k3mesh"	{
 		fail!(fmt!( "Invalid mesh signature '%s': %s", signature, br.path ))
@@ -221,7 +222,7 @@ pub fn read_mesh( br : &mut Reader, context : &mut context::Context, lg : &journ
 	let n_vert	= br.get_uint(4u);
 	let n_ind	= br.get_uint(4u);
 	let topology= br.get_string();
-	lg.add(fmt!( "Loading mesh '%s' of %u vertices and %u indices: %s", name, n_vert, n_ind, br.path ));
+	lg.add(fmt!( "\tName: %s, Vertices: %u, Indices: %u", name, n_vert, n_ind ));
 	let mut mesh = context.create_mesh( name, topology, n_vert, n_ind );
 	let mut num_buffers = br.get_uint(1u);
 	while num_buffers>0u	{

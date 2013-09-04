@@ -1,5 +1,6 @@
 extern mod lmath;
 extern mod engine;
+extern mod gen_scene;
 
 use lmath::quat::*;
 use lmath::vec::*;
@@ -10,8 +11,7 @@ use engine::gr_mid::draw::Mod;
 use engine::space::{Interpolate,Space};
 
 use input;
-use scene::grid;
-use scene = scene::common;
+use scene;
 
 
 pub struct Character	{
@@ -38,7 +38,7 @@ pub impl Character	{
 
 
 pub struct View	{
-	cam				: scene::Camera,
+	cam				: scene::common::Camera,
 	trans_duration	: float,
 	points			: ~[engine::space::QuatSpace],
 	source			: Option<engine::space::QuatSpace>,
@@ -76,7 +76,7 @@ pub impl View	{
 pub struct Scene	{
 	view	: View,
 	land	: engine::object::Entity,
-	grid	: grid::Grid,
+	grid	: scene::grid::Grid,
 	hero	: Character,
 }
 
@@ -155,7 +155,7 @@ pub fn make_scene( ct : &mut gr_low::context::Context, lg : &engine::journal::Lo
 				parent	: None,
 				actions	: ~[],
 			};
-			scene::Camera{
+			scene::common::Camera{
 				node	: cam_node,
 				proj	: projection::PerspectiveSym{
 					vfov	: 45f32,
@@ -190,8 +190,10 @@ pub fn make_scene( ct : &mut gr_low::context::Context, lg : &engine::journal::Lo
 	let mat = @gr_mid::draw::load_material(~"data/code/mat/phong");
 	let vao = ct.create_vertex_array();
 	// load battle landscape
+	let iscene = gen_scene::battle::main::load();
+	let scene = scene::load::parse( ~"data/scene/battle-test", &iscene, ~[], ct, Some(vao), lg );
 	let mut battle_land = {
-		let mesh = @engine::load::load_mesh( ~"data/mesh/battle-test.k3mesh", ct, lg );
+		let mesh = *scene.context.meshes.get( &~"Plane@all" );
 		let node = @mut engine::space::Node{
 			name	: ~"landscape",
 			space	: engine::space::QuatSpace::identity(),
@@ -208,14 +210,15 @@ pub fn make_scene( ct : &mut gr_low::context::Context, lg : &engine::journal::Lo
 	};
 	// load protagonist
 	let hero =	{
-		let mesh = @engine::load::load_mesh( ~"data/mesh/character.k3mesh", ct, lg );
+		let mesh = *scene.context.meshes.get( &~"Cube@all" );
 		let arm_node = @mut engine::space::Node{
 			name	: ~"armature",
 			space	: engine::space::QuatSpace::identity(),
 			parent	: None,
 			actions	: ~[],
 		};
-		let skel = @mut engine::load::load_armature( ~"data/arm/character.k3arm", arm_node, lg );
+		let skel = *scene.context.armatures.get( &~"Armature" );
+		skel.root = arm_node;
 		let node = @mut engine::space::Node{
 			name	: ~"hero",
 			space	: engine::space::QuatSpace::identity(),
@@ -239,7 +242,7 @@ pub fn make_scene( ct : &mut gr_low::context::Context, lg : &engine::journal::Lo
 		Character{
 			entity		: ent,
 			skeleton	: skel,
-			record		: skel.find_record(~"Idle").expect(~"Hero has to have Idle"),
+			record		: skel.find_record(~"ArmatureAction").expect(~"Hero has to have Idle"),
 			start_time	: engine::anim::get_time(),
 		}
 	};
@@ -250,7 +253,7 @@ pub fn make_scene( ct : &mut gr_low::context::Context, lg : &engine::journal::Lo
 	let utc = vec4::new(10f32,10f32,0f32,0f32);
 	battle_land.data.insert( ~"u_Tex0Transform", gr_low::shade::UniFloatVec(utc) );
 	// create grid
-	let grid = grid::Grid::create( ct, 10u, lg );
+	let grid = scene::grid::Grid::create( ct, 10u, lg );
 	grid.init( &mut ct.texture );
 	{	// move hero
 		let mut sp = hero.entity.node.space;

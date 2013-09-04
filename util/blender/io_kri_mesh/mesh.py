@@ -259,7 +259,7 @@ def collect_attributes(mesh,armature,groups,no_output,log):
 	if bad_vert:
 		log.log(1,'w','%d pure vertices detected' % (bad_vert))
 	if hasQuatUv and avg!=0.0:
-		log.log(1,'i','%.2f avg tangent accuracy' % (avg / len(ar_vert)))
+		log.log(1,'i','%.2f avg tangent accuracy' % (avg / len(set_vert)))
 	del set_surf
 	del bad_vert
 	del avg
