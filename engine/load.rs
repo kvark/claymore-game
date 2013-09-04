@@ -217,10 +217,12 @@ pub fn read_mesh( br : &mut Reader, context : &mut context::Context, lg : &journ
 	if signature != ~"k3mesh"	{
 		fail!(fmt!( "Invalid mesh signature '%s': %s", signature, br.path ))
 	}
+	let name	= br.get_string();
 	let n_vert	= br.get_uint(4u);
 	let n_ind	= br.get_uint(4u);
-	lg.add(fmt!( "Loading mesh of %u vertices and %u indices: %s", n_vert, n_ind, br.path ));
-	let mut mesh = context.create_mesh( br.get_string(), ~"3", n_vert, n_ind );
+	let topology= br.get_string();
+	lg.add(fmt!( "Loading mesh '%s' of %u vertices and %u indices: %s", name, n_vert, n_ind, br.path ));
+	let mut mesh = context.create_mesh( name, topology, n_vert, n_ind );
 	let mut num_buffers = br.get_uint(1u);
 	while num_buffers>0u	{
 		let buffer = context.create_buffer();

@@ -256,10 +256,9 @@ def save_scene(filepath,context,export_meshes,export_actions,precision):
 		if len(ob.modifiers):
 			log.log(1,'w','Unapplied modifiers detected on object %s' % (ob.name))
 		node_map[ob.name] = node = cook_node(ob,log)
-		if out_act_node:
-			anims = save_actions_int( out_act_node,ob,None,log )
-			for ani in anims:
-				node[2]['actions'].append( '%s@%s' % (ani,collection_node_anim) )
+		anims = save_actions_int( out_act_node,ob,None,log )
+		for ani in anims:
+			node[2]['actions'].append( '%s@%s' % (ani,collection_node_anim) )
 		if ob.parent == None:
 			nodes.append(node)
 		else:
@@ -268,10 +267,7 @@ def save_scene(filepath,context,export_meshes,export_actions,precision):
 		# parse node
 		if ob.type == 'MESH':
 			if out_mesh != None:
-				out_mesh.begin('meta')
-				out_mesh.text(ob.data.name)
 				(_,face_num) = save_mesh(out_mesh,ob,log)
-				out_mesh.end()
 			else:
 				(_,face_num) = collect_attributes(ob.data,None,ob.vertex_groups,True,log)
 			offset = 0
@@ -291,12 +287,11 @@ def save_scene(filepath,context,export_meshes,export_actions,precision):
 		elif ob.type == 'ARMATURE':
 			arm = cook_armature(ob.data,log)
 			children.append(arm)
-			if export_actions:
-				name = ob.data.name
-				ani_path = '%s/%s' % (filepath,name)
-				anims = save_actions_ext( ani_path,ob,'pose',log )
-				for ani in anims:
-					arm[2]['actions'].append( '%s@%s' % (ani,name) )
+			name = ob.data.name
+			ani_path = (None, '%s/%s' % (filepath,name))[export_actions]
+			anims = save_actions_ext( ani_path,ob,'pose',log )
+			for ani in anims:
+				arm[2]['actions'].append( '%s@%s' % (ani,name) )
 		elif ob.type == 'CAMERA':
 			children.append( cook_camera(ob.data,log) )
 		elif ob.type == 'LAMP':

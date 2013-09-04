@@ -113,7 +113,7 @@ class Mesh:
 
 def save_mesh(out,ob,log):
 	# ready...
-	print('Exporting Mesh...')
+	print("\t",'Exporting Mesh',ob.data.name)
 	log.logu(0,'Mesh %s' % (ob.data.name))
 	arm = None
 	if ob.parent and ob.parent.type == 'ARMATURE':
@@ -126,6 +126,7 @@ def save_mesh(out,ob,log):
 	assert len(totalFm) == 2*len(km.attribs)
 	stride = out.sizeOf(totalFm)
 	log.logu(1,'Format: %s, Stride: %d' % (totalFm,stride))
+	out.text(ob.data.name);
 	out.pack('LL', km.nv, km.ni)
 	out.text('3')	# topology
 	out.pack('BB', 2, stride)
@@ -156,7 +157,6 @@ def save_mesh(out,ob,log):
 		assert out.tell() == seqStart + km.ni*stride
 	# done
 	out.end()	#k3mesh
-	print('Done.')
 	return (km,face_num)
 
 

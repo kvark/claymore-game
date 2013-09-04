@@ -46,6 +46,8 @@ def save_action(out,act,prefix,log):
 	# write header or exit
 	if not len(rnas):
 		return None
+	if not out:
+		return act.name
 	out.begin( 'action' )
 	out.text( act.name )
 	out.pack('f', nf / bpy.context.scene.render.fps )
@@ -80,14 +82,17 @@ def save_actions_ext(path,ob,prefix,log):
 	all_actions = gather_anim(ob,log)
 	if len(all_actions)==0: return []
 	anilist = []
-	out = Writer(path + '.k3act')
-	out.begin('*action')
+	out = None
+	if path:
+		out = Writer(path + '.k3act')
+		out.begin('*action')
 	for act in all_actions:
 		name = save_action(out,act,prefix,log)
 		if name != None:
 			anilist.append(name)
-	out.end()
-	out.close()
+	if out:
+		out.end()
+		out.close()
 	return anilist
 		
 

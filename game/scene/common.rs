@@ -243,11 +243,8 @@ pub impl SceneContext	{
 		if split.len() > 1	{
 			assert!( rd.enter() == ~"*mesh" );
 			while rd.has_more()!=0u	{
-				assert!( rd.enter() == ~"meta" );
-				let name = rd.get_string();
 				let mesh = @engine::load::read_mesh( &mut rd, gc, lg );
-				rd.leave();
-				let full_name = fmt!( "%s@%s", name, split[1] );
+				let full_name = fmt!( "%s@%s", mesh.name, split[1] );
 				if full_name == *mesh_name	{
 					q_mesh = Some(mesh);
 				}
@@ -279,7 +276,6 @@ pub impl SceneContext	{
 			assert!( rd.enter() == ~"*action" );
 			while rd.has_more()!=0u	{
 				let act = @engine::load::read_action( &mut rd, *bones, lg );
-				rd.leave();
 				let full_name = fmt!( "%s@%s", act.name, split[1] );
 				if full_name == *act_name	{
 					q_act = Some(act);
