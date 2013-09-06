@@ -1,5 +1,6 @@
 pub type Path = ~str;
 pub type Vector = [uint, ..2]; //x,y
+pub type Kerning = [int, ..2];
 pub type Color = uint;
 
 pub enum Relation	{
@@ -42,13 +43,13 @@ pub struct Frame	{
 
 pub struct Font	{
 	path	: ~str,
-	color	: Color,
 	size	: Vector,
-	kern	: [float, ..2],
+	kern	: Kerning,
 }
 
 pub struct Text	{
-	font	: Font,
 	value	: ~str,
+	font	: Font,
+	color	: Color,
 	edit	: bool,
 }

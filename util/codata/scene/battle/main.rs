@@ -204,7 +204,7 @@ pub fn load()-> Scene	{Scene{
 						filter	: 3,
 						wrap	: 0,
 						offset	: [0.00, 0.00, 0.00],
-						path	: ~"//../../data/texture/SoilCracked0103_2_S.jpg",
+						path	: ~"//SoilCracked0103_2_S.jpg",
 					}
 				],
 				data	: ~[

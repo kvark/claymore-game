@@ -78,7 +78,7 @@ priv fn parse_materials( materials : &[gen::Material], prefix : ~str, ctx : &mut
 					},
 					None	=>	{
 						if !future_textures.contains_key( &itex.path )	{
-							let ft = engine::load::future_texture_2D( &path, true );
+							let ft = engine::load::TextureFuture::new_2D( copy path, true );
 							future_textures.insert( copy itex.path, ft );
 						}
 						None

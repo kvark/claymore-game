@@ -194,20 +194,19 @@ pub struct TextureFuture	{
 }
 
 pub impl TextureFuture	{
+	fn new_2D( path : ~str, mipmap : bool )-> TextureFuture	{
+		TextureFuture	{
+			name	: copy path,
+			image	: future::spawn(|| {stb_image::image::load(copy path)} ),
+			mipmap	: mipmap,
+		}
+	}
 	fn get( &self, ct : &mut context::Context )-> @texture::Texture	{
 		let result = self.image.get();
 		load_texture_2D_image( ct, &result, self.mipmap, self.name )
 	}
 }
 
-pub fn future_texture_2D( path : &~str, mipmap : bool )-> TextureFuture	{
-	let p = copy *path;
-	TextureFuture	{
-		name	: copy p,
-		image	: future::spawn(|| {stb_image::image::load(copy p)} ),
-		mipmap	: mipmap,
-	}
-}
 
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - //
 //		Mesh											//

@@ -20,6 +20,7 @@ extern mod std;
 
 
 pub mod hud;
+pub mod hud_new;
 pub mod input;
 pub mod main;
 

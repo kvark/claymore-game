@@ -276,8 +276,7 @@ pub impl Frame	{
 			return Some( fun(self) )
 		}
 		for uint::range(0,self.children.len())	|i|	{
-			//TODO: remove unsafe on Rust-0.6
-			let res = unsafe{ self.children[i].with_frame_mut(name,fun) };
+			let res = self.children[i].with_frame_mut(name,fun);
 			if res.is_some()	{
 				return res
 			}
