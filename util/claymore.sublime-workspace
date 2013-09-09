@@ -4,6 +4,58 @@
 		"selected_items":
 		[
 			[
+				"ch",
+				"children"
+			],
+			[
+				"elem",
+				"element"
+			],
+			[
+				"F",
+				"FontCache"
+			],
+			[
+				"get",
+				"get_among"
+			],
+			[
+				"child",
+				"children"
+			],
+			[
+				"get_",
+				"get_string"
+			],
+			[
+				"all",
+				"all_actions"
+			],
+			[
+				"collec",
+				"collection_node_anim"
+			],
+			[
+				"par",
+				"parse_space"
+			],
+			[
+				"arma",
+				"armatures"
+			],
+			[
+				"array",
+				"array_index"
+			],
+			[
+				"matrix",
+				"matrix_local"
+			],
+			[
+				"Node",
+				"NodeChild"
+			],
+			[
 				"input",
 				"input_queue"
 			],
@@ -144,16 +196,8 @@
 				"AL_FORMAT_MONO16"
 			],
 			[
-				"get",
-				"get_uint"
-			],
-			[
 				"sou",
 				"sound_source"
-			],
-			[
-				"get_",
-				"get_bytes"
 			],
 			[
 				"cre",
@@ -174,10 +218,6 @@
 			[
 				"up",
 				"update_base"
-			],
-			[
-				"ch",
-				"child"
 			],
 			[
 				"y_m",
@@ -376,10 +416,6 @@
 				"dual_quat"
 			],
 			[
-				"Node",
-				"NodeInfo"
-			],
-			[
 				"Came",
 				"Camera"
 			],
@@ -478,47 +514,59 @@
 			[
 				"as",
 				"ascender"
-			],
-			[
-				"yp",
-				"ypix"
-			],
-			[
-				"mu",
-				"mut_data"
-			],
-			[
-				"sp",
-				"space"
-			],
-			[
-				"dei",
-				"destination"
-			],
-			[
-				"Quat",
-				"QuatSpace"
-			],
-			[
-				"stencil",
-				"stencil_front"
-			],
-			[
-				"stencil_",
-				"stencil_back"
-			],
-			[
-				"GL_TEXT",
-				"GL_TEXTURE_2D"
-			],
-			[
-				"GL_UN",
-				"GL_UNSIGNED_INT"
 			]
 		]
 	},
 	"buffers":
 	[
+		{
+			"file": "/mnt/code/claymore/claymore-game/game/hud_new.rs",
+			"settings":
+			{
+				"buffer_size": 4806,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "/mnt/code/claymore/claymore-game/game/hud.rs",
+			"settings":
+			{
+				"buffer_size": 15572,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "/mnt/code/claymore/claymore-game/engine/gr_mid/font.rs",
+			"settings":
+			{
+				"buffer_size": 8677,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "codata/hud/common.rs",
+			"settings":
+			{
+				"buffer_size": 1112,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "/mnt/code/claymore/claymore-game/engine/gr_low/texture.rs",
+			"settings":
+			{
+				"buffer_size": 11907,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "codata/hud/chared.rs",
+			"settings":
+			{
+				"buffer_size": 1259,
+				"line_ending": "Unix"
+			}
+		}
 	],
 	"build_system": "",
 	"command_palette":
@@ -526,6 +574,14 @@
 		"height": 392.0,
 		"selected_items":
 		[
+			[
+				"Snippet: ",
+				"Snippet: Ok(…)"
+			],
+			[
+				"tab",
+				"View: Toggle Tabs"
+			],
 			[
 				"",
 				"Build: Build"
@@ -552,6 +608,28 @@
 	},
 	"file_history":
 	[
+		"/mnt/code/claymore/claymore-game/util/codata/hud/common.rs",
+		"/mnt/code/claymore/claymore-game/util/codata/scene/battle/main.rs",
+		"/mnt/code/claymore/claymore-game/game/scene/load.rs",
+		"/mnt/code/claymore/claymore-game/engine/load.rs",
+		"/mnt/code/claymore/claymore-game/util/codata/hud/chared.rs",
+		"/mnt/code/claymore/claymore-game/data/hud/char.json",
+		"/mnt/code/claymore/claymore-game/util/codata/hud/hud.rs",
+		"/mnt/code/claymore/claymore-game/game/hud.rs",
+		"/mnt/code/claymore/claymore-game/game/claymore.rs",
+		"/mnt/code/claymore/claymore-game/util/codata/scene/common.rs",
+		"/mnt/code/claymore/claymore-game/util/blender/io_kri_scene/scene.py",
+		"/mnt/code/claymore/claymore-game/util/blender/io_kri/action.py",
+		"/mnt/code/claymore/claymore-game/engine/gr_mid/mesh.rs",
+		"/mnt/code/claymore/claymore-game/util/blender/io_kri_mesh/mesh.py",
+		"/mnt/code/claymore/claymore-game/game/scene/common.rs",
+		"/mnt/code/claymore/claymore-game/data/details.json",
+		"/mnt/code/claymore/claymore-game/game/scene/chared.rs",
+		"/mnt/code/claymore/claymore-game/game/scene/battle.rs",
+		"/mnt/code/claymore/claymore-game/.hgignore",
+		"/mnt/code/claymore/claymore-game/game/scene/load_json.rs",
+		"/mnt/code/claymore/claymore-game/util/blender/io_kri_arm/arm.py",
+		"/mnt/code/claymore/claymore-game/util/blender/io_kri_scene/__init__.py",
 		"/Users/kvark/Code/rust/claymore-game/game/battle.rs",
 		"/Users/kvark/Code/rust/claymore-game/data/hud/char.json",
 		"/Users/kvark/Code/rust/claymore-game/game/chared.rs",
@@ -657,29 +735,7 @@
 		"/Users/kvark/Code/rust/claymore-game/sample/demo05-text.rs",
 		"/Users/kvark/Code/rust/claymore-game/data/code/hud/text_bubble.glslf",
 		"/Users/kvark/Code/rust/claymore-game/data/code/hud/text_bubble.glslv",
-		"/Users/kvark/Code/rust/claymore-game/data/code/hud/text.glslf",
-		"/Users/kvark/Code/rust/claymore-game/data/code/hud/text.glslv",
-		"/Users/kvark/Code/rust/claymore-game/data/code/hud",
-		"/Users/kvark/Code/rust/claymore-game/data/code-game/grid.glslf",
-		"/Users/kvark/Library/Application Support/Sublime Text 2/Packages/User/Preferences.sublime-settings",
-		"/Users/kvark/Code/rust/claymore-game/data/code-game/grid.glslv",
-		"/Users/kvark/Code/rust/claymore-game/data/code/tech/forward/sub.glslv",
-		"/Users/kvark/Code/rust/claymore-game/data/code/tech/forward/sun.glslf",
-		"/Users/kvark/Code/rust/claymore-game/data/code/tech/forward/sun.glslv",
-		"/Users/kvark/Code/rust/claymore-game/sample/demo04-skeleton.rs",
-		"/Users/kvark/Code/claymore-game/game/main.rs",
-		"/Users/kvark/Code/claymore-game/engine/space.rs",
-		"/Users/kvark/Code/claymore-game/engine/load.rs",
-		"/Users/kvark/Code/claymore-game/data/code/mod/arm.glslv",
-		"/Users/kvark/Code/claymore-game/data/code/tech/omni1.glslf",
-		"/Users/kvark/Code/claymore-game/data/code/mat/phong.glslf",
-		"/Users/kvark/Code/claymore-game/data/code/mat/phong.glslv",
-		"/Users/kvark/Code/claymore-game/engine/shade.rs",
-		"/Users/kvark/Code/claymore-game/Makefile",
-		"/Users/kvark/Code/claymore-game/data/code/mod/arm_dualquat.glslv",
-		"/Users/kvark/Code/claymore-game/engine/draw.rs",
-		"/Users/kvark/Code/claymore-game/data/code/mat/fresnel.glslv",
-		"/Users/kvark/Code/claymore-game/data/code/mat/phong_tangent.glslv"
+		"/Users/kvark/Code/rust/claymore-game/data/code/hud/text.glslf"
 	],
 	"find":
 	{
@@ -687,7 +743,7 @@
 	},
 	"find_in_files":
 	{
-		"height": 0.0,
+		"height": 90.0,
 		"where_history":
 		[
 			""
@@ -695,9 +751,44 @@
 	},
 	"find_state":
 	{
-		"case_sensitive": false,
+		"case_sensitive": true,
 		"find_history":
 		[
+			"IDENTIFICATION",
+			"Eq",
+			"IterBytes",
+			"context::",
+			"context",
+			"fc",
+			"texture",
+			"context::",
+			"context",
+			"gr_low",
+			"shade",
+			"gr_low",
+			"id.caption.left",
+			"id.caption.text",
+			"id.caption.frame",
+			"id.frame",
+			"load_config",
+			"grid::",
+			"grid",
+			"scene::",
+			"vfov",
+			"ChildCam",
+			"required attribute",
+			"has_more",
+			"mesh",
+			"mesh:",
+			"parse_child",
+			"get_input",
+			"query_mesh",
+			"parse_bones",
+			"parse_child",
+			"read_action",
+			"out_arm",
+			"ChildArm",
+			"Armature",
 			"mouse",
 			"KeyFun",
 			"self",
@@ -790,42 +881,7 @@
 			"framerate",
 			"kFrameSec",
 			"min_x",
-			"max_x",
-			"face.offset",
-			"face.off",
-			"fail",
-			"64f",
-			"vt",
-			"fail",
-			"debug",
-			"fail",
-			"6u",
-			"a_Vertex",
-			"unsafe",
-			"as @",
-			"filepath",
-			"save_me",
-			"int\ncreate_stencil",
-			"int",
-			" \n",
-			"make_rect",
-			"trait",
-			"glcore",
-			"View vector",
-			"create_mesh",
-			"LinearMap",
-			"range",
-			"bind_pose",
-			"lerp",
-			"glCreateShader",
-			"sync_back",
-			"));",
-			"lmath",
-			"self.node",
-			"a_Normal",
-			"used_meta",
-			"u_PosCam",
-			"substr"
+			"max_x"
 		],
 		"highlight": true,
 		"in_selection": false,
@@ -842,14 +898,177 @@
 		"reverse": false,
 		"show_context": true,
 		"use_buffer2": true,
-		"whole_word": false,
+		"whole_word": true,
 		"wrap": true
 	},
 	"groups":
 	[
 		{
+			"selected": 0,
 			"sheets":
 			[
+				{
+					"buffer": 0,
+					"file": "/mnt/code/claymore/claymore-game/game/hud_new.rs",
+					"settings":
+					{
+						"buffer_size": 4806,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								4796,
+								4796
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Rust/Rust.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 2250.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 1,
+					"file": "/mnt/code/claymore/claymore-game/game/hud.rs",
+					"settings":
+					{
+						"buffer_size": 15572,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								13488,
+								13488
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Rust/Rust.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 6851.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 2,
+					"file": "/mnt/code/claymore/claymore-game/engine/gr_mid/font.rs",
+					"settings":
+					{
+						"buffer_size": 8677,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								3108,
+								3108
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Rust/Rust.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 1817.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 3,
+					"file": "codata/hud/common.rs",
+					"settings":
+					{
+						"buffer_size": 1112,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								877,
+								877
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Rust/Rust.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 144.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 4,
+					"file": "/mnt/code/claymore/claymore-game/engine/gr_low/texture.rs",
+					"settings":
+					{
+						"buffer_size": 11907,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								3171,
+								3171
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Rust/Rust.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 822.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 5,
+					"file": "codata/hud/chared.rs",
+					"settings":
+					{
+						"buffer_size": 1259,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								826,
+								826
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Rust/Rust.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				}
 			]
 		}
 	],
@@ -911,7 +1130,7 @@
 	},
 	"show_minimap": true,
 	"show_open_files": false,
-	"show_tabs": true,
+	"show_tabs": false,
 	"side_bar_visible": true,
 	"side_bar_width": 216.0,
 	"status_bar_visible": true

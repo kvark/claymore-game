@@ -1,3 +1,5 @@
+use core;	//for IterBytes
+
 pub type Path = ~str;
 pub type Vector = [uint, ..2]; //x,y
 pub type Kerning = [int, ..2];
@@ -41,6 +43,8 @@ pub struct Frame	{
 	children: ~[Child],
 }
 
+//#[deriving(Eq)]
+#[deriving(IterBytes)]
 pub struct Font	{
 	path	: ~str,
 	size	: Vector,
@@ -51,5 +55,15 @@ pub struct Text	{
 	value	: ~str,
 	font	: Font,
 	color	: Color,
+	bound	: Vector,
 	edit	: bool,
+}
+
+impl core::cmp::Eq for Font	{
+	fn eq( &self, other : &Font )-> bool	{
+		self.path == other.path && self.size == other.size && self.kern == other.kern
+	}
+	fn ne( &self, other : &Font )-> bool	{
+		!self.eq( other )
+	}
 }

@@ -31,6 +31,7 @@ pub fn load()-> Screen	{Screen	{
 											kern	: [0,-10],
 										},
 										color	: 0x000000FF,
+										bound	: [200,50],
 										edit	: false,
 									}),
 								},	//text

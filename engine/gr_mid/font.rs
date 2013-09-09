@@ -247,7 +247,7 @@ impl Font	{
 
 
 pub impl Context	{
-	fn load_font( @self, path : &str, index : uint, xs : uint, ys : uint,
+	fn load( @self, path : &str, index : uint, xs : uint, ys : uint,
 			kerning : float, line_gap : float )-> @Font	{
 		let mut face : FT_Face = ptr::null();
 		do str::as_c_str(path) |text|	{

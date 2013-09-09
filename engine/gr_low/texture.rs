@@ -1,9 +1,9 @@
 extern mod glcore;
 
+use core;
 use core::cmp::Eq;
 use core::hashmap::linear::LinearMap;
 use core::managed;
-use core::to_bytes;
 use core::to_str::ToStr;
 
 use gr_low::{context,frame};
@@ -135,20 +135,12 @@ pub fn map_pix_format( s : ~str )-> glcore::GLenum	{
 }
 
 
-//#[deriving(IterBytes)]
+#[deriving(IterBytes)]
 #[deriving(Eq)]
 pub struct Slot	{
 	unit	: uint,
 	target	: Target
 }
-
-impl to_bytes::IterBytes for Slot	{
-	fn iter_bytes( &self, lsb0 : bool, f : to_bytes::Cb)	{
-		self.unit.iter_bytes( lsb0, f );
-		(*self.target).iter_bytes( lsb0, f );
-	}
-}
-
 
 pub struct Binding	{
 	unit	: uint,
