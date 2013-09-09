@@ -38,6 +38,7 @@ pub struct Context	{
 	ta_color	: @gr_low::texture::Texture,
 	t_depth		: @gr_low::texture::Texture,
 	fbo_alt		: @mut gr_low::frame::Buffer,
+	cache		: @mut gr_mid::draw::Cache,
 }
 
 pub impl Context	{
@@ -65,6 +66,7 @@ pub impl Context	{
 			ta_color	: ta_col,
 			t_depth		: depth,
 			fbo_alt		: gc.create_frame_buffer(),
+			cache		: @mut gr_mid::draw::make_cache(),
 		}
 	}
 
@@ -129,7 +131,7 @@ pub impl Context	{
 				modifier: @() as @gr_mid::draw::Mod,
 				material: mat,
 			};
-			self.tech_bake.process( &e, copy output, copy rast, None, gc, lg )
+			self.tech_bake.process( &e, copy output, copy rast, self.cache, gc, lg )
 		};
 		//todo: functional style in Rust-0.6
 		queue.insert( 0u, clear );

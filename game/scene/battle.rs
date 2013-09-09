@@ -26,7 +26,7 @@ pub impl Character	{
 		let time = engine::anim::get_time();
 		let mut moment  = time - self.start_time;
 		if moment>self.record.duration	{
-			self.record = self.skeleton.find_record(~"Idle").expect(~"!");
+			self.record = self.skeleton.find_record(~"ArmatureAction").expect(~"character Idle not found");
 			self.start_time = time;
 			moment = 0f;
 		}
@@ -78,6 +78,7 @@ pub struct Scene	{
 	land	: engine::object::Entity,
 	grid	: scene::grid::Grid,
 	hero	: Character,
+	cache	: gr_mid::draw::Cache,
 }
 
 pub impl Scene	{
@@ -128,8 +129,8 @@ pub impl Scene	{
 		let mut rast = gc.default_rast;
 		rast.set_depth( ~"<=", true );
 		rast.prime.cull = true;
-		let c_land = tech.process( &self.land, copy output, copy rast, None, gc, lg );
-		let c_hero = tech.process( &self.hero.entity, copy output, copy rast, None, gc, lg );
+		let c_land = tech.process( &self.land, copy output, copy rast, &mut self.cache, gc, lg );
+		let c_hero = tech.process( &self.hero.entity, copy output, copy rast, &mut self.cache, gc, lg );
 		let c_grid = self.grid.call( output.fb, copy output.pmap, self.land.input.va );
 		gc.flush( ~[c_land,c_hero,c_grid] );
 	}
@@ -267,5 +268,6 @@ pub fn make_scene( ct : &mut gr_low::context::Context, lg : &engine::journal::Lo
 		land	: battle_land,
 		grid	: grid,
 		hero	: hero,
+		cache	: gr_mid::draw::make_cache(),
 	}
 }

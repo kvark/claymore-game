@@ -218,7 +218,7 @@ pub impl Scene	{
 					for group.each() |ent|	{
 						queue.push( self.shadow.tech_solid.process( ent,
 							copy self.shadow.output, copy self.shadow.rast,
-							Some( &mut self.cache ), ct, lg ));
+							&mut self.cache, ct, lg ));
 					}
 				}
 				/*for [&self.gr_hair].each() |group|	{
@@ -235,7 +235,7 @@ pub impl Scene	{
 					for group.each_mut() |ent|	{
 						queue.push( self.depth.tech_solid.process( ent,
 							copy self.depth.output, copy self.depth.rast,
-							Some( &mut self.cache ), ct, lg ));
+							&mut self.cache, ct, lg ));
 						lbuf.fill_data( &mut ent.data );
 					}
 				}
@@ -252,18 +252,18 @@ pub impl Scene	{
 		};
 		if el.character	{
 			for self.gr_main.each() |ent|	{
-				queue.push( tech.process( ent, copy output, copy self.rast_solid, Some( &mut self.cache ), ct, lg ) );
+				queue.push( tech.process( ent, copy output, copy self.rast_solid, &mut self.cache, ct, lg ) );
 			}
 			for self.gr_cape.each() |ent|	{
-				queue.push( tech.process( ent, copy output, copy self.rast_cloak, Some( &mut self.cache ), ct, lg ) );	
+				queue.push( tech.process( ent, copy output, copy self.rast_cloak, &mut self.cache, ct, lg ) );	
 			}
 			for self.gr_hair.each() |ent|	{
-				queue.push( tech.process( ent, copy output, copy self.rast_alpha, Some( &mut self.cache ), ct, lg ) );
+				queue.push( tech.process( ent, copy output, copy self.rast_alpha, &mut self.cache, ct, lg ) );
 			}
 		}
 		if el.shadow	{
 			for self.gr_other.each() |ent|	{
-				queue.push( tech.process( ent, copy output, copy self.rast_solid, Some( &mut self.cache ), ct, lg ) );
+				queue.push( tech.process( ent, copy output, copy self.rast_solid, &mut self.cache, ct, lg ) );
 			}
 		}
 		if el.hud	{

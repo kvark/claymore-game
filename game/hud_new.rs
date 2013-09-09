@@ -223,7 +223,8 @@ pub impl Context	{
 				},
 				&gen::ElSpace(space)	=> space,
 				&gen::ElFrame(ref frame)	=>	{
-					let (size,sub) = self.draw( frame.children, copy area, cache );
+					let a2 = Rect{ x:off[0],y:off[1], w:area.x+area.w-off[0], h:area.y+area.h-off[1] };
+					let (size,sub) = self.draw( frame.children, a2, cache );
 					calls.push_all_move( sub );
 					size
 				},
