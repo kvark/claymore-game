@@ -194,7 +194,7 @@ impl Stage for Scissor	{
 	fn activate( &mut self, new : &Scissor, _poly : uint )	{
 		if self.test != new.test	{
 			self.test = new.test;
-			set_state( glcore::GL_SCISSOR_TEST, new.test);
+			set_state( glcore::GL_SCISSOR_TEST, new.test );
 		}
 		if new.test && self.area != new.area	{
 			self.area = new.area;

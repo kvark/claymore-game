@@ -1,5 +1,6 @@
 extern mod lmath;
 extern mod engine;
+extern mod gen_hud;
 extern mod gen_scene;
 
 use lmath::quat::*;
@@ -11,6 +12,7 @@ use engine::gr_mid::draw::Mod;
 use engine::space::{Interpolate,Space};
 
 use input;
+use hud_new;
 use scene;
 
 
@@ -79,6 +81,7 @@ pub struct Scene	{
 	grid	: scene::grid::Grid,
 	hero	: Character,
 	cache	: gr_mid::draw::Cache,
+	hud		: gen_hud::common::Screen,
 }
 
 pub impl Scene	{
@@ -113,8 +116,8 @@ pub impl Scene	{
 		}
 		self.hero.update() && self.view.update( cam_dir ) && ok
 	}
-	fn render( &mut self, gc : &mut gr_low::context::Context, tech : &gr_mid::draw::Technique,
-			output : gr_mid::call::Output, lg : &engine::journal::Log )	{
+	fn render( &mut self, gc : &mut gr_low::context::Context, hc : &hud_new::Context,
+			tech : &gr_mid::draw::Technique, output : gr_mid::call::Output, lg : &engine::journal::Log )	{
 		let aspect = output.area.aspect();
 		{// update matrices
 			let light_pos	= vec4::new( 4f32, 1f32, 6f32, 1f32 );
@@ -126,13 +129,23 @@ pub impl Scene	{
 				d.insert( ~"u_World",		gr_low::shade::UniMatrix(false,world) );
 			}
 		}
+		// clear screen
+		let cd = gr_mid::call::ClearData{
+			color	:Some( gr_low::rast::Color::new(0x8080FFFF) ),
+			depth	:Some( 1f ),
+			stencil	:Some( 0u ),
+		};
+		let c0 = gr_mid::call::CallClear( copy output, cd, copy gc.default_rast.mask );
+		// draw battle
 		let mut rast = gc.default_rast;
 		rast.set_depth( ~"<=", true );
 		rast.prime.cull = true;
 		let c_land = tech.process( &self.land, copy output, copy rast, &mut self.cache, gc, lg );
 		let c_hero = tech.process( &self.hero.entity, copy output, copy rast, &mut self.cache, gc, lg );
 		let c_grid = self.grid.call( output.fb, copy output.pmap, self.land.input.va );
-		gc.flush( ~[c_land,c_hero,c_grid] );
+		gc.flush( [c0,c_land,c_hero,c_grid] );
+		// draw hud
+		gc.flush( hc.draw_all( &self.hud, &output ) );
 	}
 	 fn debug_move( &self, _rot : bool, _x : int, _y : int )	{
 		//empty
@@ -140,7 +153,7 @@ pub impl Scene	{
 }
 
 
-pub fn make_scene( ct : &mut gr_low::context::Context, lg : &engine::journal::Log )-> Scene	{
+pub fn make_scene( gc : &mut gr_low::context::Context, hc : &mut hud_new::Context, fcon : @gr_mid::font::Context, lg : &engine::journal::Log )-> Scene	{
 	// create view
 	let view = 	{
 		// create camera
@@ -189,10 +202,10 @@ pub fn make_scene( ct : &mut gr_low::context::Context, lg : &engine::journal::Lo
 	};
 	// load basic material & vao
 	let mat = @gr_mid::draw::load_material(~"data/code/mat/phong");
-	let vao = ct.create_vertex_array();
+	let vao = gc.create_vertex_array();
 	// load battle landscape
 	let iscene = gen_scene::battle::main::load();
-	let scene = scene::load::parse( ~"data/scene/battle-test", &iscene, ~[], ct, Some(vao), lg );
+	let scene = scene::load::parse( ~"data/scene/battle-test", &iscene, ~[], gc, Some(vao), lg );
 	let mut battle_land = {
 		let mesh = *scene.context.meshes.get( &~"Plane@all" );
 		let node = @mut engine::space::Node{
@@ -234,7 +247,7 @@ pub fn make_scene( ct : &mut gr_low::context::Context, lg : &engine::journal::Lo
 			material: mat,
 		};
 		// load char texture
-		let tex = engine::load::load_texture_2D( ct, &~"data/texture/diffuse.jpg", true );
+		let tex = engine::load::load_texture_2D( gc, &~"data/texture/diffuse.jpg", true );
 		let s_opt = Some( gr_low::texture::Sampler::new(3u,1) );
 		ent.data.insert( ~"t_Main", gr_low::shade::UniTexture(0u,tex,s_opt) );
 		let utc = vec4::new(1f32,1f32,0f32,0f32);
@@ -248,20 +261,22 @@ pub fn make_scene( ct : &mut gr_low::context::Context, lg : &engine::journal::Lo
 		}
 	};
 	// load land texture
-	let tex = engine::load::load_texture_2D( ct, &~"data/texture/SoilCracked0103_2_S.jpg", true );
+	let tex = engine::load::load_texture_2D( gc, &~"data/texture/SoilCracked0103_2_S.jpg", true );
 	let s_opt = Some( gr_low::texture::Sampler::new(3u,1) );
 	battle_land.data.insert( ~"t_Main", gr_low::shade::UniTexture(0u,tex,s_opt) );
 	let utc = vec4::new(10f32,10f32,0f32,0f32);
 	battle_land.data.insert( ~"u_Tex0Transform", gr_low::shade::UniFloatVec(utc) );
 	// create grid
-	let grid = scene::grid::Grid::create( ct, 10u, lg );
-	grid.init( &mut ct.texture );
+	let grid = scene::grid::Grid::create( gc, 10u, lg );
+	grid.init( &mut gc.texture );
 	{	// move hero
 		let mut sp = hero.entity.node.space;
 		sp.position = grid.get_cell_center(7u,2u);
 		sp.position.z = 1.3f32;
 		sp.orientation = quat::new( 0.707f32, 0f32, 0f32, 0.707f32 );
 	}
+	let hud = gen_hud::battle::load();
+	hc.preload( hud.children, gc, fcon, lg );
 	// done
 	Scene{
 		view	: view,
@@ -269,5 +284,6 @@ pub fn make_scene( ct : &mut gr_low::context::Context, lg : &engine::journal::Lo
 		grid	: grid,
 		hero	: hero,
 		cache	: gr_mid::draw::make_cache(),
+		hud		: hud,
 	}
 }

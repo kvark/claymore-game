@@ -9,4 +9,5 @@
 #[crate_type = "lib"];
 
 pub mod common;
+pub mod battle;
 pub mod chared;

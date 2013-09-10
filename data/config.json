@@ -13,7 +13,7 @@
 		"debug"	:true
 	},
 	"journal":	{
-		"path"	: "build/log.txt",
+		"path"	: "build/run.log",
 		"depth"	: 5
 	},
 	"elements":	{

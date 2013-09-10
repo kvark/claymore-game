@@ -70,12 +70,12 @@ pub impl Output	{
 		Output	{
 			fb	: fb,
 			pmap: pmap,
-			area: frame::Rect::new(0x10000,0x10000),
+			area: frame::Rect::new(0,0),
 		}
 	}
 	fn gen_scissor( &self )-> rast::Scissor	{
 		rast::Scissor	{
-			test: self.area.w>0u || self.area.h>0u,
+			test: !self.area.is_empty(),
 			area: copy self.area,
 		}
 	}
@@ -92,8 +92,9 @@ pub enum Call	{
 
 
 pub impl context::Context	{
-	fn flush( &mut self, queue	: ~[Call] )	{
-		for vec::each_const(queue)	|&call|	{
+	fn flush( &mut self, queue	: &[Call] )	{
+		self.call_count += queue.len();
+		for queue.each()	|&call|	{
 			match call	{
 				CallEmpty => {},
 				CallClear(out,data,mask)	=> {

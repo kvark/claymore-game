@@ -7,6 +7,7 @@ use engine::{gr_low,gr_mid};
 use engine::gr_low::context::ProxyState;
 
 use input;
+use hud_new;
 use scene;
 
 
@@ -20,11 +21,13 @@ enum Screen	{
 
 
 struct Game	{
-	context		: gr_low::context::Context,
-	audio		: engine::audio::Context,
+	gr_context	: gr_low::context::Context,
+	aud_context	: engine::audio::Context,
+	font_context: @gr_mid::font::Context,
+	hud_context	: hud_new::Context,
 	journal		: engine::journal::Log,
-	sound_source: @mut engine::audio::Source,
 	frames		: uint,
+	call_count	: uint,
 	technique	: gr_mid::draw::Technique,
 	output		: gr_mid::call::Output,
 	s_intro		: scene::intro::Scene,
@@ -45,28 +48,39 @@ pub struct Elements	{
 
 pub impl Game	{
 	fn create( el : &Elements, wid : uint, het : uint, lg : engine::journal::Log  )-> Game	{
-		let mut ct = gr_low::context::create( wid, het );
-		assert!( ct.sync_back() );
+		let mut gcon = gr_low::context::create( wid, het );
+		assert!( gcon.sync_back() );
 		// audio test
-		let ac = engine::audio::Context::create();
-		let buf = @engine::audio::load_wav( &ac, ~"data/sound/stereol.wav", &lg );
-		let src = @mut ac.create_source();
-		src.bind(buf);
+		let acon = engine::audio::Context::create();
+		if false	{
+			let buf = @engine::audio::load_wav( &acon, ~"data/sound/stereol.wav", &lg );
+			let src = @mut acon.create_source();
+			src.bind(buf);
+		}
 		//src.play();
 		// create a forward light technique
 		let tech = gr_mid::draw::load_technique( ~"data/code/tech/forward/light" );
 		let pmap = gr_mid::call::PlaneMap::new_simple( ~"o_Color", gr_low::frame::TarEmpty );
-		let out = gr_mid::call::Output::new( ct.default_frame_buffer, pmap );
+		let out = gr_mid::call::Output::new( gcon.default_frame_buffer, pmap );
+		// create hud
+		let fcon = @gr_mid::font::Context::create();
+		let mut hcon = hud_new::Context::create( &mut gcon, &lg );
 		// done
-		ct.check(~"init");
+		gcon.check(~"init");
 		let intro = scene::intro::Scene{ active:false };
-		let editor = scene::chared::make_scene( el, &mut ct, &lg );
-		let battle = scene::battle::make_scene( &mut ct, &lg );
-		Game{ context:ct, audio:ac, journal:lg,
-			sound_source:src, frames:0u,
-			technique:tech, output:out,
+		let editor = scene::chared::make_scene( el, &mut gcon, fcon, &lg );
+		let battle = scene::battle::make_scene( &mut gcon, &mut hcon, fcon, &lg );
+		Game{
+			gr_context	: gcon,
+			aud_context	: acon,
+			font_context: fcon,
+			hud_context	: hcon,
+			journal		: lg,
+			frames:0u, call_count:0u,
+			technique	: tech,
+			output		: out,
 			s_intro:intro, s_editor:editor, s_battle:battle,
-			screen:ScreenBattle,
+			screen		: ScreenBattle,
 		}
 	}
 
@@ -74,7 +88,7 @@ pub impl Game	{
 		let aspect = self.output.area.aspect();
 		match self.screen	{
 			ScreenChar		=> self.s_editor.update( input, &self.journal ),
-			ScreenBattle	=> self.s_battle.update( input, &mut self.context.texture, aspect ),
+			ScreenBattle	=> self.s_battle.update( input, &mut self.gr_context.texture, aspect ),
 			_ => true
 		}
 	}
@@ -89,24 +103,16 @@ pub impl Game	{
 	fn render( &mut self, el : &Elements )-> bool	{
 		match self.screen	{
 			ScreenIntro	=> (),
-			ScreenChar	=> self.s_editor.render( el, &mut self.context, &self.journal ),
-			ScreenBattle	=> {
-				// clear screen
-				let cd = gr_mid::call::ClearData{
-					color	:Some( gr_low::rast::Color::new(0x8080FFFF) ),
-					depth	:Some( 1f ),
-					stencil	:Some( 0u ),
-				};
-				let c0 = gr_mid::call::CallClear( copy self.output, cd, copy self.context.default_rast.mask );
-				self.context.flush(~[c0]);
-				// draw battle
-				self.s_battle.render( &mut self.context, &self.technique, copy self.output, &self.journal );
-			},
+			ScreenChar	=> self.s_editor.render( el, &mut self.gr_context, &self.journal ),
+			ScreenBattle	=> self.s_battle.render( &mut self.gr_context, &self.hud_context,
+				&self.technique, copy self.output, &self.journal ),	
 			_ => ()
 		}
 		// done
+		self.call_count = self.gr_context.call_count;
+		self.gr_context.call_count = 0;
 		self.frames += 1;
-		self.context.check( ~"render" );
+		self.gr_context.check( ~"render" );
 		true
 	}
 	

@@ -149,7 +149,11 @@ pub impl Rect	{
 		r.y>=self.y && r.y+r.h<=self.y+self.w
 	}
 	fn aspect( &self )-> f32	{
-		(self.w as f32) / (self.h as f32)
+		if self.h==0 {0f32}
+		else {(self.w as f32) / (self.h as f32)}
+	}
+	fn is_empty( &self )-> bool	{
+		self.w==0 && self.h==0
 	}
 }
 

@@ -78,6 +78,7 @@ pub struct Context	{
 	caps				: Capabilities,
 	rast				: rast::State,
 	priv clear_data		: ClearData,
+	call_count			: uint,
 	// bindings
 	shader				: shade::Binding,
 	vertex_array		: buf::VaBinding,
@@ -107,6 +108,7 @@ pub fn create( wid : uint, het : uint )-> Context	{
 		caps				: caps,
 		rast				: copy rast,
 		clear_data			: ClearData{ color:color, depth:1f, stencil:0u },
+		call_count			: 0,
 		shader				: shade::Binding::new(),
 		vertex_array		: buf::VaBinding::new(),
 		array_buffer		: buf::Binding::new( glcore::GL_ARRAY_BUFFER ),

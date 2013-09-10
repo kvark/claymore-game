@@ -310,7 +310,8 @@ pub impl Scene	{
 }
 
 
-pub fn make_scene( el : &main::Elements, ct : &mut gr_low::context::Context, lg : &engine::journal::Log )-> Scene	{
+pub fn make_scene( el : &main::Elements, ct : &mut gr_low::context::Context, fcon : @gr_mid::font::Context,
+		lg : &engine::journal::Log )-> Scene	{
 	let vao = ct.create_vertex_array();
 	let mut scene = if true	{ //new method
 		let iscene = gen_scene::chared::main::load();
@@ -363,7 +364,6 @@ pub fn make_scene( el : &main::Elements, ct : &mut gr_low::context::Context, lg 
 		}		
 	};
 	// load char HUD
-	let fcon = @gr_mid::font::Context::create();
 	let mut hud_screen = hud::load_screen( ~"data/hud/char.json", ct, fcon, lg );
 	hud_screen.root.update( lg );
 	let hc = {

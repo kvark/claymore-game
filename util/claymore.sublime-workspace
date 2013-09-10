@@ -523,7 +523,7 @@
 			"file": "/mnt/code/claymore/claymore-game/game/hud_new.rs",
 			"settings":
 			{
-				"buffer_size": 4806,
+				"buffer_size": 6730,
 				"line_ending": "Unix"
 			}
 		},
@@ -566,12 +566,70 @@
 				"buffer_size": 1259,
 				"line_ending": "Unix"
 			}
+		},
+		{
+			"file": "/mnt/code/claymore/claymore-game/game/main.rs",
+			"settings":
+			{
+				"buffer_size": 6332,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "/mnt/code/claymore/claymore-game/game/scene/battle.rs",
+			"settings":
+			{
+				"buffer_size": 8167,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "/mnt/code/claymore/claymore-game/engine/gr_mid/draw.rs",
+			"settings":
+			{
+				"buffer_size": 4323,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "/mnt/code/claymore/claymore-game/engine/object.rs",
+			"settings":
+			{
+				"buffer_size": 902,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"contents": "Searching 324 files for \"process\" (case sensitive, whole word)\n\n/mnt/code/claymore/claymore-game/engine/object.rs:\n   23  \n   24  pub impl gr_mid::draw::Technique	{\n   25: 	fn process( &self, e : &Entity, output : gr_mid::call::Output, rast : gr_low::rast::State,\n   26  			cache : &mut gr_mid::draw::Cache, ct : &gr_low::context::Context,\n   27  			lg : &journal::Log )-> gr_mid::call::Call	{\n\n/mnt/code/claymore/claymore-game/game/render/lbuf.rs:\n  130  				material: mat,\n  131  			};\n  132: 			self.tech_bake.process( &e, copy output, copy rast, None, gc, lg )\n  133  		};\n  134  		//todo: functional style in Rust-0.6\n\n/mnt/code/claymore/claymore-game/game/scene/battle.rs:\n  129  		rast.set_depth( ~\"<=\", true );\n  130  		rast.prime.cull = true;\n  131: 		let c_land = tech.process( &self.land, copy output, copy rast, None, gc, lg );\n  132: 		let c_hero = tech.process( &self.hero.entity, copy output, copy rast, None, gc, lg );\n  133  		let c_grid = self.grid.call( output.fb, copy output.pmap, self.land.input.va );\n  134  		gc.flush( ~[c_land,c_hero,c_grid] );\n\n/mnt/code/claymore/claymore-game/game/scene/chared.rs:\n  217  				for [&self.gr_main,&self.gr_cape,&self.gr_hair].each() |group|	{\n  218  					for group.each() |ent|	{\n  219: 						queue.push( self.shadow.tech_solid.process( ent,\n  220  							copy self.shadow.output, copy self.shadow.rast,\n  221  							Some( &mut self.cache ), ct, lg ));\n  ...\n  224  				/*for [&self.gr_hair].each() |group|	{\n  225  					for group.each() |ent|	{\n  226: 						queue.push( self.shadow.tech_alpha.process( ent, ct, lg ));\n  227  					}\n  228  				}*/\n  ...\n  234  				for [&mut self.gr_main,&mut self.gr_cape,&mut self.gr_hair].each() |group|	{\n  235  					for group.each_mut() |ent|	{\n  236: 						queue.push( self.depth.tech_solid.process( ent,\n  237  							copy self.depth.output, copy self.depth.rast,\n  238  							Some( &mut self.cache ), ct, lg ));\n  ...\n  253  		if el.character	{\n  254  			for self.gr_main.each() |ent|	{\n  255: 				queue.push( tech.process( ent, copy output, copy self.rast_solid, Some( &mut self.cache ), ct, lg ) );\n  256  			}\n  257  			for self.gr_cape.each() |ent|	{\n  258: 				queue.push( tech.process( ent, copy output, copy self.rast_cloak, Some( &mut self.cache ), ct, lg ) );	\n  259  			}\n  260  			for self.gr_hair.each() |ent|	{\n  261: 				queue.push( tech.process( ent, copy output, copy self.rast_alpha, Some( &mut self.cache ), ct, lg ) );\n  262  			}\n  263  		}\n  264  		if el.shadow	{\n  265  			for self.gr_other.each() |ent|	{\n  266: 				queue.push( tech.process( ent, copy output, copy self.rast_solid, Some( &mut self.cache ), ct, lg ) );\n  267  			}\n  268  		}\n\n/mnt/code/claymore/claymore-game/util/blender/io_kri_mat/__init__.py:\n   46  		default=Settings.showWarning )\n   47  	break_err	= BoolProperty( name='Break on error',\n   48: 		description='Stop the process on first error',\n   49  		default=Settings.breakError )\n   50  \n\n/mnt/code/claymore/claymore-game/util/blender/io_kri_mesh/__init__.py:\n   46  		default=Settings.showWarning )\n   47  	break_err	= BoolProperty( name='Break on error',\n   48: 		description='Stop the process on first error',\n   49  		default=Settings.breakError )\n   50  	put_normal	= BoolProperty( name='Put normals',\n\n/mnt/code/claymore/claymore-game/util/blender/io_kri_scene/__init__.py:\n   54  		default=Settings.showWarning )\n   55  	break_err	= BoolProperty( name='Break on error',\n   56: 		description='Stop the process on first error',\n   57  		default=Settings.breakError )\n   58  	# mesh settings\n\n/mnt/code/claymore/claymore-game/util/sample/demo03-materials.rs:\n  167  		let mx = e.node.world_space().to_matrix();\n  168  		s.data.insert( ~\"u_World\", engine::shade::UniMatrix(false,mx) );\n  169: 		calls.push( t.process( e, &s.context, copy s.data ));\n  170  	}\n  171  	s.context.flush(calls);\n\n/mnt/code/claymore/claymore-game/util/sample/demo04-skeleton.rs:\n  153  		let c0 = engine::call::CallClear( t.fbo, copy t.pmap,\n  154  			cdata, t.rast.scissor, t.rast.mask );\n  155: 		let c1 = t.process( &s.entity, &s.context );\n  156  		s.context.flush(~[c0,c1]);\n  157  	}\n\n/mnt/code/claymore/rust-stb-image/stb_image.c:\n   81  //    int x,y,n;\n   82  //    unsigned char *data = stbi_load(filename, &x, &y, &n, 0);\n   83: //    // ... process data if not NULL ... \n   84  //    // ... x = width, y = height, n = # 8-bit components per pixel ...\n   85  //    // ... replace '0' with '1'..'4' to force that many components per pixel\n   ..\n  288  extern void stbi_set_unpremultiply_on_load(int flag_true_if_should_unpremultiply);\n  289  \n  290: // indicate whether we should process iphone images back to canonical format,\n  291  // or just pass them through \"as-is\"\n  292  extern void stbi_convert_iphone_png_to_rgb(int flag_true_if_should_convert);\n  ...\n 1363        short data[64];\n 1364        int n = z->order[0];\n 1365:       // non-interleaved data, we just need to process one block at a time,\n 1366        // in trivial scanline order\n 1367        // number of blocks to do just depends on how many actual \"pixels\" this\n ....\n 1392        for (j=0; j < z->img_mcu_y; ++j) {\n 1393           for (i=0; i < z->img_mcu_x; ++i) {\n 1394:             // scan an interleaved mcu... process scan_n components in order\n 1395              for (k=0; k < z->scan_n; ++k) {\n 1396                 int n = z->order[k];\n\n20 matches across 10 files\n\n\nSearching 324 files for \"process\" (case sensitive, whole word)\n\n/mnt/code/claymore/claymore-game/engine/object.rs:\n   23  \n   24  pub impl gr_mid::draw::Technique	{\n   25: 	fn process( &self, e : &Entity, output : gr_mid::call::Output, rast : gr_low::rast::State,\n   26  			cache : &mut gr_mid::draw::Cache, ct : &gr_low::context::Context,\n   27  			lg : &journal::Log )-> gr_mid::call::Call	{\n\n/mnt/code/claymore/claymore-game/game/render/lbuf.rs:\n  132  				material: mat,\n  133  			};\n  134: 			self.tech_bake.process( &e, copy output, copy rast, self.cache, gc, lg )\n  135  		};\n  136  		//todo: functional style in Rust-0.6\n\n/mnt/code/claymore/claymore-game/game/scene/battle.rs:\n  129  		rast.set_depth( ~\"<=\", true );\n  130  		rast.prime.cull = true;\n  131: 		let c_land = tech.process( &self.land, copy output, copy rast, None, gc, lg );\n  132: 		let c_hero = tech.process( &self.hero.entity, copy output, copy rast, None, gc, lg );\n  133  		let c_grid = self.grid.call( output.fb, copy output.pmap, self.land.input.va );\n  134  		gc.flush( ~[c_land,c_hero,c_grid] );\n\n/mnt/code/claymore/claymore-game/game/scene/chared.rs:\n  217  				for [&self.gr_main,&self.gr_cape,&self.gr_hair].each() |group|	{\n  218  					for group.each() |ent|	{\n  219: 						queue.push( self.shadow.tech_solid.process( ent,\n  220  							copy self.shadow.output, copy self.shadow.rast,\n  221  							Some( &mut self.cache ), ct, lg ));\n  ...\n  224  				/*for [&self.gr_hair].each() |group|	{\n  225  					for group.each() |ent|	{\n  226: 						queue.push( self.shadow.tech_alpha.process( ent, ct, lg ));\n  227  					}\n  228  				}*/\n  ...\n  234  				for [&mut self.gr_main,&mut self.gr_cape,&mut self.gr_hair].each() |group|	{\n  235  					for group.each_mut() |ent|	{\n  236: 						queue.push( self.depth.tech_solid.process( ent,\n  237  							copy self.depth.output, copy self.depth.rast,\n  238  							Some( &mut self.cache ), ct, lg ));\n  ...\n  253  		if el.character	{\n  254  			for self.gr_main.each() |ent|	{\n  255: 				queue.push( tech.process( ent, copy output, copy self.rast_solid, Some( &mut self.cache ), ct, lg ) );\n  256  			}\n  257  			for self.gr_cape.each() |ent|	{\n  258: 				queue.push( tech.process( ent, copy output, copy self.rast_cloak, Some( &mut self.cache ), ct, lg ) );	\n  259  			}\n  260  			for self.gr_hair.each() |ent|	{\n  261: 				queue.push( tech.process( ent, copy output, copy self.rast_alpha, Some( &mut self.cache ), ct, lg ) );\n  262  			}\n  263  		}\n  264  		if el.shadow	{\n  265  			for self.gr_other.each() |ent|	{\n  266: 				queue.push( tech.process( ent, copy output, copy self.rast_solid, Some( &mut self.cache ), ct, lg ) );\n  267  			}\n  268  		}\n\n/mnt/code/claymore/claymore-game/util/blender/io_kri_mat/__init__.py:\n   46  		default=Settings.showWarning )\n   47  	break_err	= BoolProperty( name='Break on error',\n   48: 		description='Stop the process on first error',\n   49  		default=Settings.breakError )\n   50  \n\n/mnt/code/claymore/claymore-game/util/blender/io_kri_mesh/__init__.py:\n   46  		default=Settings.showWarning )\n   47  	break_err	= BoolProperty( name='Break on error',\n   48: 		description='Stop the process on first error',\n   49  		default=Settings.breakError )\n   50  	put_normal	= BoolProperty( name='Put normals',\n\n/mnt/code/claymore/claymore-game/util/blender/io_kri_scene/__init__.py:\n   54  		default=Settings.showWarning )\n   55  	break_err	= BoolProperty( name='Break on error',\n   56: 		description='Stop the process on first error',\n   57  		default=Settings.breakError )\n   58  	# mesh settings\n\n/mnt/code/claymore/claymore-game/util/sample/demo03-materials.rs:\n  167  		let mx = e.node.world_space().to_matrix();\n  168  		s.data.insert( ~\"u_World\", engine::shade::UniMatrix(false,mx) );\n  169: 		calls.push( t.process( e, &s.context, copy s.data ));\n  170  	}\n  171  	s.context.flush(calls);\n\n/mnt/code/claymore/claymore-game/util/sample/demo04-skeleton.rs:\n  153  		let c0 = engine::call::CallClear( t.fbo, copy t.pmap,\n  154  			cdata, t.rast.scissor, t.rast.mask );\n  155: 		let c1 = t.process( &s.entity, &s.context );\n  156  		s.context.flush(~[c0,c1]);\n  157  	}\n\n/mnt/code/claymore/rust-stb-image/stb_image.c:\n   81  //    int x,y,n;\n   82  //    unsigned char *data = stbi_load(filename, &x, &y, &n, 0);\n   83: //    // ... process data if not NULL ... \n   84  //    // ... x = width, y = height, n = # 8-bit components per pixel ...\n   85  //    // ... replace '0' with '1'..'4' to force that many components per pixel\n   ..\n  288  extern void stbi_set_unpremultiply_on_load(int flag_true_if_should_unpremultiply);\n  289  \n  290: // indicate whether we should process iphone images back to canonical format,\n  291  // or just pass them through \"as-is\"\n  292  extern void stbi_convert_iphone_png_to_rgb(int flag_true_if_should_convert);\n  ...\n 1363        short data[64];\n 1364        int n = z->order[0];\n 1365:       // non-interleaved data, we just need to process one block at a time,\n 1366        // in trivial scanline order\n 1367        // number of blocks to do just depends on how many actual \"pixels\" this\n ....\n 1392        for (j=0; j < z->img_mcu_y; ++j) {\n 1393           for (i=0; i < z->img_mcu_x; ++i) {\n 1394:             // scan an interleaved mcu... process scan_n components in order\n 1395              for (k=0; k < z->scan_n; ++k) {\n 1396                 int n = z->order[k];\n\n20 matches across 10 files\n\n\nSearching 324 files for \"process\" (case sensitive, whole word)\n\n/mnt/code/claymore/claymore-game/engine/object.rs:\n   23  \n   24  pub impl gr_mid::draw::Technique	{\n   25: 	fn process( &self, e : &Entity, output : gr_mid::call::Output, rast : gr_low::rast::State,\n   26  			cache : &mut gr_mid::draw::Cache, ct : &gr_low::context::Context,\n   27  			lg : &journal::Log )-> gr_mid::call::Call	{\n\n/mnt/code/claymore/claymore-game/game/render/lbuf.rs:\n  132  				material: mat,\n  133  			};\n  134: 			self.tech_bake.process( &e, copy output, copy rast, self.cache, gc, lg )\n  135  		};\n  136  		//todo: functional style in Rust-0.6\n\n/mnt/code/claymore/claymore-game/game/scene/battle.rs:\n  130  		rast.set_depth( ~\"<=\", true );\n  131  		rast.prime.cull = true;\n  132: 		let c_land = tech.process( &self.land, copy output, copy rast, &mut self.cache, gc, lg );\n  133: 		let c_hero = tech.process( &self.hero.entity, copy output, copy rast, &mut self.cache, gc, lg );\n  134  		let c_grid = self.grid.call( output.fb, copy output.pmap, self.land.input.va );\n  135  		gc.flush( ~[c_land,c_hero,c_grid] );\n\n/mnt/code/claymore/claymore-game/game/scene/chared.rs:\n  217  				for [&self.gr_main,&self.gr_cape,&self.gr_hair].each() |group|	{\n  218  					for group.each() |ent|	{\n  219: 						queue.push( self.shadow.tech_solid.process( ent,\n  220  							copy self.shadow.output, copy self.shadow.rast,\n  221  							&mut self.cache, ct, lg ));\n  ...\n  224  				/*for [&self.gr_hair].each() |group|	{\n  225  					for group.each() |ent|	{\n  226: 						queue.push( self.shadow.tech_alpha.process( ent, ct, lg ));\n  227  					}\n  228  				}*/\n  ...\n  234  				for [&mut self.gr_main,&mut self.gr_cape,&mut self.gr_hair].each() |group|	{\n  235  					for group.each_mut() |ent|	{\n  236: 						queue.push( self.depth.tech_solid.process( ent,\n  237  							copy self.depth.output, copy self.depth.rast,\n  238  							&mut self.cache, ct, lg ));\n  ...\n  253  		if el.character	{\n  254  			for self.gr_main.each() |ent|	{\n  255: 				queue.push( tech.process( ent, copy output, copy self.rast_solid, &mut self.cache, ct, lg ) );\n  256  			}\n  257  			for self.gr_cape.each() |ent|	{\n  258: 				queue.push( tech.process( ent, copy output, copy self.rast_cloak, &mut self.cache, ct, lg ) );	\n  259  			}\n  260  			for self.gr_hair.each() |ent|	{\n  261: 				queue.push( tech.process( ent, copy output, copy self.rast_alpha, &mut self.cache, ct, lg ) );\n  262  			}\n  263  		}\n  264  		if el.shadow	{\n  265  			for self.gr_other.each() |ent|	{\n  266: 				queue.push( tech.process( ent, copy output, copy self.rast_solid, &mut self.cache, ct, lg ) );\n  267  			}\n  268  		}\n\n/mnt/code/claymore/claymore-game/util/blender/io_kri_mat/__init__.py:\n   46  		default=Settings.showWarning )\n   47  	break_err	= BoolProperty( name='Break on error',\n   48: 		description='Stop the process on first error',\n   49  		default=Settings.breakError )\n   50  \n\n/mnt/code/claymore/claymore-game/util/blender/io_kri_mesh/__init__.py:\n   46  		default=Settings.showWarning )\n   47  	break_err	= BoolProperty( name='Break on error',\n   48: 		description='Stop the process on first error',\n   49  		default=Settings.breakError )\n   50  	put_normal	= BoolProperty( name='Put normals',\n\n/mnt/code/claymore/claymore-game/util/blender/io_kri_scene/__init__.py:\n   54  		default=Settings.showWarning )\n   55  	break_err	= BoolProperty( name='Break on error',\n   56: 		description='Stop the process on first error',\n   57  		default=Settings.breakError )\n   58  	# mesh settings\n\n/mnt/code/claymore/claymore-game/util/sample/demo03-materials.rs:\n  167  		let mx = e.node.world_space().to_matrix();\n  168  		s.data.insert( ~\"u_World\", engine::shade::UniMatrix(false,mx) );\n  169: 		calls.push( t.process( e, &s.context, copy s.data ));\n  170  	}\n  171  	s.context.flush(calls);\n\n/mnt/code/claymore/claymore-game/util/sample/demo04-skeleton.rs:\n  153  		let c0 = engine::call::CallClear( t.fbo, copy t.pmap,\n  154  			cdata, t.rast.scissor, t.rast.mask );\n  155: 		let c1 = t.process( &s.entity, &s.context );\n  156  		s.context.flush(~[c0,c1]);\n  157  	}\n\n/mnt/code/claymore/rust-stb-image/stb_image.c:\n   81  //    int x,y,n;\n   82  //    unsigned char *data = stbi_load(filename, &x, &y, &n, 0);\n   83: //    // ... process data if not NULL ... \n   84  //    // ... x = width, y = height, n = # 8-bit components per pixel ...\n   85  //    // ... replace '0' with '1'..'4' to force that many components per pixel\n   ..\n  288  extern void stbi_set_unpremultiply_on_load(int flag_true_if_should_unpremultiply);\n  289  \n  290: // indicate whether we should process iphone images back to canonical format,\n  291  // or just pass them through \"as-is\"\n  292  extern void stbi_convert_iphone_png_to_rgb(int flag_true_if_should_convert);\n  ...\n 1363        short data[64];\n 1364        int n = z->order[0];\n 1365:       // non-interleaved data, we just need to process one block at a time,\n 1366        // in trivial scanline order\n 1367        // number of blocks to do just depends on how many actual \"pixels\" this\n ....\n 1392        for (j=0; j < z->img_mcu_y; ++j) {\n 1393           for (i=0; i < z->img_mcu_x; ++i) {\n 1394:             // scan an interleaved mcu... process scan_n components in order\n 1395              for (k=0; k < z->scan_n; ++k) {\n 1396                 int n = z->order[k];\n\n20 matches across 10 files\n",
+			"settings":
+			{
+				"buffer_size": 16151,
+				"line_ending": "Unix",
+				"name": "Find Results",
+				"scratch": true
+			}
+		},
+		{
+			"file": "/mnt/code/claymore/claymore-game/game/render/lbuf.rs",
+			"settings":
+			{
+				"buffer_size": 5458,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "/mnt/code/claymore/claymore-game/game/scene/chared.rs",
+			"settings":
+			{
+				"buffer_size": 13789,
+				"line_ending": "Unix"
+			}
 		}
 	],
 	"build_system": "",
 	"command_palette":
 	{
-		"height": 392.0,
+		"height": 52.0,
 		"selected_items":
 		[
 			[
@@ -754,6 +812,12 @@
 		"case_sensitive": true,
 		"find_history":
 		[
+			"process",
+			"cache",
+			"process",
+			"Idle",
+			"screen",
+			"Texture",
 			"IDENTIFICATION",
 			"Eq",
 			"IterBytes",
@@ -875,13 +939,7 @@
 			"\n		",
 			"unsafe",
 			"addr_of",
-			"add_of",
-			"unsafe",
-			"kFrameSec",
-			"framerate",
-			"kFrameSec",
-			"min_x",
-			"max_x"
+			"add_of"
 		],
 		"highlight": true,
 		"in_selection": false,
@@ -904,7 +962,7 @@
 	"groups":
 	[
 		{
-			"selected": 0,
+			"selected": 10,
 			"sheets":
 			[
 				{
@@ -912,15 +970,15 @@
 					"file": "/mnt/code/claymore/claymore-game/game/hud_new.rs",
 					"settings":
 					{
-						"buffer_size": 4806,
+						"buffer_size": 6730,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								4796,
-								4796
+								6730,
+								6730
 							]
 						],
 						"settings":
@@ -929,7 +987,7 @@
 							"translate_tabs_to_spaces": false
 						},
 						"translation.x": 0.0,
-						"translation.y": 2250.0,
+						"translation.y": 2565.0,
 						"zoom_level": 1.0
 					},
 					"type": "text"
@@ -946,8 +1004,8 @@
 						"selection":
 						[
 							[
-								13488,
-								13488
+								10460,
+								10460
 							]
 						],
 						"settings":
@@ -956,7 +1014,7 @@
 							"translate_tabs_to_spaces": false
 						},
 						"translation.x": 0.0,
-						"translation.y": 6851.0,
+						"translation.y": 5861.0,
 						"zoom_level": 1.0
 					},
 					"type": "text"
@@ -1054,8 +1112,8 @@
 						"selection":
 						[
 							[
-								826,
-								826
+								661,
+								661
 							]
 						],
 						"settings":
@@ -1065,6 +1123,447 @@
 						},
 						"translation.x": 0.0,
 						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 6,
+					"file": "/mnt/code/claymore/claymore-game/game/main.rs",
+					"settings":
+					{
+						"buffer_size": 6332,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								2124,
+								2124
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Rust/Rust.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 589.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 7,
+					"file": "/mnt/code/claymore/claymore-game/game/scene/battle.rs",
+					"settings":
+					{
+						"buffer_size": 8167,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								8167,
+								8167
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Rust/Rust.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 3735.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 8,
+					"file": "/mnt/code/claymore/claymore-game/engine/gr_mid/draw.rs",
+					"settings":
+					{
+						"buffer_size": 4323,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								2831,
+								2831
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Rust/Rust.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 1305.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 9,
+					"file": "/mnt/code/claymore/claymore-game/engine/object.rs",
+					"settings":
+					{
+						"buffer_size": 902,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								621,
+								621
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Rust/Rust.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 10,
+					"settings":
+					{
+						"buffer_size": 16151,
+						"regions":
+						{
+							"match":
+							{
+								"flags": 112,
+								"regions":
+								[
+									[
+										176,
+										183
+									],
+									[
+										513,
+										520
+									],
+									[
+										779,
+										786
+									],
+									[
+										867,
+										874
+									],
+									[
+										1287,
+										1294
+									],
+									[
+										1554,
+										1561
+									],
+									[
+										1790,
+										1797
+									],
+									[
+										2017,
+										2024
+									],
+									[
+										2185,
+										2192
+									],
+									[
+										2354,
+										2361
+									],
+									[
+										2558,
+										2565
+									],
+									[
+										2866,
+										2873
+									],
+									[
+										3138,
+										3145
+									],
+									[
+										3458,
+										3465
+									],
+									[
+										3762,
+										3769
+									],
+									[
+										4041,
+										4048
+									],
+									[
+										4284,
+										4291
+									],
+									[
+										4621,
+										4628
+									],
+									[
+										4920,
+										4927
+									],
+									[
+										5230,
+										5237
+									],
+									[
+										5565,
+										5572
+									],
+									[
+										5902,
+										5909
+									],
+									[
+										6174,
+										6181
+									],
+									[
+										6262,
+										6269
+									],
+									[
+										6682,
+										6689
+									],
+									[
+										6949,
+										6956
+									],
+									[
+										7185,
+										7192
+									],
+									[
+										7412,
+										7419
+									],
+									[
+										7580,
+										7587
+									],
+									[
+										7749,
+										7756
+									],
+									[
+										7953,
+										7960
+									],
+									[
+										8261,
+										8268
+									],
+									[
+										8533,
+										8540
+									],
+									[
+										8853,
+										8860
+									],
+									[
+										9157,
+										9164
+									],
+									[
+										9436,
+										9443
+									],
+									[
+										9679,
+										9686
+									],
+									[
+										10016,
+										10023
+									],
+									[
+										10315,
+										10322
+									],
+									[
+										10625,
+										10632
+									],
+									[
+										10960,
+										10967
+									],
+									[
+										11297,
+										11304
+									],
+									[
+										11569,
+										11576
+									],
+									[
+										11668,
+										11675
+									],
+									[
+										12099,
+										12106
+									],
+									[
+										12358,
+										12365
+									],
+									[
+										12594,
+										12601
+									],
+									[
+										12813,
+										12820
+									],
+									[
+										12973,
+										12980
+									],
+									[
+										13134,
+										13141
+									],
+									[
+										13330,
+										13337
+									],
+									[
+										13630,
+										13637
+									],
+									[
+										13902,
+										13909
+									],
+									[
+										14222,
+										14229
+									],
+									[
+										14526,
+										14533
+									],
+									[
+										14805,
+										14812
+									],
+									[
+										15048,
+										15055
+									],
+									[
+										15385,
+										15392
+									],
+									[
+										15684,
+										15691
+									],
+									[
+										15994,
+										16001
+									]
+								],
+								"scope": ""
+							}
+						},
+						"selection":
+						[
+							[
+								819,
+								819
+							]
+						],
+						"settings":
+						{
+							"detect_indentation": false,
+							"output_tag": 3,
+							"result_base_dir": "",
+							"result_file_regex": "^([A-Za-z\\\\/<].*):$",
+							"result_line_regex": "^ +([0-9]+):",
+							"scroll_past_end": true,
+							"syntax": "Packages/Default/Find Results.hidden-tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 11,
+					"file": "/mnt/code/claymore/claymore-game/game/render/lbuf.rs",
+					"settings":
+					{
+						"buffer_size": 5458,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								272,
+								272
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Rust/Rust.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 12,
+					"file": "/mnt/code/claymore/claymore-game/game/scene/chared.rs",
+					"settings":
+					{
+						"buffer_size": 13789,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								6380,
+								6380
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Rust/Rust.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 2622.0,
 						"zoom_level": 1.0
 					},
 					"type": "text"
