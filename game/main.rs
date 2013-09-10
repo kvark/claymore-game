@@ -85,7 +85,8 @@ pub impl Game	{
 	}
 
 	fn update( &mut self, input : &input::State )-> bool	{
-		let aspect = self.output.area.aspect();
+		//let aspect = self.output.area.aspect(); FIXME
+		let aspect = self.gr_context.get_aspect();
 		match self.screen	{
 			ScreenChar		=> self.s_editor.update( input, &self.journal ),
 			ScreenBattle	=> self.s_battle.update( input, &mut self.gr_context.texture, aspect ),

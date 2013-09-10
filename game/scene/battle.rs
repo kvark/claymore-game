@@ -118,7 +118,8 @@ pub impl Scene	{
 	}
 	fn render( &mut self, gc : &mut gr_low::context::Context, hc : &hud_new::Context,
 			tech : &gr_mid::draw::Technique, output : gr_mid::call::Output, lg : &engine::journal::Log )	{
-		let aspect = output.area.aspect();
+		let aspect = if output.area.is_empty()	{gc.get_aspect()}
+			else {output.area.aspect()};
 		{// update matrices
 			let light_pos	= vec4::new( 4f32, 1f32, 6f32, 1f32 );
 			for [ &mut self.land, &mut self.hero.entity ].each |ent|	{
