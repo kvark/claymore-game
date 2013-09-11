@@ -161,7 +161,7 @@ pub impl Scene	{
 
 	fn render( &mut self, el : &main::Elements, ct : &mut gr_low::context::Context, lg : &engine::journal::Log  )	{
 		// clear screen
-		let pmap = gr_mid::call::PlaneMap::new_simple( ~"o_Color", gr_low::frame::TarEmpty );
+		let pmap = gr_mid::call::PlaneMap::new_main( ct, ~"o_Color" );
 		let output = gr_mid::call::Output::new( ct.default_frame_buffer, pmap );
 		let cdata = gr_mid::call::ClearData{
 			color	:Some( gr_low::rast::Color::new(0x8080FFFF) ),
@@ -169,7 +169,7 @@ pub impl Scene	{
 			stencil	:Some( 0u ),
 		};
 		let c0 = gr_mid::call::CallClear( copy output, cdata, copy self.rast_solid.mask );
-		let aspect = ct.get_aspect();
+		let aspect = output.area.aspect();
 		if el.environment	{
 			let vpi = self.cam.get_inverse_matrix( aspect );
 			//self.cam.fill_data( &mut self.envir.data );
@@ -193,9 +193,9 @@ pub impl Scene	{
 			//self.skel.fill_data( self.girl.mut_data() );
 		}
 		if el.character	{
-			let (wid,het) = ct.screen_size;
-			let target_size = vec4::new( wid as f32, het as f32,
-  				1f32/(wid as f32), 1f32/(het as f32) );
+			let area = &output.area;
+			let target_size = vec4::new( area.w as f32, area.h as f32,
+  				1f32/(area.w as f32), 1f32/(area.h as f32) );
 			let par_ts = gr_low::shade::UniFloatVec( target_size );
 			for [&mut self.gr_main, &mut self.gr_cape, &mut self.gr_hair, &mut self.gr_other].each() |group|	{
 				for group.each_mut() |ent|	{
@@ -370,13 +370,13 @@ pub fn make_scene( el : &main::Elements, ct : &mut gr_low::context::Context, fco
 		let mut hud_rast = copy ct.default_rast;
 		hud_rast.set_blend( ~"s+d", ~"Sa", ~"1-Sa" );
 		let quad = @gr_mid::mesh::create_quad(ct);
-		let pmap = gr_mid::call::PlaneMap::new_simple( ~"o_Color", gr_low::frame::TarEmpty );
+		let pmap = gr_mid::call::PlaneMap::new_main( ct, ~"o_Color" );
 		let out = gr_mid::call::Output::new( ct.default_frame_buffer, pmap );
 		hud::Context{
 			input	: gr_mid::call::Input::new( vao, quad ),
 			output	: out,
 			rast	: hud_rast,
-			size	: ct.screen_size,
+			size	: ct.get_screen_size(),
 		}
 	};
 	let edit_label = @mut hud::EditLabel::obtain( &mut hud_screen, ~"id.name.text" );

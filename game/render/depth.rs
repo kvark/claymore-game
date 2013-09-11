@@ -12,7 +12,7 @@ pub struct Data	{
 
 pub impl Data	{
 	fn create( gc : &mut gr_low::context::Context )-> Data	{
-		let (wid,het) = gc.screen_size;
+		let (wid,het) = gc.get_screen_size();
 		let texture = gc.create_texture( ~"2D", wid, het, 0u, 0u );
 		gc.texture.init_depth( texture, false );
 		let mut pmap = gr_mid::call::PlaneMap::new_empty();

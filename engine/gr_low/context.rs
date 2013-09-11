@@ -89,20 +89,20 @@ pub struct Context	{
 	frame_buffer_read	: frame::Binding,
 	texture				: texture::Binding,
 	// defaults
-	screen_size			: (uint,uint),
 	default_rast		: rast::State,
 	default_frame_buffer: @mut frame::Buffer,
 }
 
 
-pub fn create( wid : uint, het : uint )-> Context	{
+pub fn create( wid : uint, het : uint, ns : uint )-> Context	{
 	// read caps
 	let caps	= Capabilities{
 		max_color_attachments : read_cap( glcore::GL_MAX_COLOR_ATTACHMENTS ),
 	};
 	let rast	= rast::make_default( wid, het );
 	let color	= rast::Color{r:0f32,g:0f32,b:0f32,a:0f32};
-	let def_fb	= frame::Buffer::new_default();
+	let rbind = frame::RenBinding::new( wid, het ,ns );
+	let def_fb	= frame::Buffer::new_default( rbind.default );
 	// fill up the context
 	Context{
 		caps				: caps,
@@ -113,11 +113,10 @@ pub fn create( wid : uint, het : uint )-> Context	{
 		vertex_array		: buf::VaBinding::new(),
 		array_buffer		: buf::Binding::new( glcore::GL_ARRAY_BUFFER ),
 		element_buffer		: buf::Binding::new( glcore::GL_ELEMENT_ARRAY_BUFFER ),
-		render_buffer		: frame::RenBinding::new(),
+		render_buffer		: rbind,
 		frame_buffer_draw	: frame::Binding::new( glcore::GL_DRAW_FRAMEBUFFER, def_fb ),
 		frame_buffer_read	: frame::Binding::new( glcore::GL_READ_FRAMEBUFFER, def_fb ),
 		texture				: texture::Binding::new(),
-		screen_size			: (wid,het),
 		default_rast		: rast,
 		default_frame_buffer: def_fb,
 	}
@@ -140,6 +139,10 @@ impl ProxyState for Context	{
 }
 
 pub impl Context	{
+	fn get_screen_size( &self )-> (uint,uint)	{
+		let rb = self.render_buffer.default;
+		(rb.width, rb.height)
+	}
 	fn check( &self, where : &str )	{
 		let code = glcore::glGetError();
 		if code == 0	{return}
@@ -172,9 +175,5 @@ pub impl Context	{
 			self.clear_data.stencil = s;
 			glcore::glClearStencil( s as glcore::GLint );
 		}
-	}
-	fn get_aspect( &self )-> f32	{
-		let (w,h) = self.screen_size;
-		(w as f32) / (h as f32)
 	}
 }

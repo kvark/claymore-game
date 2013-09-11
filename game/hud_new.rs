@@ -183,12 +183,8 @@ impl Context	{
 	}
 
 	pub fn draw_all( &self, screen : &gen::Screen, out : &call::Output )-> ~[call::Call]	{
-		let size = if out.area.is_empty()	{	//FIXME
-			[self.rast.view.w, self.rast.view.h]
-		}else	{
-			[out.area.w, out.area.h]
-		};
-		let (_,calls) = self.draw( screen.children, Rect::new(size[0],size[1]), out, &size );
+		let size = [out.area.w, out.area.h];
+		let (_,calls) = self.draw( screen.children, out.area, out, &size );
 		calls
 	}
 

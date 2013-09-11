@@ -436,7 +436,7 @@ pub fn load_screen( path : ~str, ct : &mut gr_low::context::Context,
 		ft : @font::Context, lg : &engine::journal::Log )-> Screen	{
 	lg.add( ~"Loading HUD screen: " + path );
 	let iscreen = scene::load_json::load_config::<ScreenInfo>( path );
-	let (wid,het) = ct.screen_size;
+	let (wid,het) = ct.get_screen_size();
 	let size = (wid as int,het as int);
 	let mut root = Frame{
 		name		: ~"root",

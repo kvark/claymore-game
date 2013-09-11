@@ -207,7 +207,7 @@ pub impl Binding	{
 
 	fn bind_sampler( &mut self, t : @Texture, s : &Sampler )	{
 		self.bind( t );
-		if t.samples != 0	{return}	//TODO: error here?
+		if t.samples != 0	{fail!(~"Unable to bound a sampler for MSAA texture")}
 		let filter_modes = [glcore::GL_TEXTURE_MIN_FILTER,glcore::GL_TEXTURE_MAG_FILTER];
 		for [0,1].each() |i|	{
 			if t.sampler.filter[*i] != s.filter[*i]	{

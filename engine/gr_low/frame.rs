@@ -75,6 +75,20 @@ impl ToStr for Target	{
 
 
 impl Target	{
+	pub fn get_size( &self )-> [uint,..4]	{
+		match self	{
+			&TarEmpty	=> fail!(~"Empty target has no size"),
+			&TarSurface(sf) => [sf.width, sf.height, 1, sf.samples],
+			&TarTexture(tex,lev) =>	{
+				let (w,h) = tex.get_level_size(lev);
+				[w, h, tex.depth, tex.samples]
+			},
+			&TarTextureLayer(tex,_,lev) =>	{
+				let (w,h) = tex.get_level_size(lev);
+				[w, h, 1, tex.samples]
+			}
+		}
+	}
 	priv fn attach( &self, root : glcore::GLenum, slot : glcore::GLenum )-> bool	{
 		match self	{
 			&TarEmpty			=> {},
@@ -105,10 +119,10 @@ pub struct RenBinding	{
 }
 
 pub impl RenBinding	{
-	fn new()-> RenBinding	{
+	fn new( wid : uint, het : uint, ns : uint )-> RenBinding	{
 		let t = glcore::GL_RENDERBUFFER;
 		let s = @Surface{ handle:SurfaceHandle(0),
-			target:t, width:0, height:0, samples:0
+			target:t, width:wid, height:het, samples:ns
 		};
 		RenBinding{
 			target: t, default: s, active: s,
@@ -175,37 +189,29 @@ impl Drop for BufferHandle	{
 }
 
 pub impl Buffer	{
-	fn new_default()-> @mut Buffer	{
+	fn new_default( rb : @Surface )-> @mut Buffer	{
+		let ts = TarSurface(rb);
 		@mut Buffer{
 			handle		:BufferHandle(0),
 			draw_mask	:0x10u,	// invalid one
 			read_id		:None,	// actually, GL_BACK
-			stencil		:TarEmpty,
-			depth		:TarEmpty,
-			colors		:~[TarEmpty],
+			stencil		:ts,
+			depth		:ts,
+			colors		:~[ts],
 		}
 	}
 	
-	fn check_size( &self )->(uint,uint,uint,uint)	{
-		let mut actual = (0u,0u,0u,0u);
-		for (~[self.stencil,self.depth] + self.colors).each |target|	{
-			let current = match *target	{
-				TarEmpty => actual,
-				TarSurface(sf) => (sf.width,sf.height,1,sf.samples),
-				TarTexture(tex,lev) =>	{
-					let (w,h) = tex.get_level_size(lev);
-					(w,h,tex.depth,tex.samples)
-				},
-				TarTextureLayer(tex,_,lev) =>	{
-					let (w,h) = tex.get_level_size(lev);
-					(w,h,1,tex.samples)
-				}
-			};
-			let (w,h,d,s) = actual;
-			if w==0u	{ actual = current; }
-			else	{
-				let (w2,h2,d2,s2) = current;
-				assert!( w==w2 && h==h2 && d==d2 && s==s2 );
+	fn check_size( &self )-> [uint,..4]	{
+		let mut actual = [0u,0u,0u,0u];
+		for (~[self.stencil,self.depth] + self.colors).each |&target|	{
+			if target == TarEmpty	{
+				loop;
+			}
+			let current = target.get_size();
+			if current[0]==0u	{
+				actual = current;
+			}else	{
+				assert_eq!( current, actual );
 			}
 		}
 		actual

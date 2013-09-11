@@ -15,20 +15,55 @@ pub struct PlaneMap	{
 
 impl Copy for PlaneMap	{}
 
-pub impl PlaneMap	{
-	fn new_empty()-> PlaneMap	{
+impl PlaneMap	{
+	pub fn new_empty()-> PlaneMap	{
 		PlaneMap	{
 			stencil	: frame::TarEmpty,
 			depth	: frame::TarEmpty,
 			colors	: LinearMap::new(),
 		}
 	}
-	fn new_simple( name : ~str, col : frame::Target )-> PlaneMap	{
+
+	pub fn new_simple( name : ~str, col : frame::Target )-> PlaneMap	{
 		let mut pm = PlaneMap::new_empty();
 		pm.colors.insert( name, col );
 		pm
 	}
-	fn check( &self, rast : &rast::State )	{
+
+	pub fn new_main( gc : &context::Context, name : ~str )-> PlaneMap	{
+		let tg = frame::TarSurface( gc.render_buffer.default );
+		let mut pm = PlaneMap::new_empty();
+		pm.stencil = tg;
+		pm.depth = tg;
+		pm.colors.insert( name, tg );
+		pm
+	}
+
+	priv fn get_any_target( &self )-> Option<frame::Target>	{
+		if self.stencil != frame::TarEmpty	{
+			Some(self.stencil)
+		}else
+		if self.depth != frame::TarEmpty	{
+			Some(self.depth)
+		}else	{
+			for self.colors.each_value |&val|	{
+				if val != frame::TarEmpty	{
+					return Some(val);
+				}
+			}
+			None
+		}
+	}
+
+	pub fn get_area( &self )-> frame::Rect	{
+		let size = match self.get_any_target()	{
+			Some(tg)	=>	tg.get_size(),
+			None		=> [0,0,0,0],
+		};
+		frame::Rect::new( size[0], size[1] )
+	}
+
+	pub fn check( &self, rast : &rast::State )	{
 		assert!( !rast.stencil.test	|| self.stencil	!= frame::TarEmpty );
 		assert!( !rast.depth.test	|| self.depth	!= frame::TarEmpty );
 		assert!( !rast.blend.on		|| !self.colors.is_empty() );
@@ -67,15 +102,16 @@ pub struct Output	{
 
 pub impl Output	{
 	fn new( fb : @mut frame::Buffer, pmap : PlaneMap )-> Output	{
+		let area = pmap.get_area();
 		Output	{
 			fb	: fb,
 			pmap: pmap,
-			area: frame::Rect::new(0,0),
+			area: area,
 		}
 	}
 	fn gen_scissor( &self )-> rast::Scissor	{
 		rast::Scissor	{
-			test: !self.area.is_empty(),
+			test: self.area != self.pmap.get_area(),
 			area: copy self.area,
 		}
 	}
@@ -160,14 +196,14 @@ pub impl context::Context	{
 						only_color = false;
 					}
 					// prepare
-					let (wid1,het1,_dep1,sam1) = src.fb.check_size();
-					let (wid2,het2,_dep2,sam2) = dst.fb.check_size();
-					assert!( sam1 == sam2 || (sam1*sam2==0 && only_color) );
-					let filter = if (only_color && sam1==0) {glcore::GL_LINEAR} else {glcore::GL_NEAREST};
+					let sizeA = src.fb.check_size();
+					let sizeB = dst.fb.check_size();
+					assert!( sizeA[3] == sizeB[3] || (sizeA[3]*sizeB[3]==0 && only_color) );
+					let filter = if (only_color && sizeA[3]==0) {glcore::GL_LINEAR} else {glcore::GL_NEAREST};
 					// call blit
 					glcore::glBlitFramebuffer(
-						0, 0, wid1 as glcore::GLint, het1 as glcore::GLint,
-						0, 0, wid2 as glcore::GLint, het2 as glcore::GLint,
+						0, 0, sizeA[0] as glcore::GLint, sizeA[1] as glcore::GLint,
+						0, 0, sizeB[0] as glcore::GLint, sizeB[1] as glcore::GLint,
 						flags, filter );
 				},
 				CallDraw(in,out,rast,prog,data)	=> {
@@ -180,17 +216,10 @@ pub impl context::Context	{
 					}
 					self.bind_frame_buffer( out.fb, true, out.pmap.stencil, out.pmap.depth, attaches );
 					// check & activate raster
-					let rect = if *out.fb.handle != 0	{
-						out.pmap.check( &rast );
-						let (wid,het,_dep,_sam) = out.fb.check_size();
-						frame::Rect::new(wid,het)
-					}else	{
-						*self.default_rast.view
-					};
 					let mut r2 = rast;
 					r2.scissor = out.gen_scissor();
 					self.rast.activate( &r2, in.mesh.get_poly_size() );
-					assert!( *self.rast.view == rect );
+					//assert_eq!( out.area, *self.rast.view );
 					// draw
 					self.draw_mesh( in, prog, &data );
 				},

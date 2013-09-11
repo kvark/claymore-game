@@ -43,7 +43,7 @@ pub struct Context	{
 
 pub impl Context	{
 	fn create( gc : &mut gr_low::context::Context, layers : uint, div : uint )-> Context	{
-		let (wid,het) = gc.screen_size;
+		let (wid,het) = gc.get_screen_size();
 		let (s_type,s_format,dim_depth) = if use_array {
 			(~"2DArray",~"rgba16f",layers)
 		} else {

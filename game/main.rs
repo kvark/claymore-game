@@ -47,8 +47,8 @@ pub struct Elements	{
 }
 
 pub impl Game	{
-	fn create( el : &Elements, wid : uint, het : uint, lg : engine::journal::Log  )-> Game	{
-		let mut gcon = gr_low::context::create( wid, het );
+	fn create( el : &Elements, wid : uint, het : uint, ns : uint, lg : engine::journal::Log  )-> Game	{
+		let mut gcon = gr_low::context::create( wid, het, ns );
 		assert!( gcon.sync_back() );
 		// audio test
 		let acon = engine::audio::Context::create();
@@ -60,7 +60,7 @@ pub impl Game	{
 		//src.play();
 		// create a forward light technique
 		let tech = gr_mid::draw::load_technique( ~"data/code/tech/forward/light" );
-		let pmap = gr_mid::call::PlaneMap::new_simple( ~"o_Color", gr_low::frame::TarEmpty );
+		let pmap = gr_mid::call::PlaneMap::new_main( &gcon, ~"o_Color" );
 		let out = gr_mid::call::Output::new( gcon.default_frame_buffer, pmap );
 		// create hud
 		let fcon = @gr_mid::font::Context::create();
@@ -85,8 +85,7 @@ pub impl Game	{
 	}
 
 	fn update( &mut self, input : &input::State )-> bool	{
-		//let aspect = self.output.area.aspect(); FIXME
-		let aspect = self.gr_context.get_aspect();
+		let aspect = self.output.area.aspect();
 		match self.screen	{
 			ScreenChar		=> self.s_editor.update( input, &self.journal ),
 			ScreenBattle	=> self.s_battle.update( input, &mut self.gr_context.texture, aspect ),
@@ -162,18 +161,18 @@ fn main()	{
 			glfw::ml::window_hint( glfw::OPENGL_FORWARD_COMPAT, 1 );
 		}
 
-		let mode = if config.window.fullscreen {
+		let cw = &config.window;
+		let mode = if cw.fullscreen {
 			glfw::FullScreen( glfw::get_primary_monitor() )
 		}else {
 			glfw::Windowed
 		};
-		let window = glfw::Window::create(
-			config.window.width, config.window.height,
-			config.window.title, mode ).get();
+		assert_eq!( cw.samples, 0 );
+		let window = glfw::Window::create( cw.width, cw.height, cw.title, mode ).get();
 
 		//window.set_input_mode( glfw::CURSOR_MODE, glfw::CURSOR_CAPTURED as int );
 		window.make_context_current();
-		let game = @mut Game::create( &config.elements, config.window.width, config.window.height, lg );
+		let game = @mut Game::create( &config.elements, cw.width, cw.height, cw.samples, lg );
 
 		// init callbacks
 		window.set_iconify_callback( |_win,done|	{
@@ -206,7 +205,7 @@ fn main()	{
 			}
 			// render
 			let input = {
-				let (cx,cy) = window.get_cursor_pos();
+				let (px,py) = window.get_cursor_pos();
 				let mut buttons = 0u;
 				for [0u, ..8u].each() |&i|	{
 					buttons |= (window.get_mouse_button(i as i32) << i) as uint;
@@ -215,8 +214,8 @@ fn main()	{
 					time	: engine::anim::get_time(),
 					focus	: true,	//FIXME
 					mouse	: input::Mouse{
-						x	:cx/(config.window.width as float),
-						y	:cy/(config.window.height as float),
+						x	:px / (cw.width as float),
+						y	:py / (cw.height as float),
 						buttons	: buttons,
 					},
 					keys	: ~[],	//FIXME
