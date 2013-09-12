@@ -384,7 +384,7 @@ struct LabelInfo	{
 	frame		: ~str,
 	text		: ~str,
 	font		: FontInfo,
-	kern		: (float,float),
+	kern		: (int,int),
 	color		: uint,
 	bound		: (uint,uint),
 }
@@ -481,7 +481,7 @@ pub fn load_screen( path : ~str, ct : &mut gr_low::context::Context,
 			None	=>	{
 				let &(fname,fsx,fsy) = &ilabel.font;
 				let (kern_x,kern_y) = ilabel.kern;
-				let f = @ft.load( ~"data/font/"+fname, 0u, fsx, fsy, kern_x, kern_y );
+				let f = @ft.load( ~"data/font/"+fname, 0u, [fsx,fsy], [kern_x,kern_y], lg );
 				(f,true)
 			}
 		};

@@ -104,19 +104,20 @@ impl Context	{
 		for children.each() |child|	{
 			match &child.element	{
 				&gen::ElFrame(ref fr)	=> self.preload( fr.children, gcon, fcon, lg ),
-				&gen::ElImage(ref path)	=>	{
-					if !self.cache_images.contains_key( path )	{
-						let t = engine::load::load_texture_2D( gcon, path, false );
-						self.cache_images.insert( copy *path, t );
+				&gen::ElImage(ref name)	=>	{
+					if !self.cache_images.contains_key( name )	{
+						let path = ~"data/texture/hud/" + *name;
+						let t = engine::load::load_texture_2D( gcon, &path, false );
+						self.cache_images.insert( copy *name, t );
 					}
 				},
 				&gen::ElText(ref text)	=>	{
 					let f = &text.font;
 					{//FIXME
 						if !self.cache_fonts.contains_key(f)	{
+							let path = ~"data/font/" + f.path;
 							let fc = FontCache	{
-								font	: @fcon.load( f.path, 0u, f.size[0], f.size[1],
-									f.kern[0] as float, f.kern[1] as float ),
+								font	: @fcon.load( path, 0u, f.size, f.kern, lg ),
 								cache	: LinearMap::new(),
 							};
 							self.cache_fonts.insert( copy text.font, copy fc );
@@ -204,7 +205,8 @@ impl Context	{
 		for children.each() |&child|	{
 			let size = match &child.element	{
 				&gen::ElImage(ref path)	=>	{
-					let t = *self.cache_images.get( path );
+					let t = *self.cache_images.find( path ).
+						expect(fmt!( "Image '%s' is not loaded", *path ));
 					let mut data = shade::make_data();
 					data.insert( ~"t_Image",		shade::UniTexture(
 						0, t, Some(self.sampler_image) ));
@@ -216,8 +218,10 @@ impl Context	{
 					[t.width,t.height]
 				},
 				&gen::ElText(ref text)	=>	{
-					let fc = self.cache_fonts.get( &text.font );
-					let t = *fc.cache.get( &text.value );
+					let fc = self.cache_fonts.find( &text.font ).
+						expect(fmt!( "Font '%s' is not loaded", text.font.path ));
+					let t = *fc.cache.find( &text.value ).
+						expect(fmt!( "Text '%s' is not loaded", text.value ));
 					let mut data = shade::make_data();
 					data.insert( ~"t_Text",	shade::UniTexture(
 						0, t, Some(self.sampler_text) ));

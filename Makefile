@@ -18,6 +18,8 @@ run: game
 	build/${NAME}
 run-trace: game
 	${TRACE} build/${NAME}
+run-debug: game
+	gdb build/${NAME}
 run-memtest: game
 	valgrind --leak-check=full --track-origins=yes build/${NAME} 2>build/memtest.txt
 

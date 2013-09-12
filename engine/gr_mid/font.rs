@@ -246,20 +246,21 @@ impl Font	{
 
 
 pub impl Context	{
-	fn load( &self, path : &str, index : uint, xs : uint, ys : uint,
-			kerning : float, line_gap : float )-> Font	{
+	fn load( &self, path : &str, index : uint, size : [uint,..2], kern : [int,..2],
+			lg : &journal::Log )-> Font	{
 		let mut face : FT_Face = ptr::null();
+		lg.add(fmt!( "Loading font: %s with size %ux%u", path, size[0], size[1] ));
 		do str::as_c_str(path) |text|	{
 			bindgen::FT_New_Face( self.lib, text, 
 				index as FT_Long, ptr::addr_of(&face) ).
 				check( "New_Face" );
 		}
 		bindgen::FT_Set_Pixel_Sizes( face,
-			xs as FT_UInt, ys as FT_UInt ).
+			size[0] as FT_UInt, size[1] as FT_UInt ).
 			check( "Set_Pixel_Sizes" );
 		Font{ face:FaceHandle(face),
-			kern_offset	: kerning * ((1<<SHIFT) as float) as int,
-			line_offset	: line_gap* ((1<<SHIFT) as float) as int,
+			kern_offset	: (kern[0] << SHIFT) as int,
+			line_offset	: (kern[1] << SHIFT) as int,
 			//cache	:send_map::linear::LinearMap::<char,Glyph>(),
 		}
 	}
