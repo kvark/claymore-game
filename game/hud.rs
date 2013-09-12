@@ -433,7 +433,7 @@ pub struct Screen    {
 
 
 pub fn load_screen( path : ~str, ct : &mut gr_low::context::Context,
-		ft : @font::Context, lg : &engine::journal::Log )-> Screen	{
+		ft : &font::Context, lg : &engine::journal::Log )-> Screen	{
 	lg.add( ~"Loading HUD screen: " + path );
 	let iscreen = scene::load_json::load_config::<ScreenInfo>( path );
 	let (wid,het) = ct.get_screen_size();
@@ -481,7 +481,7 @@ pub fn load_screen( path : ~str, ct : &mut gr_low::context::Context,
 			None	=>	{
 				let &(fname,fsx,fsy) = &ilabel.font;
 				let (kern_x,kern_y) = ilabel.kern;
-				let f = ft.load( ~"data/font/"+fname, 0u, fsx, fsy, kern_x, kern_y );
+				let f = @ft.load( ~"data/font/"+fname, 0u, fsx, fsy, kern_x, kern_y );
 				(f,true)
 			}
 		};

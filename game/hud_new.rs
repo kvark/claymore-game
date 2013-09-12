@@ -100,7 +100,7 @@ impl Context	{
 	}
 
 	pub fn preload( &mut self, children : &[gen::Child], gcon : &mut engine::gr_low::context::Context,
-			fcon : @font::Context, lg : &engine::journal::Log )	{
+			fcon : &font::Context, lg : &engine::journal::Log )	{
 		for children.each() |child|	{
 			match &child.element	{
 				&gen::ElFrame(ref fr)	=> self.preload( fr.children, gcon, fcon, lg ),
@@ -115,7 +115,7 @@ impl Context	{
 					{//FIXME
 						if !self.cache_fonts.contains_key(f)	{
 							let fc = FontCache	{
-								font	: fcon.load( f.path, 0u, f.size[0], f.size[1],
+								font	: @fcon.load( f.path, 0u, f.size[0], f.size[1],
 									f.kern[0] as float, f.kern[1] as float ),
 								cache	: LinearMap::new(),
 							};

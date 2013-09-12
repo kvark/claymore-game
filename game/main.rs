@@ -23,7 +23,7 @@ enum Screen	{
 struct Game	{
 	gr_context	: gr_low::context::Context,
 	aud_context	: engine::audio::Context,
-	font_context: @gr_mid::font::Context,
+	font_context: gr_mid::font::Context,
 	hud_context	: hud_new::Context,
 	journal		: engine::journal::Log,
 	frames		: uint,
@@ -63,13 +63,13 @@ pub impl Game	{
 		let pmap = gr_mid::call::PlaneMap::new_main( &gcon, ~"o_Color" );
 		let out = gr_mid::call::Output::new( gcon.default_frame_buffer, pmap );
 		// create hud
-		let fcon = @gr_mid::font::Context::create();
+		let fcon = gr_mid::font::Context::create();
 		let mut hcon = hud_new::Context::create( &mut gcon, &lg );
 		// done
 		gcon.check(~"init");
 		let intro = scene::intro::Scene{ active:false };
-		let editor = scene::chared::make_scene( el, &mut gcon, fcon, &lg );
-		let battle = scene::battle::make_scene( &mut gcon, &mut hcon, fcon, &lg );
+		let editor = scene::chared::make_scene( el, &mut gcon, &fcon, &lg );
+		let battle = scene::battle::make_scene( &mut gcon, &mut hcon, &fcon, &lg );
 		Game{
 			gr_context	: gcon,
 			aud_context	: acon,
