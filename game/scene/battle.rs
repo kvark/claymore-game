@@ -28,7 +28,7 @@ pub impl Character	{
 		let time = engine::anim::get_time();
 		let mut moment  = time - self.start_time;
 		if moment>self.record.duration	{
-			self.record = self.skeleton.find_record(~"ArmatureAction").expect(~"character Idle not found");
+			//self.record = self.skeleton.find_record(~"ArmatureAction").expect(~"character Idle not found");
 			self.start_time = time;
 			moment = 0f;
 		}
@@ -85,30 +85,29 @@ pub struct Scene	{
 	land	: engine::object::Entity,
 	grid	: scene::grid::Grid,
 	hero	: Character,
+	boss	: Character,
 	cache	: gr_mid::draw::Cache,
 	hud		: gen_hud::common::Screen,
 }
 
 pub impl Scene	{
+	fn reset( &mut self )	{
+		self.move_hero( 7, 2 );
+		let time = engine::anim::get_time();
+		self.hero.start_time = time;
+		self.boss.start_time = time;
+	}
+
+	fn move_hero( &mut self, px : uint, py : uint )	{
+		let sp = &mut self.hero.skeleton.root.space;
+		sp.position = self.grid.get_cell_center( px, py );
+		sp.position.z = 1.5f32;
+		sp.orientation = quat::new( 0.707f32, 0f32, 0f32, 0.707f32 );
+	}
+
 	fn update( &mut self, input : &input::State, tb : &mut gr_low::texture::Binding, aspect : f32 )-> bool	{
-		/*let (_,scroll_y) = window.get_scroll_offset(); //FIXME
-		let scroll_y = 0;
-		let shift = window.get_key(glfw::KEY_LEFT_SHIFT)!=0;
-		// debug keys
-		if window.get_key(glfw::KEY_LEFT)!=0	{
-			game.debug_move(shift,-1,0);
-		}
-		if window.get_key(glfw::KEY_RIGHT)!=0	{
-			game.debug_move(shift,1,0);
-		}
-		if window.get_key(glfw::KEY_DOWN)!=0	{
-			game.debug_move(shift,0,-1);
-		}
-		if window.get_key(glfw::KEY_UP)!=0	{
-			game.debug_move(shift,0,1);
-		}*/
 		let ok = self.grid.update( tb, &self.view.cam, aspect, input.mouse.x, input.mouse.y );
-		self.hero.update() && self.view.update() && ok
+		self.hero.update() && self.boss.update() && self.view.update() && ok
 	}
 
 	fn on_input( &mut self, event : &input::Event )	{
@@ -125,11 +124,7 @@ pub impl Scene	{
 			&input::MouseClick(key,press) if key==0 && press	=> {
 				match self.grid.selected	{
 					Some(pos)	=>	{
-						let sp = &mut self.hero.entity.node.space;
-						let z = sp.position.z;
-						sp.position = self.grid.get_cell_center( pos[0], pos[1] );
-						sp.position.z = z;
-						sp.orientation = quat::new( 0.707f32, 0f32, 0f32, 0.707f32 );
+						self.move_hero( pos[0], pos[1] );
 					},
 					None	=> ()	//beep
 				}
@@ -143,7 +138,7 @@ pub impl Scene	{
 		let aspect = output.area.aspect();
 		{// update matrices
 			let light_pos	= vec4::new( 4f32, 1f32, 6f32, 1f32 );
-			for [ &mut self.land, &mut self.hero.entity ].each |ent|	{
+			for [ &mut self.land, &mut self.hero.entity, &mut self.boss.entity ].each |ent|	{
 				let d = &mut ent.data;
 				self.view.cam.fill_data( d, aspect );
 				d.insert( ~"u_LightPos",	gr_low::shade::UniFloatVec(light_pos) );
@@ -164,8 +159,9 @@ pub impl Scene	{
 		rast.prime.cull = true;
 		let c_land = tech.process( &self.land, copy output, copy rast, &mut self.cache, gc, lg );
 		let c_hero = tech.process( &self.hero.entity, copy output, copy rast, &mut self.cache, gc, lg );
+		let c_boss = tech.process( &self.boss.entity, copy output, copy rast, &mut self.cache, gc, lg );
 		let c_grid = self.grid.call( output.fb, copy output.pmap, self.land.input.va );
-		gc.flush( [c0,c_land,c_hero,c_grid], lg );
+		gc.flush( [c0,c_land,c_hero,c_boss,c_grid], lg );
 		// draw hud
 		let hud_calls = hc.draw_all( &self.hud, &output );
 		gc.flush( hud_calls, lg );
@@ -224,66 +220,35 @@ pub fn make_scene( gc : &mut gr_low::context::Context, hc : &mut hud_new::Contex
 			start_time		: 0f,
 		}
 	};
-	// load basic material & vao
-	let mat = @gr_mid::draw::load_material(~"data/code/mat/phong");
-	let vao = gc.create_vertex_array();
 	// load battle landscape
 	let iscene = gen_scene::battle::main::load();
-	let scene = scene::load::parse( ~"data/scene/battle-test", &iscene, ~[], gc, Some(vao), lg );
-	let mut battle_land = {
-		let mesh = *scene.context.meshes.get( &~"Plane@all" );
-		let node = @mut engine::space::Node{
-			name	: ~"landscape",
-			space	: engine::space::QuatSpace::identity(),
-			parent	: None,
-			actions	: ~[],
-		};
-		engine::object::Entity{
-			node	: node,
-			input	: gr_mid::call::Input::new( vao, mesh ),
-			data	: gr_low::shade::DataMap::new(),
-			modifier: @() as @gr_mid::draw::Mod,
-			material: mat,
-		}
-	};
+	let vao = gc.create_vertex_array();
+	let mut scene = scene::load::parse( ~"data/scene/battle-test", &iscene, ~[], gc, Some(vao), lg );
+	let mut battle_land = scene.entities.exclude( &~"Plane" ).expect("No ground found");
 	// load protagonist
 	let hero =	{
-		let mesh = *scene.context.meshes.get( &~"Cube@all" );
+		let ent = scene.entities.exclude( &~"Player" ).expect("No player found");
 		let skel = *scene.context.armatures.get( &~"Armature" );
-		//skel.root = arm_node;
-		let node = @mut engine::space::Node{
-			name	: ~"hero",
-			space	: engine::space::QuatSpace::identity(),
-			parent	: Some(skel.root),
-			actions	: ~[],
-		};
-		let mut ent = engine::object::Entity{
-			node	: node,
-			input	: gr_mid::call::Input::new( vao, mesh ),
-			data	: gr_low::shade::DataMap::new(),
-			modifier: skel as @gr_mid::draw::Mod,
-			material: mat,
-		};
-		// load char texture
-		let tex = engine::load::load_texture_2D( gc, &~"data/texture/diffuse.jpg", true );
-		let s_opt = Some( gr_low::texture::Sampler::new(3u,1) );
-		ent.data.insert( ~"t_Main", gr_low::shade::UniTexture(0u,tex,s_opt) );
-		let utc = vec4::new(1f32,1f32,0f32,0f32);
-		ent.data.insert( ~"u_Tex0Transform", gr_low::shade::UniFloatVec(utc) );
 		// done
 		Character{
 			entity		: ent,
 			skeleton	: skel,
-			record		: skel.find_record(~"ArmatureAction").expect(~"Hero has to have Idle"),
-			start_time	: engine::anim::get_time(),
+			record		: skel.find_record(~"ArmatureBossAction").expect(~"Hero has to have Idle"),
+			start_time	: 0f,
 		}
 	};
-	// load land texture
-	let tex = engine::load::load_texture_2D( gc, &~"data/texture/SoilCracked0103_2_S.jpg", true );
-	let s_opt = Some( gr_low::texture::Sampler::new(3u,1) );
-	battle_land.data.insert( ~"t_Main", gr_low::shade::UniTexture(0u,tex,s_opt) );
-	let utc = vec4::new(10f32,10f32,0f32,0f32);
-	battle_land.data.insert( ~"u_Tex0Transform", gr_low::shade::UniFloatVec(utc) );
+	// load boss
+	let boss =	{
+		let ent = scene.entities.exclude( &~"Boss" ).expect("No player found");
+		let skel = *scene.context.armatures.get( &~"ArmatureBoss" );
+		// done
+		Character{
+			entity		: ent,
+			skeleton	: skel,
+			record		: skel.find_record(~"ArmatureBossAction").expect(~"Boss has to have Idle"),
+			start_time	: 0f,
+		}
+	};
 	// create grid
 	let grid = scene::grid::Grid::create( gc, 10u, lg );
 	grid.init( &mut gc.texture );
@@ -301,6 +266,7 @@ pub fn make_scene( gc : &mut gr_low::context::Context, hc : &mut hud_new::Contex
 		land	: battle_land,
 		grid	: grid,
 		hero	: hero,
+		boss	: boss,
 		cache	: gr_mid::draw::make_cache(),
 		hud		: hud,
 	}

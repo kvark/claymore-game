@@ -23,6 +23,12 @@ run-debug: game
 run-memtest: game
 	valgrind --leak-check=full --track-origins=yes build/${NAME} 2>build/memtest.txt
 
+grab-scene: asset/claymore/claymore-2a.rs asset/battle/battle-test.rs
+	cp asset/claymore/claymore-2a.rs ${CODATA}/scene/chared/main.rs
+	cp asset/claymore/claymore-2a/* data/scene/claymore-2a/
+	cp asset/battle/battle-test.rs ${CODATA}/scene/battle/main.rs
+	cp asset/battle/battle-test/* data/scene/battle-test/
+
 
 game: build/claymore
 
@@ -38,7 +44,7 @@ lib/engine.dummy: lib/glcore.dummy lib/lmath.dummy lib/openal.dummy lib/freetype
 
 codata: lib/codata-scene.dummy lib/codata-hud.dummy
 
-lib/codata-scene.dummy: ${CODATA}/scene/*.rs ${CODATA}/scene/chared/*.rs
+lib/codata-scene.dummy: ${CODATA}/scene/*.rs ${CODATA}/scene/chared/*.rs ${CODATA}/scene/battle/*.rs
 	${RUST} ${CODATA}/scene/scene.rs --out-dir lib
 	touch $@
 

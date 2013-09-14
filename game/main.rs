@@ -89,6 +89,13 @@ pub impl Game	{
 		}
 	}
 
+	fn reset( &mut self )	{
+		match self.screen	{
+			ScreenBattle	=> self.s_battle.reset(),
+			_ => ()
+		}
+	}
+
 	fn update( &mut self, input : &input::State )-> bool	{
 		let aspect = self.output.area.aspect();
 		match self.screen	{
@@ -191,6 +198,7 @@ fn main()	{
 		//window.set_input_mode( glfw::CURSOR_MODE, glfw::CURSOR_CAPTURED as int );
 		window.make_context_current();
 		let game = @mut Game::create( &config.elements, cw.width, cw.height, cw.samples, journal );
+		game.reset();
 
 		// init callbacks
 		window.set_iconify_callback( |_win,done|	{
@@ -221,7 +229,7 @@ fn main()	{
 				window.destroy();
 				break;
 			}
-			// render
+			// update
 			let input = {
 				let (px,py) = window.get_cursor_pos();
 				let mut buttons = 0u;
@@ -232,8 +240,8 @@ fn main()	{
 					time	: engine::anim::get_time(),
 					focus	: window.get_param(glfw::support::consts::VISIBLE) != 0,
 					mouse	: input::Mouse{
-						x	:px / (cw.width as float),
-						y	:py / (cw.height as float),
+						x	: px / (cw.width as float),
+						y	: py / (cw.height as float),
 						buttons	: buttons,
 					},
 				}
@@ -242,6 +250,7 @@ fn main()	{
 			if !game.update( &input )	{
 				break
 			}
+			// render
 			if !game.render( &config.elements )	{
 				break;
 			}
