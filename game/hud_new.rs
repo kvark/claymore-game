@@ -207,7 +207,7 @@ impl Context	{
 				&gen::ElImage(ref path)	=>	{
 					let t = *self.cache_images.find( path ).
 						expect(fmt!( "Image '%s' is not loaded", *path ));
-					let mut data = shade::make_data();
+					let mut data = shade::DataMap::new();
 					data.insert( ~"t_Image",		shade::UniTexture(
 						0, t, Some(self.sampler_image) ));
 					let rect = Rect{ x:off[0], y:off[1], w:t.width, h:t.height };
@@ -222,7 +222,7 @@ impl Context	{
 						expect(fmt!( "Font '%s' is not loaded", text.font.path ));
 					let t = *fc.cache.find( &text.value ).
 						expect(fmt!( "Text '%s' is not loaded", text.value ));
-					let mut data = shade::make_data();
+					let mut data = shade::DataMap::new();
 					data.insert( ~"t_Text",	shade::UniTexture(
 						0, t, Some(self.sampler_text) ));
 					data.insert( ~"u_Color", Context::get_color_param(text.color) );

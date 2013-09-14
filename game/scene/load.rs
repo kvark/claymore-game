@@ -13,7 +13,7 @@ use gen = gen_scene::common;
 
 priv fn parse_shader_data( imat : &gen::Material, tex_cache : &LinearMap<~str,@gr_low::texture::Texture>,
 		lg : &engine::journal::Log )-> gr_low::shade::DataMap	{
-	let mut out = gr_low::shade::make_data();
+	let mut out = gr_low::shade::DataMap::new();
 	fn color2vec(v : [f32, ..3])-> vec::vec4	{
 		let kf = 1f32 / 255f32;
 		vec::vec4::new( v[0] as f32 * kf, v[1] as f32 * kf, v[2] as f32 * kf, 1f32 )
@@ -39,7 +39,7 @@ priv fn parse_shader_data( imat : &gen::Material, tex_cache : &LinearMap<~str,@g
 		let mut name = copy ti.name;
 		if name != phong_texture && i==0 && imat.shader == ~"phong"	{
 			name = copy phong_texture; //that's what the shader expects
-			lg.add(fmt!( "(w) forcing texture '%s' name to %s", ti.name, phong_texture ));
+			lg.add(fmt!( "\t\t(w) forcing texture '%s' name to %s", ti.name, phong_texture ));
 		}
 		out.insert( ~"t_" + name, gr_low::shade::UniTexture(0,tex,s_opt) );
 		let u_transform = vec::vec4::new( ti.scale[0], ti.scale[1], ti.offset[0], ti.offset[1] );
@@ -63,7 +63,7 @@ priv fn parse_materials( materials : &[gen::Material], prefix : ~str, ctx : &mut
 		lg.add(fmt!( "\tMaterial added: %s (%s)", imat.name, source ));
 		if source == ~"phong" && imat.textures.is_empty()	{
 			source = copy flat_mat;
-			lg.add(fmt!( "(w) forcing material '%s' shader to '%s' due to no textures", imat.name, flat_mat ));
+			lg.add(fmt!( "\t\t(w) forcing shader to '%s' due to no textures", flat_mat ));
 		}
 		let mat = @gr_mid::draw::load_material( prefix + source );
 		ctx.materials.insert( copy imat.name, mat );

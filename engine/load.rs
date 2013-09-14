@@ -299,11 +299,12 @@ pub fn read_curve<T : space::Interpolate>( br : &Reader, fkey : &fn(&Reader)->T 
 
 
 pub fn read_action( br : &mut Reader, bones : &[space::Bone], lg : &journal::Log )-> space::ArmatureRecord	{
+	lg.add(fmt!( "Loading anim from %s", br.path ));
 	assert!( br.enter() == ~"action" );
 	let act_name = br.get_string();
 	//final ani.Record rec = a.records[actName] = new ani.Record();
 	let length = br.get_float() as float;
-	lg.add(fmt!( "\tAnim '%s' of length %f", act_name, length as float ));
+	lg.add(fmt!( "\tName: '%s', Length: %f sec", act_name, length as float ));
 	let mut curves : ~[space::ArmatureCurve] = ~[];
 	while br.has_more()!=0u	{
 		assert!( br.enter() == ~"curve" );
@@ -321,7 +322,7 @@ pub fn read_action( br : &mut Reader, bones : &[space::Bone], lg : &journal::Log
 			let mut bid = 0u;	//FIXME: vec::position, when Rust allows
 			while bones[bid].node.name != split[1]	{
 				bid += 1;
-				assert!( bid < bones.len() );
+				assert!( bid < bones.len(), fmt!("Bone '%s' not found", split[1]) );
 			}
 			if split[2] == ~"].location"	{
 				assert!( dimension == 3u );

@@ -101,7 +101,7 @@ pub impl Context	{
 		rast.set_blend( ~"s+d", ~"1", ~"1" );
 		rast.set_depth( ~"<=", false );
 		let output = gr_mid::call::Output::new( self.fbo, pmap );
-		let mut data = gr_low::shade::make_data();
+		let mut data = gr_low::shade::DataMap::new();
 		{	// fill data
 			let aspect = (wid as f32) / (het as f32);
 			let sampler = Some( gr_low::texture::Sampler::new(2u,0) );

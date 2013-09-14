@@ -28,8 +28,8 @@ pub struct Sampler	{
 	compare	: Option<glcore::GLenum>,
 }
 
-pub impl Sampler	{
-	fn new( filter : uint, wrap : int )-> Sampler	{
+impl Sampler	{
+	pub fn new( filter : uint, wrap : int )-> Sampler	{
 		assert!( filter>0u && filter<=3u );
 		let min_filter =	if filter==3u	{glcore::GL_LINEAR_MIPMAP_LINEAR}
 			else			if filter==2u	{glcore::GL_LINEAR}
@@ -49,6 +49,25 @@ pub impl Sampler	{
 		}
 	}
 }
+
+impl ToStr for Sampler	{
+	fn to_str( &self )-> ~str	{
+		let sf = match self.filter[0] as u32	{
+			glcore::GL_LINEAR_MIPMAP_LINEAR	=> ~"trilinear",
+			glcore::GL_LINEAR				=> ~"bilinear",
+			glcore::GL_NEAREST				=> ~"point",
+			_								=> ~"unknown"
+		};
+		let sw = match self.wrap[0] as u32	{
+			glcore::GL_REPEAT			=> ~"repeat",
+			glcore::GL_MIRRORED_REPEAT	=> ~"mirror_repeat",
+			glcore::GL_CLAMP_TO_EDGE	=> ~"clamp",
+			_							=> ~"unknown"
+		};
+		fmt!( "Sampler(filter=%s, wrap=%s, compare=%b", sf, sw, !self.compare.is_none() )
+	}
+}
+
 
 pub struct LevelInfo	{
 	total	: uint,

@@ -283,7 +283,7 @@ pub impl Scene	{
 			let (x,y) = self.mouse_point;
 			let mut rast  = copy ct.default_rast;
 			rast.prime.poly_mode = gr_low::rast::map_polygon_fill(2);
-			let mut data = gr_low::shade::make_data();
+			let mut data = gr_low::shade::DataMap::new();
 			let vc = vec4::new(1f32,0f32,0f32,1f32);
 			data.insert( ~"u_Color", gr_low::shade::UniFloatVec(vc) );
 			do self.hud_screen.root.trace(x,y)	|frame,depth| {
@@ -298,7 +298,7 @@ pub impl Scene	{
 			queue.push_all_move({
 				let mut rast  = copy ct.default_rast;
 				rast.prime.poly_mode = gr_low::rast::map_polygon_fill(2);
-				let mut data = gr_low::shade::make_data();
+				let mut data = gr_low::shade::DataMap::new();
 				let vc = vec4::new(1f32,0f32,0f32,1f32);
 				data.insert( ~"u_Color", gr_low::shade::UniFloatVec(vc) );
 				self.hud_screen.root.draw_debug_all( &self.hud_context,
@@ -342,7 +342,7 @@ pub fn make_scene( el : &main::Elements, ct : &mut gr_low::context::Context, fco
 	lg.add(fmt!( "Group size: %u", group.len() ));
 	let envir = {
 		let mesh = @gr_mid::mesh::create_quad( ct );
-		let mut data = gr_low::shade::make_data();
+		let mut data = gr_low::shade::DataMap::new();
 		let samp = gr_low::texture::Sampler::new(3u,1);
 		let use_spherical = false;
 		let prog = if use_spherical	{

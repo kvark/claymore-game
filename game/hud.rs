@@ -362,7 +362,7 @@ impl Element for Image	{
 	}
 	fn draw( &self, hc : &Context, rect : &Rect )-> call::Call	{
 		// fill shader data
-		let mut data = gr_low::shade::make_data();
+		let mut data = gr_low::shade::DataMap::new();
 		data.insert( ~"t_Image",	gr_low::shade::UniTexture(
 			0, self.texture, Some(self.sampler) ));
 		let (cx,cy) = self.center, (sx,sy) = rect.size;
@@ -403,7 +403,7 @@ impl Element for Label	{
 	}
 	fn draw( &self, hc : &Context, rect : &Rect )-> call::Call	{
 		// fill shader data
-		let mut data = gr_low::shade::make_data();
+		let mut data = gr_low::shade::DataMap::new();
 		let sm = gr_low::texture::Sampler::new(1u,0);
 		data.insert( ~"t_Text",	gr_low::shade::UniTexture(0,self.texture,Some(sm)) );
 		let vc = vec4::new( self.color.r, self.color.g, self.color.b, self.color.a );

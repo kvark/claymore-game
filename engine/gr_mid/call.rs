@@ -2,6 +2,7 @@ extern mod glcore;
 
 use core::hashmap::linear::LinearMap;
 
+use journal;
 use gr_low::{buf,context,frame,rast,shade};
 use gr_low::rast::Stage;
 use gr_mid::mesh;
@@ -68,6 +69,18 @@ impl PlaneMap	{
 		assert!( !rast.depth.test	|| self.depth	!= frame::TarEmpty );
 		assert!( !rast.blend.on		|| !self.colors.is_empty() );
 	}
+
+	pub fn log( &self, lg : &journal::Log )	{
+		if self.stencil != frame::TarEmpty	{
+			lg.add(fmt!( "\t\t_stencil\t= %s", self.stencil.to_str() ));
+		}
+		if self.depth != frame::TarEmpty	{
+			lg.add(fmt!( "\t\t_depth\t= %s", self.depth.to_str() ));	
+		}
+		for self.colors.each	|&(name,val)|	{
+			lg.add(fmt!( "\t\t%s\t= %s", *name, val.to_str() ));
+		}
+	}
 }
 
 
@@ -100,8 +113,8 @@ pub struct Output	{
 	area	: frame::Rect,
 }
 
-pub impl Output	{
-	fn new( fb : @mut frame::Buffer, pmap : PlaneMap )-> Output	{
+impl Output	{
+	pub fn new( fb : @mut frame::Buffer, pmap : PlaneMap )-> Output	{
 		let area = pmap.get_area();
 		Output	{
 			fb	: fb,
@@ -109,11 +122,14 @@ pub impl Output	{
 			area: area,
 		}
 	}
-	fn gen_scissor( &self )-> rast::Scissor	{
+	pub fn gen_scissor( &self )-> rast::Scissor	{
 		rast::Scissor	{
 			test: self.area != self.pmap.get_area(),
 			area: copy self.area,
 		}
+	}
+	pub fn log( &self, lg : &journal::Log )	{
+		lg.add(fmt!( "Output to fb %d with area %s", *self.fb.handle as int, self.area.to_str() ));
 	}
 }
 
@@ -126,14 +142,27 @@ pub enum Call	{
 	CallTransfrom(),	//TODO
 }
 
+impl Call	{
+	pub fn log( &self, lg : &journal::Log )	{
+		match self	{
+			&CallEmpty	=> lg.add(~"Call empty"),
+			&CallClear(ref out, ref data, ref mask)	=>	{
+				lg.add(~"Call clear");
+				out.log( lg );
+			}
+			_	=> (),
+		}
+	}
+}
 
-pub impl context::Context	{
-	fn flush( &mut self, queue	: &[Call] )	{
+
+impl context::Context	{
+	pub fn flush( &mut self, queue	: &[Call] )	{
 		self.call_count += queue.len();
-		for queue.each()	|&call|	{
+		for queue.each()	|call|	{
 			match call	{
-				CallEmpty => {},
-				CallClear(out,data,mask)	=> {
+				&CallEmpty => {},
+				&CallClear(ref out, ref data, ref mask)	=> {
 					let mut colors : ~[frame::Target] = ~[];
 					for out.pmap.colors.each_value() |target|	{
 						colors.push( *target );
@@ -141,7 +170,7 @@ pub impl context::Context	{
 					let has_color = colors.len()!=0 && (*out.fb.handle==0 || colors[0]!=frame::TarEmpty);
 					self.bind_frame_buffer( out.fb, true, out.pmap.stencil, out.pmap.depth, colors );
 					self.rast.scissor.activate( &out.gen_scissor(), 0 );
-					self.rast.mask.activate( &mask, 0 );
+					self.rast.mask.activate( mask, 0 );
 					let mut flags = 0 as glcore::GLenum;
 					//FIXME: cache this
 					match data.color	{
@@ -167,7 +196,7 @@ pub impl context::Context	{
 					}
 					glcore::glClear( flags );
 				},
-				CallBlit(src,dst)	=>	{
+				&CallBlit(ref src, ref dst)	=>	{
 					assert!( *src.fb.handle != *dst.fb.handle );
 					// bind frame buffers
 					let mut colors : ~[frame::Target] = ~[];
@@ -206,7 +235,7 @@ pub impl context::Context	{
 						0, 0, sizeB[0] as glcore::GLint, sizeB[1] as glcore::GLint,
 						flags, filter );
 				},
-				CallDraw(in,out,rast,prog,data)	=> {
+				&CallDraw(ref in, ref out, ref rast, ref prog, ref data)	=> {
 					// bind FBO
 					let mut attaches = vec::from_elem( out.pmap.colors.len(), frame::TarEmpty );
 					for out.pmap.colors.each() |&(name,target)|	{
@@ -216,12 +245,12 @@ pub impl context::Context	{
 					}
 					self.bind_frame_buffer( out.fb, true, out.pmap.stencil, out.pmap.depth, attaches );
 					// check & activate raster
-					let mut r2 = rast;
+					let mut r2 = *rast;
 					r2.scissor = out.gen_scissor();
 					self.rast.activate( &r2, in.mesh.get_poly_size() );
 					//assert_eq!( out.area, *self.rast.view );
 					// draw
-					self.draw_mesh( in, prog, &data );
+					self.draw_mesh( *in, *prog, data );
 				},
 				_	=> fail!(~"Unsupported call!")
 			}

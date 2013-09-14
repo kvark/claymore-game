@@ -171,6 +171,13 @@ pub impl Rect	{
 	}
 }
 
+impl ToStr for Rect	{
+	fn to_str( &self )-> ~str	{
+		fmt!( "[%u.%u : %u.%u]", self.x, self.y, self.w, self.h )
+	}
+}
+
+
 pub struct BufferHandle( glcore::GLuint );
 
 pub struct Buffer	{

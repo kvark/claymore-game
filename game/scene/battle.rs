@@ -217,7 +217,7 @@ pub fn make_scene( gc : &mut gr_low::context::Context, hc : &mut hud_new::Contex
 		engine::object::Entity{
 			node	: node,
 			input	: gr_mid::call::Input::new( vao, mesh ),
-			data	: gr_low::shade::make_data(),
+			data	: gr_low::shade::DataMap::new(),
 			modifier: @() as @gr_mid::draw::Mod,
 			material: mat,
 		}
@@ -225,24 +225,18 @@ pub fn make_scene( gc : &mut gr_low::context::Context, hc : &mut hud_new::Contex
 	// load protagonist
 	let hero =	{
 		let mesh = *scene.context.meshes.get( &~"Cube@all" );
-		let arm_node = @mut engine::space::Node{
-			name	: ~"armature",
-			space	: engine::space::QuatSpace::identity(),
-			parent	: None,
-			actions	: ~[],
-		};
 		let skel = *scene.context.armatures.get( &~"Armature" );
-		skel.root = arm_node;
+		//skel.root = arm_node;
 		let node = @mut engine::space::Node{
 			name	: ~"hero",
 			space	: engine::space::QuatSpace::identity(),
-			parent	: Some(arm_node),
+			parent	: Some(skel.root),
 			actions	: ~[],
 		};
 		let mut ent = engine::object::Entity{
 			node	: node,
 			input	: gr_mid::call::Input::new( vao, mesh ),
-			data	: gr_low::shade::make_data(),
+			data	: gr_low::shade::DataMap::new(),
 			modifier: skel as @gr_mid::draw::Mod,
 			material: mat,
 		};

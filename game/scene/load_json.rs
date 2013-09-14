@@ -306,7 +306,7 @@ pub fn load_scene( path : ~str, gc : &mut gr_low::context::Context,
 				tex_cache.insert( copy itex.path, tex );
 			}
 		}
-		let mut data = gr_low::shade::make_data();
+		let mut data = gr_low::shade::DataMap::new();
 		imat.fill_data( &mut data, &tex_cache );
 		map_data.insert( copy imat.name, data );
 	}
@@ -320,7 +320,7 @@ pub fn load_scene( path : ~str, gc : &mut gr_low::context::Context,
 				tex_cache.insert( copy itex.path, tex );
 			}
 		}
-		let mut data = gr_low::shade::make_data();
+		let mut data = gr_low::shade::DataMap::new();
 		imat.fill_data( &mut data, &tex_cache );
 		map_data.insert( copy imat.name, data );
 	}

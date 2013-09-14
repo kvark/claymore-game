@@ -27,7 +27,7 @@ static CELL_ACTIVE	: uint	= 0x2040E040;
 
 pub impl Grid	{
 	fn create( ct : &mut gr_low::context::Context, segments : uint, lg : &engine::journal::Log )-> Grid	{
-		let mut data = gr_low::shade::make_data();
+		let mut data = gr_low::shade::DataMap::new();
 		let mut rast = copy ct.default_rast;
 		rast.prime.cull = true;
 		rast.set_depth( ~"<=", false );

@@ -41,7 +41,7 @@ pub impl Binding	{
 
 
 pub enum Uniform	{
-	Unitialized,
+	Uninitialized,
 	UniFloat(float),
 	UniInt(int),
 	UniFloatVec(vec4),
@@ -54,7 +54,7 @@ pub enum Uniform	{
 impl cmp::Eq for Uniform	{
 	fn eq( &self, v : &Uniform )-> bool	{
 		match (self,v)	{
-			(&Unitialized,&Unitialized)						=> true,
+			(&Uninitialized,&Uninitialized)						=> true,
 			(&UniFloat(f1),&UniFloat(f2))					=> f1==f2,
 			(&UniInt(i1),&UniInt(i2))						=> i1==i2,
 			(&UniFloatVec(fv1),&UniFloatVec(fv2))			=> fv1==fv2,
@@ -141,16 +141,16 @@ priv impl Parameter	{
 
 	fn write( &self )	{
 		let loc = *self.loc;
-		match copy *self.value	{
-			Unitialized			=> fail!(fmt!( "Uninitalized parameter at location %d", loc as int )),
-			UniFloat(v)			=> glcore::glUniform1f( loc, v as glcore::GLfloat ),
-			UniInt(v)			=> glcore::glUniform1i( loc, v as glcore::GLint ),
-			UniFloatVec(v)		=> glcore::glUniform4fv( loc, 1, ptr::addr_of(&v.x) ),
-			UniIntVec(v)		=> glcore::glUniform4iv( loc, 1, v.to_ptr() ),
-			UniFloatVecArray(v)	=> glcore::glUniform4fv( loc, self.size as glcore::GLint,
-				unsafe{vec::raw::to_ptr(v)} as *glcore::GLfloat ),
-			UniMatrix(b,v)		=> glcore::glUniformMatrix4fv( loc, 1, b as glcore::GLboolean, ptr::addr_of(&v.x.x) ),
-			UniTexture(u,_,_)	=> glcore::glUniform1i( loc, u as glcore::GLint ),
+		match &*self.value	{
+			&Uninitialized	=> fail!(fmt!( "Uninitialized parameter at location %d", loc as int )),
+			&UniFloat(v)	=> glcore::glUniform1f( loc, v as glcore::GLfloat ),
+			&UniInt(v)		=> glcore::glUniform1i( loc, v as glcore::GLint ),
+			&UniFloatVec(ref v)		=> glcore::glUniform4fv( loc, 1, ptr::addr_of(&v.x) ),
+			&UniIntVec(ref v)		=> glcore::glUniform4iv( loc, 1, v.to_ptr() ),
+			&UniFloatVecArray(ref v)		=> glcore::glUniform4fv( loc, self.size as glcore::GLint,
+				unsafe{vec::raw::to_ptr(*v)} as *glcore::GLfloat ),
+			&UniMatrix(b, ref v)			=> glcore::glUniformMatrix4fv( loc, 1, b as glcore::GLboolean, ptr::addr_of(&v.x.x) ),
+			&UniTexture(u,_,_)		=> glcore::glUniform1i( loc, u as glcore::GLint ),
 		}
 	}
 }
@@ -158,7 +158,32 @@ priv impl Parameter	{
 
 pub type AttriMap	= LinearMap<~str,Attribute>;
 pub type ParaMap	= LinearMap<~str,Parameter>;
-pub type DataMap	= LinearMap<~str,Uniform>;
+pub struct DataMap(	LinearMap<~str,Uniform> );
+
+impl DataMap	{
+	pub fn new()-> DataMap	{
+		DataMap( LinearMap::new() )
+	}
+	pub fn log( &self, lg : &journal::Log )	{
+		for self.each |&(name,val)|	{
+			let sv = match val	{
+				&Uninitialized		=> ~"uninitialized",
+				&UniFloat(v)		=> fmt!("float(%f)",v),
+				&UniInt(v)			=> fmt!("int(%i)",v),
+				&UniFloatVec(ref v)	=> fmt!("float4(%f,%f,%f,%f)",
+					v.x as float, v.y as float, v.z as float, v.w as float),
+				&UniIntVec(ref v)	=> fmt!("int4(%i,%i,%i,%i)",
+					v.x as int, v.y as int, v.z as int, v.w as int),
+				&UniFloatVecArray(ref _v)		=> ~"float4[]",
+				&UniMatrix(b, ref _v)			=> fmt!("mat4(), transpose=%b", b),
+				&UniTexture(u, ref t, ref os)	=> fmt!("slot[%u]: %s %s",
+					u, t.to_str(), match os	{ &Some(ref s) => s.to_str(), &None => ~"" })
+			};
+			lg.add(fmt!( "\t\t%s = %s", *name, sv ));
+		}
+	}
+}
+
 
 struct Object	{
 	handle	: ObjectHandle,
@@ -198,7 +223,7 @@ pub impl Program	{
 				par.read( &self.handle );
 				copy *par.value
 			},
-			None => Unitialized
+			None => Uninitialized
 		}
 	}
 	fn find_output( &self, name : &~str )-> uint	{
@@ -281,7 +306,7 @@ priv fn query_parameters( h : &ProgramHandle, lg : &journal::Log )-> ParaMap	{
 		info_bytes[length] = 0;
 		let loc = glcore::glGetUniformLocation( **h, raw_bytes );
 		lg.add(fmt!( "\t\t[%d-%d]\t= '%s',\tformat %d", loc as int, ((loc + size) as int) -1, name, storage as int ));
-		let p = Parameter{ loc:Location(loc), storage:storage, size:size as uint, value:@mut Unitialized };
+		let p = Parameter{ loc:Location(loc), storage:storage, size:size as uint, value:@mut Uninitialized };
 		//p.read( h );	// no need to read them here
 		rez.insert( name, p );
 	}
@@ -415,9 +440,9 @@ pub impl context::Context	{
 					}
 				},
 				None	=>	{
-					let msg = match *par.value	{
-						Unitialized	=> ~"not inialized",
-						_			=> ~"missing",
+					let msg = match &*par.value	{
+						&Uninitialized	=> ~"not inialized",
+						_				=> ~"missing",
 					};
 					fail!(fmt!( "Program %d parameter is %s: name=%s, loc=%d",
 						*p.handle as int, msg, *name, *par.loc as int ))
@@ -433,9 +458,4 @@ pub impl context::Context	{
 			glcore::glUseProgram( 0 );
 		}
 	}
-}
-
-
-pub fn make_data()-> DataMap	{
-	LinearMap::new()
 }
