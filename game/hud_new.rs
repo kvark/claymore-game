@@ -138,12 +138,8 @@ impl Context	{
 	}
 
 	priv fn make_call( &self, prog : @shade::Program, data : shade::DataMap,
-		output : &call::Output, rast_override : Option<&rast::State> )-> call::Call	{
-		let rast = match rast_override	{
-			Some(ro)	=> copy *ro,
-			None		=> copy self.rast,
-		};
-		call::CallDraw( copy self.input, copy *output, rast, prog, data )
+			output : &call::Output )-> call::Call	{
+		call::CallDraw( copy self.input, copy *output, copy self.rast, prog, data )
 	}
 
 	priv fn transform( &self, r : &Rect, screen_size : &gen::Vector )-> shade::Uniform	{
@@ -214,7 +210,7 @@ impl Context	{
 					let vc = vec4::new( 0f32, 0f32, 1f32, 1f32 );
 					data.insert( ~"u_Center",		shade::UniFloatVec(vc) );
 					data.insert( ~"u_Transform",	self.transform(&rect,screen_size) );
-					calls.push( self.make_call( self.program_image, data, out, None ));
+					calls.push( self.make_call( self.program_image, data, out ));
 					[t.width,t.height]
 				},
 				&gen::ElText(ref text)	=>	{
@@ -229,7 +225,7 @@ impl Context	{
 					let dr = Rect{ x:off[0], y:off[0], w:t.width, h:t.height };
 					data.insert( ~"u_Transform", self.transform(&dr,screen_size) );
 					// return
-					calls.push( self.make_call( self.program_text, data, out, None ));
+					calls.push( self.make_call( self.program_text, data, out ));
 					[t.width,t.height]
 				},
 				&gen::ElSpace(space)	=> space,

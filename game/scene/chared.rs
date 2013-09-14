@@ -305,7 +305,7 @@ pub impl Scene	{
 					self.hud_debug, &mut data, &rast )
 			});
 		}
-		ct.flush(queue);
+		ct.flush( queue, lg );
 	}
 }
 

@@ -1,20 +1,24 @@
 pub struct Log	{
-	depth		: uint,
+	name		: ~str,
+	enable		: bool,
 	priv wr		: @io::Writer,
 }
 
-pub impl Log	{
-	fn create( path : ~str, depth : uint )->Log	{
+impl Log	{
+	pub fn create( path : ~str )-> Log	{
 		match io::file_writer( &path::Path(path), &[io::Create,io::Truncate] )	{
-			Ok(wr)	=> Log{ depth:depth, wr:wr },
+			Ok(wr)	=> Log{ name:~"", enable:true, wr:wr },
 			Err(e)	=> fail!( e.to_str() ),
 		}
 	}
-	fn add( &self, message : ~str )	{
-		let d = str::find(message,char::is_alphanumeric).expect(~"Bad log record");
-		if d<self.depth	{
+
+	pub fn fork( &self, name : ~str )-> Log	{
+		Log{ name:name, enable:self.enable, wr:self.wr }
+	}
+
+	pub fn add( &self, message : ~str )	{
+		if self.enable	{
 			self.wr.write_line(message);
-			//self.wr.flush();
 		}
 	}
 }

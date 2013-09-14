@@ -19,13 +19,18 @@ enum Screen	{
 	ScreenDeath,
 }
 
+struct Log	{
+	main	: engine::journal::Log,
+	load	: engine::journal::Log,
+	render	: engine::journal::Log,
+}
 
 struct Game	{
 	gr_context	: gr_low::context::Context,
 	aud_context	: engine::audio::Context,
 	font_context: gr_mid::font::Context,
 	hud_context	: hud_new::Context,
-	journal		: engine::journal::Log,
+	journal		: Log,
 	frames		: uint,
 	call_count	: uint,
 	technique	: gr_mid::draw::Technique,
@@ -47,13 +52,13 @@ pub struct Elements	{
 }
 
 pub impl Game	{
-	fn create( el : &Elements, wid : uint, het : uint, ns : uint, lg : engine::journal::Log  )-> Game	{
+	fn create( el : &Elements, wid : uint, het : uint, ns : uint, journal : Log  )-> Game	{
 		let mut gcon = gr_low::context::create( wid, het, ns );
 		assert!( gcon.sync_back() );
 		// audio test
 		let acon = engine::audio::Context::create();
 		if false	{
-			let buf = @engine::audio::load_wav( &acon, ~"data/sound/stereol.wav", &lg );
+			let buf = @engine::audio::load_wav( &acon, ~"data/sound/stereol.wav", &journal.load );
 			let src = @mut acon.create_source();
 			src.bind(buf);
 		}
@@ -64,18 +69,18 @@ pub impl Game	{
 		let out = gr_mid::call::Output::new( gcon.default_frame_buffer, pmap );
 		// create hud
 		let fcon = gr_mid::font::Context::create();
-		let mut hcon = hud_new::Context::create( &mut gcon, &lg );
+		let mut hcon = hud_new::Context::create( &mut gcon, &journal.load );
 		// done
 		gcon.check(~"init");
 		let intro = scene::intro::Scene{ active:false };
-		let editor = scene::chared::make_scene( el, &mut gcon, &fcon, &lg );
-		let battle = scene::battle::make_scene( &mut gcon, &mut hcon, &fcon, &lg );
+		let editor = scene::chared::make_scene( el, &mut gcon, &fcon, &journal.load );
+		let battle = scene::battle::make_scene( &mut gcon, &mut hcon, &fcon, &journal.load );
 		Game{
 			gr_context	: gcon,
 			aud_context	: acon,
 			font_context: fcon,
 			hud_context	: hcon,
-			journal		: lg,
+			journal		: journal,
 			frames:0u, call_count:0u,
 			technique	: tech,
 			output		: out,
@@ -87,7 +92,7 @@ pub impl Game	{
 	fn update( &mut self, input : &input::State )-> bool	{
 		let aspect = self.output.area.aspect();
 		match self.screen	{
-			ScreenChar		=> self.s_editor.update( input, &self.journal ),
+			ScreenChar		=> self.s_editor.update( input, &self.journal.main ),
 			ScreenBattle	=> self.s_battle.update( input, &mut self.gr_context.texture, aspect ),
 			_ => true
 		}
@@ -103,17 +108,18 @@ pub impl Game	{
 	fn render( &mut self, el : &Elements )-> bool	{
 		match self.screen	{
 			ScreenIntro	=> (),
-			ScreenChar	=> self.s_editor.render( el, &mut self.gr_context, &self.journal ),
+			ScreenChar	=> self.s_editor.render( el, &mut self.gr_context, &self.journal.render ),
 			ScreenBattle	=> self.s_battle.render( &mut self.gr_context, &self.hud_context,
-				&self.technique, copy self.output, &self.journal ),	
+				&self.technique, copy self.output, &self.journal.render ),	
 			_ => ()
 		}
-		// done
+		// submit
 		self.call_count = self.gr_context.call_count;
 		self.gr_context.call_count = 0;
 		self.frames += 1;
 		self.gr_context.check( ~"render" );
-		true
+		// exit if logging draw calls
+		!self.journal.render.enable
 	}
 	
 	fn debug_move( &mut self, rot : bool, x : int, y : int )	{
@@ -131,14 +137,14 @@ struct ConfigGL	{
 	major:uint, minor:uint, core:bool, debug:bool,
 }
 #[auto_decode]
-struct Log	{
-	path:~str, depth:uint,
+struct ConfigLog	{
+	path:~str, load:bool, render:bool,
 }
 #[auto_decode]
 struct Config	{
 	window	: ConfigWindow,
 	GL		: ConfigGL,
-	journal	: Log,
+	journal	: ConfigLog,
 	elements: Elements,
 }
 
@@ -149,8 +155,15 @@ fn main()	{
 	}
 	do glfw::spawn {
 		let config = scene::load_json::load_config::<Config>( ~"data/config.json" );
-		let lg = engine::journal::Log::create( copy config.journal.path, config.journal.depth );
+		let lg = engine::journal::Log::create( copy config.journal.path );
 		lg.add(~"--- Claymore ---");
+		let mut journal = Log	{
+			load	: lg.fork( ~"Load" ),
+			render	: lg.fork( ~"Render" ),
+			main	: lg,
+		};
+		journal.load.enable		= config.journal.load;
+		journal.render.enable	= config.journal.render;
 
 		glfw::ml::window_hint( glfw::RESIZABLE, 0 );
 		glfw::ml::window_hint( glfw::OPENGL_DEBUG_CONTEXT, if config.GL.debug {1} else {0} );
@@ -172,7 +185,7 @@ fn main()	{
 
 		//window.set_input_mode( glfw::CURSOR_MODE, glfw::CURSOR_CAPTURED as int );
 		window.make_context_current();
-		let game = @mut Game::create( &config.elements, cw.width, cw.height, cw.samples, lg );
+		let game = @mut Game::create( &config.elements, cw.width, cw.height, cw.samples, journal );
 
 		// init callbacks
 		window.set_iconify_callback( |_win,done|	{

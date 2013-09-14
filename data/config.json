@@ -14,7 +14,8 @@
 	},
 	"journal":	{
 		"path"	: "build/run.log",
-		"depth"	: 5
+		"load"	: true,
+		"render": false
 	},
 	"elements":	{
 		"character"		: true,

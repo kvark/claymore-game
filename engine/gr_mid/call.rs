@@ -188,110 +188,117 @@ impl Call	{
 			},
 		}
 	}
+
+	pub fn execute( &self, gc : &mut context::Context )	{
+		match self	{
+			&CallEmpty => {},
+			&CallClear(ref cdata, ref out, ref mask)	=> {
+				let mut colors : ~[frame::Target] = ~[];
+				for out.pmap.colors.each_value() |target|	{
+					colors.push( *target );
+				}
+				let has_color = colors.len()!=0 && (*out.fb.handle==0 || colors[0]!=frame::TarEmpty);
+				gc.bind_frame_buffer( out.fb, true, out.pmap.stencil, out.pmap.depth, colors );
+				gc.rast.scissor.activate( &out.gen_scissor(), 0 );
+				gc.rast.mask.activate( mask, 0 );
+				let mut flags = 0 as glcore::GLenum;
+				//FIXME: cache this
+				match cdata.color	{
+					Some(c) =>	{
+						assert!( has_color );
+						flags |= glcore::GL_COLOR_BUFFER_BIT;
+						gc.set_clear_color( &c );
+					},
+					None	=>	()
+				}
+				match cdata.depth	{
+					Some(d) => 	{
+						assert!( *out.fb.handle==0 || out.pmap.depth!=frame::TarEmpty );
+						flags |= glcore::GL_DEPTH_BUFFER_BIT;
+						gc.set_clear_depth( d );
+					},
+					None	=> 	()
+				}
+				match cdata.stencil	{
+					Some(s)	=>	{
+						assert!( *out.fb.handle==0 || out.pmap.stencil!=frame::TarEmpty );
+						flags |= glcore::GL_STENCIL_BUFFER_BIT;
+						gc.set_clear_stencil( s );
+					},
+					None	=>	()
+				}
+				glcore::glClear( flags );
+			},
+			&CallBlit(ref src, ref dst)	=>	{
+				assert!( *src.fb.handle != *dst.fb.handle );
+				// bind frame buffers
+				let mut colors : ~[frame::Target] = ~[];
+				for src.pmap.colors.each_value() |target|	{
+					colors.push( *target );
+				}
+				gc.bind_frame_buffer( src.fb, false, src.pmap.stencil, src.pmap.depth, colors );
+				colors = ~[];
+				for dst.pmap.colors.each_value() |target|	{
+					colors.push( *target );
+				}
+				gc.bind_frame_buffer( dst.fb, true, dst.pmap.stencil, dst.pmap.depth, colors );
+				// set state
+				gc.rast.scissor.activate( &dst.gen_scissor(), 0 );
+				let mut flags = 0 as glcore::GLenum;
+				let mut only_color = true;
+				if !src.pmap.colors.is_empty() || !dst.pmap.colors.is_empty()	{
+					flags |= glcore::GL_COLOR_BUFFER_BIT;
+				}
+				if src.pmap.depth != frame::TarEmpty || dst.pmap.depth != frame::TarEmpty	{
+					flags |= glcore::GL_DEPTH_BUFFER_BIT;
+					only_color = false;
+				}
+				if src.pmap.stencil != frame::TarEmpty || dst.pmap.stencil != frame::TarEmpty	{
+					flags |= glcore::GL_STENCIL_BUFFER_BIT;
+					only_color = false;
+				}
+				// prepare
+				let sizeA = src.fb.check_size();
+				let sizeB = dst.fb.check_size();
+				assert!( sizeA[3] == sizeB[3] || (sizeA[3]*sizeB[3]==0 && only_color) );
+				let filter = if (only_color && sizeA[3]==0) {glcore::GL_LINEAR} else {glcore::GL_NEAREST};
+				// call blit
+				glcore::glBlitFramebuffer(
+					0, 0, sizeA[0] as glcore::GLint, sizeA[1] as glcore::GLint,
+					0, 0, sizeB[0] as glcore::GLint, sizeB[1] as glcore::GLint,
+					flags, filter );
+			},
+			&CallDraw(ref in, ref out, ref rast, prog, ref data)	=> {
+				// bind FBO
+				let mut attaches = vec::from_elem( out.pmap.colors.len(), frame::TarEmpty );
+				for out.pmap.colors.each() |&(name,target)|	{
+					let loc = prog.find_output( name );
+					assert!( loc < attaches.len() && attaches[loc] == frame::TarEmpty );
+					attaches[loc] = *target;
+				}
+				gc.bind_frame_buffer( out.fb, true, out.pmap.stencil, out.pmap.depth, attaches );
+				// check & activate raster
+				let mut r2 = *rast;
+				r2.scissor = out.gen_scissor();
+				gc.rast.activate( &r2, in.mesh.get_poly_size() );
+				//assert_eq!( out.area, *gc.rast.view );
+				// draw
+				gc.draw_mesh( *in, prog, data );
+			},
+			_	=> fail!(~"Unsupported call!")
+		}
+	}
 }
 
 
 impl context::Context	{
-	pub fn flush( &mut self, queue	: &[Call] )	{
+	pub fn flush( &mut self, queue	: &[Call], lg : &journal::Log )	{
 		self.call_count += queue.len();
 		for queue.each()	|call|	{
-			match call	{
-				&CallEmpty => {},
-				&CallClear(ref cdata, ref out, ref mask)	=> {
-					let mut colors : ~[frame::Target] = ~[];
-					for out.pmap.colors.each_value() |target|	{
-						colors.push( *target );
-					}
-					let has_color = colors.len()!=0 && (*out.fb.handle==0 || colors[0]!=frame::TarEmpty);
-					self.bind_frame_buffer( out.fb, true, out.pmap.stencil, out.pmap.depth, colors );
-					self.rast.scissor.activate( &out.gen_scissor(), 0 );
-					self.rast.mask.activate( mask, 0 );
-					let mut flags = 0 as glcore::GLenum;
-					//FIXME: cache this
-					match cdata.color	{
-						Some(c) =>	{
-							assert!( has_color );
-							flags |= glcore::GL_COLOR_BUFFER_BIT;
-							self.set_clear_color( &c );
-						},
-						None	=>	()
-					}
-					match cdata.depth	{
-						Some(d) => 	{
-							assert!( *out.fb.handle==0 || out.pmap.depth!=frame::TarEmpty );
-							flags |= glcore::GL_DEPTH_BUFFER_BIT;
-							self.set_clear_depth( d );
-						},
-						None	=> 	()
-					}
-					match cdata.stencil	{
-						Some(s)	=>	{
-							assert!( *out.fb.handle==0 || out.pmap.stencil!=frame::TarEmpty );
-							flags |= glcore::GL_STENCIL_BUFFER_BIT;
-							self.set_clear_stencil( s );
-						},
-						None	=>	()
-					}
-					glcore::glClear( flags );
-				},
-				&CallBlit(ref src, ref dst)	=>	{
-					assert!( *src.fb.handle != *dst.fb.handle );
-					// bind frame buffers
-					let mut colors : ~[frame::Target] = ~[];
-					for src.pmap.colors.each_value() |target|	{
-						colors.push( *target );
-					}
-					self.bind_frame_buffer( src.fb, false, src.pmap.stencil, src.pmap.depth, colors );
-					colors = ~[];
-					for dst.pmap.colors.each_value() |target|	{
-						colors.push( *target );
-					}
-					self.bind_frame_buffer( dst.fb, true, dst.pmap.stencil, dst.pmap.depth, colors );
-					// set state
-					self.rast.scissor.activate( &dst.gen_scissor(), 0 );
-					let mut flags = 0 as glcore::GLenum;
-					let mut only_color = true;
-					if !src.pmap.colors.is_empty() || !dst.pmap.colors.is_empty()	{
-						flags |= glcore::GL_COLOR_BUFFER_BIT;
-					}
-					if src.pmap.depth != frame::TarEmpty || dst.pmap.depth != frame::TarEmpty	{
-						flags |= glcore::GL_DEPTH_BUFFER_BIT;
-						only_color = false;
-					}
-					if src.pmap.stencil != frame::TarEmpty || dst.pmap.stencil != frame::TarEmpty	{
-						flags |= glcore::GL_STENCIL_BUFFER_BIT;
-						only_color = false;
-					}
-					// prepare
-					let sizeA = src.fb.check_size();
-					let sizeB = dst.fb.check_size();
-					assert!( sizeA[3] == sizeB[3] || (sizeA[3]*sizeB[3]==0 && only_color) );
-					let filter = if (only_color && sizeA[3]==0) {glcore::GL_LINEAR} else {glcore::GL_NEAREST};
-					// call blit
-					glcore::glBlitFramebuffer(
-						0, 0, sizeA[0] as glcore::GLint, sizeA[1] as glcore::GLint,
-						0, 0, sizeB[0] as glcore::GLint, sizeB[1] as glcore::GLint,
-						flags, filter );
-				},
-				&CallDraw(ref in, ref out, ref rast, prog, ref data)	=> {
-					// bind FBO
-					let mut attaches = vec::from_elem( out.pmap.colors.len(), frame::TarEmpty );
-					for out.pmap.colors.each() |&(name,target)|	{
-						let loc = prog.find_output( name );
-						assert!( loc < attaches.len() && attaches[loc] == frame::TarEmpty );
-						attaches[loc] = *target;
-					}
-					self.bind_frame_buffer( out.fb, true, out.pmap.stencil, out.pmap.depth, attaches );
-					// check & activate raster
-					let mut r2 = *rast;
-					r2.scissor = out.gen_scissor();
-					self.rast.activate( &r2, in.mesh.get_poly_size() );
-					//assert_eq!( out.area, *self.rast.view );
-					// draw
-					self.draw_mesh( *in, prog, data );
-				},
-				_	=> fail!(~"Unsupported call!")
+			if lg.enable	{
+				call.log( lg );
 			}
+			call.execute( self );
 		}
 	}
 }

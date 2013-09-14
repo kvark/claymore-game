@@ -143,15 +143,13 @@ pub impl Scene	{
 		let c_land = tech.process( &self.land, copy output, copy rast, &mut self.cache, gc, lg );
 		let c_hero = tech.process( &self.hero.entity, copy output, copy rast, &mut self.cache, gc, lg );
 		let c_grid = self.grid.call( output.fb, copy output.pmap, self.land.input.va );
-		gc.flush( [c0,c_land,c_hero,c_grid] );
+		gc.flush( [c0,c_land,c_hero,c_grid], lg );
 		// draw hud
 		let hud_calls = hc.draw_all( &self.hud, &output );
-		for hud_calls.each |c|	{
-			//c.log(lg);
-		}
-		gc.flush( hud_calls );
+		gc.flush( hud_calls, lg );
 	}
-	 fn debug_move( &self, _rot : bool, _x : int, _y : int )	{
+	
+	fn debug_move( &self, _rot : bool, _x : int, _y : int )	{
 		//empty
 	}
 }
