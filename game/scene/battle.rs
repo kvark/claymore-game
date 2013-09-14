@@ -49,14 +49,19 @@ pub struct View	{
 }
 
 pub impl View	{
-	fn update( &mut self, dir : int )-> bool	{
+	fn move( &mut self, dir : int )-> bool	{
 		let time = engine::anim::get_time();
-		if dir != 0 && time > self.start_time + 0.5f	{
+		if dir!=0 && time > self.start_time + 0.5f	{
 			let l = self.points.len() as int;
 			self.destination = ((self.destination as int) + dir + l) % l as uint;
 			self.source = Some( self.cam.node.space );
 			self.start_time = time;
-		}
+			true
+		}else	{false}
+	}
+
+	fn update( &mut self )-> bool	{
+		let time = engine::anim::get_time();
 		match copy self.source	{
 			Some(source)	=>	{
 				let moment = (time - self.start_time) / self.trans_duration;
@@ -101,21 +106,38 @@ pub impl Scene	{
 		}
 		if window.get_key(glfw::KEY_UP)!=0	{
 			game.debug_move(shift,0,1);
-		}
-		// camera rotation
-		let _cam_dir = (window.get_key(glfw::KEY_E) - window.get_key(glfw::KEY_Q)) as int;
-		*/
-		let cam_dir = 0;
-		let (i,j,ok) = self.grid.update( tb, &self.view.cam, aspect, input.mouse.x, input.mouse.y );
-		let mouse_hit = (input.mouse.buttons & 1) != 0;
-		if mouse_hit && self.grid.get_rectangle().contains(i,j)	{
-			let sp = &mut self.hero.entity.node.space;
-			sp.position = self.grid.get_cell_center(i,j);
-			sp.position.z = 1.3f32;
-			sp.orientation = quat::new( 0.707f32, 0f32, 0f32, 0.707f32 );
-		}
-		self.hero.update() && self.view.update( cam_dir ) && ok
+		}*/
+		let ok = self.grid.update( tb, &self.view.cam, aspect, input.mouse.x, input.mouse.y );
+		self.hero.update() && self.view.update() && ok
 	}
+
+	fn on_input( &mut self, event : &input::Event )	{
+		match event	{
+			&input::Keyboard(key,press) if press	=> {
+				// camera rotation
+				let dir = match key as char	{
+					'E'	=> 1i,
+					'Q'	=> -1i,
+					_	=> 0i,
+				};
+				self.view.move( dir );
+			},
+			&input::MouseClick(key,press) if key==0 && press	=> {
+				match self.grid.selected	{
+					Some(pos)	=>	{
+						let sp = &mut self.hero.entity.node.space;
+						let z = sp.position.z;
+						sp.position = self.grid.get_cell_center( pos[0], pos[1] );
+						sp.position.z = z;
+						sp.orientation = quat::new( 0.707f32, 0f32, 0f32, 0.707f32 );
+					},
+					None	=> ()	//beep
+				}
+			},
+			_	=> (),
+		}
+	}
+
 	fn render( &mut self, gc : &mut gr_low::context::Context, hc : &hud_new::Context,
 			tech : &gr_mid::draw::Technique, output : gr_mid::call::Output, lg : &engine::journal::Log )	{
 		let aspect = output.area.aspect();

@@ -4,6 +4,11 @@ pub struct Log	{
 	priv wr		: @io::Writer,
 }
 
+pub trait LoggedUnused	{
+	fn log( &self, lg : &Log );
+}
+
+
 impl Log	{
 	pub fn create( path : ~str )-> Log	{
 		match io::file_writer( &path::Path(path), &[io::Create,io::Truncate] )	{
@@ -19,6 +24,12 @@ impl Log	{
 	pub fn add( &self, message : ~str )	{
 		if self.enable	{
 			self.wr.write_line(message);
+		}
+	}
+
+	pub fn describe( &self, obj : &LoggedUnused )	{
+		if self.enable	{
+			obj.log( self );
 		}
 	}
 }

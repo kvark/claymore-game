@@ -19,7 +19,7 @@ enum Screen	{
 	ScreenDeath,
 }
 
-struct Log	{
+struct Journal	{
 	main	: engine::journal::Log,
 	load	: engine::journal::Log,
 	render	: engine::journal::Log,
@@ -30,7 +30,7 @@ struct Game	{
 	aud_context	: engine::audio::Context,
 	font_context: gr_mid::font::Context,
 	hud_context	: hud_new::Context,
-	journal		: Log,
+	journal		: Journal,
 	frames		: uint,
 	call_count	: uint,
 	technique	: gr_mid::draw::Technique,
@@ -52,7 +52,7 @@ pub struct Elements	{
 }
 
 pub impl Game	{
-	fn create( el : &Elements, wid : uint, het : uint, ns : uint, journal : Log  )-> Game	{
+	fn create( el : &Elements, wid : uint, het : uint, ns : uint, journal : Journal  )-> Game	{
 		let mut gcon = gr_low::context::create( wid, het, ns );
 		assert!( gcon.sync_back() );
 		// audio test
@@ -99,8 +99,10 @@ pub impl Game	{
 	}
 
 	fn on_input( &mut self, event : input::Event )	{
+		self.journal.main.add( event.to_str() );
 		match self.screen	{
-			ScreenChar	=> self.s_editor.on_input( &event ),
+			ScreenChar		=> self.s_editor.on_input( &event ),
+			ScreenBattle	=> self.s_battle.on_input( &event ),
 			_	=> ()
 		}
 	}
@@ -157,7 +159,7 @@ fn main()	{
 		let config = scene::load_json::load_config::<Config>( ~"data/config.json" );
 		let lg = engine::journal::Log::create( copy config.journal.path );
 		lg.add(~"--- Claymore ---");
-		let mut journal = Log	{
+		let mut journal = Journal	{
 			load	: lg.fork( ~"Load" ),
 			render	: lg.fork( ~"Render" ),
 			main	: lg,
@@ -181,7 +183,10 @@ fn main()	{
 			glfw::Windowed
 		};
 		assert_eq!( cw.samples, 0 );
-		let window = glfw::Window::create( cw.width, cw.height, cw.title, mode ).get();
+		let window = match glfw::Window::create( cw.width, cw.height, cw.title, mode )	{
+			Ok(w)	=> w,
+			Err(e)	=> fail!(fmt!( "Window::create failed: %s", e )),
+		};
 
 		//window.set_input_mode( glfw::CURSOR_MODE, glfw::CURSOR_CAPTURED as int );
 		window.make_context_current();
@@ -225,13 +230,12 @@ fn main()	{
 				}
 				input::State{
 					time	: engine::anim::get_time(),
-					focus	: true,	//FIXME
+					focus	: window.get_param(glfw::support::consts::VISIBLE) != 0,
 					mouse	: input::Mouse{
 						x	:px / (cw.width as float),
 						y	:py / (cw.height as float),
 						buttons	: buttons,
 					},
-					keys	: ~[],	//FIXME
 				}
 			};
 			//TODO: update on a higher frequency than render

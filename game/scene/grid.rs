@@ -4,20 +4,21 @@ extern mod engine;
 use lmath::vec::*;
 use engine::{gr_low,gr_mid};
 use engine::gr_low::context::GLType;
+use engine::gr_low::rast::Color;
 use engine::space::Space;
 
 use scene = scene::common;
 
 
 pub struct Grid	{
+	selected	: Option<[uint,..2]>,
 	priv mesh		: @gr_mid::mesh::Mesh,
 	priv program	: @gr_low::shade::Program,
 	priv data		: gr_low::shade::DataMap,
 	priv rast		: gr_low::rast::State,
 	priv nseg		: uint,
-	priv selected	: (uint,uint),
 	priv texture	: @gr_low::texture::Texture,
-	priv cells		: ~[gr_low::rast::Color],
+	priv cells		: ~[Color],
 	priv v_scale	: Vec4<f32>,
 }
 
@@ -32,8 +33,8 @@ pub impl Grid	{
 		rast.prime.cull = true;
 		rast.set_depth( ~"<=", false );
 		rast.set_blend( ~"s+d", ~"Sa", ~"1" );
-		let cells = do vec::from_fn::<gr_low::rast::Color>(segments*segments) |_i|	{
-			gr_low::rast::Color::new(CELL_EMPTY)
+		let cells = do vec::from_fn::<Color>(segments*segments) |_i|	{
+			Color::new(CELL_EMPTY)
 		};
 		let tex = ct.create_texture( ~"2D", segments, segments, 0u, 0u );
 		let s_opt = Some( gr_low::texture::Sampler::new(1u,0) );
@@ -44,12 +45,12 @@ pub impl Grid	{
 		let par_size = vec4::new( oo_seg, oo_seg, 0f32, 0f32 );
 		data.insert( ~"u_Size",		gr_low::shade::UniFloatVec(par_size) );
 		Grid{
+			selected: None,
 			mesh	: @gr_mid::mesh::create_quad( ct ),
 			program	: engine::load::load_program( ct, ~"data/code-game/grid", lg ),
 			data	: data,
 			rast	: rast,
 			nseg	: segments,
-			selected: (0u,0u),
 			texture	: tex,
 			cells	: cells,
 			v_scale	: par_scale,
@@ -120,18 +121,24 @@ pub impl Grid	{
 		// set up texture
 	}
 
-	fn update( &mut self, tb : &mut gr_low::texture::Binding, cam : &scene::Camera, aspect : f32, nx : float, ny : float )-> (uint,uint,bool)	{
+	fn update( &mut self, tb : &mut gr_low::texture::Binding, cam : &scene::Camera, aspect : f32, nx : float, ny : float )-> bool	{
 		let view_proj = cam.get_matrix( aspect );
 		self.data.insert( ~"u_ViewProj", gr_low::shade::UniMatrix(false,view_proj) );
 		let (sx,sy) = self.get_cell_selected( cam, aspect, nx, ny );
-		if sx<self.nseg && sy<self.nseg && self.selected != (sx,sy)	{
-			let (ox,oy) = self.selected;
-			self.cells[ox + oy*self.nseg] = gr_low::rast::Color::new(CELL_EMPTY);
+		let (ox,oy) = match self.selected	{
+			Some(sel) if sel[0]==sx && sel[1]==sy	=> return true,
+			Some(sel)	=> (sel[0],sel[1]),
+			None		=> (0u,0u)
+		};
+		self.selected = if sx<self.nseg && sy<self.nseg	{
+			self.cells[ox + oy*self.nseg] = Color::new(CELL_EMPTY);
 			self.upload_single_cell(tb,ox,oy);
-			self.selected = (sx,sy);
-			self.cells[sx + sy*self.nseg] = gr_low::rast::Color::new(CELL_ACTIVE);
+			self.cells[sx + sy*self.nseg] = Color::new(CELL_ACTIVE);
 			self.upload_single_cell(tb,sx,sy);
-		}
-		(sx,sy,true)
+			Some([sx,sy])
+		}else	{
+			None
+		};
+		true
 	}
 }
