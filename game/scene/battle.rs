@@ -135,7 +135,7 @@ pub impl Scene	{
 			depth	:Some( 1f ),
 			stencil	:Some( 0u ),
 		};
-		let c0 = gr_mid::call::CallClear( copy output, cd, copy gc.default_rast.mask );
+		let c0 = gr_mid::call::CallClear( cd, copy output, copy gc.default_rast.mask );
 		// draw battle
 		let mut rast = gc.default_rast;
 		rast.set_depth( ~"<=", true );
@@ -145,7 +145,11 @@ pub impl Scene	{
 		let c_grid = self.grid.call( output.fb, copy output.pmap, self.land.input.va );
 		gc.flush( [c0,c_land,c_hero,c_grid] );
 		// draw hud
-		gc.flush( hc.draw_all( &self.hud, &output ) );
+		let hud_calls = hc.draw_all( &self.hud, &output );
+		for hud_calls.each |c|	{
+			//c.log(lg);
+		}
+		gc.flush( hud_calls );
 	}
 	 fn debug_move( &self, _rot : bool, _x : int, _y : int )	{
 		//empty

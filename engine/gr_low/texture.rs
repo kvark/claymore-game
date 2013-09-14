@@ -64,7 +64,7 @@ impl ToStr for Sampler	{
 			glcore::GL_CLAMP_TO_EDGE	=> ~"clamp",
 			_							=> ~"unknown"
 		};
-		fmt!( "Sampler(filter=%s, wrap=%s, compare=%b", sf, sw, !self.compare.is_none() )
+		fmt!( "Sampler(filter=%s, wrap=%s, compare=%b)", sf, sw, !self.compare.is_none() )
 	}
 }
 

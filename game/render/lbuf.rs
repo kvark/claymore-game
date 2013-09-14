@@ -118,7 +118,7 @@ pub impl Context	{
 			depth	: None,
 			stencil	: None,
 		};
-		let clear = gr_mid::call::CallClear( copy output, cdata, rast.mask );
+		let clear = gr_mid::call::CallClear( cdata, copy output, rast.mask );
 		let mut queue = do vec::map(lights) |lit|	{
 			let (mesh,mat) = vol.query( lit.kind );
 			lit.fill_data( &mut data, 1f32, 30f32 );

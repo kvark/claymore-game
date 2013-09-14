@@ -24,7 +24,7 @@ pub impl Data	{
 		let cdata = gr_mid::call::ClearData{
 			color:None, depth:Some(1f), stencil:None
 		};
-		let clear = gr_mid::call::CallClear( copy out, cdata, copy rast.mask );
+		let clear = gr_mid::call::CallClear( cdata, copy out, copy rast.mask );
 		Data{
 			texture		: texture,
 			tech_solid	: gr_mid::draw::load_technique( ~"data/code/tech/pure/solid" ),

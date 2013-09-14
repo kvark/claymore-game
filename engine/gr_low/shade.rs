@@ -176,10 +176,15 @@ impl DataMap	{
 					v.x as int, v.y as int, v.z as int, v.w as int),
 				&UniFloatVecArray(ref _v)		=> ~"float4[]",
 				&UniMatrix(b, ref _v)			=> fmt!("mat4(), transpose=%b", b),
-				&UniTexture(u, ref t, ref os)	=> fmt!("slot[%u]: %s %s",
-					u, t.to_str(), match os	{ &Some(ref s) => s.to_str(), &None => ~"" })
+				&UniTexture(u, ref t, ref os)	=>	{
+					let smp = match os	{
+						&Some(ref s) => ~"\n\t\t\t" + s.to_str(),
+						&None => ~""
+					};
+					fmt!("slot[%u]: %s%s", u, t.to_str(), smp)
+				},
 			};
-			lg.add(fmt!( "\t\t%s = %s", *name, sv ));
+			lg.add(fmt!( "\t\t%s\t= %s", *name, sv ));
 		}
 	}
 }

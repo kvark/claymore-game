@@ -72,10 +72,10 @@ impl PlaneMap	{
 
 	pub fn log( &self, lg : &journal::Log )	{
 		if self.stencil != frame::TarEmpty	{
-			lg.add(fmt!( "\t\t_stencil\t= %s", self.stencil.to_str() ));
+			lg.add(fmt!( "\t\tstencil\t= %s", self.stencil.to_str() ));
 		}
 		if self.depth != frame::TarEmpty	{
-			lg.add(fmt!( "\t\t_depth\t= %s", self.depth.to_str() ));	
+			lg.add(fmt!( "\t\tdepth\t= %s", self.depth.to_str() ));	
 		}
 		for self.colors.each	|&(name,val)|	{
 			lg.add(fmt!( "\t\t%s\t= %s", *name, val.to_str() ));
@@ -96,13 +96,18 @@ pub struct Input	{
 	range	: mesh::Range,
 }
 
-pub impl Input	{
-	fn new( va : @mut buf::VertexArray, m : @mesh::Mesh )-> Input	{
+impl Input	{
+	pub fn new( va : @mut buf::VertexArray, m : @mesh::Mesh )-> Input	{
 		Input	{
 			va		: va,
 			mesh	: m,
 			range	: m.get_range(),
 		}
+	}
+	pub fn log( &self, lg : &journal::Log )	{
+		lg.add(fmt!( "\tMesh '%s' at VAO=%i with range [%u:%u]",
+			self.mesh.name, *self.va.handle as int,
+			self.range.start, self.range.start+self.range.num ));
 	}
 }
 
@@ -128,15 +133,17 @@ impl Output	{
 			area: copy self.area,
 		}
 	}
-	pub fn log( &self, lg : &journal::Log )	{
-		lg.add(fmt!( "Output to fb %d with area %s", *self.fb.handle as int, self.area.to_str() ));
+	pub fn log( &self, kind : &str, lg : &journal::Log )	{
+		lg.add(fmt!( "\t%s FBO=%i with area %s", kind, *self.fb.handle as int, self.area.to_str() ));
+		self.pmap.log( lg );
 	}
 }
 
 
 pub enum Call	{
+	// naming convention: What-Where-How
 	CallEmpty,
-	CallClear( Output, ClearData, rast::Mask ),
+	CallClear( ClearData, Output, rast::Mask ),
 	CallBlit( Output, Output ),
 	CallDraw( Input, Output, rast::State, @shade::Program, shade::DataMap ),
 	CallTransfrom(),	//TODO
@@ -146,11 +153,39 @@ impl Call	{
 	pub fn log( &self, lg : &journal::Log )	{
 		match self	{
 			&CallEmpty	=> lg.add(~"Call empty"),
-			&CallClear(ref out, ref data, ref mask)	=>	{
+			&CallClear(ref cd, ref out, ref _mask)	=>	{
 				lg.add(~"Call clear");
-				out.log( lg );
+				lg.add(fmt!( "\tValue %s %s %s",
+					match cd.color	{
+						Some(v)	=> fmt!("color(%f,%f,%f,%f)",
+							v.r as float, v.g as float, v.b as float, v.a as float),
+						None	=> ~"",
+					},
+					match cd.depth	{
+						Some(v)	=> fmt!("depth(%f)", v),
+						None	=> ~"",
+					},
+					match cd.stencil	{
+						Some(v)	=> fmt!("stencil(%u)", v),
+						None	=> ~"",
+					}) );
+				out.log( "Output", lg );
 			}
-			_	=> (),
+			&CallBlit(ref src, ref dst)	=>	{
+				lg.add(~"Call blit");
+				src.log( "Src", lg );
+				dst.log( "Dst", lg );
+			},
+			&CallDraw(ref in, ref out, ref _rast, prog, ref data )	=>	{
+				lg.add(~"Call draw");
+				in.log( lg );
+				out.log( "Output", lg );
+				lg.add(fmt!( "\tProgram=%i", *prog.handle as int ));
+				data.log( lg );
+			},
+			&CallTransfrom()	=>	{
+				lg.add(~"Call transform");
+			},
 		}
 	}
 }
@@ -162,7 +197,7 @@ impl context::Context	{
 		for queue.each()	|call|	{
 			match call	{
 				&CallEmpty => {},
-				&CallClear(ref out, ref data, ref mask)	=> {
+				&CallClear(ref cdata, ref out, ref mask)	=> {
 					let mut colors : ~[frame::Target] = ~[];
 					for out.pmap.colors.each_value() |target|	{
 						colors.push( *target );
@@ -173,26 +208,29 @@ impl context::Context	{
 					self.rast.mask.activate( mask, 0 );
 					let mut flags = 0 as glcore::GLenum;
 					//FIXME: cache this
-					match data.color	{
+					match cdata.color	{
 						Some(c) =>	{
 							assert!( has_color );
 							flags |= glcore::GL_COLOR_BUFFER_BIT;
 							self.set_clear_color( &c );
-						},None	=>	{}
+						},
+						None	=>	()
 					}
-					match data.depth	{
+					match cdata.depth	{
 						Some(d) => 	{
 							assert!( *out.fb.handle==0 || out.pmap.depth!=frame::TarEmpty );
 							flags |= glcore::GL_DEPTH_BUFFER_BIT;
 							self.set_clear_depth( d );
-						},None	=> 	{}
+						},
+						None	=> 	()
 					}
-					match data.stencil	{
+					match cdata.stencil	{
 						Some(s)	=>	{
 							assert!( *out.fb.handle==0 || out.pmap.stencil!=frame::TarEmpty );
 							flags |= glcore::GL_STENCIL_BUFFER_BIT;
 							self.set_clear_stencil( s );
-						},None	=>	{}
+						},
+						None	=>	()
 					}
 					glcore::glClear( flags );
 				},
@@ -235,7 +273,7 @@ impl context::Context	{
 						0, 0, sizeB[0] as glcore::GLint, sizeB[1] as glcore::GLint,
 						flags, filter );
 				},
-				&CallDraw(ref in, ref out, ref rast, ref prog, ref data)	=> {
+				&CallDraw(ref in, ref out, ref rast, prog, ref data)	=> {
 					// bind FBO
 					let mut attaches = vec::from_elem( out.pmap.colors.len(), frame::TarEmpty );
 					for out.pmap.colors.each() |&(name,target)|	{
@@ -250,7 +288,7 @@ impl context::Context	{
 					self.rast.activate( &r2, in.mesh.get_poly_size() );
 					//assert_eq!( out.area, *self.rast.view );
 					// draw
-					self.draw_mesh( *in, *prog, data );
+					self.draw_mesh( *in, prog, data );
 				},
 				_	=> fail!(~"Unsupported call!")
 			}

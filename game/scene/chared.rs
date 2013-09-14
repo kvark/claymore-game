@@ -168,7 +168,7 @@ pub impl Scene	{
 			depth	:Some( 1f ),
 			stencil	:Some( 0u ),
 		};
-		let c0 = gr_mid::call::CallClear( copy output, cdata, copy self.rast_solid.mask );
+		let c0 = gr_mid::call::CallClear( cdata, copy output, copy self.rast_solid.mask );
 		let aspect = output.area.aspect();
 		if el.environment	{
 			let vpi = self.cam.get_inverse_matrix( aspect );
