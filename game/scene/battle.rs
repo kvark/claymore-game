@@ -92,17 +92,18 @@ pub struct Scene	{
 
 pub impl Scene	{
 	fn reset( &mut self )	{
-		self.move_hero( 7, 2 );
+		self.grid.reset();
+		self.move_hero( [7,2] );
 		let time = engine::anim::get_time();
 		self.hero.start_time = time;
 		self.boss.start_time = time;
 	}
 
-	fn move_hero( &mut self, px : uint, py : uint )	{
+	fn move_hero( &mut self, d : scene::grid::Coordinate )	{
 		let sp = &mut self.hero.skeleton.root.space;
-		sp.position = self.grid.get_cell_center( px, py );
+		sp.position = self.grid.get_cell_center( d );
 		sp.position.z = 1.5f32;
-		sp.orientation = quat::new( 0.707f32, 0f32, 0f32, 0.707f32 );
+		//sp.orientation = quat::new( 0.707f32, 0f32, 0f32, 0.707f32 );
 	}
 
 	fn update( &mut self, input : &input::State, tb : &mut gr_low::texture::Binding, aspect : f32 )-> bool	{
@@ -124,7 +125,7 @@ pub impl Scene	{
 			&input::MouseClick(key,press) if key==0 && press	=> {
 				match self.grid.selected	{
 					Some(pos)	=>	{
-						self.move_hero( pos[0], pos[1] );
+						self.move_hero( pos );
 					},
 					None	=> ()	//beep
 				}
@@ -252,12 +253,6 @@ pub fn make_scene( gc : &mut gr_low::context::Context, hc : &mut hud_new::Contex
 	// create grid
 	let grid = scene::grid::Grid::create( gc, 10u, lg );
 	grid.init( &mut gc.texture );
-	{	// move hero
-		let mut sp = hero.entity.node.space;
-		sp.position = grid.get_cell_center(7u,2u);
-		sp.position.z = 1.3f32;
-		sp.orientation = quat::new( 0.707f32, 0f32, 0f32, 0.707f32 );
-	}
 	let hud = gen_hud::battle::load();
 	hc.preload( hud.children, gc, fcon, lg );
 	// done

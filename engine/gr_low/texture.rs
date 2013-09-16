@@ -146,7 +146,7 @@ pub fn map_pix_format( s : ~str )-> glcore::GLenum	{
 		~"rgb"	=> glcore::GL_RGB,
 		~"bgr"	=> glcore::GL_BGR,
 		~"rgba"	=> glcore::GL_RGBA,
-		~"bgra"	=> glcore::GL_RGBA,
+		~"bgra"	=> glcore::GL_BGRA,
 		~"depth"=> glcore::GL_DEPTH_COMPONENT,
 		~"ds"	=> glcore::GL_DEPTH_STENCIL,
 		_	=> fail!(fmt!( "Can not recognize texture pixel format %s",s ))

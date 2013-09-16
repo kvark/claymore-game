@@ -4,38 +4,37 @@ extern mod engine;
 use lmath::vec::*;
 use engine::{gr_low,gr_mid};
 use engine::gr_low::context::GLType;
-use engine::gr_low::rast::Color;
 use engine::space::Space;
 
 use scene = scene::common;
 
+pub type Coordinate = [int, ..2];
+
 
 pub struct Grid	{
-	selected	: Option<[uint,..2]>,
+	selected		: Option<Coordinate>,
 	priv mesh		: @gr_mid::mesh::Mesh,
 	priv program	: @gr_low::shade::Program,
 	priv data		: gr_low::shade::DataMap,
 	priv rast		: gr_low::rast::State,
 	priv nseg		: uint,
 	priv texture	: @gr_low::texture::Texture,
-	priv cells		: ~[Color],
+	priv cells		: ~[u32],
 	priv v_scale	: Vec4<f32>,
 }
 
-static CELL_EMPTY 	: uint	= 0x20802000;
-static CELL_ACTIVE	: uint	= 0x2040E040;
+static CELL_EMPTY 	: u32	= 0x20802000;
+static CELL_ACTIVE	: u32	= 0x2040E040;
 
 
-pub impl Grid	{
-	fn create( ct : &mut gr_low::context::Context, segments : uint, lg : &engine::journal::Log )-> Grid	{
+impl Grid	{
+	pub fn create( ct : &mut gr_low::context::Context, segments : uint, lg : &engine::journal::Log )-> Grid	{
 		let mut data = gr_low::shade::DataMap::new();
 		let mut rast = copy ct.default_rast;
 		rast.prime.cull = true;
 		rast.set_depth( ~"<=", false );
 		rast.set_blend( ~"s+d", ~"Sa", ~"1" );
-		let cells = do vec::from_fn::<Color>(segments*segments) |_i|	{
-			Color::new(CELL_EMPTY)
-		};
+		let cells = vec::from_elem( segments*segments, CELL_EMPTY );
 		let tex = ct.create_texture( ~"2D", segments, segments, 0u, 0u );
 		let s_opt = Some( gr_low::texture::Sampler::new(1u,0) );
 		data.insert( ~"t_Grid",		gr_low::shade::UniTexture(0,tex,s_opt) );
@@ -57,25 +56,46 @@ pub impl Grid	{
 		}
 	}
 
-	fn get_cell_size( &self )-> (f32,f32)	{
+	pub fn reset( &mut self )	{
+		for self.cells.each_mut |c|	{
+			*c = CELL_EMPTY;
+		}
+	}
+
+	pub fn get_cell_size( &self )-> (f32,f32)	{
 		(2f32*self.v_scale.x / (self.nseg as f32),
 		 2f32*self.v_scale.y / (self.nseg as f32))
 	}
-	fn get_cell_center( &self, x: uint, y : uint )-> Vec3<f32>	{
+	pub fn get_cell_center( &self, d : Coordinate )-> Vec3<f32>	{
 		let (x_unit,y_unit) = self.get_cell_size();
 		let half = (self.nseg as f32) * 0.5f32;
 		vec3::new(
-			((x as f32)+0.5f32-half)*x_unit,
-			((y as f32)+0.5f32-half)*y_unit,
+			((d[0] as f32)+0.5f32-half)*x_unit,
+			((d[1] as f32)+0.5f32-half)*y_unit,
 			self.v_scale.z )
 	}
-	fn get_rectangle( &self )-> gr_low::frame::Rect	{
+	pub fn get_rectangle( &self )-> gr_low::frame::Rect	{
 		gr_low::frame::Rect{
 			x:0u, y:0u, w:self.nseg, h:self.nseg
 		}
 	}
 
-	fn call( &self, fbo : @mut gr_low::frame::Buffer, pmap : gr_mid::call::PlaneMap,
+	pub fn get_cell( &self, d : Coordinate )-> Option<u32>	{
+		let ns = self.nseg as int;
+		if d[0]>=0 && d[0]<ns && d[1]>=0 && d[1]<ns	{
+			Some(self.cells[ d[0] + d[1]*ns ])
+		}else	{None}
+	}
+
+	pub fn mut_cell( &mut self, d : Coordinate, fun : &fn(&mut u32) )-> bool	{
+		let ns = self.nseg as int;
+		if d[0]>=0 && d[0]<ns && d[1]>=0 && d[1]<ns	{
+			fun( &mut self.cells[ d[0] + d[1]*ns ] );
+			true
+		}else	{false}
+	}
+
+	pub fn call( &self, fbo : @mut gr_low::frame::Buffer, pmap : gr_mid::call::PlaneMap,
 			vao : @mut gr_low::buf::VertexArray )-> gr_mid::call::Call	{
 		gr_mid::call::CallDraw(
 			gr_mid::call::Input::new( vao, self.mesh ),
@@ -86,21 +106,26 @@ pub impl Grid	{
 	priv fn upload_all_cells( &self, tb : &mut gr_low::texture::Binding )	{
 		tb.bind( self.texture );
 		let fm_pix = gr_low::texture::map_pix_format( ~"rgba" );
-		let component = self.cells[0].r.to_gl_type();
+		let component = 0u8.to_gl_type();
 		let r = self.get_rectangle();
 		tb.load_sub_2D(	self.texture, 0u, &r, fm_pix, component, self.cells );
 	}
 
-	priv fn upload_single_cell( &self, tb : &mut gr_low::texture::Binding, x : uint, y : uint )	{
+	priv fn upload_single_cell( &self, tb : &mut gr_low::texture::Binding, d : Coordinate )-> bool	{
 		tb.bind( self.texture );
-		let col = self.cells[x + y*self.nseg];
-		let fm_pix = gr_low::texture::map_pix_format( ~"rgba" );
-		let component = col.r.to_gl_type();
-		let r = gr_low::frame::Rect{ x:x, y:y, w:1u, h:1u };
-		tb.load_sub_2D(	self.texture, 0u, &r, fm_pix, component, &[col] );
+		match self.get_cell(d)	{
+			Some(col)	=>	{
+				let fm_pix = gr_low::texture::map_pix_format( ~"rgba" );
+				let component = 0u8.to_gl_type();
+				let r = gr_low::frame::Rect{ x:d[0] as uint, y:d[1] as uint, w:1u, h:1u };
+				tb.load_sub_2D(	self.texture, 0u, &r, fm_pix, component, &[col] );
+				true
+			},
+			None	=> false
+		}	
 	}
 
-	priv fn get_cell_selected( &self, cam : &scene::Camera, aspect : f32, nx : float, ny : float )-> (uint,uint)	{
+	priv fn get_cell_selected( &self, cam : &scene::Camera, aspect : f32, nx : float, ny : float )-> Coordinate	{
 		let ndc = vec3::new( (nx as f32)*2f32-1f32, 1f32-(ny as f32)*2f32, 0f32 );
 		let origin = cam.node.world_space().position;
 		let ray = cam.get_matrix(aspect).invert().transform( &ndc ).sub_v( &origin );
@@ -108,10 +133,10 @@ pub impl Grid	{
 		let k = (self.v_scale.z - origin.z) / ray.z;
 		let x = (origin.x + ray.x*k + self.v_scale.x) / x_unit;
 		let y = (origin.y + ray.y*k + self.v_scale.y) / y_unit;
-		(x as uint, y as uint)
+		[x as int, y as int]
 	}
 
-	fn init( &self, tb : &mut gr_low::texture::Binding )	{
+	pub fn init( &self, tb : &mut gr_low::texture::Binding )	{
 		// init storage
 		tb.bind( self.texture );
 		let fm_int = gr_low::texture::map_int_format( ~"rgba8" );
@@ -121,23 +146,25 @@ pub impl Grid	{
 		// set up texture
 	}
 
-	fn update( &mut self, tb : &mut gr_low::texture::Binding, cam : &scene::Camera, aspect : f32, nx : float, ny : float )-> bool	{
+	pub fn update( &mut self, tb : &mut gr_low::texture::Binding, cam : &scene::Camera, aspect : f32, nx : float, ny : float )-> bool	{
 		let view_proj = cam.get_matrix( aspect );
 		self.data.insert( ~"u_ViewProj", gr_low::shade::UniMatrix(false,view_proj) );
-		let (sx,sy) = self.get_cell_selected( cam, aspect, nx, ny );
-		let (ox,oy) = match self.selected	{
-			Some(sel) if sel[0]==sx && sel[1]==sy	=> return true,
-			Some(sel)	=> (sel[0],sel[1]),
-			None		=> (0u,0u)
+		let sp = self.get_cell_selected( cam, aspect, nx, ny );
+		let op = match self.selected	{
+			Some(sel) if sel==sp	=> return true,
+			Some(sel)	=> sel,
+			None		=> [0,0]
 		};
-		self.selected = if sx<self.nseg && sy<self.nseg	{
-			self.cells[ox + oy*self.nseg] = Color::new(CELL_EMPTY);
-			self.upload_single_cell(tb,ox,oy);
-			self.cells[sx + sy*self.nseg] = Color::new(CELL_ACTIVE);
-			self.upload_single_cell(tb,sx,sy);
-			Some([sx,sy])
-		}else	{
-			None
+		self.selected = match self.get_cell(sp)	{
+			Some(_col)	=>	{
+				let ns = self.nseg as int;
+				self.cells[op[0] + op[1]*ns] = CELL_EMPTY;
+				self.upload_single_cell(tb,op);
+				self.cells[sp[0] + sp[1]*ns] = CELL_ACTIVE;
+				self.upload_single_cell(tb,sp);
+				Some(sp)
+			},
+			None	=> None,
 		};
 		true
 	}
