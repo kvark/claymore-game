@@ -100,7 +100,7 @@ pub impl Game	{
 		let aspect = self.output.area.aspect();
 		match self.screen	{
 			ScreenChar		=> self.s_editor.update( input, &self.journal.main ),
-			ScreenBattle	=> self.s_battle.update( input, &mut self.gr_context.texture, aspect ),
+			ScreenBattle	=> self.s_battle.update( input, aspect ),
 			_ => true
 		}
 	}

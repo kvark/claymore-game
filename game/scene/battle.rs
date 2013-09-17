@@ -14,6 +14,7 @@ use engine::space::{Interpolate,Space};
 use input;
 use hud_new;
 use scene;
+use scene::grid;
 
 
 pub struct Character	{
@@ -21,6 +22,7 @@ pub struct Character	{
 	skeleton	: @mut engine::space::Armature,
 	record		: @engine::space::ArmatureRecord,
 	priv start_time	: float,
+	coord		: grid::Coordinate,
 }
 
 pub impl Character	{
@@ -35,6 +37,15 @@ pub impl Character	{
 		self.skeleton.set_record( self.record, moment );
 		self.skeleton.fill_data( &mut self.entity.data );
 		true
+	}
+	fn move( &mut self, grid : &mut grid::Grid, d : grid::Coordinate )	{
+		grid.set_cell( self.coord, grid::CELL_EMPTY, None );
+		grid.set_cell( d, grid::CELL_OCCUPIED, None );
+		self.coord = d;
+		let sp = &mut self.skeleton.root.space;
+		sp.position = grid.get_cell_center( d );
+		sp.position.z = 1.5f32;
+		//sp.orientation = quat::new( 0.707f32, 0f32, 0f32, 0.707f32 );
 	}
 }
 
@@ -83,7 +94,7 @@ pub impl View	{
 pub struct Scene	{
 	view	: View,
 	land	: engine::object::Entity,
-	grid	: scene::grid::Grid,
+	grid	: grid::Grid,
 	hero	: Character,
 	boss	: Character,
 	cache	: gr_mid::draw::Cache,
@@ -93,21 +104,15 @@ pub struct Scene	{
 pub impl Scene	{
 	fn reset( &mut self )	{
 		self.grid.reset();
-		self.move_hero( [7,2] );
+		self.hero.move( &mut self.grid, [7,2] );
+		self.boss.move( &mut self.grid, [5,5] );
 		let time = engine::anim::get_time();
 		self.hero.start_time = time;
 		self.boss.start_time = time;
 	}
 
-	fn move_hero( &mut self, d : scene::grid::Coordinate )	{
-		let sp = &mut self.hero.skeleton.root.space;
-		sp.position = self.grid.get_cell_center( d );
-		sp.position.z = 1.5f32;
-		//sp.orientation = quat::new( 0.707f32, 0f32, 0f32, 0.707f32 );
-	}
-
-	fn update( &mut self, input : &input::State, tb : &mut gr_low::texture::Binding, aspect : f32 )-> bool	{
-		let ok = self.grid.update( tb, &self.view.cam, aspect, input.mouse.x, input.mouse.y );
+	fn update( &mut self, input : &input::State, aspect : f32 )-> bool	{
+		let ok = self.grid.update( &self.view.cam, aspect, input.mouse.x, input.mouse.y );
 		self.hero.update() && self.boss.update() && self.view.update() && ok
 	}
 
@@ -125,7 +130,12 @@ pub impl Scene	{
 			&input::MouseClick(key,press) if key==0 && press	=> {
 				match self.grid.selected	{
 					Some(pos)	=>	{
-						self.move_hero( pos );
+						match self.grid.get_cell(pos)	{
+							Some(col) if col==grid::CELL_ACTIVE	=>	{
+								self.hero.move( &mut self.grid, pos );
+							},
+							_	=> ()	//beep
+						}
 					},
 					None	=> ()	//beep
 				}
@@ -136,8 +146,10 @@ pub impl Scene	{
 
 	fn render( &mut self, gc : &mut gr_low::context::Context, hc : &hud_new::Context,
 			tech : &gr_mid::draw::Technique, output : gr_mid::call::Output, lg : &engine::journal::Log )	{
-		let aspect = output.area.aspect();
+		// update grid
+		self.grid.upload_dirty_cells( &mut gc.texture );
 		{// update matrices
+			let aspect = output.area.aspect();
 			let light_pos	= vec4::new( 4f32, 1f32, 6f32, 1f32 );
 			for [ &mut self.land, &mut self.hero.entity, &mut self.boss.entity ].each |ent|	{
 				let d = &mut ent.data;
@@ -236,6 +248,7 @@ pub fn make_scene( gc : &mut gr_low::context::Context, hc : &mut hud_new::Contex
 			skeleton	: skel,
 			record		: skel.find_record(~"ArmatureBossAction").expect(~"Hero has to have Idle"),
 			start_time	: 0f,
+			coord		: [0,0],
 		}
 	};
 	// load boss
@@ -248,10 +261,11 @@ pub fn make_scene( gc : &mut gr_low::context::Context, hc : &mut hud_new::Contex
 			skeleton	: skel,
 			record		: skel.find_record(~"ArmatureBossAction").expect(~"Boss has to have Idle"),
 			start_time	: 0f,
+			coord		: [0,0],
 		}
 	};
 	// create grid
-	let grid = scene::grid::Grid::create( gc, 10u, lg );
+	let mut grid = scene::grid::Grid::create( gc, 10u, lg );
 	grid.init( &mut gc.texture );
 	let hud = gen_hud::battle::load();
 	hc.preload( hud.children, gc, fcon, lg );

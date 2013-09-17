@@ -21,10 +21,12 @@ pub struct Grid	{
 	priv texture	: @gr_low::texture::Texture,
 	priv cells		: ~[u32],
 	priv v_scale	: Vec4<f32>,
+	priv dirty_coords	: ~[Coordinate],
 }
 
-static CELL_EMPTY 	: u32	= 0x20802000;
-static CELL_ACTIVE	: u32	= 0x2040E040;
+pub static CELL_EMPTY 	: u32	= 0x20802000;
+pub static CELL_OCCUPIED: u32	= 0x80202020;
+pub static CELL_ACTIVE	: u32	= 0x2040E040;
 
 
 impl Grid	{
@@ -53,6 +55,7 @@ impl Grid	{
 			texture	: tex,
 			cells	: cells,
 			v_scale	: par_scale,
+			dirty_coords	: ~[],
 		}
 	}
 
@@ -86,12 +89,19 @@ impl Grid	{
 			Some(self.cells[ d[0] + d[1]*ns ])
 		}else	{None}
 	}
-
 	pub fn mut_cell( &mut self, d : Coordinate, fun : &fn(&mut u32) )-> bool	{
 		let ns = self.nseg as int;
 		if d[0]>=0 && d[0]<ns && d[1]>=0 && d[1]<ns	{
 			fun( &mut self.cells[ d[0] + d[1]*ns ] );
 			true
+		}else	{false}
+	}
+	pub fn set_cell( &mut self, d : Coordinate, col : u32, tb_opt : Option<&mut gr_low::texture::Binding> )-> bool	{
+		if self.mut_cell( d, |c| {*c = col;} )	{
+			match tb_opt	{
+				Some(tb)	=> self.upload_single_cell(tb,d),
+				None		=> {self.dirty_coords.push(d); true},
+			}
 		}else	{false}
 	}
 
@@ -103,12 +113,13 @@ impl Grid	{
 			copy self.rast, self.program, copy self.data )
 	}
 
-	priv fn upload_all_cells( &self, tb : &mut gr_low::texture::Binding )	{
+	priv fn upload_all_cells( &mut self, tb : &mut gr_low::texture::Binding )	{
 		tb.bind( self.texture );
 		let fm_pix = gr_low::texture::map_pix_format( ~"rgba" );
 		let component = 0u8.to_gl_type();
 		let r = self.get_rectangle();
 		tb.load_sub_2D(	self.texture, 0u, &r, fm_pix, component, self.cells );
+		self.dirty_coords.clear();
 	}
 
 	priv fn upload_single_cell( &self, tb : &mut gr_low::texture::Binding, d : Coordinate )-> bool	{
@@ -125,6 +136,17 @@ impl Grid	{
 		}	
 	}
 
+	pub fn upload_dirty_cells( &mut self, tb : &mut gr_low::texture::Binding )	{
+		if self.dirty_coords.len() >= self.nseg	{
+			self.upload_all_cells( tb );
+		}else	{
+			for self.dirty_coords.each |&d|	{
+				self.upload_single_cell( tb, d );
+			}
+			self.dirty_coords.clear();
+		}
+	}
+
 	priv fn get_cell_selected( &self, cam : &scene::Camera, aspect : f32, nx : float, ny : float )-> Coordinate	{
 		let ndc = vec3::new( (nx as f32)*2f32-1f32, 1f32-(ny as f32)*2f32, 0f32 );
 		let origin = cam.node.world_space().position;
@@ -136,7 +158,7 @@ impl Grid	{
 		[x as int, y as int]
 	}
 
-	pub fn init( &self, tb : &mut gr_low::texture::Binding )	{
+	pub fn init( &mut self, tb : &mut gr_low::texture::Binding )	{
 		// init storage
 		tb.bind( self.texture );
 		let fm_int = gr_low::texture::map_int_format( ~"rgba8" );
@@ -146,7 +168,7 @@ impl Grid	{
 		// set up texture
 	}
 
-	pub fn update( &mut self, tb : &mut gr_low::texture::Binding, cam : &scene::Camera, aspect : f32, nx : float, ny : float )-> bool	{
+	pub fn update( &mut self, cam : &scene::Camera, aspect : f32, nx : float, ny : float )-> bool	{
 		let view_proj = cam.get_matrix( aspect );
 		self.data.insert( ~"u_ViewProj", gr_low::shade::UniMatrix(false,view_proj) );
 		let sp = self.get_cell_selected( cam, aspect, nx, ny );
@@ -155,16 +177,18 @@ impl Grid	{
 			Some(sel)	=> sel,
 			None		=> [0,0]
 		};
+		match self.get_cell(op)	{
+			Some(col) if col==CELL_ACTIVE	=>	{
+				self.set_cell( op, CELL_EMPTY, None );
+			},
+			_	=> ()
+		}
 		self.selected = match self.get_cell(sp)	{
-			Some(_col)	=>	{
-				let ns = self.nseg as int;
-				self.cells[op[0] + op[1]*ns] = CELL_EMPTY;
-				self.upload_single_cell(tb,op);
-				self.cells[sp[0] + sp[1]*ns] = CELL_ACTIVE;
-				self.upload_single_cell(tb,sp);
+			Some(col) if col==CELL_EMPTY	=>	{
+				self.set_cell( sp, CELL_ACTIVE, None );
 				Some(sp)
 			},
-			None	=> None,
+			_	=> None
 		};
 		true
 	}
