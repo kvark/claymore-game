@@ -71,8 +71,7 @@ pub struct Record<C>	{
 }
 
 pub trait Player<C>	{
-	//FIXME: use &str when possible
-	fn find_record( &self, name : ~str )-> Option< @Record<C> >;
+	fn find_record( &self, name : &str )-> Option< @Record<C> >;
 	fn set_record( &mut self, rec : &Record<C>, time : float );
 }
 

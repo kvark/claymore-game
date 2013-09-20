@@ -273,12 +273,17 @@ pub fn read_key_orientation_quat( br : &Reader )-> quat	{
 	let v = br.get_floats(4u);
 	quat::new(v[0],v[1],v[2],v[3])
 }
+pub fn read_key_orientation_euler( br : &Reader )-> vec3	{
+	//option: convert to quaternion
+	let v = br.get_floats(3u);
+	vec3::new(v[0],v[1],v[2])
+}
 pub fn read_key_scale3( br : &Reader )-> f32	{
 	let v = br.get_floats(3u);
 	(v[0]+v[1]+v[2]) * (1f32/3f32)
 }
 
-pub fn read_curve<T : space::Interpolate>( br : &Reader, fkey : &fn(&Reader)->T )-> @anim::Curve<T>	{
+pub fn read_curve<T : Owned + space::Interpolate>( br : &Reader, fkey : &fn(&Reader)->T )-> @anim::Curve<T>	{
 	let num = br.get_uint(2u);
 	let _extrapolate = br.get_uint(1u)!=0u;
 	let bezier = br.get_uint(1u)!=0u;
@@ -310,11 +315,10 @@ pub fn read_action( br : &mut Reader, bones : &[space::Bone], lg : &journal::Log
 		assert!( br.enter() == ~"curve" );
 		let curve_name = br.get_string();
 		let dimension = br.get_uint(1u);
-		lg.add( ~"\t\tCurve" + curve_name );
+		lg.add(fmt!( "\t\tCurve: %s", curve_name ));
 		let split = vec::build(|push|	{
-			do curve_name.each_split_char('"') |word|	{
+			for curve_name.each_split_char('"') |word|	{
 				push( word.to_owned() );
-				true
 			}
 		});
 		if split.len() == 3u	{
@@ -324,28 +328,33 @@ pub fn read_action( br : &mut Reader, bones : &[space::Bone], lg : &journal::Log
 				bid += 1;
 				assert!( bid < bones.len(), fmt!("Bone '%s' not found", split[1]) );
 			}
-			if split[2] == ~"].location"	{
-				assert!( dimension == 3u );
-				let c = read_curve( br, read_key_position );
-				curves.push( space::ACuPos(bid,c) );
-			}else
-			if split[2] == ~"].rotation_quaternion"	{
-				assert!( dimension == 4u );
-				let c = read_curve( br, read_key_orientation_quat );
-				curves.push( space::ACuRotQuat(bid,c) );
-			}else
-			if split[2] == ~"].rotation_euler"	{
-				assert!( dimension == 3u );
-				read_curve( br, read_key_position );
-				//curves.push( space)	//FIXME!
-			}else
-			if split[2] == ~"].scale"	{
-				assert!( dimension == 3u );
-				let c = read_curve( br, read_key_scale3 );
-				curves.push( space::ACuScale(bid,c) );
-			}else {
-				fail!(fmt!( "Unable to find curve '%s'", split[2] ))
+			let arm_curve = match split[2]	{
+				~"].location"	=>	{
+					assert!( dimension == 3u );
+					let c = read_curve( br, read_key_position );
+					space::ACuPos(bid,c)
+				},
+				~"].rotation_quaternion"	=>	{
+					assert!( dimension == 4u );
+					let c = read_curve( br, read_key_orientation_quat );
+					space::ACuRotQuat(bid,c)
+				},
+				~"].rotation_euler"	=>	{
+					assert!( dimension == 3u );
+					let c = read_curve( br, read_key_orientation_euler );
+					space::ACuRotEuler(bid,c)
+				},
+				~"].scale"	=>	{
+					assert!( dimension == 3u );
+					let c = read_curve( br, read_key_scale3 );
+					space::ACuScale(bid,c)
+				},
+				_		=> fail!(fmt!( "Unknown pose curve: %s", split[2] ))
 			};
+			curves.push( arm_curve );
+		}else	{
+			br.skip();
+			fail!(fmt!( "Unknown curve: %s", curve_name ))
 		}
 		br.leave();
 	}

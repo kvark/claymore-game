@@ -2,6 +2,7 @@ extern mod lmath;
 
 use core::managed;
 use core::to_str::ToStr;
+use core::str;
 
 use lmath::vec::*;
 use lmath::quat::*;
@@ -161,7 +162,7 @@ impl ToStr for QuatSpace	{
 enum NodeCurve	{
 	NCuPos(		@anim::Curve<Vector>		),
 	NCuRotQuat(	@anim::Curve<Quaternion>	),
-	//NCuRotEuler(@anim::Curve<lmath::vector::vec3>		),
+//	NCuRotEuler(@anim::Curve<Vector>		),
 	NCuScale(	@anim::Curve<Scale>			),
 }
 
@@ -198,15 +199,15 @@ pub impl Node	{
 }
 
 impl anim::Player<NodeCurve> for Node	{
-	fn find_record( &self, name : ~str )-> Option<@NodeRecord>	{
-		do self.actions.find() |a| {a.name==name}
+	fn find_record( &self, name : &str )-> Option<@NodeRecord>	{
+		self.actions.find(|a| str::eq_slice(a.name,name))
 	}
 	fn set_record( &mut self, a : &NodeRecord, time : float )	{
 		for a.curves.each() |chan|	{
 			match chan	{
-				&NCuPos(c)		=> self.space.position		= c.sample(time),
-				&NCuRotQuat(c)	=> self.space.orientation	= c.sample(time),
-				&NCuScale(c)	=> self.space.scale			= c.sample(time),
+				&NCuPos(ref c)		=> self.space.position		= c.sample(time),
+				&NCuRotQuat(ref c)	=> self.space.orientation	= c.sample(time),
+				&NCuScale(ref c)	=> self.space.scale			= c.sample(time),
 			}
 		}
 	}
@@ -233,6 +234,7 @@ pub impl Bone	{
 pub enum ArmatureCurve	{
 	ACuPos(		uint, @anim::Curve<Vector>		),
 	ACuRotQuat(	uint, @anim::Curve<Quaternion>	),
+	ACuRotEuler(uint, @anim::Curve<Vector>		),
 	ACuScale(	uint, @anim::Curve<Scale>		),
 }
 
@@ -291,21 +293,29 @@ fn is_same_node( a: Option<@Node>, b : Option<@Node> )-> bool	{
 }
 
 impl anim::Player<ArmatureCurve> for Armature	{
-	fn find_record( &self, name : ~str )-> Option<@ArmatureRecord>	{
-		do self.actions.find() |a| {a.name==name}
+	fn find_record( &self, name : &str )-> Option<@ArmatureRecord>	{
+		self.actions.find(|a| str::eq_slice(a.name,name))
 	}
 	fn set_record( &mut self, a : &ArmatureRecord, time : float )	{
 		for a.curves.each() |chan|	{
 			match chan	{
-				&ACuPos(bi,c)		=> { let b = &self.bones[bi];
-					b.node.space.position	= b.bind_space.transform( &c.sample(time) );
+				&ACuPos(bi,ref c)		=> {
+					let b = &self.bones[bi];	let p = c.sample(time);
+					b.node.space.position	= b.bind_space.transform( &p );
 				},
-				&ACuRotQuat(bi,c)	=> { let b = &self.bones[bi];
-					b.node.space.orientation= b.bind_space.orientation.mul_q( &c.sample(time) );
+				&ACuRotQuat(bi,ref c)	=> {
+					let b = &self.bones[bi];	let q = c.sample(time);
+					b.node.space.orientation= b.bind_space.orientation.mul_q( &q );
 				},
-				&ACuScale(bi,c)		=> { let b = &self.bones[bi];
-					b.node.space.scale		= b.bind_space.scale * c.sample(time);
-				}
+				&ACuRotEuler(bi,ref c)	=> {
+					let b = &self.bones[bi];	let eul = c.sample(time);
+					let q = quat::from_angle_xyz( eul.x, eul.y, eul.z );
+					b.node.space.orientation= b.bind_space.orientation.mul_q( &q );
+				},
+				&ACuScale(bi,ref c)		=> {
+					let b = &self.bones[bi];	let s = c.sample(time);
+					b.node.space.scale		= b.bind_space.scale * s;
+				},
 			}
 		}
 	}
