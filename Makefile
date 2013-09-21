@@ -32,7 +32,7 @@ grab-scene: asset/claymore/claymore-2a.rs asset/battle/battle-test.rs
 
 game: build/claymore
 
-build/claymore:	lib/engine.dummy lib/codata-scene.dummy lib/codata-hud.dummy lib/glfw3.dummy lib/numeric.dummy lib/lmath.dummy lib/cgmath.dummy game/*.rs game/render/*.rs game/scene/*.rs
+build/claymore:	lib/engine.dummy lib/codata-scene.dummy lib/codata-hud.dummy lib/glfw3.dummy lib/numeric.dummy lib/lmath.dummy lib/cgmath.dummy game/*.rs game/render/*.rs game/scene/*.rs game/battle/*.rs
 	${RUST} game/claymore.rs -L lib --out-dir build
 
 engine: lib/engine.dummy

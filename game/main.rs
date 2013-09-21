@@ -9,6 +9,7 @@ use engine::gr_low::context::ProxyState;
 use input;
 use hud_new;
 use scene;
+use battle = battle::main;
 
 
 enum Screen	{
@@ -37,7 +38,7 @@ struct Game	{
 	output		: gr_mid::call::Output,
 	s_intro		: scene::intro::Scene,
 	s_editor	: scene::chared::Scene,
-	s_battle	: scene::battle::Scene,
+	s_battle	: battle::Scene,
 	screen		: Screen,
 }
 
@@ -74,7 +75,7 @@ pub impl Game	{
 		gcon.check(~"init");
 		let intro = scene::intro::Scene{ active:false };
 		let editor = scene::chared::make_scene( el, &mut gcon, &fcon, &journal.load );
-		let battle = scene::battle::make_scene( &mut gcon, &mut hcon, &fcon, &journal.load );
+		let battle = battle::make_scene( &mut gcon, &mut hcon, &fcon, &journal.load );
 		Game{
 			gr_context	: gcon,
 			aud_context	: acon,

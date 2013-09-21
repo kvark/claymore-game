@@ -14,7 +14,7 @@ use engine::space::{Interpolate,Space};
 use input;
 use hud_new;
 use scene;
-use scene::grid;
+use battle::grid;
 
 
 pub struct Character	{
@@ -265,7 +265,7 @@ pub fn make_scene( gc : &mut gr_low::context::Context, hc : &mut hud_new::Contex
 		}
 	};
 	// create grid
-	let mut grid = scene::grid::Grid::create( gc, 10u, lg );
+	let mut grid = grid::Grid::create( gc, 10u, lg );
 	grid.init( &mut gc.texture );
 	let hud = gen_hud::battle::load();
 	hc.preload( hud.children, gc, fcon, lg );

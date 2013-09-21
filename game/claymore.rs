@@ -31,12 +31,15 @@ pub mod render	{
 }
 
 pub mod scene	{
-	pub mod battle;
 	pub mod chared;
 	pub mod common;
-	pub mod grid;
 	pub mod intro;
 	pub mod load;
 	pub mod load_json;
+}
+
+pub mod battle	{
+	pub mod grid;
+	pub mod main;
 	pub mod time;
 }
