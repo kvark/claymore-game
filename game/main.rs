@@ -9,6 +9,7 @@ use engine::gr_low::context::ProxyState;
 use input;
 use hud_new;
 use scene;
+use scene::chared;
 use battle = battle::main;
 
 
@@ -37,7 +38,7 @@ struct Game	{
 	technique	: gr_mid::draw::Technique,
 	output		: gr_mid::call::Output,
 	s_intro		: scene::intro::Scene,
-	s_editor	: scene::chared::Scene,
+	s_editor	: chared::Scene,
 	s_battle	: battle::Scene,
 	screen		: Screen,
 }
@@ -74,8 +75,8 @@ pub impl Game	{
 		// done
 		gcon.check(~"init");
 		let intro = scene::intro::Scene{ active:false };
-		let editor = scene::chared::make_scene( el, &mut gcon, &fcon, &journal.load );
-		let battle = battle::make_scene( &mut gcon, &mut hcon, &fcon, &journal.load );
+		let editor = chared::create( el, &mut gcon, &fcon, &journal.load );
+		let battle = battle::create( &mut gcon, &mut hcon, &fcon, &journal.load );
 		Game{
 			gr_context	: gcon,
 			aud_context	: acon,

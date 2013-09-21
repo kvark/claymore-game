@@ -310,7 +310,7 @@ pub impl Scene	{
 }
 
 
-pub fn make_scene( el : &main::Elements, ct : &mut gr_low::context::Context, fcon : &gr_mid::font::Context,
+pub fn create( el : &main::Elements, ct : &mut gr_low::context::Context, fcon : &gr_mid::font::Context,
 		lg : &engine::journal::Log )-> Scene	{
 	let vao = ct.create_vertex_array();
 	let mut scene = if true	{ //new method

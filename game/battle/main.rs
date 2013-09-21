@@ -186,7 +186,7 @@ pub impl Scene	{
 }
 
 
-pub fn make_scene( gc : &mut gr_low::context::Context, hc : &mut hud_new::Context, fcon : &gr_mid::font::Context, lg : &engine::journal::Log )-> Scene	{
+pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud_new::Context, fcon : &gr_mid::font::Context, lg : &engine::journal::Log )-> Scene	{
 	// create view
 	let view = 	{
 		// create camera
