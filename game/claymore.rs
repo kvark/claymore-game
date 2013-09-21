@@ -38,4 +38,5 @@ pub mod scene	{
 	pub mod intro;
 	pub mod load;
 	pub mod load_json;
+	pub mod time;
 }
