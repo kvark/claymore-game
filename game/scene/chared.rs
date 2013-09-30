@@ -1,12 +1,15 @@
-extern mod numeric;
-extern mod lmath;
+extern mod cgmath;
 extern mod engine;
 extern mod gen_scene;
 
-use lmath::quat::*;
-use lmath::vec::*;
+use std;
+use glfw;
+use cgmath::{angle,rotation};
+use cgmath::quaternion::*;
+use cgmath::vector::*;
 use engine::anim::{Act,Player};
 use engine::{gr_low,gr_mid};
+use engine::space::Space;
 
 use hud;
 use input;
@@ -31,36 +34,29 @@ struct CamControl	{
 	in_rotation	: bool,
 }
 
-pub fn clamp<T:cmp::Ord>( x:T, a:T, b:T )-> T	{
-	if x>a {
-		if x<b	{x}
-		else	{b}
-	}else {a}
-}
-
-pub impl CamControl	{
-	fn update( &mut self, input : &input::State )	{
+impl CamControl	{
+	pub fn update( &mut self, input : &input::State )	{
 		// calculate rotation
 		if self.in_rotation	{
 			let dt = 1f32/30f32;	//FIXME
-			let axis = vec3::new( 0f32, 0f32, if input.mouse.x>0.5f {1f32} else {-1f32} );
-			let angle = dt as f32 * self.speed_rot;
-			let qr = Quat::from_angle_axis( angle, &axis );
+			let axis = Vec3::new( 0f32, 0f32, if input.mouse.x>0.5f {1f32} else {-1f32} );
+			let angle = angle::deg( dt as f32 * self.speed_rot );
+			let qr = rotation::AxisAngle::new( axis, angle ).to_quat();
 			let sq = engine::space::QuatSpace{
-				position : vec3::new(0f32,0f32,0f32),
+				position : Vec3::new(0f32,0f32,0f32),
 				orientation : qr, scale : 1f32 };
-			self.node.space = sq * self.node.space;
+			self.node.space = sq.concat( &self.node.space );
 		}
 	}
 
-	fn on_scroll( &mut self, scroll : float )	{
-		let v_origin = self.origin.sub_v( &copy self.node.space.position );
+	pub fn on_scroll( &mut self, scroll : float )	{
+		let v_origin = self.origin.sub_v( &self.node.space.position );
 		let dist_min = 20f32;
 		let dist_max = 200f32;
 		let dist = v_origin.length();
 		let dist_raw = dist - (scroll as f32) * self.speed_zoom;
-		let dist_diff = clamp( dist_raw, dist_min, dist_max ) - dist;
-		let p = (copy self.node.space.position).sub_v( &v_origin.mul_t(dist_diff/dist) );
+		let dist_diff = std::num::clamp( dist_raw, dist_min, dist_max ) - dist;
+		let p = (self.node.space.position).sub_v( &v_origin.mul_s(dist_diff/dist) );
 		self.node.space.position = p;
 	}
 }
@@ -102,13 +98,13 @@ pub struct Scene	{
 }
 
 
-pub impl Scene	{
-	fn loose_focus( &mut self )	{
+impl Scene	{
+	pub fn loose_focus( &mut self )	{
 		self.edit_label.active = false;
 		self.hud_active = AhInactive;
 	}
 
-	fn update( &mut self, input : &input::State, _lg : &engine::journal::Log )-> bool	{
+	pub fn update( &mut self, input : &input::State, _lg : &engine::journal::Log )-> bool	{
 		if true	{
 			let (mx,my) = self.hud_screen.root.min_size;
 			let x = ((0f+input.mouse.x) * (mx as float)) as int;
@@ -122,13 +118,13 @@ pub impl Scene	{
 		true
 	}
 
-	fn on_input( &mut self, event : &input::Event )	{
+	pub fn on_input( &mut self, event : &input::Event )	{
 		match event	{
-			&input::Character(c)	=> str::push_char( &mut self.input_queue, c ),
+			&input::Character(c)	=> self.input_queue.push_char(c),
 			&input::Keyboard(key,press)	=> {
 				match (key,press)	{
-					(257,true)	=> self.loose_focus(),
-					(259,true)	=> str::push_char( &mut self.input_queue, key as char ),
+					(glfw::KeyEscape,true)		=> self.loose_focus(),
+					(glfw::KeyBackspace,true)	=> self.input_queue.push_char( 'c' ),	//FIXME
 					_	=> ()
 				}
 			},
@@ -136,7 +132,8 @@ pub impl Scene	{
 				if press	{
 					self.loose_focus();
 					let (x,y) = self.mouse_point;
-					let mut found_name = false, found_any = false;
+					let mut found_name = false;
+					let mut found_any = false;
 					do self.hud_screen.root.trace(x,y)	|frame,depth|	{
 						if depth>0u	{
 							found_any = true;
@@ -159,7 +156,7 @@ pub impl Scene	{
 		}
 	}
 
-	fn render( &mut self, el : &main::Elements, ct : &mut gr_low::context::Context, lg : &engine::journal::Log  )	{
+	pub fn render( &mut self, el : &main::Elements, ct : &mut gr_low::context::Context, lg : &engine::journal::Log  )	{
 		// clear screen
 		let pmap = gr_mid::call::PlaneMap::new_main( ct, ~"o_Color" );
 		let output = gr_mid::call::Output::new( ct.default_frame_buffer, pmap );
@@ -168,7 +165,7 @@ pub impl Scene	{
 			depth	:Some( 1f ),
 			stencil	:Some( 0u ),
 		};
-		let c0 = gr_mid::call::CallClear( cdata, copy output, copy self.rast_solid.mask );
+		let c0 = gr_mid::call::CallClear( cdata, output.clone(), self.rast_solid.mask );
 		let aspect = output.area.aspect();
 		if el.environment	{
 			let vpi = self.cam.get_inverse_matrix( aspect );
@@ -179,7 +176,7 @@ pub impl Scene	{
 		let c1 = if el.environment	{
 			let e = &self.envir;
 			gr_mid::call::CallDraw(
-				copy e.input, copy output, copy e.rast, e.prog, copy e.data )
+				e.input, output.clone(), e.rast, e.prog, e.data.clone() )
 		}else	{
 			gr_mid::call::CallEmpty
 		};
@@ -194,17 +191,18 @@ pub impl Scene	{
 		}
 		if el.character	{
 			let area = &output.area;
-			let target_size = vec4::new( area.w as f32, area.h as f32,
+			let target_size = Vec4::new( area.w as f32, area.h as f32,
   				1f32/(area.w as f32), 1f32/(area.h as f32) );
 			let par_ts = gr_low::shade::UniFloatVec( target_size );
-			for [&mut self.gr_main, &mut self.gr_cape, &mut self.gr_hair, &mut self.gr_other].each() |group|	{
-				for group.each_mut() |ent|	{
+			let char_groups = ~[&mut self.gr_main, &mut self.gr_cape, &mut self.gr_hair, &mut self.gr_other];
+			for group in char_groups.move_iter()	{
+				for ent in group.mut_iter()	{
 					ent.update_world();
 					{
 						let gd = &mut ent.data;
 						self.shadow.light.fill_data( gd, 1f32, 200f32 );
-						gd.insert( ~"t_Shadow", copy self.shadow.par_shadow );
-						gd.insert( ~"u_TargetSize",	copy par_ts );
+						gd.insert( ~"t_Shadow", self.shadow.par_shadow.clone() );
+						gd.insert( ~"u_TargetSize",	par_ts.clone() );
 						self.cam.fill_data( gd, aspect );
 						//self.skel.fill_data( gd );
 					}
@@ -212,12 +210,13 @@ pub impl Scene	{
 			}
 		}
 		if el.shadow	{
-			queue.push( copy self.shadow.call_clear );
+			queue.push( self.shadow.call_clear.clone() );
 			if el.character	{
-				for [&self.gr_main,&self.gr_cape,&self.gr_hair].each() |group|	{
-					for group.each() |ent|	{
+				let char_shadow_groups = [&self.gr_main,&self.gr_cape,&self.gr_hair];
+				for group in char_shadow_groups.iter()	{
+					for ent in group.iter()	{
 						queue.push( self.shadow.tech_solid.process( ent,
-							copy self.shadow.output, copy self.shadow.rast,
+							self.shadow.output.clone(), self.shadow.rast,
 							&mut self.cache, ct, lg ));
 					}
 				}
@@ -230,16 +229,17 @@ pub impl Scene	{
 		}
 		let tech = match self.lbuf {
 			Some(ref lbuf)	=>	{
-				queue.push( copy self.depth.call_clear );
-				for [&mut self.gr_main,&mut self.gr_cape,&mut self.gr_hair].each() |group|	{
-					for group.each_mut() |ent|	{
+				queue.push( self.depth.call_clear.clone() );
+				let char_groups = ~[&mut self.gr_main,&mut self.gr_cape,&mut self.gr_hair];
+				for group in char_groups.move_iter()	{
+					for ent in group.mut_iter()	{
 						queue.push( self.depth.tech_solid.process( ent,
-							copy self.depth.output, copy self.depth.rast,
+							self.depth.output.clone(), self.depth.rast,
 							&mut self.cache, ct, lg ));
 						lbuf.fill_data( &mut ent.data );
 					}
 				}
-				for self.gr_other.each_mut() |ent|	{
+				for ent in self.gr_other.mut_iter()	{
 					lbuf.fill_data( &mut ent.data );
 				}
 				queue.push( lbuf.update_depth( self.depth.texture ));
@@ -251,19 +251,19 @@ pub impl Scene	{
 			None	=> self.technique,
 		};
 		if el.character	{
-			for self.gr_main.each() |ent|	{
-				queue.push( tech.process( ent, copy output, copy self.rast_solid, &mut self.cache, ct, lg ) );
+			for ent in self.gr_main.iter()	{
+				queue.push( tech.process( ent, output.clone(), self.rast_solid, &mut self.cache, ct, lg ) );
 			}
-			for self.gr_cape.each() |ent|	{
-				queue.push( tech.process( ent, copy output, copy self.rast_cloak, &mut self.cache, ct, lg ) );	
+			for ent in self.gr_cape.iter()	{
+				queue.push( tech.process( ent, output.clone(), self.rast_cloak, &mut self.cache, ct, lg ) );	
 			}
-			for self.gr_hair.each() |ent|	{
-				queue.push( tech.process( ent, copy output, copy self.rast_alpha, &mut self.cache, ct, lg ) );
+			for ent in self.gr_hair.iter()	{
+				queue.push( tech.process( ent, output.clone(), self.rast_alpha, &mut self.cache, ct, lg ) );
 			}
 		}
 		if el.shadow	{
-			for self.gr_other.each() |ent|	{
-				queue.push( tech.process( ent, copy output, copy self.rast_solid, &mut self.cache, ct, lg ) );
+			for ent in self.gr_other.iter()	{
+				queue.push( tech.process( ent, output.clone(), self.rast_solid, &mut self.cache, ct, lg ) );
 			}
 		}
 		if el.hud	{
@@ -281,10 +281,10 @@ pub impl Scene	{
 				self.hud_screen.root.draw_all( &self.hud_context )
 				);
 			let (x,y) = self.mouse_point;
-			let mut rast  = copy ct.default_rast;
+			let mut rast  = ct.default_rast;
 			rast.prime.poly_mode = gr_low::rast::map_polygon_fill(2);
 			let mut data = gr_low::shade::DataMap::new();
-			let vc = vec4::new(1f32,0f32,0f32,1f32);
+			let vc = Vec4::new(1f32,0f32,0f32,1f32);
 			data.insert( ~"u_Color", gr_low::shade::UniFloatVec(vc) );
 			do self.hud_screen.root.trace(x,y)	|frame,depth| {
 				if depth==0u && frame.element.get_size()!=(0,0)	{
@@ -296,10 +296,10 @@ pub impl Scene	{
 		}
 		if el.hud_debug	{
 			queue.push_all_move({
-				let mut rast  = copy ct.default_rast;
+				let mut rast  = ct.default_rast;
 				rast.prime.poly_mode = gr_low::rast::map_polygon_fill(2);
 				let mut data = gr_low::shade::DataMap::new();
-				let vc = vec4::new(1f32,0f32,0f32,1f32);
+				let vc = Vec4::new(1f32,0f32,0f32,1f32);
 				data.insert( ~"u_Color", gr_low::shade::UniFloatVec(vc) );
 				self.hud_screen.root.draw_debug_all( &self.hud_context,
 					self.hud_debug, &mut data, &rast )
@@ -316,23 +316,23 @@ pub fn create( el : &main::Elements, ct : &mut gr_low::context::Context, fcon : 
 	let mut scene = if true	{ //new method
 		let iscene = gen_scene::chared::main::load();
 		let icustom = gen_scene::chared::custom::load();
-		scene::load::parse( ~"data/scene/claymore-2a", &iscene, icustom, ct, Some(vao), lg )
+		scene::load::parse( "data/scene/claymore-2a", &iscene, icustom, ct, Some(vao), lg )
 	}else	{
-		scene::load_json::load_scene( ~"data/scene/claymore-2a", ct, Some(vao), lg )
+		scene::load_json::load_scene( "data/scene/claymore-2a", ct, Some(vao), lg )
 	};
-	let detail_info = scene::load_json::load_config::<~[scene::load_json::EntityInfo]>( ~"data/details.json" );
+	let detail_info = scene::load_json::load_config::<~[scene::load_json::EntityInfo]>( "data/details.json" );
 	let mut details = scene::load_json::parse_group( &mut scene.context, detail_info, ct, Some(vao), lg );
 	// techniques & rast states
-	let tech = @gr_mid::draw::load_technique( ~"data/code/tech/forward/spot-shadow" );
-	let mut rast = copy ct.default_rast;
+	let tech = @gr_mid::draw::load_technique( "data/code/tech/forward/spot-shadow" );
+	let mut rast = ct.default_rast;
 	rast.depth.test = true;
 	rast.prime.cull = true;
-	let r_solid = copy rast;
+	let r_solid = rast;
 	rast.prime.cull = false;
-	let r_cloak = copy rast;
+	let r_cloak = rast;
 	rast.prime.cull = true;
-	rast.set_blend( ~"s+d", ~"Sa", ~"1-Sa" );
-	let r_alpha = copy rast;
+	rast.set_blend( "s+d", "Sa", "1-Sa" );
+	let r_alpha = rast;
 	// armature
 	let arm = { *scene.context.armatures.get(&~"Armature.002") };
 	let mut group = scene.entities.divide( &~"noTrasnform" );
@@ -348,13 +348,13 @@ pub fn create( el : &main::Elements, ct : &mut gr_low::context::Context, fcon : 
 		let prog = if use_spherical	{
 			let tex = *scene.context.textures.get( &~"data/texture/Topanga_Forest_B_3k.hdr" );
 			data.insert( ~"t_Environment",	gr_low::shade::UniTexture(0,tex,Some(samp)) );
-			engine::load::load_program( ct, ~"data/code-game/envir", lg )
+			engine::load::load_program( ct, "data/code-game/envir", lg )
 		}else	{
-			let tex = engine::load::load_texture_2D( ct, &~"data/texture/bg2.jpg", true );
+			let tex = engine::load::load_texture_2D( ct, "data/texture/bg2.jpg", true );
 			data.insert( ~"t_Image",		gr_low::shade::UniTexture(0,tex,Some(samp)) );
-			engine::load::load_program( ct, ~"data/code-game/copy", lg )
+			engine::load::load_program( ct, "data/code-game/copy", lg )
 		};
-		let mut rast = copy ct.default_rast;
+		let rast = ct.default_rast;
 		//rast.set_depth( ~"<=", false );
 		Envir{
 			input	: gr_mid::call::Input::new( vao, mesh ),
@@ -364,11 +364,11 @@ pub fn create( el : &main::Elements, ct : &mut gr_low::context::Context, fcon : 
 		}		
 	};
 	// load char HUD
-	let mut hud_screen = hud::load_screen( ~"data/hud/char.json", ct, fcon, lg );
+	let mut hud_screen = hud::load_screen( "data/hud/char.json", ct, fcon, lg );
 	hud_screen.root.update( lg );
 	let hc = {
-		let mut hud_rast = copy ct.default_rast;
-		hud_rast.set_blend( ~"s+d", ~"Sa", ~"1-Sa" );
+		let mut hud_rast = ct.default_rast;
+		hud_rast.set_blend( "s+d", "Sa", "1-Sa" );
 		let quad = @gr_mid::mesh::create_quad(ct);
 		let pmap = gr_mid::call::PlaneMap::new_main( ct, ~"o_Color" );
 		let out = gr_mid::call::Output::new( ct.default_frame_buffer, pmap );
@@ -380,7 +380,7 @@ pub fn create( el : &main::Elements, ct : &mut gr_low::context::Context, fcon : 
 		}
 	};
 	let edit_label = @mut hud::EditLabel::obtain( &mut hud_screen, ~"id.name.text" );
-	let hdebug = engine::load::load_program( ct, ~"data/code/hud/debug", lg );
+	let hdebug = engine::load::load_program( ct, "data/code/hud/debug", lg );
 	//arm.set_record( arm.actions[0], 0f );
 	let depth = render::depth::Data::create( ct );
 	let lbuf = if el.lbuffer!=0	{
@@ -390,16 +390,16 @@ pub fn create( el : &main::Elements, ct : &mut gr_low::context::Context, fcon : 
 	let shadow = render::shadow::create_data( ct, *scene.lights.get(&~"Lamp"), 0x200u );
 	// load camera
 	let cam = *scene.cameras.get(&~"Camera");
-	//cam.proj = copy shadow.light.proj;
+	//cam.proj = shadow.light.proj;
 	//cam.node = shadow.light.node;
-	lg.add(fmt!( "Camera fov:%f, range:%f-%f",
-		cam.proj.vfov as float,
+	lg.add(fmt!( "Camera fov:%s, range:%f-%f",
+		cam.proj.fovy.to_str(),
 		cam.proj.near as float,
 		cam.proj.far as float ));
 	lg.add( ~"\tWorld :" + cam.node.world_space().to_str() );
 	let control = CamControl{
 		node	: cam.node,
-		origin	: vec3::new(0f32,0f32,75f32),
+		origin	: Vec3::new(0f32,0f32,75f32),
 		speed_rot	: 1.5f32,
 		speed_zoom	: 15f32,
 		last_scroll	: None,
@@ -413,7 +413,7 @@ pub fn create( el : &main::Elements, ct : &mut gr_low::context::Context, fcon : 
 		gr_main	: group,
 		gr_cape	: cape,
 		gr_hair	: hair,
-		gr_other: copy scene.entities,
+		gr_other: scene.entities,
 		details	: details,
 		skel	: arm,
 		cam		: cam,

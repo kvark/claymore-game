@@ -1,4 +1,4 @@
-use core;	//for IterBytes
+use std;
 
 pub type Path = ~str;
 pub type Vector = [uint, ..2]; //x,y
@@ -43,8 +43,6 @@ pub struct Frame	{
 	children: ~[Child],
 }
 
-//#[deriving(Eq)]
-#[deriving(IterBytes)]
 pub struct Font	{
 	path	: ~str,
 	size	: Vector,
@@ -59,11 +57,29 @@ pub struct Text	{
 	edit	: bool,
 }
 
-impl core::cmp::Eq for Font	{
+
+impl Eq for Font	{
 	fn eq( &self, other : &Font )-> bool	{
-		self.path == other.path && self.size == other.size && self.kern == other.kern
+		self.path == other.path &&
+		self.size[0] == other.size[0] && self.size[1] == other.size[1] &&
+		self.kern[0] == other.kern[0] && self.kern[1] == other.kern[1]
 	}
-	fn ne( &self, other : &Font )-> bool	{
-		!self.eq( other )
+}
+
+impl IterBytes for Font	{
+	fn iter_bytes( &self, lsb0 : bool, f : std::to_bytes::Cb )-> bool	{
+		self.path.iter_bytes( lsb0, |x| f(x) ) &&
+		self.size.iter_bytes( lsb0, |x| f(x) ) &&
+		self.kern.iter_bytes( lsb0, |x| f(x) )
+	}
+}
+
+impl Clone for Font	{
+	fn clone( &self )-> Font	{
+		Font	{
+			path	: self.path.clone(),
+			size	: [self.size[0],self.size[1]],
+			kern	: [self.kern[0],self.kern[1]],
+		}
 	}
 }

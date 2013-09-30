@@ -9,10 +9,10 @@
 #[crate_type = "lib"];
 
 
-extern mod std;
+extern mod extra;
 extern mod freetype;
 extern mod stb_image;
-extern mod lmath;
+extern mod cgmath;
 extern mod openal;
 
 

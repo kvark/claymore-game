@@ -1,9 +1,9 @@
 extern mod freetype;
 
-use core::ptr;
-use core::vec;
+use std;
+use std::{ptr,vec};
 
-use freetype::freetype::*;
+use freetype::freetype;
 
 use gr_low::{context,texture};
 use gr_low::context::GLType;
@@ -16,32 +16,36 @@ trait FontError	{
 	fn check( &self, s : &str );
 }
 
-impl FontError for FT_Error	{
+impl FontError for freetype::FT_Error	{
 	fn check( &self, s : &str )	{
 		if (*self as int)!=0	{
-			fail!(fmt!( "Freetype %s failed with code %d", s, *self as int ))
+			fail!("Freetype %s failed with code %d", s, *self as int)
 		}
 	}
 }
 
 
 pub struct Context	{
-	priv lib	: FT_Library,
+	priv lib	: freetype::FT_Library,
 }
 
 impl Drop for Context	{
-	fn finalize( &self )	{
+	#[fixed_stack_segment]
+	fn drop( &mut self )	{
 		assert!( self.lib.is_not_null() );
-		bindgen::FT_Done_FreeType( self.lib ).
-			check( "Done_FreeType" );
+		unsafe{
+			freetype::FT_Done_FreeType( self.lib )
+		}.check( "Done_FreeType" );
 	}
 }
 
-pub impl Context	{
-	fn create()-> Context	{
-		let mut lib : FT_Library = ptr::null();
-		bindgen::FT_Init_FreeType( ptr::addr_of(&lib) ).
-			check( "Init_FreeType" );
+impl Context	{
+	#[fixed_stack_segment]
+	pub fn create()-> Context	{
+		let lib : freetype::FT_Library = ptr::null();
+		unsafe{
+			freetype::FT_Init_FreeType( ptr::to_unsafe_ptr(&lib) )
+		}.check( "Init_FreeType" );
 		Context{ lib:lib }
 	}
 }
@@ -53,24 +57,26 @@ struct Glyph	{
 }
 impl Drop for Glyph	{
 	fn finalize( &self )	{
-		freetype::bindgen::FT_Done_Glyph( self.slot );
+		freetype::freetype::FT_Done_Glyph( self.slot );
 	}
 }
 */
 
-struct FaceHandle( FT_Face );
+struct FaceHandle( freetype::FT_Face );
 
 pub struct Font	{
 	priv face		: FaceHandle,
 	kern_offset		: int,
 	line_offset		: int,
-	//priv mut cache	: send_map::linear::LinearMap<char,Glyph>,
+	//priv mut cache	: send_map::linear::HashMap<char,Glyph>,
 }
 
 impl Drop for FaceHandle	{
-	fn finalize( &self )	{
-		bindgen::FT_Done_Face( **self ).
-			check( "Done_Face" );
+	#[fixed_stack_segment]
+	fn drop( &mut self )	{
+		unsafe{
+			freetype::FT_Done_Face( **self )
+		}.check( "Done_Face" );
 	}
 }
 
@@ -85,16 +91,16 @@ impl Font	{
 		match copy self.cache.find(c)	{
 			Some(g) => &g,
 			None =>	{
-				freetype::bindgen::FT_Load_Char( self.face, c as freetype::FT_ULong,
+				freetype::freetype::FT_Load_Char( self.face, c as freetype::FT_ULong,
 					freetype::FT_LOAD_DEFAULT as freetype::FT_Int32 )
 					.check( "Load_Char" );
 				let face  = unsafe { &*(self.face) };
-				freetype::bindgen::FT_Render_Glyph(
+				freetype::freetype::FT_Render_Glyph(
 					face.glyph as freetype::FT_GlyphSlot,
 					freetype::FT_RENDER_MODE_NORMAL )
 					.check( "Render_Glyph" );
 				let mut slot : freetype::FT_GlyphSlot = ptr::null();
-				freetype::bindgen::FT_Get_Glyph( self.face,	ptr::addr_of(&slot))
+				freetype::freetype::FT_Get_Glyph( self.face,	ptr::to_unsafe_ptr(&slot))
 					.check( "Get_Glyph" );
 				let g = Glyph{ slot:slot };
 				self.cache.insert( c, slot );
@@ -103,84 +109,95 @@ impl Font	{
 		}
 	}*/
 
-	priv fn set_char_size( &self, xs : float, ys : float, xdpi : uint, ydpi : uint )	{
-		bindgen::FT_Set_Char_Size( *self.face,
-			64f*xs as FT_F26Dot6, 64f*ys as FT_F26Dot6,
-			xdpi as FT_UInt, ydpi as FT_UInt
-			).check( "Set_Char_Size" );
+	#[fixed_stack_segment]
+	fn set_char_size( &self, xs : float, ys : float, xdpi : uint, ydpi : uint )	{
+		unsafe{
+			freetype::FT_Set_Char_Size( *self.face,
+				(64f*xs) as freetype::FT_F26Dot6, (64f*ys) as freetype::FT_F26Dot6,
+				xdpi as freetype::FT_UInt, ydpi as freetype::FT_UInt )
+		}.check( "Set_Char_Size" );
 	}
 
-	priv fn set_pixel_size( &self, xpix : uint, ypix : uint )	{
-		bindgen::FT_Set_Pixel_Sizes( *self.face,
-			xpix as FT_UInt, ypix as FT_UInt
-			).check( "Set_Pixel_Sizes" );
+	#[fixed_stack_segment]
+	fn set_pixel_size( &self, xpix : uint, ypix : uint )	{
+		unsafe{
+			freetype::FT_Set_Pixel_Sizes( *self.face,
+				xpix as freetype::FT_UInt, ypix as freetype::FT_UInt )
+		}.check( "Set_Pixel_Sizes" );
 	}
 
-	priv fn draw( &self, bm : &FT_Bitmap, target : &mut ~[u8], offset : uint, pitch : uint )	{
-		//TODO: use &[mut u8] argument
+	fn draw( &self, bm : &freetype::FT_Bitmap, target : &mut [u8], offset : uint, pitch : uint )	{
 		let height = bm.rows as uint;
-		for uint::range(0,height) |y|	{
+		for y in range(0u,height)	{
 			unsafe	{
-				let src = ptr::offset( bm.buffer, y*(bm.pitch as uint)) as *u8;
-				let dst = ptr::offset( vec::raw::to_ptr(*target), y*pitch+offset ) as *mut u8;
+				let src = ptr::offset( bm.buffer, (y*(bm.pitch as uint)) as int );
+				let dst = ptr::mut_offset( vec::raw::to_mut_ptr(target), (y*pitch+offset) as int );
 				ptr::copy_memory( dst, src, bm.width as uint );
 			};
 		}
 	}
 
+	#[fixed_stack_segment]
 	pub fn bake( &self, gr : &mut context::Context, s : &str, max_size : (uint,uint), lg : &journal::Log )-> @texture::Texture	{
 		lg.add(fmt!( "Font baking text: %s", s ));
 		if s.is_empty()	{
-			let tex = gr.create_texture( ~"2D", 1u, 1u, 1u, 0u );
-			let mut image = vec::from_elem( 1u, 0u8 );
-			gr.texture.load_2D( tex, 0u, texture::map_int_format(~"r8"),
-				texture::map_pix_format(~"red"), image[0].to_gl_type(), &image );
+			let tex = gr.create_texture( "2D", 1u, 1u, 1u, 0u );
+			let image = vec::from_elem( 1u, 0u8 );
+			gr.texture.load_2D( tex, 0u, texture::map_int_format("r8"),
+				texture::map_pix_format("red"), image[0].to_gl_type(), image );
 			return tex
 		}
 		struct Target	{ c:char, x:int, y:int }
 		let (limit_x,limit_y) = max_size;
 		let face  = unsafe { &**self.face };
 		let line_gap = (self.line_offset as int) + (face.height as int);
-		let mut position = 0, baseline = face.ascender as int;	// in font units
+		let mut position = 0;	// in font units
+		let mut baseline = face.ascender as int;
 		lg.add(fmt!( "\tFace height=%d, up=%d, down=%d", face.height as int,
 			face.ascender as int, face.descender as int ));
-		let mut prev_index = 0 as FT_UInt;	// font char index
+		let mut prev_index = 0 as freetype::FT_UInt;	// font char index
 		let BIG		= 999999;
 		let BORDER	= 1;
 		let ALIGN	= 3;
-		let mut max_x = -BIG, max_y = -BIG, min_x = BIG, min_y = BIG;	// in font units
+		let mut max_x = -BIG;	// in font units
+		let mut max_y = -BIG;
+		let mut min_x = BIG;
+		let mut min_y = BIG;
 		let mut start_word = 0u;
 		let width_capacity = limit_x as int << SHIFT;
 		let mut pos_array = vec::with_capacity::<Target>( s.len() );
-		do str::each_char(s) |c|	{
+		for c in s.iter()	{
 			if c == '\n'	{
 				baseline += line_gap;
 				position = 0;
-				prev_index = 0 as FT_UInt;
+				prev_index = 0 as freetype::FT_UInt;
 			}else	{
-				if char::is_whitespace(c)	{
+				if std::char::is_whitespace(c)	{
 					start_word = pos_array.len();
 				}
-				let index = bindgen::FT_Get_Char_Index( *self.face, c as FT_ULong );
-				bindgen::FT_Load_Glyph( *self.face, index, FT_LOAD_DEFAULT as FT_Int32 ).
-					check( "Load_Glyph" );
+				let index = unsafe{
+					freetype::FT_Get_Char_Index( *self.face, c as freetype::FT_ULong )
+				};
+				unsafe{
+					freetype::FT_Load_Glyph( *self.face, index, freetype::FT_LOAD_DEFAULT as freetype::FT_Int32 )
+				}.check( "Load_Glyph" );
 				position += unsafe{
-					let delta = struct_FT_Vector_{ x:0, y:0 };
-					bindgen::FT_Get_Kerning( *self.face, prev_index, index,
-						FT_KERNING_DEFAULT, ptr::addr_of(&delta) ).
+					let delta = freetype::struct_FT_Vector_{ x:0, y:0 };
+					freetype::FT_Get_Kerning( *self.face, prev_index, index,
+						freetype::FT_KERNING_DEFAULT, ptr::to_unsafe_ptr(&delta) ).
 						check( "Get_Kerning" );
 					//lg.add(fmt!( "\tKerning %d-%d is %d",
 					//	prev_index as int, index as int, delta.x as int ));
 					delta.x as int + self.kern_offset
 				};
 				prev_index = index;
-				let glyph = unsafe { &*(face.glyph as FT_GlyphSlot) };
+				let glyph = unsafe { &*(face.glyph as freetype::FT_GlyphSlot) };
 				assert!( *self.face as uint == glyph.face as uint );
 				let cx = position + glyph.metrics.horiBearingX as int;
 				let cy = baseline - glyph.metrics.horiBearingY as int;
 				pos_array.push( Target{ c:c, x:cx, y:cy });
-				min_x = int::min( min_x, cx );
-				min_y = int::min( min_y, cy );
+				min_x = std::int::min( min_x, cx );
+				min_y = std::int::min( min_y, cy );
 				let mut ex = cx + glyph.metrics.width	as int;
 				let mut ey = cy + glyph.metrics.height	as int;
 				let e_border = (ex - min_x + (2*BORDER<<SHIFT)) | (((ALIGN+1)<<SHIFT)-1);
@@ -188,11 +205,11 @@ impl Font	{
 					lg.add(fmt!( "\tMoving the word: %u-%u", start_word, pos_array.len() ));
 					let word_offset = pos_array[start_word].x - min_x;
 					if e_border - word_offset >= width_capacity	{
-						fail!(fmt!( "Text exceeds horisontal bound: %s", s ))
+						fail!("Text exceeds horisontal bound: %s", s)
 					}
 					lg.add(fmt!( "\tHor:%d Ver:%d", -word_offset, line_gap ));
-					prev_index = 0 as FT_UInt;
-					for uint::range( start_word, pos_array.len() ) |i|	{
+					prev_index = 0 as freetype::FT_UInt;
+					for i in range( start_word, pos_array.len() )	{
 						pos_array[i].x -= word_offset;
 						pos_array[i].y += line_gap;
 					}
@@ -201,8 +218,8 @@ impl Font	{
 					ex -= word_offset;
 					ey += line_gap;
 				}
-				max_x = int::max( max_x, ex );
-				max_y = int::max( max_y, ey );
+				max_x = std::int::max( max_x, ex );
+				max_y = std::int::max( max_y, ey );
 				//lg.add(fmt!( "\tsymbol:%c cx:%d cy:%d", c, cx, cy ));
 				/*lg.add(fmt!( "\tSymbol '%c' (id=%u) at (%u,%u): size=(%d,%d) bearing=(%d,%d)",
 					c, self.get_char_index(c), position, baseline,
@@ -210,7 +227,6 @@ impl Font	{
 					glyph.metrics.horiBearingX as int, glyph.metrics.horiBearingY as int ));*/
 				position += glyph.advance.x as int;
 			}
-			true
 		}
 		// add border and align to 4 bytes
 		let width = ((((SHIFT+max_x-min_x)>>SHIFT)+ALIGN+2*BORDER) & !ALIGN) as uint;
@@ -219,49 +235,55 @@ impl Font	{
 		lg.add(fmt!( "\tBox at (%d,%d) of size %ux%u", min_x, min_y, width, height ));
 		assert!( width<=limit_x && height<=limit_y );
 		let mut image = vec::from_elem( width*height, 0u8 );
-		for pos_array.each |slice|	{
-			bindgen::FT_Load_Char( *self.face,
-				slice.c as FT_ULong, FT_LOAD_DEFAULT as FT_Int32 ).
-				check( "Load_Char" );
-			bindgen::FT_Render_Glyph(
-				face.glyph as FT_GlyphSlot, FT_RENDER_MODE_NORMAL ).
-				check( "Render_Glyph" );
-			let glyph = unsafe { &*(face.glyph as FT_GlyphSlot) };
+		for slice in pos_array.iter()	{
+			unsafe{
+				freetype::FT_Load_Char( *self.face,
+					slice.c as freetype::FT_ULong, freetype::FT_LOAD_DEFAULT as freetype::FT_Int32 )
+			}.check( "Load_Char" );
+			unsafe{
+				freetype::FT_Render_Glyph(
+					face.glyph as freetype::FT_GlyphSlot, freetype::FT_RENDER_MODE_NORMAL )
+			}.check( "Render_Glyph" );
+			let glyph = unsafe { &*(face.glyph as freetype::FT_GlyphSlot) };
 			let bmp = &(glyph.bitmap);
-			let bw = bmp.width as uint, bh = bmp.rows as uint;
+			let bw = bmp.width as uint;
+			let bh = bmp.rows as uint;
 			assert!( bw == glyph.metrics.width	as uint >> SHIFT );
 			assert!( bh == glyph.metrics.height	as uint >> SHIFT );
 			let x = ((slice.x - min_x) >>SHIFT) as uint;
 			let y = ((slice.y - min_y) >>SHIFT) as uint;
 			//lg.add(fmt!( "\tx:%u bw:%u, width:%u, y:%u bh:%u height:%u", x,bw,width, y,bh,height ));
 			assert!( x + bw <= width && y + bh <= height );
-			self.draw( bmp, &mut image, y*width + x, width );
+			self.draw( bmp, image, y*width + x, width );
 		}
-		let tex = gr.create_texture( ~"2D", width, height, 1u, 0u );
-		gr.texture.load_2D( tex, 0u, texture::map_int_format(~"r8"),
-			texture::map_pix_format(~"red"), image[0].to_gl_type(), &image );
+		let tex = gr.create_texture( "2D", width, height, 1u, 0u );
+		gr.texture.load_2D( tex, 0u, texture::map_int_format("r8"),
+			texture::map_pix_format("red"), image[0].to_gl_type(), image );
 		tex
 	}
 }
 
 
-pub impl Context	{
-	fn load( &self, path : &str, index : uint, size : [uint,..2], kern : [int,..2],
+impl Context	{
+	#[fixed_stack_segment]
+	pub fn load( &self, path : &str, index : uint, size : [uint,..2], kern : [int,..2],
 			lg : &journal::Log )-> Font	{
-		let mut face : FT_Face = ptr::null();
+		let mut face : freetype::FT_Face = ptr::null();
 		lg.add(fmt!( "Loading font: %s with size %ux%u", path, size[0], size[1] ));
-		do str::as_c_str(path) |text|	{
-			bindgen::FT_New_Face( self.lib, text, 
-				index as FT_Long, ptr::addr_of(&face) ).
-				check( "New_Face" );
-		}
-		bindgen::FT_Set_Pixel_Sizes( face,
-			size[0] as FT_UInt, size[1] as FT_UInt ).
-			check( "Set_Pixel_Sizes" );
+		path.with_c_str( |text|	{
+			unsafe{
+				freetype::FT_New_Face( self.lib, text, 
+					index as freetype::FT_Long, ptr::to_mut_unsafe_ptr(&mut face) )
+			}.check( "New_Face" );
+		});
+		unsafe{
+			freetype::FT_Set_Pixel_Sizes( face,
+				size[0] as freetype::FT_UInt, size[1] as freetype::FT_UInt )
+		}.check( "Set_Pixel_Sizes" );
 		Font{ face:FaceHandle(face),
 			kern_offset	: (kern[0] << SHIFT) as int,
 			line_offset	: (kern[1] << SHIFT) as int,
-			//cache	:send_map::linear::LinearMap::<char,Glyph>(),
+			//cache	:send_map::linear::HashMap::<char,Glyph>(),
 		}
 	}
 }

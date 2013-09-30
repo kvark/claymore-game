@@ -1,5 +1,5 @@
 extern mod glfw;
-extern mod lmath;
+extern mod cgmath;
 extern mod engine;
 extern mod std;
 
@@ -27,6 +27,7 @@ struct Journal	{
 	render	: engine::journal::Log,
 }
 
+
 struct Game	{
 	gr_context	: gr_low::context::Context,
 	aud_context	: engine::audio::Context,
@@ -43,7 +44,10 @@ struct Game	{
 	screen		: Screen,
 }
 
-#[auto_decode]
+local_data_key!(game_singleton : @mut Game)
+
+
+#[deriving(Decodable)]
 pub struct Elements	{
 	character	: bool,
 	shadow		: bool,
@@ -53,27 +57,27 @@ pub struct Elements	{
 	hud_debug	: bool,
 }
 
-pub impl Game	{
-	fn create( el : &Elements, wid : uint, het : uint, ns : uint, journal : Journal  )-> Game	{
+impl Game	{
+	pub fn create( el : &Elements, wid : uint, het : uint, ns : uint, journal : Journal  )-> Game	{
 		let mut gcon = gr_low::context::create( wid, het, ns );
 		assert!( gcon.sync_back() );
 		// audio test
-		let acon = engine::audio::Context::create();
+		let acon = engine::audio::Context::create( "" );
 		if false	{
-			let buf = @engine::audio::load_wav( &acon, ~"data/sound/stereol.wav", &journal.load );
+			let buf = @engine::audio::load_wav( &acon, "data/sound/stereol.wav", &journal.load );
 			let src = @mut acon.create_source();
 			src.bind(buf);
 		}
 		//src.play();
 		// create a forward light technique
-		let tech = gr_mid::draw::load_technique( ~"data/code/tech/forward/light" );
+		let tech = gr_mid::draw::load_technique( "data/code/tech/forward/light" );
 		let pmap = gr_mid::call::PlaneMap::new_main( &gcon, ~"o_Color" );
 		let out = gr_mid::call::Output::new( gcon.default_frame_buffer, pmap );
 		// create hud
 		let fcon = gr_mid::font::Context::create();
 		let mut hcon = hud_new::Context::create( &mut gcon, &journal.load );
 		// done
-		gcon.check(~"init");
+		gcon.check("init");
 		let intro = scene::intro::Scene{ active:false };
 		let editor = chared::create( el, &mut gcon, &fcon, &journal.load );
 		let battle = battle::create( &mut gcon, &mut hcon, &fcon, &journal.load );
@@ -91,14 +95,18 @@ pub impl Game	{
 		}
 	}
 
-	fn reset( &mut self )	{
+	pub fn get()-> @mut Game	{
+		std::local_data::get( game_singleton, |opt| *opt.expect("Your game is dead") )
+	}
+
+	pub fn reset( &mut self )	{
 		match self.screen	{
 			ScreenBattle	=> self.s_battle.reset(),
 			_ => ()
 		}
 	}
 
-	fn update( &mut self, input : &input::State )-> bool	{
+	pub fn update( &mut self, input : &input::State )-> bool	{
 		let aspect = self.output.area.aspect();
 		match self.screen	{
 			ScreenChar		=> self.s_editor.update( input, &self.journal.main ),
@@ -107,7 +115,7 @@ pub impl Game	{
 		}
 	}
 
-	fn on_input( &mut self, event : input::Event )	{
+	pub fn on_input( &mut self, event : input::Event )	{
 		self.journal.main.add( event.to_str() );
 		match self.screen	{
 			ScreenChar		=> self.s_editor.on_input( &event ),
@@ -116,42 +124,42 @@ pub impl Game	{
 		}
 	}
 
-	fn render( &mut self, el : &Elements )-> bool	{
+	pub fn render( &mut self, el : &Elements )-> bool	{
 		match self.screen	{
 			ScreenIntro	=> (),
 			ScreenChar	=> self.s_editor.render( el, &mut self.gr_context, &self.journal.render ),
 			ScreenBattle	=> self.s_battle.render( &mut self.gr_context, &self.hud_context,
-				&self.technique, copy self.output, &self.journal.render ),	
+				&self.technique, self.output.clone(), &self.journal.render ),	
 			_ => ()
 		}
 		// submit
 		self.call_count = self.gr_context.call_count;
 		self.gr_context.call_count = 0;
 		self.frames += 1;
-		self.gr_context.check( ~"render" );
+		self.gr_context.check( "render" );
 		// exit if logging draw calls
 		!self.journal.render.enable
 	}
 	
-	fn debug_move( &mut self, rot : bool, x : int, y : int )	{
+	pub fn debug_move( &mut self, rot : bool, x : int, y : int )	{
 		self.s_battle.debug_move( rot, x, y );
 	}
 }
 
 
-#[auto_decode]
+#[deriving(Decodable)]
 struct ConfigWindow	{
 	title:~str, width:uint, height:uint, samples:uint, fullscreen:bool,
 }
-#[auto_decode]
+#[deriving(Decodable)]
 struct ConfigGL	{
 	major:uint, minor:uint, core:bool, debug:bool,
 }
-#[auto_decode]
+#[deriving(Decodable)]
 struct ConfigLog	{
 	path:~str, load:bool, render:bool,
 }
-#[auto_decode]
+#[deriving(Decodable)]
 struct Config	{
 	window	: ConfigWindow,
 	GL		: ConfigGL,
@@ -159,14 +167,14 @@ struct Config	{
 	elements: Elements,
 }
 
-
-fn main()	{
-	do glfw::set_error_callback() |_error,description|	{
-		fail!(fmt!( "GLFW Error: %s", description ))
-	}
-	do glfw::spawn {
-		let config = scene::load_json::load_config::<Config>( ~"data/config.json" );
-		let lg = engine::journal::Log::create( copy config.journal.path );
+#[main]
+pub fn main()	{
+	glfw::set_error_callback( |_error,description|	{
+		fail!("GLFW Error: %s", description)
+	});
+	do glfw::start {
+		let config = scene::load_json::load_config::<Config>( "data/config.json" );
+		let lg = engine::journal::Log::create( config.journal.path.clone() );
 		lg.add(~"--- Claymore ---");
 		let mut journal = Journal	{
 			load	: lg.fork( ~"Load" ),
@@ -176,25 +184,29 @@ fn main()	{
 		journal.load.enable		= config.journal.load;
 		journal.render.enable	= config.journal.render;
 
-		glfw::ml::window_hint( glfw::RESIZABLE, 0 );
-		glfw::ml::window_hint( glfw::OPENGL_DEBUG_CONTEXT, if config.GL.debug {1} else {0} );
-		glfw::ml::window_hint( glfw::CONTEXT_VERSION_MAJOR, config.GL.major as libc::c_int );
-		glfw::ml::window_hint( glfw::CONTEXT_VERSION_MINOR, config.GL.minor as libc::c_int );
+		glfw::window_hint::resizable( false );
+		glfw::window_hint::opengl_debug_context( config.GL.debug );
+		glfw::window_hint::context_version_major( config.GL.major );
+		glfw::window_hint::context_version_minor( config.GL.minor );
 		if config.GL.core	{
-			glfw::ml::window_hint( glfw::OPENGL_PROFILE, glfw::OPENGL_CORE_PROFILE );
-			glfw::ml::window_hint( glfw::OPENGL_FORWARD_COMPAT, 1 );
+			glfw::window_hint::opengl_profile( glfw::OpenGlCoreProfile );
+			glfw::window_hint::opengl_forward_compat( true );
 		}
 
 		let cw = &config.window;
+		let monitor = match glfw::Monitor::get_primary()	{
+			Ok(m)	=> m,
+			Err(e)	=> fail!( "Monitoor::get_primary failed: %s", e.to_str() )
+		};
 		let mode = if cw.fullscreen {
-			glfw::FullScreen( glfw::get_primary_monitor() )
+			glfw::FullScreen( monitor )
 		}else {
 			glfw::Windowed
 		};
 		assert_eq!( cw.samples, 0 );
 		let window = match glfw::Window::create( cw.width, cw.height, cw.title, mode )	{
 			Ok(w)	=> w,
-			Err(e)	=> fail!(fmt!( "Window::create failed: %s", e )),
+			Err(e)	=> fail!( "Window::create failed: %s", e.to_str() ),
 		};
 
 		//window.set_input_mode( glfw::CURSOR_MODE, glfw::CURSOR_CAPTURED as int );
@@ -202,45 +214,50 @@ fn main()	{
 		let game = @mut Game::create( &config.elements, cw.width, cw.height, cw.samples, journal );
 		game.reset();
 
+		std::local_data::set( game_singleton, game );
+
 		// init callbacks
 		window.set_iconify_callback( |_win,done|	{
-			game.on_input( input::Focus(!done) );
+			Game::get().on_input( input::Focus(!done) );
 		});
 		window.set_focus_callback( |_win,done|	{
-			game.on_input( input::Focus(done) );
+			Game::get().on_input( input::Focus(done) );
 		});
 		window.set_char_callback( |_win,key|	{
-			game.on_input( input::Character( key as char ));
+			Game::get().on_input( input::Character( key ));
 		});
-		window.set_key_callback( |_win,key,action|	{
-			game.on_input( input::Keyboard( key as int, action == glfw::PRESS ));
+		window.set_key_callback( |_win,key,_scan,action,_mods|	{
+			Game::get().on_input( input::Keyboard( key, action == glfw::Press ));
 		});
 		window.set_cursor_pos_callback( |_win,posx,posy|	{
-			game.on_input( input::MouseMove( posx, posy ));
+			Game::get().on_input( input::MouseMove( posx, posy ));
 		});
-		window.set_mouse_button_callback( |_win,button,action|	{
-			game.on_input( input::MouseClick( button as uint, action == glfw::PRESS ));
+		window.set_mouse_button_callback( |_win,button,action,_mods|	{
+			Game::get().on_input( input::MouseClick( button as uint, action == glfw::Press ));
 		});
 		window.set_scroll_callback( |_win,floatx,floaty|	{
-			game.on_input( input::Scroll( floatx, floaty ));
+			Game::get().on_input( input::Scroll( floatx, floaty ));
 		});
 		
 		loop	{
 			glfw::poll_events();
-			if window.should_close() || window.get_key(glfw::support::consts::KEY_ESCAPE)!=0	{
-				window.destroy();
+			if window.should_close() || window.get_key(glfw::KeyEscape) == glfw::Press	{
+				window.close();
 				break;
 			}
 			// update
 			let input = {
 				let (px,py) = window.get_cursor_pos();
 				let mut buttons = 0u;
-				for [0u, ..8u].each() |&i|	{
-					buttons |= (window.get_mouse_button(i as i32) << i) as uint;
+				let all_buttons = [glfw::MouseButtonLeft,glfw::MouseButtonRight,glfw::MouseButtonMiddle];
+				for (i,but) in all_buttons.iter().enumerate()	{
+					if window.get_mouse_button(*but) == glfw::Press	{
+						buttons |= (1<<i) as uint;
+					}
 				}
 				input::State{
 					time	: engine::anim::get_time(),
-					focus	: window.get_param(glfw::support::consts::VISIBLE) != 0,
+					focus	: window.is_visible(),
 					mouse	: input::Mouse{
 						x	: px / (cw.width as float),
 						y	: py / (cw.height as float),

@@ -1,21 +1,23 @@
-extern mod glcore;
-extern mod lmath;
+extern mod gl;
+extern mod cgmath;
 
-use core::hashmap::linear::LinearMap;
-use core::managed;
+use std;
+use std::hashmap::HashMap;
+use std::{managed,ptr,vec};
 
-use lmath::vec::*;
-use lmath::mat::*;
+use cgmath::array::Array;
+use cgmath::vector::*;
+use cgmath::matrix::*;
 
 use gr_low::{context,texture};
 use journal;
 
 
-pub struct Location( glcore::GLint );
+pub struct Location( gl::types::GLint );
 #[deriving(Eq)]
-pub struct ObjectHandle( glcore::GLuint );
+pub struct ObjectHandle( gl::types::GLuint );
 #[deriving(Eq)]
-pub struct ProgramHandle( glcore::GLuint );
+pub struct ProgramHandle( gl::types::GLuint );
 
 
 pub struct Binding	{
@@ -24,34 +26,35 @@ pub struct Binding	{
 
 impl context::ProxyState for Binding	{
 	fn sync_back( &mut self )-> bool	{
-		let mut hid = 0 as glcore::GLint;
-		glcore::glGetIntegerv( glcore::GL_CURRENT_PROGRAM, ptr::addr_of(&hid) );
+		let mut hid = 0 as gl::types::GLint;
+		unsafe{ gl::GetIntegerv( gl::CURRENT_PROGRAM, ptr::to_mut_unsafe_ptr(&mut hid) ); }
 		hid == match self.active	{
-			Some(p)	=> *p.handle as glcore::GLint,
+			Some(p)	=> *p.handle as gl::types::GLint,
 			None	=> 0
 		}
 	}
 }
 
-pub impl Binding	{
-	fn new()-> Binding	{
+impl Binding	{
+	pub fn new()-> Binding	{
 		Binding{ active:None }
 	}
 }
 
 
+#[deriving(Clone)]
 pub enum Uniform	{
 	Uninitialized,
 	UniFloat(float),
 	UniInt(int),
-	UniFloatVec(vec4),
-	UniIntVec(ivec4),
-	UniFloatVecArray(~[vec4]),
-	UniMatrix(bool,mat4),
+	UniFloatVec(Vec4<f32>),
+	UniIntVec(Vec4<i32>),
+	UniFloatVecArray(~[Vec4<f32>]),
+	UniMatrix(bool,Mat4<f32>),
 	UniTexture(uint,@texture::Texture,Option<texture::Sampler>),
 }
 
-impl cmp::Eq for Uniform	{
+impl std::cmp::Eq for Uniform	{
 	fn eq( &self, v : &Uniform )-> bool	{
 		match (self,v)	{
 			(&Uninitialized,&Uninitialized)						=> true,
@@ -65,32 +68,31 @@ impl cmp::Eq for Uniform	{
 			(_,_)											=> false
 		}
 	}
-	fn ne( &self, v : &Uniform )-> bool	{ !self.eq(v) }
 }
 
 
 pub struct Attribute	{
 	loc		: uint,
-	storage	: glcore::GLenum,
+	storage	: gl::types::GLenum,
 	size	: uint,
 }
 
-pub impl Attribute	{
-	fn is_integer( &self )-> bool	{
-		![glcore::GL_FLOAT,glcore::GL_FLOAT_VEC2,glcore::GL_FLOAT_VEC3,
-			glcore::GL_FLOAT_VEC4].contains( &self.storage )
+impl Attribute	{
+	pub fn is_integer( &self )-> bool	{
+		![gl::FLOAT,gl::FLOAT_VEC2,gl::FLOAT_VEC3,
+			gl::FLOAT_VEC4].contains( &self.storage )
 	}
-	fn decompose( &self )-> (uint,glcore::GLenum)	{
+	pub fn decompose( &self )-> (uint,gl::types::GLenum)	{
 		match self.storage	{
-			glcore::GL_FLOAT_VEC2			=> (2,glcore::GL_FLOAT),
-			glcore::GL_FLOAT_VEC3			=> (3,glcore::GL_FLOAT),
-			glcore::GL_FLOAT_VEC4			=> (4,glcore::GL_FLOAT),
-			glcore::GL_INT_VEC2				=> (2,glcore::GL_INT),
-			glcore::GL_INT_VEC3				=> (3,glcore::GL_INT),
-			glcore::GL_INT_VEC4				=> (4,glcore::GL_INT),
-			glcore::GL_UNSIGNED_INT_VEC2	=> (2,glcore::GL_UNSIGNED_INT),
-			glcore::GL_UNSIGNED_INT_VEC3	=> (3,glcore::GL_UNSIGNED_INT),
-			glcore::GL_UNSIGNED_INT_VEC4	=> (4,glcore::GL_UNSIGNED_INT),
+			gl::FLOAT_VEC2			=> (2,gl::FLOAT),
+			gl::FLOAT_VEC3			=> (3,gl::FLOAT),
+			gl::FLOAT_VEC4			=> (4,gl::FLOAT),
+			gl::INT_VEC2				=> (2,gl::INT),
+			gl::INT_VEC3				=> (3,gl::INT),
+			gl::INT_VEC4				=> (4,gl::INT),
+			gl::UNSIGNED_INT_VEC2	=> (2,gl::UNSIGNED_INT),
+			gl::UNSIGNED_INT_VEC3	=> (3,gl::UNSIGNED_INT),
+			gl::UNSIGNED_INT_VEC4	=> (4,gl::UNSIGNED_INT),
 			_	=> (1,self.storage)
 		}
 	}
@@ -99,39 +101,39 @@ pub impl Attribute	{
 
 struct Parameter	{
 	loc		: Location,
-	storage	: glcore::GLenum,
+	storage	: gl::types::GLenum,
 	size	: uint,
 	value	: @mut Uniform,
 }
 
-priv impl Parameter	{
+impl Parameter	{
 	fn read( &self, h : &ProgramHandle )-> bool	{
 		let loc = *self.loc;
 		assert!( loc>=0 && self.size==1u );
 		*self.value = match self.storage	{
-			glcore::GL_FLOAT	=> {
+			gl::FLOAT	=> {
 				let mut v = 0f32;
-				glcore::glGetUniformfv( **h, loc, ptr::addr_of(&v) );
+				unsafe{ gl::GetUniformfv( **h, loc, ptr::to_mut_unsafe_ptr(&mut v) ); }
 				UniFloat(v as float)
 			},
-			glcore::GL_INT	=>	{
+			gl::INT	=>	{
 				let mut v = 0i32;
-				glcore::glGetUniformiv( **h, loc, ptr::addr_of(&v) );
+				unsafe{ gl::GetUniformiv( **h, loc, ptr::to_mut_unsafe_ptr(&mut v) ); }
 				UniInt(v as int)
 			},
-			glcore::GL_FLOAT_VEC4	=>	{
-				let mut v = vec4::zero();
-				glcore::glGetUniformfv( **h, loc, v.to_ptr() );
+			gl::FLOAT_VEC4	=>	{
+				let mut v = Vec4::zero();
+				unsafe{ gl::GetUniformfv( **h, loc, ptr::to_mut_unsafe_ptr(&mut v.x) ); }
 				UniFloatVec(v)
 			},
-			glcore::GL_INT_VEC4	=>	{
-				let mut v = ivec4::zero();
-				glcore::glGetUniformiv( **h, loc, v.to_ptr() );
+			gl::INT_VEC4	=>	{
+				let mut v = Vec4::zero();
+				unsafe{ gl::GetUniformiv( **h, loc, ptr::to_mut_unsafe_ptr(&mut v.x) ); }
 				UniIntVec(v)
 			},
-			glcore::GL_FLOAT_MAT4	=>	{
-				let mut v = mat4::zero();
-				glcore::glGetUniformfv( **h, loc, ptr::addr_of(&v.x.x) );
+			gl::FLOAT_MAT4	=>	{
+				let mut v = Mat4::zero();
+				unsafe{ gl::GetUniformfv( **h, loc, ptr::to_mut_unsafe_ptr(&mut v.x.x) ); }
 				UniMatrix(false,v)
 			},
 			_	=>	{return false}
@@ -142,30 +144,33 @@ priv impl Parameter	{
 	fn write( &self )	{
 		let loc = *self.loc;
 		match &*self.value	{
-			&Uninitialized	=> fail!(fmt!( "Uninitialized parameter at location %d", loc as int )),
-			&UniFloat(v)	=> glcore::glUniform1f( loc, v as glcore::GLfloat ),
-			&UniInt(v)		=> glcore::glUniform1i( loc, v as glcore::GLint ),
-			&UniFloatVec(ref v)		=> glcore::glUniform4fv( loc, 1, ptr::addr_of(&v.x) ),
-			&UniIntVec(ref v)		=> glcore::glUniform4iv( loc, 1, v.to_ptr() ),
-			&UniFloatVecArray(ref v)		=> glcore::glUniform4fv( loc, self.size as glcore::GLint,
-				unsafe{vec::raw::to_ptr(*v)} as *glcore::GLfloat ),
-			&UniMatrix(b, ref v)			=> glcore::glUniformMatrix4fv( loc, 1, b as glcore::GLboolean, ptr::addr_of(&v.x.x) ),
-			&UniTexture(u,_,_)		=> glcore::glUniform1i( loc, u as glcore::GLint ),
+			&Uninitialized	=> fail!("Uninitialized parameter at location %d", loc as int),
+			&UniFloat(v)	=> gl::Uniform1f( loc, v as gl::types::GLfloat ),
+			&UniInt(v)		=> gl::Uniform1i( loc, v as gl::types::GLint ),
+			&UniFloatVec(ref v)		=> unsafe{ gl::Uniform4fv( loc, 1, ptr::to_unsafe_ptr(&v.x) )},
+			&UniIntVec(ref v)		=> unsafe{ gl::Uniform4iv( loc, 1, ptr::to_unsafe_ptr(&v.x) )},
+			&UniFloatVecArray(ref v)		=> unsafe{
+				gl::Uniform4fv( loc, self.size as gl::types::GLint,
+					vec::raw::to_ptr(*v) as *gl::types::GLfloat )},
+			&UniMatrix(b, ref v)			=> unsafe{
+				gl::UniformMatrix4fv( loc, 1, b as gl::types::GLboolean, ptr::to_unsafe_ptr(&v.x.x) )},
+			&UniTexture(u,_,_)		=> gl::Uniform1i( loc, u as gl::types::GLint ),
 		}
 	}
 }
 
 
-pub type AttriMap	= LinearMap<~str,Attribute>;
-pub type ParaMap	= LinearMap<~str,Parameter>;
-pub struct DataMap(	LinearMap<~str,Uniform> );
+pub type AttriMap	= HashMap<~str,Attribute>;
+pub type ParaMap	= HashMap<~str,Parameter>;
+#[deriving(Clone)]
+pub struct DataMap(	HashMap<~str,Uniform> );
 
 impl DataMap	{
 	pub fn new()-> DataMap	{
-		DataMap( LinearMap::new() )
+		DataMap( HashMap::new() )
 	}
 	pub fn log( &self, lg : &journal::Log )	{
-		for self.each |&(name,val)|	{
+		for (name,val) in self.iter()	{
 			let sv = match val	{
 				&Uninitialized		=> ~"uninitialized",
 				&UniFloat(v)		=> fmt!("float(%f)",v),
@@ -192,15 +197,15 @@ impl DataMap	{
 
 struct Object	{
 	handle	: ObjectHandle,
-	target	: glcore::GLenum,
+	target	: gl::types::GLenum,
 	alive	: bool,
 	info	: ~str,
 }
 
 
 impl Drop for ObjectHandle	{
-	fn finalize( &self )	{
-		glcore::glDeleteShader( **self );
+	fn drop( &mut self )	{
+		gl::DeleteShader( **self );
 	}
 }
 
@@ -216,30 +221,31 @@ pub struct Program	{
 
 
 impl Drop for ProgramHandle	{
-	fn finalize( &self )	{
-		glcore::glDeleteProgram( **self );
+	fn drop( &mut self )	{
+		gl::DeleteProgram( **self );
 	}
 }
 
-pub impl Program	{
-	fn read_parameter( &self, name : ~str )-> Uniform	{
+impl Program	{
+	pub fn read_parameter( &self, name : ~str )-> Uniform	{
 		match self.params.find(&name)	{
 			Some(par) =>	{
 				par.read( &self.handle );
-				copy *par.value
+				(*par.value).clone()	//FIXME
 			},
 			None => Uninitialized
 		}
 	}
-	fn find_output( &self, name : &~str )-> uint	{
+	
+	pub fn find_output( &self, name : &~str )-> uint	{
 		let outs : &mut ~[~str] = self.outputs;
 		match outs.position_elem(name)	{
 			Some(p)	=> p,
 			None	=>	{
-				/*let mut p = -1 as glcore::GLint;
-				do str::as_c_str(*name) |text|	{
+				/*let mut p = -1 as gl::types::GLint;
+				do std::str::raw::as_c_str(*name) |text|	{
 					//FIXME:doesn't work!
-					glcore::glGetFragDataLocation( *self.handle, text );
+					gl::GetFragDataLocation( *self.handle, text );
 				}
 				assert p >= 0;
 				let pu = p as uint;*/
@@ -247,9 +253,9 @@ pub impl Program	{
 				if self.outputs.len() <= pu	{
 					do vec::grow_fn( &mut self.outputs, pu+1u-self.outputs.len()) |_i| {~""};
 				}
-				self.outputs[pu] = copy *name;
+				self.outputs[pu] = *name;
 				pu*/
-				outs.push( copy *name );
+				outs.push( (*name).clone() );
 				outs.len() - 1u
 			}
 		}
@@ -263,26 +269,32 @@ impl context::ProxyState for Program	{
 }
 
 
-priv fn query_attributes( h : &ProgramHandle, lg : &journal::Log )-> AttriMap	{
-	//assert glcore::glGetError() == 0;
-	let num		= 0 as glcore::GLint;
-	let max_len	= 0 as glcore::GLint;
-	glcore::glGetProgramiv( **h, glcore::GL_ACTIVE_ATTRIBUTES, ptr::addr_of(&num) );
-	glcore::glGetProgramiv( **h, glcore::GL_ACTIVE_ATTRIBUTE_MAX_LENGTH, ptr::addr_of(&max_len) );
-	let mut info_bytes	= vec::from_elem( max_len as uint, 0 as libc::c_char );
-	let raw_bytes		= unsafe{ vec::raw::to_ptr(info_bytes) };
+fn query_attributes( h : &ProgramHandle, lg : &journal::Log )-> AttriMap	{
+	//assert gl::GetError() == 0;
+	let mut num		= 0 as gl::types::GLint;
+	let mut max_len	= 0 as gl::types::GLint;
+	unsafe{
+		gl::GetProgramiv( **h, gl::ACTIVE_ATTRIBUTES,			ptr::to_mut_unsafe_ptr(&mut num) );
+		gl::GetProgramiv( **h, gl::ACTIVE_ATTRIBUTE_MAX_LENGTH,	ptr::to_mut_unsafe_ptr(&mut max_len) );
+	}
+	let mut info_bytes	= vec::from_elem( max_len as uint, 0 as gl::types::GLchar );
+	let raw_bytes		= vec::raw::to_mut_ptr(info_bytes);
 	lg.add(fmt!( "\tQuerying %d attributes:", num as int ));
-	let mut rez		= LinearMap::with_capacity::<~str,Attribute>( num as uint );
-	for uint::range(0u,num as uint) |i|	{
-		let mut length	= 0 as glcore::GLint;
-		let mut size	= 0 as glcore::GLint;
-		let mut storage	= 0 as glcore::GLenum;
-		glcore::glGetActiveAttrib( **h, i as glcore::GLuint, max_len,
-			ptr::addr_of(&length), ptr::addr_of(&size),
-			ptr::addr_of(&storage), raw_bytes );
-		let name = unsafe{ str::raw::from_c_str_len( raw_bytes, length as uint ) };
-		info_bytes[length] = 0;
-		let loc = glcore::glGetAttribLocation( **h, raw_bytes );
+	let mut rez	: HashMap<~str,Attribute>	= HashMap::with_capacity::( num as uint );
+	for i in range(0u,num as uint)	{
+		let mut length	= 0 as gl::types::GLint;
+		let mut size	= 0 as gl::types::GLint;
+		let mut storage	= 0 as gl::types::GLenum;
+		let (name,loc) = unsafe{
+			gl::GetActiveAttrib( **h, i as gl::types::GLuint, max_len,
+				ptr::to_mut_unsafe_ptr(&mut length), ptr::to_mut_unsafe_ptr(&mut size),
+				ptr::to_mut_unsafe_ptr(&mut storage), raw_bytes );
+			info_bytes[length] = 0;
+			let raw_str = raw_bytes as *gl::types::GLchar;
+			let name = std::str::raw::from_c_str( raw_str );
+			let loc = gl::GetAttribLocation( **h, raw_str );
+			(name,loc)
+		};
 		lg.add(fmt!( "\t\t[%d] = '%s',\tformat %d", loc as int, name, storage as int ));
 		rez.insert( name, Attribute{ loc:loc as uint, storage:storage, size:size as uint } );
 	}
@@ -290,26 +302,32 @@ priv fn query_attributes( h : &ProgramHandle, lg : &journal::Log )-> AttriMap	{
 }
 
 
-priv fn query_parameters( h : &ProgramHandle, lg : &journal::Log )-> ParaMap	{
-	//assert glcore::glGetError() == 0;
-	let num		= 0 as glcore::GLint;
-	let max_len	= 0 as glcore::GLint;
-	glcore::glGetProgramiv( **h, glcore::GL_ACTIVE_UNIFORMS, ptr::addr_of(&num) );
-	glcore::glGetProgramiv( **h, glcore::GL_ACTIVE_UNIFORM_MAX_LENGTH, ptr::addr_of(&max_len) );
-	let mut info_bytes	= vec::from_elem( max_len as uint, 0 as libc::c_char );
-	let raw_bytes		= unsafe{ vec::raw::to_ptr(info_bytes) };
+fn query_parameters( h : &ProgramHandle, lg : &journal::Log )-> ParaMap	{
+	//assert gl::GetError() == 0;
+	let mut num		= 0 as gl::types::GLint;
+	let mut max_len	= 0 as gl::types::GLint;
+	unsafe{
+		gl::GetProgramiv( **h, gl::ACTIVE_UNIFORMS,				ptr::to_mut_unsafe_ptr(&mut num) );
+		gl::GetProgramiv( **h, gl::ACTIVE_UNIFORM_MAX_LENGTH,	ptr::to_mut_unsafe_ptr(&mut max_len) );
+	}
+	let mut info_bytes	= vec::from_elem( max_len as uint, 0 as gl::types::GLchar );
+	let raw_bytes		= vec::raw::to_mut_ptr(info_bytes);
 	lg.add(fmt!( "\tQuerying %d parameters:", num as int ));
-	let mut rez		= LinearMap::with_capacity::<~str,Parameter>( num as uint );
-	for uint::range(0u,num as uint) |i|	{
-		let mut length	= 0 as glcore::GLint;
-		let mut size	= 0 as glcore::GLint;
-		let mut storage	= 0 as glcore::GLenum;
-		glcore::glGetActiveUniform( **h, i as glcore::GLuint, max_len,
-			ptr::addr_of(&length), ptr::addr_of(&size),
-			ptr::addr_of(&storage), raw_bytes );
-		let name = unsafe{ str::raw::from_c_str_len( raw_bytes, length as uint ) };
-		info_bytes[length] = 0;
-		let loc = glcore::glGetUniformLocation( **h, raw_bytes );
+	let mut rez	: HashMap<~str,Parameter>	= HashMap::with_capacity( num as uint );
+	for i in range(0u,num as uint)	{
+		let mut length	= 0 as gl::types::GLint;
+		let mut size	= 0 as gl::types::GLint;
+		let mut storage	= 0 as gl::types::GLenum;
+		let (name,loc) = unsafe{
+			gl::GetActiveUniform( **h, i as gl::types::GLuint, max_len,
+				ptr::to_mut_unsafe_ptr(&mut length), ptr::to_mut_unsafe_ptr(&mut size),
+				ptr::to_mut_unsafe_ptr(&mut storage), raw_bytes );
+			info_bytes[length] = 0;
+			let raw_str = raw_bytes as *gl::types::GLchar;
+			let name = std::str::raw::from_c_str( raw_str );
+			let loc = gl::GetUniformLocation( **h, raw_str );
+			(name,loc)
+		};
 		lg.add(fmt!( "\t\t[%d-%d]\t= '%s',\tformat %d", loc as int, ((loc + size) as int) -1, name, storage as int ));
 		let p = Parameter{ loc:Location(loc), storage:storage, size:size as uint, value:@mut Uninitialized };
 		//p.read( h );	// no need to read them here
@@ -319,79 +337,81 @@ priv fn query_parameters( h : &ProgramHandle, lg : &journal::Log )-> ParaMap	{
 }
 
 
-pub fn check_sampler( target : glcore::GLenum, storage : glcore::GLenum )	{
+pub fn check_sampler( target : gl::types::GLenum, storage : gl::types::GLenum )	{
 	let expected_target = match storage	{
-		glcore::GL_SAMPLER_1D			=> glcore::GL_TEXTURE_1D,
-		glcore::GL_SAMPLER_2D			|
-		glcore::GL_SAMPLER_2D_SHADOW	=> glcore::GL_TEXTURE_2D,
-		glcore::GL_SAMPLER_2D_RECT		=> glcore::GL_TEXTURE_RECTANGLE,
-		glcore::GL_SAMPLER_2D_ARRAY		=> glcore::GL_TEXTURE_2D_ARRAY,
-		glcore::GL_SAMPLER_3D			=> glcore::GL_TEXTURE_3D,
-		_	=> fail!(fmt!( "Unknown sampler: %x", storage as uint ))
+		gl::SAMPLER_1D			=> gl::TEXTURE_1D,
+		gl::SAMPLER_2D			|
+		gl::SAMPLER_2D_SHADOW	=> gl::TEXTURE_2D,
+		gl::SAMPLER_2D_RECT		=> gl::TEXTURE_RECTANGLE,
+		gl::SAMPLER_2D_ARRAY		=> gl::TEXTURE_2D_ARRAY,
+		gl::SAMPLER_3D			=> gl::TEXTURE_3D,
+		_	=> fail!("Unknown sampler: %x", storage as uint)
 	};
 	assert!( target == expected_target );
 }
 
-pub fn map_shader_type( t : char )-> glcore::GLenum	{
+pub fn map_shader_type( t : char )-> gl::types::GLenum	{
 	match t	{
-		'v'	=> glcore::GL_VERTEX_SHADER,
-		'g' => glcore::GL_GEOMETRY_SHADER,
-		'f'	=> glcore::GL_FRAGMENT_SHADER,
-		_	=> fail!(fmt!( "Unknown shader type: %c", t ))
+		'v'	=> gl::VERTEX_SHADER,
+		'g' => gl::GEOMETRY_SHADER,
+		'f'	=> gl::FRAGMENT_SHADER,
+		_	=> fail!("Unknown shader type: %c", t)
 	}
 }
 
 
-pub impl context::Context	{
-	fn create_shader( &self, t : char, code : &str )-> @Object	{
+impl context::Context	{
+	pub fn create_shader( &self, t : char, code : &str )-> @Object	{
+		assert_eq!( std::sys::size_of::<gl::types::GLchar>(), 1 );
 		let target = map_shader_type(t);
-		let h = ObjectHandle( glcore::glCreateShader(target) );
-		let mut length = code.len() as glcore::GLint;
+		let h = ObjectHandle( gl::CreateShader(target) );
+		let mut length = code.len() as gl::types::GLint;
 		// temporary fix for Linux Radeon HD4000
-		do str::as_c_str(str::replace(code,"150 core","140")) |text|	{
-			glcore::glShaderSource(	*h, 1i32, ptr::addr_of(&text), ptr::addr_of(&length) );
-		}
-		glcore::glCompileShader( *h );
+		code.replace("150 core","140").with_c_str( |text|	{
+			unsafe{
+				gl::ShaderSource(	*h, 1i32, ptr::to_unsafe_ptr(&text), ptr::to_unsafe_ptr(&length) );
+			}
+		});
+		gl::CompileShader( *h );
 		// get info message
-		let mut status = 0 as glcore::GLint;
+		let mut status = 0 as gl::types::GLint;
 		length = 0;
 		let message = unsafe	{
-			glcore::glGetShaderiv( *h, glcore::GL_COMPILE_STATUS, ptr::addr_of(&status) );
-			glcore::glGetShaderiv( *h, glcore::GL_INFO_LOG_LENGTH, ptr::addr_of(&length) );
-			let info_bytes	= vec::from_elem( length as uint, 0 as libc::c_char );
-			let raw_bytes	= vec::raw::to_ptr(info_bytes);
-			glcore::glGetShaderInfoLog( *h, length, ptr::addr_of(&length), raw_bytes );
-			str::raw::from_c_str( raw_bytes )
+			gl::GetShaderiv( *h, gl::COMPILE_STATUS,	ptr::to_mut_unsafe_ptr(&mut status) );
+			gl::GetShaderiv( *h, gl::INFO_LOG_LENGTH,	ptr::to_mut_unsafe_ptr(&mut length) );
+			let mut info_bytes	= vec::from_elem( length as uint, 0 as gl::types::GLchar );
+			let raw_bytes		= vec::raw::to_mut_ptr( info_bytes );
+			gl::GetShaderInfoLog( *h, length, ptr::to_mut_unsafe_ptr(&mut length), raw_bytes );
+			std::str::raw::from_buf_len( raw_bytes as *u8, length as uint )
 		};
-		let ok = (status != (0 as glcore::GLint));
+		let ok = (status != (0 as gl::types::GLint));
 		if !ok	{
-			io::println(~"Failed shader code:");
-			io::println(code);
+			print!( "Failed shader code:\n{}\n", code );
 			fail!( ~"\tGLSL " + message )
 		}
 		@Object{ handle:h, target:target,
 			alive:ok, info:message }
 	}
 	
-	fn create_program( &self, shaders : ~[@Object], lg : &journal::Log )-> @Program	{
-		let h = ProgramHandle( glcore::glCreateProgram() );
-		for shaders.each |s| {
-			glcore::glAttachShader( *h, *s.handle );
+	pub fn create_program( &self, shaders : &[@Object], lg : &journal::Log )-> @Program	{
+		let h = ProgramHandle( gl::CreateProgram() );
+		for s in shaders.iter() {
+			gl::AttachShader( *h, *s.handle );
 		}
-		glcore::glLinkProgram( *h );
+		gl::LinkProgram( *h );
 		lg.add(fmt!( "Linked program %d", *h as int ));
 		// get info message
-		let mut status = 0 as glcore::GLint;
-		let mut length = 0 as glcore::GLint;
+		let mut status = 0 as gl::types::GLint;
+		let mut length = 0 as gl::types::GLint;
 		let message = unsafe	{
-			glcore::glGetProgramiv( *h, glcore::GL_LINK_STATUS, ptr::addr_of(&status) );
-			glcore::glGetProgramiv( *h, glcore::GL_INFO_LOG_LENGTH, ptr::addr_of(&length) );
-			let info_bytes	= vec::from_elem( length as uint, 0 as libc::c_char );
-			let raw_bytes	= vec::raw::to_ptr(info_bytes);
-			glcore::glGetProgramInfoLog( *h, length, ptr::addr_of(&length), raw_bytes );
-			str::raw::from_c_str( raw_bytes )
+			gl::GetProgramiv( *h, gl::LINK_STATUS,		ptr::to_mut_unsafe_ptr(&mut status) );
+			gl::GetProgramiv( *h, gl::INFO_LOG_LENGTH,	ptr::to_mut_unsafe_ptr(&mut length) );
+			let mut info_bytes	= vec::from_elem( length as uint, 0 as gl::types::GLchar );
+			let raw_bytes		= vec::raw::to_mut_ptr( info_bytes );
+			gl::GetProgramInfoLog( *h, length, ptr::to_mut_unsafe_ptr(&mut length), raw_bytes );
+			std::str::raw::from_buf_len( raw_bytes as *u8, length as uint )
 		};
-		let ok = (status != (0 as glcore::GLint));
+		let ok = (status != (0 as gl::types::GLint));
 		if !ok	{
 			fail!( ~"\tGLSL program error: " + message )
 		}
@@ -407,17 +427,17 @@ pub impl context::Context	{
 	}
 
 	//FIXME: accept Map trait once HashMap<~str> are supported
-	fn bind_program( &mut self, p : @Program, data : &DataMap )->bool	{
+	pub fn bind_program( &mut self, p : @Program, data : &DataMap )->bool	{
 		let need_bind = match self.shader.active	{
 			Some(prog)	=> !managed::ptr_eq(p,prog),
 			None		=> true
 		};
 		if need_bind	{
 			self.shader.active = Some(p);
-			glcore::glUseProgram( *p.handle );
+			gl::UseProgram( *p.handle );
 		}
 		let mut tex_unit = 0;
-		for p.params.each() |&(name,par)|	{
+		for (name,par) in p.params.iter()	{
 			match data.find(name)	{
 				Some(&UniTexture(_,t,s_opt))	=> {
 					check_sampler( *t.target, par.storage );
@@ -440,27 +460,27 @@ pub impl context::Context	{
 				Some(value)	=>	{
 					if *par.value != *value	{
 						//io::println(fmt!( "Uploading value '%s'", *name ));
-						*par.value = copy *value;
+						*par.value = (*value).clone();
 						par.write();
 					}
 				},
 				None	=>	{
-					let msg = match &*par.value	{
-						&Uninitialized	=> ~"not inialized",
+					let msg = match par.value	{
+						@Uninitialized	=> ~"not inialized",
 						_				=> ~"missing",
 					};
-					fail!(fmt!( "Program %d parameter is %s: name=%s, loc=%d",
-						*p.handle as int, msg, *name, *par.loc as int ))
+					fail!("Program %d parameter is %s: name=%s, loc=%d",
+						*p.handle as int, msg, *name, *par.loc as int)
 				}
 			}
 		}
 		true
 	}
 
-	fn unbind_program( &mut self )	{
+	pub fn unbind_program( &mut self )	{
 		if self.shader.active.is_some()	{
 			self.shader.active = None;
-			glcore::glUseProgram( 0 );
+			gl::UseProgram( 0 );
 		}
 	}
 }

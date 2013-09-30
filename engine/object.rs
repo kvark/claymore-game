@@ -14,20 +14,20 @@ pub struct Entity	{
 	material: @gr_mid::draw::Material,
 }
 
-pub impl Entity	{
-	fn update_world( &mut self )	{
+impl Entity	{
+	pub fn update_world( &mut self )	{
 		let world = self.node.world_space().to_matrix();
 		self.data.insert( ~"u_World", gr_low::shade::UniMatrix(false,world) );
 	}
 }
 
-pub impl gr_mid::draw::Technique	{
-	fn process( &self, e : &Entity, output : gr_mid::call::Output, rast : gr_low::rast::State,
+impl gr_mid::draw::Technique	{
+	pub fn process( &self, e : &Entity, output : gr_mid::call::Output, rast : gr_low::rast::State,
 			cache : &mut gr_mid::draw::Cache, ct : &gr_low::context::Context,
 			lg : &journal::Log )-> gr_mid::call::Call	{
 		let op = self.get_program( e.material, e.modifier, cache, ct, lg );
 		match op	{
-			Some(p)	=> gr_mid::call::CallDraw( copy e.input, output, rast, p, copy e.data ),
+			Some(p)	=> gr_mid::call::CallDraw( e.input, output, rast, p, e.data.clone() ),
 			None => gr_mid::call::CallEmpty
 		}
 	}

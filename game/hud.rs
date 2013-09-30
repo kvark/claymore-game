@@ -1,12 +1,11 @@
 extern mod engine;
-extern mod lmath;
-extern mod std;
 
-use core::hashmap::linear::LinearMap;
-use core::to_str::ToStr;
-use std::serialize::Decoder;
+use std;
+use std::hashmap::HashMap;
+use std::to_str::ToStr;
+use extra::serialize::Decoder;
 
-use lmath::vec::vec4;
+use cgmath::vector::Vec4;
 use engine::gr_low;
 use engine::gr_mid::{call,font};
 use scene;
@@ -59,9 +58,7 @@ fn parse_relation( s : &str )-> Relation	{
 }
 
 fn parse_alignment( expression : &str )-> Alignment	{
-	let s = vec::build( |push|	{
-		expression.each_split( |c| {c=='=' || c=='.'}, |s| {push(s.to_owned());true} );
-	});
+	let s = expression.split_iter( |c:char| {c=='=' || c=='.'} ).map( |w| w.to_owned() ).to_owned_vec();
 	assert!( s.len() == 3u );
 	Alignment(parse_anchor(s[0]), parse_relation(s[1]), parse_anchor(s[2]))
 }
@@ -86,13 +83,13 @@ impl ToStr for Rect	{
 	}
 }
 
-pub impl Rect	{
-	fn get_corner( &self )-> Point	{
+impl Rect	{
+	pub fn get_corner( &self )-> Point	{
 		let (bx,by) = self.base;
 		let (sx,sy) = self.size;
 		(bx+sx,by+sy)
 	}
-	fn get_point( &self, anchor : Anchor, m : &Margin )-> Point	{
+	pub fn get_point( &self, anchor : Anchor, m : &Margin )-> Point	{
 		let (bx,by) = self.base;
 		let (sx,sy) = self.size;
 		match anchor	{
@@ -117,21 +114,23 @@ pub struct Context	{
 	size	: (uint,uint),
 }
 
-pub impl Context	{
-	fn call( &self, prog : @gr_low::shade::Program, data : gr_low::shade::DataMap,
+impl Context	{
+	pub fn call( &self, prog : @gr_low::shade::Program, data : gr_low::shade::DataMap,
 		rast_override : Option<&gr_low::rast::State> )-> call::Call	{
 		let rast = match rast_override	{
-			Some(ro)	=> copy *ro,
-			None		=> copy self.rast,
+			Some(ro)	=> *ro,
+			None		=> self.rast,
 		};
-		call::CallDraw( copy self.input, copy self.output, rast, prog, data )
+		call::CallDraw( self.input.clone(), self.output.clone(), rast, prog, data )
 	}
 
-	fn transform( &self, r : &Rect )-> gr_low::shade::Uniform	{
-		let (tx,ty) = self.size, (bx,by) = r.base, (sx,sy) = r.size;
+	pub fn transform( &self, r : &Rect )-> gr_low::shade::Uniform	{
+		let (tx,ty) = self.size;
+		let (bx,by) = r.base;
+		let (sx,sy) = r.size;
 		let dx = 2f32 / (tx as f32);
 		let dy = 2f32 / (ty as f32);
-		let vt = vec4::new(
+		let vt = Vec4::new(
 			dx * (sx as f32),
 			dy * (sy as f32),
 			dx * (bx as f32) - 1f32,
@@ -165,15 +164,15 @@ pub struct Frame	{
 	children	: ~[Frame],
 }
 
-pub impl Frame	{
-	fn get_size( &self, content : Point )-> Point	{
+impl Frame	{
+	pub fn get_size( &self, content : Point )-> Point	{
 		let m = &self.margin;
 		let (sx,sy) = self.min_size;
 		let (ex,ey) = content;
-		( int::max(sx,m.side+ex+m.side), int::max(sy,m.bot+ey+m.top) )
+		( std::int::max(sx,m.side+ex+m.side), std::int::max(sy,m.bot+ey+m.top) )
 	}
 
-	fn get_draw_rect( &self )-> Rect	{
+	pub fn get_draw_rect( &self )-> Rect	{
 		/*let m = &self.margin;
 		let (bx,by) = self.area.base;
 		let (sx,sy) = self.area.size;
@@ -184,7 +183,7 @@ pub impl Frame	{
 		self.area
 	}
 
-	priv fn update_size( &mut self, lg : &engine::journal::Log )-> Point	{
+	fn update_size( &mut self, lg : &engine::journal::Log )-> Point	{
 		let (ex,ey) = self.element.get_size();
 		let (cx,cy) = self.get_size((ex,ey));
 		if self.children.is_empty()	{
@@ -193,76 +192,83 @@ pub impl Frame	{
 		}
 		let no_margin = Margin{side:0,bot:0,top:0};
 		let BIG : int = 10000;
-		let mut x_min=BIG, y_min=BIG, x_max=-BIG, y_max=-BIG;
-		for uint::range(0,self.children.len()) |i|	{
-			let child = &mut self.children[i];
-			let size = child.update_size(lg);
-			let Alignment(destination,relation,source) = child.alignment;
+		let mut x_min=BIG;
+		let mut y_min=BIG;
+		let mut x_max=-BIG;
+		let mut y_max=-BIG;
+		for i in range(0,self.children.len())	{
+			let size = self.children[i].update_size(lg);
+			let Alignment(destination,relation,source) = self.children[i].alignment;
 			let (src_x,src_y) = Rect{base:(0,0),size:size}.
 				get_point( destination, &no_margin );
 			let (dst_x,dst_y) = match relation	{
 				RelParent	=> (0,0),
 				RelHead		=> { assert!( i>0u );
-					(copy self.children[0].area).
+					(self.children[0].area).
 						get_point( source, &no_margin )
 				},
 				RelTail		=> { assert!( i>0u );
-					(copy self.children[i-1u].area).
+					(self.children[i-1u].area).
 						get_point( source, &no_margin )
 				}
 			};
-			lg.add(fmt!( "\tFrame1 '%s' rel (%d,%d) := (%d,%d)", child.name,
-				src_x,src_y, dst_x,dst_y ));
-			child.area.base = ( dst_x-src_x, dst_y-src_y );
-			let (x1,y1) = child.area.get_point( ALeftBot, &no_margin );
-			let (x2,y2) = child.area.get_point( ARightTop,&no_margin );
-			assert!( x1<=x2 && y1<=y2 );
-			x_min = int::min(x_min,x1); y_min = int::min(y_min,y1);
-			x_max = int::max(x_max,x2); y_max = int::max(y_max,y2);
-			lg.add(fmt!( "\tUpdated1 '%s' to: %s, (%d,%d),(%d,%d)",
-				child.name, child.area.to_str(), x1,y1, x2,y2 ));
+			{
+				let child = &mut self.children[i];
+				lg.add(fmt!( "\tFrame1 '%s' rel (%d,%d) := (%d,%d)", child.name,
+					src_x,src_y, dst_x,dst_y ));
+				child.area.base = ( dst_x-src_x, dst_y-src_y );
+				let (x1,y1) = child.area.get_point( ALeftBot, &no_margin );
+				let (x2,y2) = child.area.get_point( ARightTop,&no_margin );
+				assert!( x1<=x2 && y1<=y2 );
+				x_min = std::int::min(x_min,x1); y_min = std::int::min(y_min,y1);
+				x_max = std::int::max(x_max,x2); y_max = std::int::max(y_max,y2);
+				lg.add(fmt!( "\tUpdated1 '%s' to: %s, (%d,%d),(%d,%d)",
+					child.name, child.area.to_str(), x1,y1, x2,y2 ));
+			}
 		}
-		let content = ( int::max(ex,x_max-x_min), int::max(ey,y_max-y_min) ); 
+		let content = ( std::int::max(ex,x_max-x_min), std::int::max(ey,y_max-y_min) ); 
 		lg.add(fmt!( "\tFrame3 '%s' bounding box is [%d-%d]x[%d-%d]", self.name, x_min, x_max, y_min, y_max ));
 		self.area.size = self.get_size(content);
 		self.area.size
 	}
 
-	priv fn update_base( &mut self, lg : &engine::journal::Log )	{
+	fn update_base( &mut self, lg : &engine::journal::Log )	{
 		let no_margin = Margin{side:0,bot:0,top:0};
-		for uint::range(0,self.children.len()) |i|	{
-			let child = &mut self.children[i];
-			let Alignment(destination,relation,source) = child.alignment;
-			let (src_x,src_y) = Rect{base:(0,0),size:child.area.size}.
+		for i in range(0,self.children.len())	{
+			let Alignment(destination,relation,source) = self.children[i].alignment;
+			let (src_x,src_y) = Rect{base:(0,0),size:self.children[i].area.size}.
 				get_point( destination, &Margin{side:0,bot:0,top:0} );
 			let (dst_x,dst_y) = match relation	{
 				RelParent	=> self.area.get_point( source, &self.margin ),
-				RelHead		=> (copy self.children[0+0u].area)
+				RelHead		=> (self.children[0+0u].area)
 					.get_point( source, &no_margin ),
-				RelTail		=> (copy self.children[i-1u].area)
+				RelTail		=> (self.children[i-1u].area)
 					.get_point( source, &no_margin ),
 			};
-			lg.add(fmt!( "\tFrame2 '%s' rel (%d,%d) := (%d,%d)", child.name,
-				src_x,src_y, dst_x,dst_y ));
-			child.area.base = ( dst_x-src_x, dst_y-src_y );
-			child.update_base(lg);
-			lg.add(fmt!( "\tUpdated2 '%s' to: %s", child.name, child.area.to_str() ));
+			{
+				let child = &mut self.children[i];
+				lg.add(fmt!( "\tFrame2 '%s' rel (%d,%d) := (%d,%d)", child.name,
+					src_x,src_y, dst_x,dst_y ));
+				child.area.base = ( dst_x-src_x, dst_y-src_y );
+				child.update_base(lg);
+				lg.add(fmt!( "\tUpdated2 '%s' to: %s", child.name, child.area.to_str() ));
+			}
 		}
 	}
 
-	fn update( &mut self, lg : &engine::journal::Log )	{
+	pub fn update( &mut self, lg : &engine::journal::Log )	{
 		lg.add( ~"Updating HUD: " + self.name );
 		self.update_size( lg );
 		assert!( self.area.size == self.min_size );
 		self.update_base( lg );
 	}
 
-	fn trace( &self, x : int, y : int, fun : &fn(&Frame,uint) )-> uint	{
-		for self.children.each() |child|	{
+	pub fn trace( &self, x : int, y : int, fun : &fn(&Frame,uint) )-> uint	{
+		for child in self.children.iter()	{
 			let (bx,by) = child.area.base;
 			let (sx,sy) = child.area.size;
 			if bx<=x && bx+sx>x && by<=y && by+sy>y	{
-				let d = child.trace( x, y, fun ) + 1u;
+				let d = child.trace( x, y, |x,i| fun(x,i) ) + 1u;
 				fun(self,d);
 				return d
 			}
@@ -271,12 +277,12 @@ pub impl Frame	{
 		0u
 	}
 
-	fn with_frame_mut<T>( &mut self, name :&~str, fun : &fn(&mut Frame)->T )-> Option<T>	{
+	pub fn with_frame_mut<T>( &mut self, name :&~str, fun : &fn(&mut Frame)->T )-> Option<T>	{
 		if self.name == *name	{
 			return Some( fun(self) )
 		}
-		for uint::range(0,self.children.len())	|i|	{
-			let res = self.children[i].with_frame_mut(name,fun);
+		for i in range(0,self.children.len())	{
+			let res = self.children[i].with_frame_mut( name, |f| fun(f) );
 			if res.is_some()	{
 				return res
 			}
@@ -284,31 +290,31 @@ pub impl Frame	{
 		None
 	}
 
-	fn populate( &mut self, name : &~str, elem : @Element )-> bool	{
+	pub fn populate( &mut self, name : &~str, elem : @Element )-> bool	{
 		let res = do self.with_frame_mut(name) |fr|	{fr.element=elem;};
 		res.is_some()
 	}
 
-	fn draw_all( &self, hc : &Context )-> ~[call::Call]	{
+	pub fn draw_all( &self, hc : &Context )-> ~[call::Call]	{
 		let c0 = self.element.draw( hc, &self.get_draw_rect() );
 		let mut queue = ~[c0];
-		for self.children.each() |child|	{
+		for child in self.children.iter()	{
 			queue.push_all_move( child.draw_all(hc) );
 		}
 		queue
 	}
 
-	fn draw_debug( &self, hc : &Context, prog : @gr_low::shade::Program,
+	pub fn draw_debug( &self, hc : &Context, prog : @gr_low::shade::Program,
 		data : &mut gr_low::shade::DataMap, rast : &gr_low::rast::State )-> call::Call	{
 		data.insert( ~"u_Transform", hc.transform(&self.area) );
-		hc.call( prog, copy *data, Some(rast) )
+		hc.call( prog, data.clone(), Some(rast) )
 	}
 
-	fn draw_debug_all( &self, hc : &Context, prog : @gr_low::shade::Program,
+	pub fn draw_debug_all( &self, hc : &Context, prog : @gr_low::shade::Program,
 		data : &mut gr_low::shade::DataMap, rast : &gr_low::rast::State )-> ~[call::Call]	{
 		let c0 = self.draw_debug(hc,prog,data,rast);
 		let mut queue = ~[c0];
-		for self.children.each() |child|	{
+		for child in self.children.iter()	{
 			queue.push_all_move( child.draw_debug_all(hc,prog,data,rast) );
 		}
 		queue
@@ -316,7 +322,7 @@ pub impl Frame	{
 }
 
 
-#[auto_decode]
+#[deriving(Decodable)]
 pub struct FrameInfo	{
 	name	: ~str,
 	size	: Point,
@@ -325,24 +331,24 @@ pub struct FrameInfo	{
 	children: ~[FrameInfo],
 }
 
-pub fn convert_frames( fi_array : &~[FrameInfo] )-> ~[Frame]	{
-	do vec::map(*fi_array) |fi|	{
+pub fn convert_frames( fi_array : &[FrameInfo] )-> ~[Frame]	{
+	fi_array.iter().map( |fi|	{
 		let (mx,mb,mt) = fi.margin;
 		Frame{
-			name		: copy fi.name,
+			name		: fi.name.clone(),
 			min_size	: fi.size,
 			area		: Rect{base:(0,0),size:fi.size},
 			alignment	: parse_alignment( fi.align ),
 			element		: @() as @Element,
 			margin		: Margin{side:mx,bot:mb,top:mt},
-			children	: convert_frames( &fi.children ),
+			children	: convert_frames( fi.children ),
 		}
-	}
+	}).collect()
 }
 
 
 
-#[auto_decode]
+#[deriving(Decodable)]
 struct ImageInfo	{
 	frame	: ~str,
 	path	: ~str,
@@ -365,8 +371,9 @@ impl Element for Image	{
 		let mut data = gr_low::shade::DataMap::new();
 		data.insert( ~"t_Image",	gr_low::shade::UniTexture(
 			0, self.texture, Some(self.sampler) ));
-		let (cx,cy) = self.center, (sx,sy) = rect.size;
-		let vc = vec4::new( cx, cy,
+		let (cx,cy) = self.center;
+		let (sx,sy) = rect.size;
+		let vc = Vec4::new( cx, cy,
 			(sx as f32)/(self.texture.width as f32),
 			(sy as f32)/(self.texture.height as f32)
 			);
@@ -379,7 +386,7 @@ impl Element for Image	{
 
 pub type FontInfo = (~str,uint,uint);
 
-#[auto_decode]
+#[deriving(Decodable)]
 struct LabelInfo	{
 	frame		: ~str,
 	text		: ~str,
@@ -406,7 +413,7 @@ impl Element for Label	{
 		let mut data = gr_low::shade::DataMap::new();
 		let sm = gr_low::texture::Sampler::new(1u,0);
 		data.insert( ~"t_Text",	gr_low::shade::UniTexture(0,self.texture,Some(sm)) );
-		let vc = vec4::new( self.color.r, self.color.g, self.color.b, self.color.a );
+		let vc = Vec4::new( self.color.r, self.color.g, self.color.b, self.color.a );
 		data.insert( ~"u_Color",	gr_low::shade::UniFloatVec(vc) );
 		let dr = Rect{ base:rect.base, size:self.get_size() };
 		data.insert( ~"u_Transform", hc.transform(&dr) );
@@ -416,7 +423,7 @@ impl Element for Label	{
 }
 
 
-#[auto_decode]
+#[deriving(Decodable)]
 struct ScreenInfo	{
 	frames	: ~[FrameInfo],
 	images	: ~[ImageInfo],
@@ -425,14 +432,14 @@ struct ScreenInfo	{
 
 pub struct Screen    {
 	root	: Frame,
-	images	: LinearMap<~str,@Image>,
-	labels	: LinearMap<~str,@mut Label>,
-	textures: LinearMap<~str,@gr_low::texture::Texture>,
-	fonts	: LinearMap<FontInfo,@font::Font>,
+	images	: HashMap<~str,@Image>,
+	labels	: HashMap<~str,@mut Label>,
+	textures: HashMap<~str,@gr_low::texture::Texture>,
+	fonts	: HashMap<FontInfo,@font::Font>,
 }
 
 
-pub fn load_screen( path : ~str, ct : &mut gr_low::context::Context,
+pub fn load_screen( path : &str, ct : &mut gr_low::context::Context,
 		ft : &font::Context, lg : &engine::journal::Log )-> Screen	{
 	lg.add( ~"Loading HUD screen: " + path );
 	let iscreen = scene::load_json::load_config::<ScreenInfo>( path );
@@ -445,17 +452,17 @@ pub fn load_screen( path : ~str, ct : &mut gr_low::context::Context,
 		alignment	: Alignment(ACenter,RelParent,ACenter),
 		element		: @() as @Element,
 		margin		: Margin{side:0,bot:0,top:0},
-		children	: convert_frames( &iscreen.frames ),
+		children	: convert_frames( iscreen.frames ),
 	};
-	let mut map_texture	: LinearMap<~str,@gr_low::texture::Texture> = LinearMap::new();
+	let mut map_texture	: HashMap<~str,@gr_low::texture::Texture> = HashMap::new();
 	lg.add(fmt!( "\tParsing %u images", iscreen.images.len() ));
-	let mut map_image : LinearMap<~str,@Image> = LinearMap::new();
-	let prog_image = engine::load::load_program( ct, ~"data/code/hud/image", lg );
-	for iscreen.images.each() |iimage|	{
+	let mut map_image : HashMap<~str,@Image> = HashMap::new();
+	let prog_image = engine::load::load_program( ct, "data/code/hud/image", lg );
+	for iimage in iscreen.images.iter()	{
 		let path = ~"data/texture/hud/" + iimage.path;
 		let (texture,new) = match map_texture.find(&path)	{
 			Some(t)	=> (*t,false),
-			None	=> (engine::load::load_texture_2D( ct, &path, false ), true),
+			None	=> (engine::load::load_texture_2D( ct, path, false ), true),
 		};
 		if new	{
 			map_texture.insert(path,texture);
@@ -466,36 +473,36 @@ pub fn load_screen( path : ~str, ct : &mut gr_low::context::Context,
 			program	: prog_image,
 			center	: iimage.center,
 		};
-		map_image.insert( copy iimage.frame, image );
+		map_image.insert( iimage.frame.clone(), image );
 		if !root.populate( &iimage.frame, image as @Element )	{
 			fail!( ~"\tImage frame not found: " + iimage.frame )
 		}
 	}
 	lg.add(fmt!( "\tParsing %u labels", iscreen.labels.len() ));
-	let mut map_font	: LinearMap<FontInfo,@font::Font>	= LinearMap::new();
-	let mut map_label	: LinearMap<~str,@mut Label>				= LinearMap::new();
-	let prog_label = engine::load::load_program( ct, ~"data/code/hud/text", lg );
-	for iscreen.labels.each() |ilabel|	{
+	let mut map_font	: HashMap<FontInfo,@font::Font>	= HashMap::new();
+	let mut map_label	: HashMap<~str,@mut Label>				= HashMap::new();
+	let prog_label = engine::load::load_program( ct, "data/code/hud/text", lg );
+	for ilabel in iscreen.labels.iter()	{
 		let (font,new) = match map_font.find(&ilabel.font)	{
 			Some(f)	=> (*f,false),
 			None	=>	{
-				let &(fname,fsx,fsy) = &ilabel.font;
+				let (fname,fsx,fsy) = ilabel.font.clone();
 				let (kern_x,kern_y) = ilabel.kern;
 				let f = @ft.load( ~"data/font/"+fname, 0u, [fsx,fsy], [kern_x,kern_y], lg );
 				(f,true)
 			}
 		};
 		if new	{
-			map_font.insert( copy ilabel.font, font );
+			map_font.insert( ilabel.font.clone(), font );
 		}
 		let label = @mut Label{
 			texture	: font.bake( ct, ilabel.text, ilabel.bound, lg ),
-			content	: copy ilabel.text,
+			content	: ilabel.text.clone(),
 			program	: prog_label,
 			color	: gr_low::rast::Color::new( ilabel.color ),
 			font	: font,
 		};
-		map_label.insert( copy ilabel.frame, label );
+		map_label.insert( ilabel.frame.clone(), label );
 		if !root.populate( &ilabel.frame, label as @Element )	{
 			fail!( ~"\tText frame not found: " + ilabel.frame )
 		}
@@ -539,9 +546,9 @@ pub struct EditLabel	{
 
 pub type KeyInput = ();
 
-pub impl EditLabel	{
-	fn obtain( screen : &mut Screen, base_name : ~str )-> EditLabel	{
-		let cursor_name = base_name + ~".cursor";
+impl EditLabel	{
+	pub fn obtain( screen : &mut Screen, base_name : ~str )-> EditLabel	{
+		let cursor_name = base_name + ".cursor";
 		let blink = @mut Blink	{
 			element	: *screen.images.get(&cursor_name),
 			visible	: false,
@@ -558,18 +565,17 @@ pub impl EditLabel	{
 		}
 	}
 
-	fn change( &self, input : &str, ct : &mut gr_low::context::Context, lg : &engine::journal::Log )	{
-		let mut text = copy self.text.content;
-		str::each_char(input, |key|	{
-			if key == (259 as char)	{
+	pub fn change( &self, input : &str, ct : &mut gr_low::context::Context, lg : &engine::journal::Log )	{
+		let mut text = self.text.content.clone();
+		for key in input.iter()	{
+			if key == 'b'{//(259 as char)	{//FIXME
 				if !text.is_empty()	{
-					str::pop_char( &mut text );
+					text.pop_char();
 				}
 			}else	{
-				str::push_char( &mut text, key );
-			};
-			true
-		});
+				text.push_char(key);
+			}
+		}
 		self.text.texture = self.text.font.bake( ct, text, (1000,100), lg );	//self.size
 		self.text.content = text;
 	}

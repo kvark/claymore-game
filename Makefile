@@ -32,12 +32,12 @@ grab-scene: asset/claymore/claymore-2a.rs asset/battle/battle-test.rs
 
 game: build/claymore
 
-build/claymore:	lib/engine.dummy lib/codata-scene.dummy lib/codata-hud.dummy lib/glfw3.dummy lib/numeric.dummy lib/lmath.dummy lib/cgmath.dummy game/*.rs game/render/*.rs game/scene/*.rs game/battle/*.rs
-	${RUST} game/claymore.rs -L lib --out-dir build
+build/claymore:	lib/engine.dummy lib/codata-scene.dummy lib/codata-hud.dummy lib/glfw.dummy game/*.rs game/render/*.rs game/scene/*.rs game/battle/*.rs
+	${RUST} -O game/claymore.rs -L lib --out-dir build
 
 engine: lib/engine.dummy
 
-lib/engine.dummy: lib/glcore.dummy lib/lmath.dummy lib/openal.dummy lib/freetype.dummy lib/stb-image.dummy engine/*.rs engine/gr_low/*.rs engine/gr_mid/*.rs
+lib/engine.dummy: lib/gl.dummy lib/cgmath.dummy lib/openal.dummy lib/freetype.dummy lib/stb-image.dummy engine/*.rs engine/gr_low/*.rs engine/gr_mid/*.rs
 	${RUST} engine/engine.rs -L lib --out-dir lib
 	touch $@
 
@@ -71,38 +71,30 @@ clean-engine:
 libs: lib/*.dummy
 
 clean-libs:
-	(cd lib && rm -Rf liblmath* libglfw3* libglcore* openal* libstb* *.dummy)
+	(cd lib && rm -Rf liblmath* libglfw3* libgl* openal* libstb* *.dummy)
 
-lib/numeric.dummy: ../numeric-rs/src/*.rs
-	(cd ../numeric-rs && rustc src/numeric.rs --out-dir ../${DIR}/lib/)
-	touch $@
-
-lib/lmath.dummy: lib/numeric.dummy ../lmath-rs/src/*.rs
-	(cd ../lmath-rs && rustc src/lmath.rs -L ../${DIR}/lib/ --out-dir ../${DIR}/lib/)
-	touch $@
-
-lib/cgmath.dummy: lib/lmath.dummy ../cgmath-rs/src/*.rs
-	(cd ../cgmath-rs && rustc src/cgmath.rs -L ../${DIR}/lib/ --out-dir ../${DIR}/lib/)
+lib/cgmath.dummy: ../cgmath-rs/src/cgmath/*.rs
+	(cd ../cgmath-rs && rustpkg build cgmath && cp -Ru build/*/cgmath/lib* ../${DIR}/lib)
 	touch $@
 	
-lib/glfw3.dummy: ../glfw3-rs/src/*.rs ../glfw3-rs/src/support/*.rs
-	(cd ../glfw3-rs && make && cp -Ru lib/* ../${DIR}/lib/)
+lib/glfw.dummy: ../glfw-rs/src/glfw/*.rs
+	(cd ../glfw-rs && rustpkg build glfw && cp -Ru build/*/glfw/lib* ../${DIR}/lib/)
 	touch $@
 
-lib/glcore.dummy: ../glcore-rs/src/*.r?
-	(cd ../glcore-rs && make ${GLTARGET} && cp -Ru lib/* ../${DIR}/lib/)
+lib/gl.dummy: ../gl-rs/src/generator/*.r? ../gl-rs/src/gl/*.r?
+	(cd ../gl-rs && rustpkg build gl && cp -Ru build/*/gl/lib* ../${DIR}/lib)
 	touch $@
 
-lib/openal.dummy: ../openal-rs/src/*.rs
-	(cd ../openal-rs && rustc src/openal.rs --out-dir ../${DIR}/lib/)
+lib/openal.dummy: ../openal-rs/src/openal/*.rs
+	(cd ../openal-rs && rustpkg build openal && cp -Ru build/*/openal/lib* ../${DIR}/lib)
 	touch $@
 
-lib/stb-image.dummy: ../rust-stb-image/*.dummy
-	(cd ../rust-stb-image && make && cp -Ru ${LIBMASK} *.a ../${DIR}/lib/)
+lib/stb-image.dummy: ../rust-stb-image/*.rs ../rust-stb-image/*.c ../rust-stb-image/Makefile
+	(cd ../rust-stb-image && make clean && make && cp -Ru ${LIBMASK} *.a ../${DIR}/lib/)
 	touch $@
 
-lib/freetype.dummy: ../rust-freetype/*.dummy
-	(cd ../rust-freetype && make && cp -Ru ${LIBMASK} ../${DIR}/lib/)
+lib/freetype.dummy: ../rust-freetype/*.rs ../rust-freetype/Makefile
+	(cd ../rust-freetype && make clean && make && cp -Ru ${LIBMASK} ../${DIR}/lib/)
 	touch $@
 
 # demo packing

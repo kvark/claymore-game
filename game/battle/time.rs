@@ -1,4 +1,5 @@
-use core::util;
+use std::util;
+
 
 pub type Coordinate = [int,..2];
 
@@ -7,8 +8,10 @@ pub trait Unit	{
 	fn get_parts()-> ~[Coordinate];
 }
 
+pub type Phase = Option<@Unit>;
 
 pub type Time = uint;
+
 
 pub struct Line	{
 	queue		: ~[~[@Unit]],
@@ -16,21 +19,21 @@ pub struct Line	{
 }
 
 impl Line	{
-	pub fn process( &mut self, moment : Time, fun : &fn(@Unit)->uint )	{
-		assert!( moment >= self.base_time )
+	pub fn add( &mut self, moment : Time, unit : @Unit )	{
 		let max_moment = self.base_time + self.queue.len();
 		if moment >= max_moment	{
-			return
+			//self.queue.grow( moment+1 - max_moment, &~[] );
 		}
-		let mut active : ~[@Unit] = ~[];
-		util::swap( &mut active, &mut self.queue[moment-self.base_time] );
-		for active.each |&unit|	{
-			let new_moment = moment + fun(unit);
-			if new_moment >= max_moment	{
-				self.queue.grow( new_moment+1 - max_moment, &~[] );
-			}
-			self.queue[new_moment - self.base_time].push(unit);
-		}
+		self.queue[moment - self.base_time].push(unit);
+	}
+
+	pub fn process( &mut self, moment : Time )-> ~[@Unit]	{
+		let max_moment = self.base_time + self.queue.len();
+		if moment >= self.base_time && moment < max_moment	{
+			let mut active : ~[@Unit] = ~[];
+			util::swap( &mut active, &mut self.queue[moment-self.base_time] );
+			active
+		}else	{~[]}
 	}
 
 	pub fn optimize( &mut self )	{

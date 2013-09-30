@@ -12,11 +12,10 @@
 
 extern mod gen_hud;
 extern mod gen_scene;
+extern mod glfw;
 extern mod cgmath;
 extern mod engine;
-extern mod lmath;
-extern mod numeric;
-extern mod std;
+extern mod extra;
 
 
 pub mod hud;

@@ -1,9 +1,10 @@
-extern mod lmath;
+extern mod cgmath;
 extern mod engine;
 extern mod gen_hud;
 
-use core::hashmap::linear::LinearMap;
-use lmath::vec::vec4;
+use std;
+use std::hashmap::HashMap;
+use cgmath::vector::Vec4;
 use engine::gr_low::{rast,shade};
 use engine::gr_low::frame::Rect;
 use engine::gr_low::texture;
@@ -12,61 +13,58 @@ use gen = gen_hud::common;
 
 
 
-priv fn get<T>( children : &[gen::Child], path : &str, fun : &fn(&gen::Child)->T )-> T	{
-	let slash = str::find_char(path,'/');
+fn get<T>( children : &[gen::Child], path : &str, fun : &fn(&gen::Child)->T )-> T	{
+	let slash = path.find('/');
 	let name = match slash	{
-		Some(p)	=> path.substr(0,p),
+		Some(p)	=> path.slice_to(p),
 		None	=> path,
 	};
-	for children.each() |child|	{
-		if str::eq_slice( child.name, name )	{
+	for child in children.iter()	{
+		if std::str::eq_slice( child.name, name )	{
 			return match slash	{
 				Some(p)	=>	{
-					let rest = path.substr( p+1, path.len()-p-1 );
+					let rest = path.slice_from( p+1 );
 					match &child.element	{
 						&gen::ElFrame(ref fr)	=> get( fr.children, rest, fun ),
-						_	=> fail!(fmt!("Hud child is not a frame: %s", name))
+						_	=> fail!("Hud child is not a frame: %s", name)
 					}
 				},
 				None	=> fun(child),
 			}
 		}
 	}
-	fail!(fmt!("Hud child not found: %s",name))
+	fail!("Hud child not found: %s", name)
 }
 
-priv fn modify( children : &mut ~[gen::Child], path : &str, fun : &fn(&mut gen::Child) )	{
-	let slash = str::find_char(path,'/');
+fn modify( children : &mut ~[gen::Child], path : &str, fun : &fn(&mut gen::Child) )	{
+	let slash = path.find('/');
 	let name = match slash	{
-		Some(p)	=> path.substr(0,p),
+		Some(p)	=> path.slice_to(p),
 		None	=> path,
 	};
-	for children.each_mut() |child|	{
-		if str::eq_slice( child.name, name )	{
+	for child in children.mut_iter()	{
+		if std::str::eq_slice( child.name, name )	{
 			return match slash	{
 				Some(p)	=>	{
-					let rest = path.substr( p+1, path.len()-p-1 );
-					child.element = match &child.element	{
-						&gen::ElFrame(ref fr)	=>	{
-							//TODO: mod in place
-							let mut f2 = copy *fr;
-							modify( &mut f2.children, rest, fun );
-							gen::ElFrame(f2)
+					let rest = path.slice_from( p+1 );
+					match &mut child.element	{
+						&gen::ElFrame(ref mut fr)	=>	{
+							modify( &mut fr.children, rest, fun );
 						},
-						_	=> fail!(fmt!("Hud child is not a frame: %s", name))
+						_	=> fail!("Hud child is not a frame: %s", name)
 					}
 				},
 				None	=> fun(child),
 			}
 		}
 	}
-	fail!(fmt!("Hud child not found: %s",name))
+	fail!("Hud child not found: %s", name)
 }
 
 
 struct FontCache	{
 	font	: @font::Font,
-	cache	: LinearMap<~str,@texture::Texture>,
+	cache	: HashMap<~str,@texture::Texture>,
 }
 
 
@@ -77,38 +75,38 @@ pub struct Context	{
 	program_text	: @shade::Program,
 	sampler_image	: texture::Sampler,
 	sampler_text	: texture::Sampler,
-	cache_images	: LinearMap<gen::Path,@texture::Texture>,
-	cache_fonts		: LinearMap<gen::Font,FontCache>,
+	cache_images	: HashMap<gen::Path,@texture::Texture>,
+	cache_fonts		: HashMap<gen::Font,FontCache>,
 }
 
 impl Context	{
 	pub fn create( gc : &mut engine::gr_low::context::Context, lg : &engine::journal::Log )-> Context	{
-		let mut hud_rast = copy gc.default_rast;
-		hud_rast.set_blend( ~"s+d", ~"Sa", ~"1-Sa" );
+		let mut hud_rast = gc.default_rast;
+		hud_rast.set_blend( "s+d", "Sa", "1-Sa" );
 		let vao = gc.create_vertex_array();
 		let quad = @engine::gr_mid::mesh::create_quad( gc );
 		Context{
 			input	: call::Input::new( vao, quad ),
 			rast	: hud_rast,
-			program_image	: engine::load::load_program( gc, ~"data/code/hud/image", lg ),
-			program_text	: engine::load::load_program( gc, ~"data/code/hud/text", lg ),
+			program_image	: engine::load::load_program( gc, "data/code/hud/image", lg ),
+			program_text	: engine::load::load_program( gc, "data/code/hud/text", lg ),
 			sampler_image	: texture::Sampler::new(1u,0),
 			sampler_text	: texture::Sampler::new(1u,0),
-			cache_images	: LinearMap::new(),
-			cache_fonts		: LinearMap::new(),
+			cache_images	: HashMap::new(),
+			cache_fonts		: HashMap::new(),
 		}
 	}
 
 	pub fn preload( &mut self, children : &[gen::Child], gcon : &mut engine::gr_low::context::Context,
 			fcon : &font::Context, lg : &engine::journal::Log )	{
-		for children.each() |child|	{
+		for child in children.iter()	{
 			match &child.element	{
 				&gen::ElFrame(ref fr)	=> self.preload( fr.children, gcon, fcon, lg ),
 				&gen::ElImage(ref name)	=>	{
 					if !self.cache_images.contains_key( name )	{
 						let path = ~"data/texture/hud/" + *name;
-						let t = engine::load::load_texture_2D( gcon, &path, false );
-						self.cache_images.insert( copy *name, t );
+						let t = engine::load::load_texture_2D( gcon, path, false );
+						self.cache_images.insert( name.clone(), t );
 					}
 				},
 				&gen::ElText(ref text)	=>	{
@@ -118,9 +116,9 @@ impl Context	{
 							let path = ~"data/font/" + f.path;
 							let fc = FontCache	{
 								font	: @fcon.load( path, 0u, f.size, f.kern, lg ),
-								cache	: LinearMap::new(),
+								cache	: HashMap::new(),
 							};
-							self.cache_fonts.insert( copy text.font, copy fc );
+							self.cache_fonts.insert( text.font.clone(), fc );
 						}
 					}
 					{
@@ -128,7 +126,7 @@ impl Context	{
 						if !fc.cache.contains_key( &text.value )	{
 							let bound = ( text.bound[0], text.bound[1] );
 							let t = fc.font.bake( gcon, text.value, bound, lg );
-							fc.cache.insert( copy text.value, t );
+							fc.cache.insert( text.value.clone(), t );
 						}
 					}
 				},
@@ -137,15 +135,15 @@ impl Context	{
 		}
 	}
 
-	priv fn make_call( &self, prog : @shade::Program, data : shade::DataMap,
+	fn make_call( &self, prog : @shade::Program, data : shade::DataMap,
 			output : &call::Output )-> call::Call	{
-		call::CallDraw( copy self.input, copy *output, copy self.rast, prog, data )
+		call::CallDraw( self.input.clone(), output.clone(), self.rast, prog, data )
 	}
 
-	priv fn transform( &self, r : &Rect, screen_size : &gen::Vector )-> shade::Uniform	{
+	fn transform( &self, r : &Rect, screen_size : &gen::Vector )-> shade::Uniform	{
 		let dx = 2f32 / (screen_size[0] as f32);
 		let dy = 2f32 / (screen_size[1] as f32);
-		let vt = vec4::new(
+		let vt = Vec4::new(
 			dx * (r.w as f32),
 			dy * (r.h as f32),
 			dx * (r.x as f32) - 1f32,
@@ -186,7 +184,7 @@ impl Context	{
 	}
 
 	pub fn get_color_param( color : uint )-> shade::Uniform	{
-		shade::UniFloatVec(vec4::new(
+		shade::UniFloatVec(Vec4::new(
 			((color>>24)&0xFF) as f32 / 255f32,
 			((color>>16)&0xFF) as f32 / 255f32,
 			((color>>8)	&0xFF) as f32 / 255f32,
@@ -198,7 +196,7 @@ impl Context	{
 			screen_size : &gen::Vector )-> (gen::Vector,~[call::Call])	{
 		let mut off : gen::Vector = [area.x,area.y];
 		let mut calls : ~[call::Call] = ~[];
-		for children.each() |&child|	{
+		for child in children.iter()	{
 			let size = match &child.element	{
 				&gen::ElImage(ref path)	=>	{
 					let t = *self.cache_images.find( path ).
@@ -207,7 +205,7 @@ impl Context	{
 					data.insert( ~"t_Image",		shade::UniTexture(
 						0, t, Some(self.sampler_image) ));
 					let rect = Rect{ x:off[0], y:off[1], w:t.width, h:t.height };
-					let vc = vec4::new( 0f32, 0f32, 1f32, 1f32 );
+					let vc = Vec4::new( 0f32, 0f32, 1f32, 1f32 );
 					data.insert( ~"u_Center",		shade::UniFloatVec(vc) );
 					data.insert( ~"u_Transform",	self.transform(&rect,screen_size) );
 					calls.push( self.make_call( self.program_image, data, out ));

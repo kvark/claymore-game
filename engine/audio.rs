@@ -1,5 +1,8 @@
 extern mod openal;
 
+use std;
+use std::ptr;
+
 use openal::*;
 
 use journal;
@@ -8,20 +11,16 @@ use load;
 //- - - - - -
 // TYPES	//
 
-pub struct BufferHandle( types::ALuint );
-pub struct SourceHandle( types::ALuint );
+pub struct BufferHandle( al::types::ALuint );
+pub struct SourceHandle( al::types::ALuint );
 
 pub struct Context	{
-	device	: *types::ALCdevice,
-	context	: *types::ALCcontext,
+	device	: alc::Device,
+	context	: alc::Context,
 }
 
 impl Drop for Context	{
-	fn finalize( &self )	{
-		ll::alcMakeContextCurrent( ptr::null() );
-		ll::alcDestroyContext( self.context );
-		ll::alcCloseDevice( self.device );
-	}
+	fn drop( &mut self )	{}
 }
 
 
@@ -31,8 +30,11 @@ pub struct Buffer	{
 }
 
 impl Drop for BufferHandle	{
-	fn finalize( &self )	{
-		ll::alDeleteBuffers( 1, ptr::addr_of(&**self) );
+	#[fixed_stack_segment]
+	fn drop( &mut self )	{
+		unsafe{
+			al::ffi::alDeleteBuffers( 1, ptr::to_unsafe_ptr(&**self) );
+		}
 	}
 }
 
@@ -43,23 +45,37 @@ pub struct Source	{
 }
 
 impl Drop for SourceHandle	{
-	fn finalize( &self )	{
-		ll::alDeleteSources( 1, ptr::addr_of(&**self) );
+	#[fixed_stack_segment]
+	fn drop( &mut self )	{
+		unsafe{
+			al::ffi::alDeleteSources( 1, ptr::to_unsafe_ptr(&**self) );
+		}
 	}
 }
 
-pub impl Source	{
-	fn bind( &mut self, buf : @Buffer )	{
+impl Source	{
+	#[fixed_stack_segment]
+	pub fn bind( &mut self, buf : @Buffer )	{
 		self.buffer = Some(buf);
-		ll::alSourcei( *self.handle, consts::al::BUFFER, *buf.handle as types::ALint )
+		unsafe{
+			al::ffi::alSourcei( *self.handle, al::ffi::BUFFER, *buf.handle as al::types::ALint )
+		}
 	}
-	fn unbind( &mut self )	{
+
+	#[fixed_stack_segment]
+	pub fn unbind( &mut self )	{
 		self.buffer = None;
-		ll::alSourcei( *self.handle, consts::al::BUFFER, 0 )
+		unsafe{
+			al::ffi::alSourcei( *self.handle, al::ffi::BUFFER, 0 )
+		}
 	}
-	fn play( &self )	{
+
+	#[fixed_stack_segment]
+	pub fn play( &self )	{
 		assert!( self.buffer.is_some() );
-		ll::alSourcePlay( *self.handle );
+		unsafe{
+			al::ffi::alSourcePlay( *self.handle );
+		}
 	}
 }
 
@@ -72,56 +88,67 @@ pub struct Listener	{
 //- - - - - - - - - -
 // IMPLEMENTATIONS	//
 
-pub fn find_format( channels : uint, bits : uint )-> types::ALenum	{
+pub fn find_format( channels : uint, bits : uint )-> al::types::ALenum	{
 	match (channels,bits)	{
-		(1,8)	=> consts::al::FORMAT_MONO8,
-		(1,16)	=> consts::al::FORMAT_MONO16,
-		(2,8)	=> consts::al::FORMAT_STEREO8,
-		(2,16)	=> consts::al::FORMAT_STEREO16,
-		_	=> fail!(fmt!( "Unknown format: %u channels, %u bits", channels, bits ))
+		(1,8)	=> al::ffi::FORMAT_MONO8,
+		(1,16)	=> al::ffi::FORMAT_MONO16,
+		(2,8)	=> al::ffi::FORMAT_STEREO8,
+		(2,16)	=> al::ffi::FORMAT_STEREO16,
+		_	=> fail!( "Unknown format: %u channels, %u bits", channels, bits )
 	}
 }
 
-pub impl Context	{
-	fn create()-> Context	{
-		let dev = ll::alcOpenDevice( ptr::null() );
-		let ctx = ll::alcCreateContext( dev, ptr::null() );
-		ll::alcMakeContextCurrent( ctx );
-		Context{ device:dev, context:ctx }
-	}
-	
-	fn check( &self )	{
-		let err = ll::alGetError();
-		if err != consts::al::NO_ERROR	{
-			fail!(fmt!("AL error %d", err as int))
+impl Context	{
+	pub fn create( dev_name : &str )-> Context	{
+		let dev = alc::Device::open( dev_name );
+		let ctx = dev.create_context( &[] );
+		ctx.make_current();
+		Context	{
+			device	: dev,
+			context	: ctx,
 		}
 	}
 	
-	fn check_extension( &self, name : &str )-> bool	{
+	#[fixed_stack_segment]
+	pub fn check( &self )	{
+		let err = unsafe{ al::ffi::alGetError() };
+		if err != al::ffi::NO_ERROR	{
+			fail!( "AL error %d", err as int )
+		}
+	}
+	
+	#[fixed_stack_segment]
+	pub fn check_extension( &self, name : &str )-> bool	{
 		let mut yes = false;
-		do str::as_c_str(name) |text|	{
-			yes = ll::alIsExtensionPresent(text) != 0
-		}
+		name.with_c_str( |text|	{
+			yes = unsafe{al::ffi::alIsExtensionPresent(text)} != 0
+		});
 		yes
 	}
 
-	fn create_buffer<T>( &self, channels : uint, bits : uint, byte_rate : uint, 
+	#[fixed_stack_segment]
+	pub fn create_buffer<T>( &self, channels : uint, bits : uint, byte_rate : uint, 
 		sample_rate : uint, data : ~[T] )-> Buffer	{
-		let mut hid : types::ALuint = 0;
-		ll::alGenBuffers( 1, ptr::addr_of(&hid) );
-		let size = data.len() * sys::size_of::<T>();
-		ll::alBufferData( hid, find_format(channels,bits),
-			unsafe{vec::raw::to_ptr(data) as *types::ALvoid},
-			size as types::ALsizei, sample_rate as types::ALsizei );
+		let mut hid : al::types::ALuint = 0;
+		let size = data.len() * std::sys::size_of::<T>();
+		unsafe{
+			al::ffi::alGenBuffers( 1, ptr::to_mut_unsafe_ptr(&mut hid) );
+			al::ffi::alBufferData( hid, find_format(channels,bits),
+				std::vec::raw::to_ptr(data) as *al::types::ALvoid,
+				size as al::types::ALsizei, sample_rate as al::types::ALsizei );
+		}		
 		Buffer{
 			handle	: BufferHandle(hid),
 			duration: (size as float) / (byte_rate as float),
 		}
 	}
 
-	fn create_source( &self )-> Source	{
-		let mut hid : types::ALuint = 0;
-		ll::alGenSources( 1, ptr::addr_of(&hid) );
+	#[fixed_stack_segment]
+	pub fn create_source( &self )-> Source	{
+		let mut hid : al::types::ALuint = 0;
+		unsafe{
+			al::ffi::alGenSources( 1, ptr::to_mut_unsafe_ptr(&mut hid) );
+		}
 		Source{
 			handle	: SourceHandle(hid),
 			buffer	: None,
@@ -131,7 +158,7 @@ pub impl Context	{
 
 
 pub fn read_wave_chunk( rd : &load::Reader )-> load::Chunk	{
-	let name = str::from_bytes( rd.get_bytes(4) );
+	let name = std::str::from_utf8( rd.get_bytes(4) );
 	let size = rd.get_uint(4);
 	//lg.add( ~"\tEntering " + name );
 	load::Chunk{
@@ -141,16 +168,16 @@ pub fn read_wave_chunk( rd : &load::Reader )-> load::Chunk	{
 	}
 }
 
-pub fn load_wav( at : &Context, path : ~str, lg : &journal::Log )-> Buffer	{
+pub fn load_wav( at : &Context, path : &str, lg : &journal::Log )-> Buffer	{
 	struct Chunk	{
 		id		: ~str,
 		start	: uint,
 		size	: uint,
 	};
-	lg.add( ~"Loading " + path );
+	lg.add( "Loading " + path );
 	let mut rd = load::Reader::create_ext( path, read_wave_chunk );
 	assert!( rd.enter() == ~"RIFF" );
-	let s_format = str::from_bytes( rd.get_bytes(4) );
+	let s_format = std::str::from_utf8( rd.get_bytes(4) );
 	assert!( s_format == ~"WAVE" );
 	assert!( rd.enter() == ~"fmt " );
 	let audio_format	= rd.get_uint(2);

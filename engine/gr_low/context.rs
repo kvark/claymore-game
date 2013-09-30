@@ -1,4 +1,7 @@
-extern mod glcore;
+extern mod gl;
+
+use std;
+use std::ptr;
 
 use gr_low::{buf,frame,rast,shade,texture};
 use gr_low::rast::Stage;
@@ -13,38 +16,38 @@ pub struct Capabilities	{
 	max_color_attachments : uint,
 }
 
-priv fn read_cap( what : glcore::GLenum )-> uint	{
-	let mut value = 0 as glcore::GLint;
+fn read_cap( what : gl::types::GLenum )-> uint	{
+	let mut value = 0 as gl::types::GLint;
 	unsafe	{
-		glcore::glGetIntegerv( what, ptr::addr_of(&value) );
+		gl::GetIntegerv( what, ptr::to_mut_unsafe_ptr(&mut value) );
 	}
 	value as uint
 }
 
 
 pub trait GLType	{
-	fn to_gl_type( &self )-> glcore::GLenum;
+	fn to_gl_type( &self )-> gl::types::GLenum;
 }
 impl GLType for i8	{
-	fn to_gl_type( &self )-> glcore::GLenum	{glcore::GL_BYTE}
+	fn to_gl_type( &self )-> gl::types::GLenum	{gl::BYTE}
 }
 impl GLType for u8	{
-	fn to_gl_type( &self )-> glcore::GLenum	{glcore::GL_UNSIGNED_BYTE}
+	fn to_gl_type( &self )-> gl::types::GLenum	{gl::UNSIGNED_BYTE}
 }
 impl GLType for i16	{
-	fn to_gl_type( &self )-> glcore::GLenum	{glcore::GL_SHORT}
+	fn to_gl_type( &self )-> gl::types::GLenum	{gl::SHORT}
 }
 impl GLType for u16	{
-	fn to_gl_type( &self )-> glcore::GLenum	{glcore::GL_UNSIGNED_SHORT}
+	fn to_gl_type( &self )-> gl::types::GLenum	{gl::UNSIGNED_SHORT}
 }
 impl GLType for i32	{
-	fn to_gl_type( &self )-> glcore::GLenum	{glcore::GL_INT}
+	fn to_gl_type( &self )-> gl::types::GLenum	{gl::INT}
 }
 impl GLType for u32	{
-	fn to_gl_type( &self )-> glcore::GLenum	{glcore::GL_UNSIGNED_INT}
+	fn to_gl_type( &self )-> gl::types::GLenum	{gl::UNSIGNED_INT}
 }
 impl GLType for f32	{
-	fn to_gl_type( &self )-> glcore::GLenum	{glcore::GL_FLOAT}
+	fn to_gl_type( &self )-> gl::types::GLenum	{gl::FLOAT}
 }
 
 
@@ -56,13 +59,13 @@ pub struct ClearData	{
 
 impl ProxyState for ClearData	{
 	fn sync_back( &mut self )-> bool	{
-		let mut color = vec::from_elem( 4, 0 as glcore::GLfloat );
-		let mut depth = 0 as glcore::GLdouble;
-		let mut stencil = 0 as glcore::GLint;
+		let mut color = std::vec::from_elem( 4, 0 as gl::types::GLfloat );
+		let mut depth = 0 as gl::types::GLdouble;
+		let mut stencil = 0 as gl::types::GLint;
 		unsafe	{
-			glcore::glGetFloatv(	glcore::GL_COLOR_CLEAR_VALUE,	vec::raw::to_ptr(color)	);
-			glcore::glGetDoublev(	glcore::GL_DEPTH_CLEAR_VALUE,	ptr::addr_of(&depth)	);
-			glcore::glGetIntegerv(	glcore::GL_STENCIL_CLEAR_VALUE,	ptr::addr_of(&stencil)	);
+			gl::GetFloatv(	gl::COLOR_CLEAR_VALUE,	std::vec::raw::to_mut_ptr(color)	);
+			gl::GetDoublev(	gl::DEPTH_CLEAR_VALUE,	ptr::to_mut_unsafe_ptr(&mut depth)		);
+			gl::GetIntegerv(gl::STENCIL_CLEAR_VALUE,ptr::to_mut_unsafe_ptr(&mut stencil)	);
 		}
 		self.color.r==color[0] as f32 &&
 		self.color.g==color[1] as f32 &&
@@ -97,7 +100,7 @@ pub struct Context	{
 pub fn create( wid : uint, het : uint, ns : uint )-> Context	{
 	// read caps
 	let caps	= Capabilities{
-		max_color_attachments : read_cap( glcore::GL_MAX_COLOR_ATTACHMENTS ),
+		max_color_attachments : read_cap( gl::MAX_COLOR_ATTACHMENTS ),
 	};
 	let rast	= rast::make_default( wid, het );
 	let color	= rast::Color{r:0f32,g:0f32,b:0f32,a:0f32};
@@ -106,16 +109,16 @@ pub fn create( wid : uint, het : uint, ns : uint )-> Context	{
 	// fill up the context
 	Context{
 		caps				: caps,
-		rast				: copy rast,
+		rast				: rast,
 		clear_data			: ClearData{ color:color, depth:1f, stencil:0u },
 		call_count			: 0,
 		shader				: shade::Binding::new(),
 		vertex_array		: buf::VaBinding::new(),
-		array_buffer		: buf::Binding::new( glcore::GL_ARRAY_BUFFER ),
-		element_buffer		: buf::Binding::new( glcore::GL_ELEMENT_ARRAY_BUFFER ),
+		array_buffer		: buf::Binding::new( gl::ARRAY_BUFFER ),
+		element_buffer		: buf::Binding::new( gl::ELEMENT_ARRAY_BUFFER ),
 		render_buffer		: rbind,
-		frame_buffer_draw	: frame::Binding::new( glcore::GL_DRAW_FRAMEBUFFER, def_fb ),
-		frame_buffer_read	: frame::Binding::new( glcore::GL_READ_FRAMEBUFFER, def_fb ),
+		frame_buffer_draw	: frame::Binding::new( gl::DRAW_FRAMEBUFFER, def_fb ),
+		frame_buffer_read	: frame::Binding::new( gl::READ_FRAMEBUFFER, def_fb ),
 		texture				: texture::Binding::new(),
 		default_rast		: rast,
 		default_frame_buffer: def_fb,
@@ -133,47 +136,47 @@ impl ProxyState for Context	{
 		was_ok &= self.frame_buffer_draw.sync_back();
 		was_ok &= self.frame_buffer_read.sync_back();
 		was_ok &= self.texture.sync_back();
-		self.check(~"sync_back");
+		self.check("sync_back");
 		was_ok
 	}
 }
 
-pub impl Context	{
-	fn get_screen_size( &self )-> (uint,uint)	{
+impl Context	{
+	pub fn get_screen_size( &self )-> (uint,uint)	{
 		let rb = self.render_buffer.default;
 		(rb.width, rb.height)
 	}
-	fn check( &self, where : &str )	{
-		let code = glcore::glGetError();
+	pub fn check( &self, where : &str )	{
+		let code = gl::GetError();
 		if code == 0	{return}
 		let message = match code	{
-			glcore::GL_INVALID_ENUM			=> ~"enum",
-			glcore::GL_INVALID_VALUE		=> ~"value",
-			glcore::GL_INVALID_OPERATION	=> ~"operation",
-			glcore::GL_OUT_OF_MEMORY		=> ~"memory",
-			glcore::GL_INVALID_FRAMEBUFFER_OPERATION	=> ~"framebuffer",
+			gl::INVALID_ENUM			=> ~"enum",
+			gl::INVALID_VALUE		=> ~"value",
+			gl::INVALID_OPERATION	=> ~"operation",
+			gl::OUT_OF_MEMORY		=> ~"memory",
+			gl::INVALID_FRAMEBUFFER_OPERATION	=> ~"framebuffer",
 			_	=> ~"unknown"
 		};
-		fail!(fmt!( "%s: GL error 0x%x (%s)", where, code as uint, message ))
+		fail!("%s: GL error 0x%x (%s)", where, code as uint, message)
 	}
-	fn set_clear_color( &mut self, c : &rast::Color )	{
+	pub fn set_clear_color( &mut self, c : &rast::Color )	{
 		if self.clear_data.color != *c	{
 			self.clear_data.color = *c;
-			glcore::glClearColor(
-				c.r as glcore::GLfloat, c.g as glcore::GLfloat,
-				c.b as glcore::GLfloat, c.a as glcore::GLfloat );
+			gl::ClearColor(
+				c.r as gl::types::GLfloat, c.g as gl::types::GLfloat,
+				c.b as gl::types::GLfloat, c.a as gl::types::GLfloat );
 		}
 	}
-	fn set_clear_depth( &mut self, d : float )	{
+	pub fn set_clear_depth( &mut self, d : float )	{
 		if self.clear_data.depth != d	{
 			self.clear_data.depth = d;
-			glcore::glClearDepth( d as glcore::GLdouble );
+			gl::ClearDepth( d as gl::types::GLdouble );
 		}
 	}
-	fn set_clear_stencil( &mut self, s : uint )	{
+	pub fn set_clear_stencil( &mut self, s : uint )	{
 		if self.clear_data.stencil != s	{
 			self.clear_data.stencil = s;
-			glcore::glClearStencil( s as glcore::GLint );
+			gl::ClearStencil( s as gl::types::GLint );
 		}
 	}
 }

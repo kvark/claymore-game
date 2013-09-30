@@ -1,3 +1,5 @@
+use std::{io,path};
+
 pub struct Log	{
 	name		: ~str,
 	enable		: bool,

@@ -4,6 +4,14 @@
 		"selected_items":
 		[
 			[
+				"CELL_",
+				"CELL_ACTIVE"
+			],
+			[
+				"mut",
+				"mut_cell"
+			],
+			[
 				"ent",
 				"entity"
 			],
@@ -168,10 +176,6 @@
 				"GL_DEPTH_COMPONENT"
 			],
 			[
-				"mut",
-				"mut_data"
-			],
-			[
 				"code",
 				"code_fragment"
 			],
@@ -269,7 +273,7 @@
 			],
 			[
 				"glco",
-				"glcore"
+				"gl"
 			],
 			[
 				"wrap",
@@ -510,52 +514,80 @@
 			[
 				"Bubble",
 				"BubbleManager"
-			],
-			[
-				"Bubbl",
-				"BubbleManager"
 			]
 		]
 	},
 	"buffers":
 	[
 		{
+			"file": "/mnt/code/claymore/claymore-game/game/scene/../battle/grid.rs",
+			"settings":
+			{
+				"buffer_size": 6109,
+				"line_ending": "Unix"
+			}
+		},
+		{
 			"file": "/mnt/code/claymore/claymore-game/game/main.rs",
 			"settings":
 			{
-				"buffer_size": 7187,
+				"buffer_size": 7167,
 				"line_ending": "Unix"
 			}
 		},
 		{
-			"file": "/mnt/code/claymore/claymore-game/game/input.rs",
+			"file": "/mnt/code/claymore/claymore-game/game/scene/../battle/main.rs",
 			"settings":
 			{
-				"buffer_size": 728,
+				"buffer_size": 7897,
 				"line_ending": "Unix"
 			}
 		},
 		{
-			"file": "/mnt/code/claymore/claymore-game/game/scene/grid.rs",
+			"file": "/mnt/code/claymore/claymore-game/game/scene/../battle/time.rs",
 			"settings":
 			{
-				"buffer_size": 4901,
+				"buffer_size": 912,
 				"line_ending": "Unix"
 			}
 		},
 		{
-			"file": "/mnt/code/claymore/claymore-game/game/scene/battle.rs",
+			"file": "/mnt/code/claymore/lmath-rs/src/quat.rs",
 			"settings":
 			{
-				"buffer_size": 7642,
+				"buffer_size": 14294,
 				"line_ending": "Unix"
 			}
 		},
 		{
-			"file": "/mnt/code/claymore/claymore-game/game/scene/common.rs",
+			"file": "/mnt/code/claymore/claymore-game/engine/anim.rs",
 			"settings":
 			{
-				"buffer_size": 9800,
+				"buffer_size": 2565,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "/mnt/code/claymore/claymore-game/engine/space.rs",
+			"settings":
+			{
+				"buffer_size": 8155,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "/mnt/code/claymore/claymore-game/engine/load.rs",
+			"settings":
+			{
+				"buffer_size": 12458,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "/mnt/code/claymore/claymore-game/game/claymore.rs",
+			"settings":
+			{
+				"buffer_size": 635,
 				"line_ending": "Unix"
 			}
 		},
@@ -563,15 +595,31 @@
 			"file": "/mnt/code/claymore/claymore-game/Makefile",
 			"settings":
 			{
-				"buffer_size": 3298,
+				"buffer_size": 3315,
 				"line_ending": "Unix"
 			}
 		},
 		{
-			"file": "codata/scene/battle/main.rs",
+			"file": "/mnt/code/claymore/claymore-game/game/battle/main.rs",
 			"settings":
 			{
-				"buffer_size": 7940,
+				"buffer_size": 7887,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "/mnt/code/claymore/claymore-game/game/scene/chared.rs",
+			"settings":
+			{
+				"buffer_size": 13757,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "/mnt/code/claymore/claymore-game/game/battle/time.rs",
+			"settings":
+			{
+				"buffer_size": 960,
 				"line_ending": "Unix"
 			}
 		}
@@ -616,11 +664,17 @@
 	},
 	"file_history":
 	[
+		"/mnt/code/claymore/claymore-game/engine/gr_low/texture.rs",
+		"/mnt/code/claymore/claymore-game/data/code-game/grid.glslf",
 		"/mnt/code/claymore/claymore-game/game/scene/battle.rs",
+		"/mnt/code/claymore/claymore-game/game/main.rs",
+		"/mnt/code/claymore/claymore-game/game/input.rs",
+		"/mnt/code/claymore/claymore-game/game/scene/common.rs",
+		"/mnt/code/claymore/claymore-game/Makefile",
+		"/mnt/code/claymore/claymore-game/util/codata/scene/battle/main.rs",
 		"/mnt/code/claymore/glfw3-rs/src/support/consts.rs",
 		"/mnt/code/claymore/claymore-game/engine/gr_mid/call.rs",
 		"/mnt/code/claymore/claymore-game/data/config.json",
-		"/mnt/code/claymore/claymore-game/game/input.rs",
 		"/mnt/code/claymore/claymore-game/game/scene/chared.rs",
 		"/mnt/code/claymore/claymore-game/game/scene/grid.rs",
 		"/mnt/code/claymore/claymore-game/engine/journal.rs",
@@ -629,8 +683,6 @@
 		"/mnt/code/claymore/claymore-game/game/render/lbuf.rs",
 		"/mnt/code/claymore/claymore-game/game/render/shadow.rs",
 		"/mnt/code/claymore/claymore-game/game/hud_new.rs",
-		"/mnt/code/claymore/claymore-game/game/main.rs",
-		"/mnt/code/claymore/claymore-game/engine/gr_low/texture.rs",
 		"/mnt/code/claymore/claymore-game/engine/gr_low/shade.rs",
 		"/mnt/code/claymore/claymore-game/engine/load.rs",
 		"/mnt/code/claymore/claymore-game/game/scene/load.rs",
@@ -639,7 +691,6 @@
 		"/mnt/code/claymore/claymore-game/engine/gr_mid/font.rs",
 		"/mnt/code/claymore/claymore-game/misc/todo.txt",
 		"/mnt/code/claymore/claymore-game/util/codata/hud/battle.rs",
-		"/mnt/code/claymore/claymore-game/Makefile",
 		"/mnt/code/claymore/claymore-game/util/codata/hud/common.rs",
 		"/mnt/code/claymore/claymore-game/engine/gr_low/context.rs",
 		"/mnt/code/claymore/claymore-game/engine/gr_low/rast.rs",
@@ -647,7 +698,6 @@
 		"/mnt/code/claymore/claymore-game/util/codata/hud/chared.rs",
 		"/mnt/code/claymore/claymore-game/engine/gr_mid/draw.rs",
 		"/mnt/code/claymore/claymore-game/engine/object.rs",
-		"/mnt/code/claymore/claymore-game/util/codata/scene/battle/main.rs",
 		"/mnt/code/claymore/claymore-game/data/hud/char.json",
 		"/mnt/code/claymore/claymore-game/game/claymore.rs",
 		"/mnt/code/claymore/claymore-game/util/codata/scene/common.rs",
@@ -655,7 +705,6 @@
 		"/mnt/code/claymore/claymore-game/util/blender/io_kri/action.py",
 		"/mnt/code/claymore/claymore-game/engine/gr_mid/mesh.rs",
 		"/mnt/code/claymore/claymore-game/util/blender/io_kri_mesh/mesh.py",
-		"/mnt/code/claymore/claymore-game/game/scene/common.rs",
 		"/mnt/code/claymore/claymore-game/data/details.json",
 		"/mnt/code/claymore/claymore-game/.hgignore",
 		"/mnt/code/claymore/claymore-game/util/blender/io_kri_arm/arm.py",
@@ -742,8 +791,7 @@
 		"/Users/kvark/Code/rust/claymore-game/data/code-game/envir.glslf",
 		"/Users/kvark/Code/rust/claymore-game/data/code-game/envir.glslv",
 		"/Users/kvark/Code/rust/claymore-game/data/claymore-2.json",
-		"/Users/kvark/Code/rust/rust-stb-image/image.rs",
-		"/Users/kvark/Code/rust/claymore-game/data/code-game/char/envir.glslf"
+		"/Users/kvark/Code/rust/rust-stb-image/image.rs"
 	],
 	"find":
 	{
@@ -764,6 +812,13 @@
 		"case_sensitive": true,
 		"find_history":
 		[
+			"scene",
+			"read_curve",
+			"do",
+			"reset",
+			"grid",
+			"Character",
+			"rgba",
 			"ChildEntity",
 			"journal",
 			"Log",
@@ -884,14 +939,7 @@
 			"fail",
 			"#[deriv",
 			"#[deriving_eq]",
-			"center",
-			"not a list",
-			"\"not a list\"",
-			"not a list",
-			"create_reader",
-			"NAME_SIZE",
-			"alBuffer",
-			"0u"
+			"center"
 		],
 		"highlight": true,
 		"in_selection": false,
@@ -915,23 +963,23 @@
 	"groups":
 	[
 		{
-			"selected": 3,
+			"selected": 12,
 			"sheets":
 			[
 				{
 					"buffer": 0,
-					"file": "/mnt/code/claymore/claymore-game/game/main.rs",
+					"file": "/mnt/code/claymore/claymore-game/game/scene/../battle/grid.rs",
 					"settings":
 					{
-						"buffer_size": 7187,
+						"buffer_size": 6109,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								6872,
-								6872
+								5125,
+								5125
 							]
 						],
 						"settings":
@@ -940,25 +988,52 @@
 							"translate_tabs_to_spaces": false
 						},
 						"translation.x": 0.0,
-						"translation.y": 3195.0,
+						"translation.y": 2352.0,
 						"zoom_level": 1.0
 					},
 					"type": "text"
 				},
 				{
 					"buffer": 1,
-					"file": "/mnt/code/claymore/claymore-game/game/input.rs",
+					"file": "/mnt/code/claymore/claymore-game/game/main.rs",
 					"settings":
 					{
-						"buffer_size": 728,
+						"buffer_size": 7167,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								0,
-								0
+								2953,
+								2953
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Rust/Rust.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 1395.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 2,
+					"file": "/mnt/code/claymore/claymore-game/game/scene/../battle/main.rs",
+					"settings":
+					{
+						"buffer_size": 7897,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								520,
+								520
 							]
 						],
 						"settings":
@@ -973,19 +1048,73 @@
 					"type": "text"
 				},
 				{
-					"buffer": 2,
-					"file": "/mnt/code/claymore/claymore-game/game/scene/grid.rs",
+					"buffer": 3,
+					"file": "/mnt/code/claymore/claymore-game/game/scene/../battle/time.rs",
 					"settings":
 					{
-						"buffer_size": 4901,
+						"buffer_size": 912,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								0,
-								0
+								198,
+								198
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Rust/Rust.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 4,
+					"file": "/mnt/code/claymore/lmath-rs/src/quat.rs",
+					"settings":
+					{
+						"buffer_size": 14294,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								3088,
+								3088
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Rust/Rust.tmLanguage",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 1453.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 5,
+					"file": "/mnt/code/claymore/claymore-game/engine/anim.rs",
+					"settings":
+					{
+						"buffer_size": 2565,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								345,
+								345
 							]
 						],
 						"settings":
@@ -1000,19 +1129,19 @@
 					"type": "text"
 				},
 				{
-					"buffer": 3,
-					"file": "/mnt/code/claymore/claymore-game/game/scene/battle.rs",
+					"buffer": 6,
+					"file": "/mnt/code/claymore/claymore-game/engine/space.rs",
 					"settings":
 					{
-						"buffer_size": 7642,
+						"buffer_size": 8155,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								2156,
-								2156
+								4423,
+								4423
 							]
 						],
 						"settings":
@@ -1021,25 +1150,25 @@
 							"translate_tabs_to_spaces": false
 						},
 						"translation.x": 0.0,
-						"translation.y": 1215.0,
+						"translation.y": 2395.0,
 						"zoom_level": 1.0
 					},
 					"type": "text"
 				},
 				{
-					"buffer": 4,
-					"file": "/mnt/code/claymore/claymore-game/game/scene/common.rs",
+					"buffer": 7,
+					"file": "/mnt/code/claymore/claymore-game/engine/load.rs",
 					"settings":
 					{
-						"buffer_size": 9800,
+						"buffer_size": 12458,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								6285,
-								6285
+								9175,
+								9175
 							]
 						],
 						"settings":
@@ -1048,25 +1177,52 @@
 							"translate_tabs_to_spaces": false
 						},
 						"translation.x": 0.0,
-						"translation.y": 2680.0,
+						"translation.y": 6100.0,
 						"zoom_level": 1.0
 					},
 					"type": "text"
 				},
 				{
-					"buffer": 5,
+					"buffer": 8,
+					"file": "/mnt/code/claymore/claymore-game/game/claymore.rs",
+					"settings":
+					{
+						"buffer_size": 635,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								483,
+								483
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Rust/Rust.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 225.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 9,
 					"file": "/mnt/code/claymore/claymore-game/Makefile",
 					"settings":
 					{
-						"buffer_size": 3298,
+						"buffer_size": 3315,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								1298,
-								1298
+								785,
+								785
 							]
 						],
 						"settings":
@@ -1074,25 +1230,25 @@
 							"syntax": "Packages/Makefile/Makefile.tmLanguage"
 						},
 						"translation.x": 0.0,
-						"translation.y": 145.0,
+						"translation.y": 360.0,
 						"zoom_level": 1.0
 					},
 					"type": "text"
 				},
 				{
-					"buffer": 6,
-					"file": "codata/scene/battle/main.rs",
+					"buffer": 10,
+					"file": "/mnt/code/claymore/claymore-game/game/battle/main.rs",
 					"settings":
 					{
-						"buffer_size": 7940,
+						"buffer_size": 7887,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								4546,
-								4546
+								5269,
+								5269
 							]
 						],
 						"settings":
@@ -1101,7 +1257,61 @@
 							"translate_tabs_to_spaces": false
 						},
 						"translation.x": 0.0,
-						"translation.y": 3880.0,
+						"translation.y": 2792.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 11,
+					"file": "/mnt/code/claymore/claymore-game/game/scene/chared.rs",
+					"settings":
+					{
+						"buffer_size": 13757,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								9196,
+								9196
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Rust/Rust.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 4278.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 12,
+					"file": "/mnt/code/claymore/claymore-game/game/battle/time.rs",
+					"settings":
+					{
+						"buffer_size": 960,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								740,
+								740
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Rust/Rust.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
 					"type": "text"
