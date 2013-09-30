@@ -59,7 +59,7 @@ pub struct Elements	{
 
 impl Game	{
 	pub fn create( el : &Elements, wid : uint, het : uint, ns : uint, journal : Journal  )-> Game	{
-		let mut gcon = gr_low::context::create( wid, het, ns );
+		let mut gcon = gr_low::context::create( glfw::get_proc_address, wid, het, ns );
 		assert!( gcon.sync_back() );
 		// audio test
 		let acon = engine::audio::Context::create( "" );

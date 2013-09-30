@@ -129,7 +129,7 @@ pub fn extract_metas( code : &str )-> ~[~str]	{
 		.expect("Unable to find meta start marker");
 	let meta_size	= code.slice_from(meta_start).find_str("\n")
 		.expect("Unable to find meta end marker");	
-	let slice = code.slice(meta_start,meta_size);
+	let slice = code.slice(meta_start,meta_start+meta_size);
 	slice.word_iter().skip(1).map(|w| w.to_owned()).collect()
 }
 

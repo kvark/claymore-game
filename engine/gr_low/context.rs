@@ -97,7 +97,10 @@ pub struct Context	{
 }
 
 
-pub fn create( wid : uint, het : uint, ns : uint )-> Context	{
+pub fn create( loader : &fn(symbol: &str) -> Option<extern "C" fn()>,
+		wid : uint, het : uint, ns : uint )-> Context	{
+	// init GL
+	gl::load_with( loader );
 	// read caps
 	let caps	= Capabilities{
 		max_color_attachments : read_cap( gl::MAX_COLOR_ATTACHMENTS ),

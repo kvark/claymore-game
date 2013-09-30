@@ -79,7 +79,7 @@ impl Reader	{
 	}
 	pub fn get_uint( &self, size : uint )-> uint	{
 		let bytes = self.get_bytes(size);
-		bytes.rev_iter().fold( 0u, |t,u|	{(*u as uint<<8u) + t} )
+		bytes.rev_iter().fold( 0u, |u,&t|	{(u<<8u) + t as uint} )
 	}
 
 	pub fn get_bool( &self )-> bool	{
@@ -242,9 +242,11 @@ pub fn read_mesh( br : &mut Reader, context : &mut context::Context, lg : &journ
 		let mut i = 0;
 		while i < format.len()	{
 			let name = ~"a_" + br.get_string();
-			let mut fm = format.slice(i,2).to_owned();
-			if br.get_bool()	{ fm.push_char('.'); }
-			if !br.get_bool()	{ fm.push_char('!'); }
+			let is_fixed_point	= br.get_bool();
+			let is_interpolated	= br.get_bool();
+			let mut fm = format.slice(i,i+2).to_owned();
+			if is_fixed_point	{ fm.push_char('.'); }
+			if !is_interpolated	{ fm.push_char('!'); }
 			lg.add(fmt!( "\t\tname:%s,\ttype:%s", name, fm ));
 			let (at,size) = buf::Attribute::new( fm, buffer, stride, offset );
 			if stride == 0u	{
@@ -376,8 +378,8 @@ pub fn get_armature_shader( dual_quat : bool )-> (~str,uint)	{
 		{~"data/code/mod/arm.glslv"} );
 	let max : uint = {
 		let start	= shader.find_str("MAX_BONES")			.expect("Has to have MAX_BONES");
-		let end		= shader.slice_from(start).find(';')	.expect("Line has to end");
-		let npos	= shader.slice_from(end).find(' ')		.expect("Space is expected");
+		let end		= shader.slice_from(start).find(';')	.expect("Line has to end")		+ start;
+		let npos	= shader.slice(start,end).rfind(' ')	.expect("Space is expected")	+ start;
 		std::from_str::from_str( shader.slice(npos+1,end) )	.expect("Unable to parse int")
 	};
 	(shader,max)

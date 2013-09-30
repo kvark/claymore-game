@@ -95,7 +95,7 @@ pub struct Attribute	{
 impl Attribute	{
 	pub fn new( format : &str, buffer : @Object, stride : uint, offset : uint )-> (Attribute,uint)	{
 		assert!( (format.len()==3u && ['.','!'].contains(&format.char_at(2))) ||
-			format.len()==2u || (format.len()==4u && format.slice(2,2)==".!") );
+			format.len()==2u || (format.len()==4u && format.slice(2,4)==".!") );
 		let count = (format[0] - "0"[0]) as uint;
 		let is_fixed_point	= format.len()>2u	&& format.char_at(2)=='.';
 		let can_interpolate	= format.len()<=2u	|| format.char_at(format.len()-1u)!='!';

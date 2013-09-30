@@ -20,7 +20,9 @@ pub struct Context	{
 }
 
 impl Drop for Context	{
-	fn drop( &mut self )	{}
+	fn drop( &mut self )	{
+		self.device.close();
+	}
 }
 
 
