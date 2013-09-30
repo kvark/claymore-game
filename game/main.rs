@@ -7,7 +7,7 @@ use engine::{gr_low,gr_mid};
 use engine::gr_low::context::ProxyState;
 
 use input;
-use hud_new;
+use hud = hud::main;
 use scene;
 use scene::chared;
 use battle = battle::main;
@@ -32,7 +32,7 @@ struct Game	{
 	gr_context	: gr_low::context::Context,
 	aud_context	: engine::audio::Context,
 	font_context: gr_mid::font::Context,
-	hud_context	: hud_new::Context,
+	hud_context	: hud::Context,
 	journal		: Journal,
 	frames		: uint,
 	call_count	: uint,
@@ -75,7 +75,7 @@ impl Game	{
 		let out = gr_mid::call::Output::new( gcon.default_frame_buffer, pmap );
 		// create hud
 		let fcon = gr_mid::font::Context::create();
-		let mut hcon = hud_new::Context::create( &mut gcon, &journal.load );
+		let mut hcon = hud::Context::create( &mut gcon, &journal.load );
 		// done
 		gcon.check("init");
 		let intro = scene::intro::Scene{ active:false };

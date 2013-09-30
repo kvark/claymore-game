@@ -15,7 +15,7 @@ use engine::gr_mid::draw::Mod;
 use engine::space::{Interpolate,Space};
 
 use input;
-use hud_new;
+use hud = hud::main;
 use scene;
 use battle::grid;
 
@@ -148,7 +148,7 @@ impl Scene	{
 		}
 	}
 
-	pub fn render( &mut self, gc : &mut gr_low::context::Context, hc : &hud_new::Context,
+	pub fn render( &mut self, gc : &mut gr_low::context::Context, hc : &hud::Context,
 			tech : &gr_mid::draw::Technique, output : gr_mid::call::Output, lg : &engine::journal::Log )	{
 		// update grid
 		self.grid.upload_dirty_cells( &mut gc.texture );
@@ -191,7 +191,7 @@ impl Scene	{
 }
 
 
-pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud_new::Context, fcon : &gr_mid::font::Context, lg : &engine::journal::Log )-> Scene	{
+pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon : &gr_mid::font::Context, lg : &engine::journal::Log )-> Scene	{
 	// create view
 	let view = 	{
 		// create camera

@@ -11,7 +11,7 @@ use engine::anim::{Act,Player};
 use engine::{gr_low,gr_mid};
 use engine::space::Space;
 
-use hud;
+use hud = hud::main_json;
 use input;
 use main;
 use render;

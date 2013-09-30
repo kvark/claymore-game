@@ -18,10 +18,20 @@ extern mod engine;
 extern mod extra;
 
 
-pub mod hud;
-pub mod hud_new;
 pub mod input;
 pub mod main;
+
+pub mod battle	{
+	pub mod grid;
+	pub mod main;
+	pub mod time;
+}
+
+pub mod hud	{
+	pub mod debug;
+	pub mod main;
+	pub mod main_json;
+}
 
 pub mod render	{
 	pub mod depth;
@@ -35,10 +45,4 @@ pub mod scene	{
 	pub mod intro;
 	pub mod load;
 	pub mod load_json;
-}
-
-pub mod battle	{
-	pub mod grid;
-	pub mod main;
-	pub mod time;
 }
