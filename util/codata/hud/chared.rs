@@ -8,17 +8,14 @@ pub fn load()-> Screen	{Screen	{
 			align	: ([-1,-1],RelParent,[-1,-1]),
 			element	: ElFrame(Frame	{
 				margin	: [[10,10],[10,10]],
-				ground	: Some(Ground	{
-					path	: ~"frame1-new.png",
-					center	: [0.5,0.5],
-				}),
+				ground	: GroundImage( ~"frame1-new.png", [0.5,0.5] ),
 				children: ~[
 					Child	{
 						name	: ~"caption",
 						align	: ([-1,-1],RelParent,[-1,-1]),
 						element	: ElFrame(Frame	{
 							margin	: [[0,0],[0,0]],
-							ground	: None,
+							ground	: GroundNone,
 							children: ~[
 								Child	{
 									name	: ~"text",

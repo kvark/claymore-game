@@ -21,7 +21,7 @@ run-trace: game
 run-debug: game
 	gdb build/${NAME}
 run-memtest: game
-	valgrind --leak-check=full --track-origins=yes build/${NAME} 2>build/memtest.txt
+	valgrind --leak-check=full --track-origins=yes build/${NAME} 2>build/memtest.log
 
 grab-scene: asset/claymore/claymore-2a.rs asset/battle/battle-test.rs
 	cp asset/claymore/claymore-2a.rs ${CODATA}/scene/chared/main.rs

@@ -32,14 +32,16 @@ pub struct Screen	{
 	children: ~[Child],
 }
 
-pub struct Ground	{
-	path	: Path,
-	center	: [float, ..2],
+pub enum Ground	{
+	GroundNone,
+	GroundSolid( Color ),
+	GroundFrame( Color ),
+	GroundImage( Path, [float, ..2] ),
 }
 
 pub struct Frame	{
 	margin	: [Vector, ..2],
-	ground	: Option<Ground>,
+	ground	: Ground,
 	children: ~[Child],
 }
 
