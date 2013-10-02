@@ -11,16 +11,49 @@ pub struct MenuItem	{
 	action	: MenuAction,
 }
 
+/*
+pub struct MenuSelectionIter<'self>	{
+	priv item		: &'self MenuItem,
+	priv selection	: &'self [u8],
+}
+
+impl<'self> Iterator<&'self MenuItem> for MenuSelectionIter<'self>	{
+	fn next( &mut self )-> Option<&'self MenuItem>	{
+		match self.selection	{
+			[head,..tail]	=>	{
+				self.item = match self.item.action	{
+					ActionList(ref list) if list.len()>(head as uint)	=>	{
+						self.selection = tail;
+						&'self list[head]
+					},
+					_	=> fail!("Unexpected end of debug menu on item %s", self.item.name),
+				};
+				Some(self.item)
+			},
+			[]	=> None,
+		}
+	}
+}*/
+
+
 pub struct Menu	{
-	children	: ~[MenuItem],
-	selected	: ~[u8],
+	root		: MenuItem,
+	selection	: ~[u8],
 	font		: gen::Font,
 }
 
 impl Menu	{
 	pub fn is_active( &self )-> bool	{
-		!self.selected.is_empty()
+		!self.selection.is_empty()
 	}
+
+	
+	/*pub fn selection_iter( &self )-> MenuSelectionIter<'self>	{
+		MenuSelectionIter	{
+			item		: &'self self.root,
+			selection	: self.selection,
+		}
+	}*/
 
 	fn build_vertical( items : &[MenuItem], font : &gen::Font, selected : u8 )-> ~[gen::Child]	{
 		items.iter().enumerate().map( |(i,item)|	{
@@ -29,14 +62,9 @@ impl Menu	{
 			} else {
 				gen::GroundFrame(0x80808080u)
 			};
-			let align = if i==0 {
-				([-1,-1], gen::RelParent, [-1,-1])
-			}else	{
-				([-1,-1], gen::RelTail, [-1,1])
-			};
 			gen::Child	{
 				name	: item.name.clone(),
-				align	: align,
+				align	: ([-1,-1], gen::RelTail, [-1,1]),
 				element	: gen::ElFrame(gen::Frame	{
 					margin	: [[0,0],[0,0]],
 					ground	: ground,
@@ -55,15 +83,29 @@ impl Menu	{
 			}
 		}).to_owned_vec()
 	}
-
-	fn build_horisontal( items : &[MenuItem], font : &gen::Font, selected : &[u8] )-> ~[gen::Child]	{
-		~[]
-	}
 	
 	pub fn build( &self, alpha : float )-> gen::Screen	{
 		gen::Screen	{
 			alpha	: alpha,
-			children: Menu::build_vertical( self.children, &self.font, self.selected[0] ),
+			children:	{
+				let mut item = &self.root;
+				self.selection.iter().map( |&sel_id|	{
+					let list = match item.action	{
+						ActionList(ref l) if l.len()>(sel_id as uint)	=> l.as_slice(),
+						_	=> fail!("Unexpected tail of debug menu: %s", item.name),
+					};
+					item = &list[sel_id];
+					gen::Child	{
+						name	: ~"group",
+						align	: ([-1,1], gen::RelTail, [1,1]),
+						element	: gen::ElFrame(gen::Frame	{
+							margin	: [[0,0],[0,0]],
+							ground	: gen::GroundNone,
+							children: Menu::build_vertical( list, &self.font, sel_id ),
+						}),
+					}
+				}).to_owned_vec()
+			},
 		}
 	}
 }
