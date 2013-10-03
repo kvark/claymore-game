@@ -11,7 +11,7 @@ pub struct MenuItem	{
 	action	: MenuAction,
 }
 
-/*
+
 pub struct MenuSelectionIter<'self>	{
 	priv item		: &'self MenuItem,
 	priv selection	: &'self [u8],
@@ -33,7 +33,7 @@ impl<'self> Iterator<&'self MenuItem> for MenuSelectionIter<'self>	{
 			[]	=> None,
 		}
 	}
-}*/
+}
 
 
 pub struct Menu	{
@@ -48,7 +48,8 @@ impl Menu	{
 	}
 
 	
-	/*pub fn selection_iter( &self )-> MenuSelectionIter<'self>	{
+	/*
+	pub fn selection_iter( &self )-> MenuSelectionIter<'self>	{
 		MenuSelectionIter	{
 			item		: &'self self.root,
 			selection	: self.selection,
@@ -83,29 +84,46 @@ impl Menu	{
 			}
 		}).to_owned_vec()
 	}
+
+	fn build_horisontal( &self )-> ~[gen::Child]	{
+		let mut item = &self.root;
+		self.selection.iter().map( |&sel_id|	{
+			let list = match item.action	{
+				ActionList(ref l) if l.len()>(sel_id as uint)	=> l.as_slice(),
+				_	=> fail!("Unexpected tail of debug menu: %s", item.name),
+			};
+			item = &list[sel_id];
+			gen::Child	{
+				name	: ~"group",
+				align	: ([-1,1], gen::RelTail, [1,1]),
+				element	: gen::ElFrame(gen::Frame	{
+					margin	: [[0,0],[0,0]],
+					ground	: gen::GroundNone,
+					children: Menu::build_vertical( list, &self.font, sel_id ),
+				}),
+			}
+		}).to_owned_vec()
+	}
 	
 	pub fn build( &self, alpha : float )-> gen::Screen	{
 		gen::Screen	{
 			alpha	: alpha,
-			children:	{
-				let mut item = &self.root;
-				self.selection.iter().map( |&sel_id|	{
-					let list = match item.action	{
-						ActionList(ref l) if l.len()>(sel_id as uint)	=> l.as_slice(),
-						_	=> fail!("Unexpected tail of debug menu: %s", item.name),
-					};
-					item = &list[sel_id];
-					gen::Child	{
-						name	: ~"group",
-						align	: ([-1,1], gen::RelTail, [1,1]),
-						element	: gen::ElFrame(gen::Frame	{
-							margin	: [[0,0],[0,0]],
-							ground	: gen::GroundNone,
-							children: Menu::build_vertical( list, &self.font, sel_id ),
-						}),
-					}
-				}).to_owned_vec()
-			},
+			children: ~[
+				gen::Child	{
+					name	: ~"tab",
+					align	: ([-1,1], gen::RelParent, [-1,1]),
+					element	: gen::ElSpace( [100,100] ),
+				},
+				gen::Child	{
+					name	: ~"menu",
+					align	: ([-1,1], gen::RelHead,[1,-1]),
+					element	: gen::ElFrame(gen::Frame{
+						margin	: [[0,0],[0,0]],
+						ground	: gen::GroundNone,
+						children: self.build_horisontal(),
+					}),
+				}
+			],
 		}
 	}
 }
