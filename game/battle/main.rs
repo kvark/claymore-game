@@ -273,7 +273,7 @@ pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon 
 	let mut grid = grid::Grid::create( gc, 10u, lg );
 	grid.init( &mut gc.texture );
 	let hud = gen_hud::battle::load();
-	hc.preload( hud.children, gc, fcon, lg );
+	hc.preload( hud.root.children, gc, fcon, lg );
 	// done
 	Scene{
 		view	: view,

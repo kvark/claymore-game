@@ -5,31 +5,24 @@ pub type Vector = [uint, ..2]; //x,y
 pub type Kerning = [int, ..2];
 pub type Color = uint;
 
-pub enum Relation	{
-	RelParent,
-	RelHead,
-	RelTail,
-}
-
-pub type Anchor = [i8, ..2]; //-1,0,+1 for x,y
-pub type Alignment = (Anchor,Relation,Anchor); //this, rel, other
 
 pub enum Element	{
 	ElSpace(Vector),
-	ElFrame(Frame),
+	ElBox(Box),
 	ElImage(Path),
 	ElText(Text),
 }
 
-pub struct Child	{
-	name	: ~str,
-	align	: Alignment,
-	element	: Element,
-}
+pub struct Child( ~str, Element );
 
 pub struct Screen	{
 	alpha	: float,
-	children: ~[Child],
+	root	: Box,
+}
+
+pub enum Align	{
+	AlignHor,
+	AlignVer,
 }
 
 pub enum Ground	{
@@ -39,8 +32,8 @@ pub enum Ground	{
 	GroundImage( Path, [float, ..2] ),
 }
 
-pub struct Frame	{
-	margin	: [Vector, ..2],
+pub struct Box	{
+	align	: Align,
 	ground	: Ground,
 	children: ~[Child],
 }

@@ -63,25 +63,19 @@ impl Menu	{
 			} else {
 				gen::GroundFrame(0x80808080u)
 			};
-			gen::Child	{
-				name	: item.name.clone(),
-				align	: ([-1,-1], gen::RelTail, [-1,1]),
-				element	: gen::ElFrame(gen::Frame	{
-					margin	: [[0,0],[0,0]],
-					ground	: ground,
-					children: ~[gen::Child{
-						name	: ~"",
-						align	: ([0,0], gen::RelParent, [0,0]),
-						element	: gen::ElText(gen::Text	{
-							value	: item.name.clone(),
-							font	: font.clone(),
-							color	: 0xFFFFFFFF,
-							bound	: [0,0],
-							edit	: false,
-						}),
-					}],
-				}),
-			}
+			gen::Child( item.name.clone(), gen::ElBox(gen::Box	{
+				align	: gen::AlignHor,
+				ground	: ground,
+				children: ~[
+					gen::Child( ~"", gen::ElText(gen::Text	{
+						value	: item.name.clone(),
+						font	: font.clone(),
+						color	: 0xFFFFFFFF,
+						bound	: [0,0],
+						edit	: false,
+					})),
+				],
+			}))
 		}).to_owned_vec()
 	}
 
@@ -93,37 +87,29 @@ impl Menu	{
 				_	=> fail!("Unexpected tail of debug menu: %s", item.name),
 			};
 			item = &list[sel_id];
-			gen::Child	{
-				name	: ~"group",
-				align	: ([-1,1], gen::RelTail, [1,1]),
-				element	: gen::ElFrame(gen::Frame	{
-					margin	: [[0,0],[0,0]],
+			gen::Child( ~"group", gen::ElBox(gen::Box	{
+					align	: gen::AlignVer,
 					ground	: gen::GroundNone,
 					children: Menu::build_vertical( list, &self.font, sel_id ),
-				}),
-			}
+			}))
 		}).to_owned_vec()
 	}
 	
 	pub fn build( &self, alpha : float )-> gen::Screen	{
 		gen::Screen	{
 			alpha	: alpha,
-			children: ~[
-				gen::Child	{
-					name	: ~"tab",
-					align	: ([-1,1], gen::RelParent, [-1,1]),
-					element	: gen::ElSpace( [100,100] ),
-				},
-				gen::Child	{
-					name	: ~"menu",
-					align	: ([-1,1], gen::RelHead,[1,-1]),
-					element	: gen::ElFrame(gen::Frame{
-						margin	: [[0,0],[0,0]],
+			root	: gen::Box{
+				align	: gen::AlignHor,
+				ground	: gen::GroundNone,
+				children: ~[
+					gen::Child( ~"tab",		gen::ElSpace( [100,100] ) ),
+					gen::Child( ~"menu",	gen::ElBox(gen::Box{
+						align	: gen::AlignHor,
 						ground	: gen::GroundNone,
 						children: self.build_horisontal(),
-					}),
-				}
-			],
+					})),
+				],
+			},
 		}
 	}
 }

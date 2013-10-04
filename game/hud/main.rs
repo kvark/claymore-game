@@ -13,48 +13,48 @@ use gen = gen_hud::common;
 
 
 
-fn get<T>( children : &[gen::Child], path : &str, fun : &fn(&gen::Child)->T )-> T	{
+fn get<T>( children : &[gen::Child], path : &str, fun : &fn(&str,&gen::Element)->T )-> T	{
 	let slash = path.find('/');
 	let name = match slash	{
 		Some(p)	=> path.slice_to(p),
 		None	=> path,
 	};
-	for child in children.iter()	{
-		if std::str::eq_slice( child.name, name )	{
+	for &gen::Child(ref cname, ref elem) in children.iter()	{
+		if std::str::eq_slice( *cname, name )	{
 			return match slash	{
 				Some(p)	=>	{
 					let rest = path.slice_from( p+1 );
-					match &child.element	{
-						&gen::ElFrame(ref fr)	=> get( fr.children, rest, fun ),
+					match elem	{
+						&gen::ElBox(ref box)	=> get( box.children, rest, fun ),
 						_	=> fail!("Hud child is not a frame: %s", name)
 					}
 				},
-				None	=> fun(child),
+				None	=> fun(name,elem),
 			}
 		}
 	}
 	fail!("Hud child not found: %s", name)
 }
 
-fn modify( children : &mut ~[gen::Child], path : &str, fun : &fn(&mut gen::Child) )	{
+fn modify( children : &mut ~[gen::Child], path : &str, fun : &fn(&str,&mut gen::Element) )	{
 	let slash = path.find('/');
 	let name = match slash	{
 		Some(p)	=> path.slice_to(p),
 		None	=> path,
 	};
-	for child in children.mut_iter()	{
-		if std::str::eq_slice( child.name, name )	{
+	for &gen::Child(ref cname, ref mut elem) in children.mut_iter()	{
+		if std::str::eq_slice( *cname, name )	{
 			return match slash	{
 				Some(p)	=>	{
 					let rest = path.slice_from( p+1 );
-					match &mut child.element	{
-						&gen::ElFrame(ref mut fr)	=>	{
-							modify( &mut fr.children, rest, fun );
+					match elem	{
+						&gen::ElBox(ref mut box)	=>	{
+							modify( &mut box.children, rest, fun );
 						},
 						_	=> fail!("Hud child is not a frame: %s", name)
 					}
 				},
-				None	=> fun(child),
+				None	=> fun(name,elem),
 			}
 		}
 	}
@@ -99,9 +99,9 @@ impl Context	{
 
 	pub fn preload( &mut self, children : &[gen::Child], gcon : &mut engine::gr_low::context::Context,
 			fcon : &font::Context, lg : &engine::journal::Log )	{
-		for child in children.iter()	{
-			match &child.element	{
-				&gen::ElFrame(ref fr)	=> self.preload( fr.children, gcon, fcon, lg ),
+		for &gen::Child(_,ref elem) in children.iter()	{
+			match elem	{
+				&gen::ElBox(ref box)	=> self.preload( box.children, gcon, fcon, lg ),
 				&gen::ElImage(ref name)	=>	{
 					if !self.cache_images.contains_key( name )	{
 						let path = ~"data/texture/hud/" + *name;
@@ -164,7 +164,7 @@ impl Context	{
 				[t.width,t.height]
 			},
 			&gen::ElSpace(space)	=> space,
-			&gen::ElFrame(_)		=> [0,0],
+			&gen::ElBox(_)	=> [0,0],
 		}
 	}
 
@@ -172,14 +172,9 @@ impl Context	{
 		[r.x+r.w, r.y+r.h]
 	}
 
-	pub fn get_rect_point( r : &Rect, a : &gen::Anchor )-> gen::Vector	{
-		let b = [(a[0]+1) as uint, (a[1]+1) as uint];
-		[r.x + ((r.w*b[0])>>1), r.y + ((r.h*b[1])>>1)]
-	}
-
 	pub fn draw_all( &self, screen : &gen::Screen, out : &call::Output )-> ~[call::Call]	{
 		let size = [out.area.w, out.area.h];
-		let (_,calls) = self.draw( screen.children, out.area, out, &size );
+		let (_,calls) = self.draw( &screen.root, out.area, out, &size );
 		calls
 	}
 
@@ -192,12 +187,12 @@ impl Context	{
 			))
 	}
 
-	pub fn draw( &self, children : &[gen::Child], area : Rect, out : &call::Output,
+	pub fn draw( &self, box : &gen::Box, area : Rect, out : &call::Output,
 			screen_size : &gen::Vector )-> (gen::Vector,~[call::Call])	{
 		let mut off : gen::Vector = [area.x,area.y];
 		let mut calls : ~[call::Call] = ~[];
-		for child in children.iter()	{
-			let size = match &child.element	{
+		for &gen::Child(_,ref element) in box.children.iter()	{
+			let size = match element	{
 				&gen::ElImage(ref path)	=>	{
 					let t = *self.cache_images.find( path ).
 						expect(fmt!( "Image '%s' is not loaded", *path ));
@@ -227,9 +222,9 @@ impl Context	{
 					[t.width,t.height]
 				},
 				&gen::ElSpace(space)	=> space,
-				&gen::ElFrame(ref frame)	=>	{
+				&gen::ElBox(ref subox)	=>	{
 					let a2 = Rect{ x:off[0],y:off[1], w:area.x+area.w-off[0], h:area.y+area.h-off[1] };
-					let (size,sub) = self.draw( frame.children, a2, out, screen_size );
+					let (size,sub) = self.draw( subox, a2, out, screen_size );
 					calls.push_all_move( sub );
 					size
 				},
