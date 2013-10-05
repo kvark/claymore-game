@@ -166,10 +166,10 @@ impl ToStr for QuatSpace	{
 //		Node											//
 
 enum NodeCurve	{
-	NCuPos(		@anim::Curve<Vector>		),
-	NCuRotQuat(	@anim::Curve<Quaternion>	),
-//	NCuRotEuler(@anim::Curve<Euler>			),
-	NCuScale(	@anim::Curve<Scale>			),
+	NCuPos(		~anim::Curve<Vector>		),
+	NCuRotQuat(	~anim::Curve<Quaternion>	),
+//	NCuRotEuler(~anim::Curve<Euler>			),
+	NCuScale(	~anim::Curve<Scale>			),
 }
 
 type NodeRecord = anim::Record<NodeCurve>;
@@ -242,10 +242,10 @@ impl Bone	{
 }
 
 pub enum ArmatureCurve	{
-	ACuPos(		uint, @anim::Curve<Vector>		),
-	ACuRotQuat(	uint, @anim::Curve<Quaternion>	),
-//	ACuRotEuler(uint, @anim::Curve<Euler>		),
-	ACuScale(	uint, @anim::Curve<Scale>		),
+	ACuPos(		uint, ~anim::Curve<Vector>		),
+	ACuRotQuat(	uint, ~anim::Curve<Quaternion>	),
+//	ACuRotEuler(uint, ~anim::Curve<Euler>		),
+	ACuScale(	uint, ~anim::Curve<Scale>		),
 }
 
 pub type ArmatureRecord = anim::Record<ArmatureCurve>;

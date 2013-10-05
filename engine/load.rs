@@ -293,24 +293,24 @@ pub fn read_key_scale3( br : &Reader )-> f32	{
 	(v[0]+v[1]+v[2]) * (1f32/3f32)
 }
 
-pub fn read_curve<T : Clone + Send + space::Interpolate>( br : &Reader, fkey : &fn(&Reader)->T )-> @anim::Curve<T>	{
+pub fn read_curve<T : Clone + Send + space::Interpolate>( br : &Reader, fkey : &fn(&Reader)->T )-> ~anim::Curve<T>	{
 	let num = br.get_uint(2u);
 	let _extrapolate = br.get_uint(1u)!=0u;
 	let bezier = br.get_uint(1u)!=0u;
 	if bezier	{
-		@std::vec::from_fn::< anim::KeyBezier<T> >(num, |_i|	{
+		~std::vec::from_fn::< anim::KeyBezier<T> >(num, |_i|	{
 			let time = br.get_float() as float;
 			let co = fkey(br);
 			let hl = fkey(br);
 			let hr = fkey(br);
 			anim::KeyBezier{ t:time, co:co, hl:hl, hr:hr }
-		}) as @anim::Curve<T>
+		}) as ~anim::Curve<T>
 	}else	{
-		@std::vec::from_fn::< anim::KeySimple<T> >(num, |_i|	{
+		~std::vec::from_fn::< anim::KeySimple<T> >(num, |_i|	{
 			let time = br.get_float() as float;
 			let co = fkey(br);
 			anim::KeySimple{ t:time, co:co }
-		}) as @anim::Curve<T>
+		}) as ~anim::Curve<T>
 	}
 }
 
@@ -357,7 +357,7 @@ pub fn read_action( br : &mut Reader, bones : &[space::Bone], lg : &journal::Log
 					let c = read_curve( br, read_key_scale3 );
 					space::ACuScale(bid,c)
 				},
-				_		=> fail!("Unknown pose curve: %s", split[2])
+				_	=> fail!("Unknown pose curve: %s", split[2])
 			};
 			curves.push( arm_curve );
 		}else	{

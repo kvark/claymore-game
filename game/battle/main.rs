@@ -177,9 +177,9 @@ impl Scene	{
 		let mut rast = gc.default_rast;
 		rast.set_depth( "<=", true );
 		rast.prime.cull = true;
-		let c_land = tech.process( &self.land, output.clone(), rast, &mut self.cache, gc, lg );
-		let c_hero = tech.process( &self.hero.entity, output.clone(), rast, &mut self.cache, gc, lg );
-		let c_boss = tech.process( &self.boss.entity, output.clone(), rast, &mut self.cache, gc, lg );
+		let c_land = tech.process( &self.land,			output.clone(), rast, &mut self.cache, gc, lg );
+		let c_hero = tech.process( &self.hero.entity,	output.clone(), rast, &mut self.cache, gc, lg );
+		let c_boss = tech.process( &self.boss.entity,	output.clone(), rast, &mut self.cache, gc, lg );
 		let c_grid = self.grid.call( output.fb, output.pmap.clone(), self.land.input.va );
 		gc.flush( [c0,c_land,c_hero,c_boss,c_grid], lg );
 		// draw hud

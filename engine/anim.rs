@@ -3,6 +3,10 @@ extern mod extra;
 use space::Interpolate;
 
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - //
+//		Timers											//
+
+
+//- - - - - - - - - - - - - - - - - - - - - - - - - - - //
 //		Curves											//
 
 pub trait Curve<T>	{
