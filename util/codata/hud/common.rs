@@ -6,9 +6,14 @@ pub type Kerning = [int, ..2];
 pub type Color = uint;
 
 
+pub enum Size	{
+	SizeAbs(uint),
+	SizeRel(float),
+}
+
 pub enum Element	{
 	ElSpace(Vector),
-	ElBox(Box),
+	ElBox(Size,Size,Box),
 	ElImage(Path),
 	ElText(Text),
 }
@@ -52,6 +57,17 @@ pub struct Text	{
 	edit	: bool,
 }
 
+
+//====== Implementation ======//
+
+impl Size	{
+	pub fn apply( &self, size : uint )-> uint	{
+		match self	{
+			&SizeAbs(abs)	=> abs,
+			&SizeRel(rel)	=> (rel * (size as float)) as uint,
+		}
+	}
+}
 
 impl Eq for Font	{
 	fn eq( &self, other : &Font )-> bool	{

@@ -25,7 +25,7 @@ fn get<T>( children : &[gen::Child], path : &str, fun : &fn(&str,&gen::Element)-
 				Some(p)	=>	{
 					let rest = path.slice_from( p+1 );
 					match elem	{
-						&gen::ElBox(ref box)	=> get( box.children, rest, fun ),
+						&gen::ElBox(_, _, ref box)	=> get( box.children, rest, fun ),
 						_	=> fail!("Hud child is not a frame: %s", name)
 					}
 				},
@@ -48,7 +48,7 @@ fn modify( children : &mut ~[gen::Child], path : &str, fun : &fn(&str,&mut gen::
 				Some(p)	=>	{
 					let rest = path.slice_from( p+1 );
 					match elem	{
-						&gen::ElBox(ref mut box)	=>	{
+						&gen::ElBox(_, _, ref mut box)	=>	{
 							modify( &mut box.children, rest, fun );
 						},
 						_	=> fail!("Hud child is not a frame: %s", name)
@@ -101,7 +101,7 @@ impl Context	{
 			fcon : &font::Context, lg : &engine::journal::Log )	{
 		for &gen::Child(_,ref elem) in children.iter()	{
 			match elem	{
-				&gen::ElBox(ref box)	=> self.preload( box.children, gcon, fcon, lg ),
+				&gen::ElBox(_, _, ref box)	=> self.preload( box.children, gcon, fcon, lg ),
 				&gen::ElImage(ref name)	=>	{
 					if !self.cache_images.contains_key( name )	{
 						let path = ~"data/texture/hud/" + *name;
@@ -164,7 +164,7 @@ impl Context	{
 				[t.width,t.height]
 			},
 			&gen::ElSpace(space)	=> space,
-			&gen::ElBox(_)	=> [0,0],
+			&gen::ElBox(_,_,_)		=> [0,0],
 		}
 	}
 
@@ -174,8 +174,7 @@ impl Context	{
 
 	pub fn draw_all( &self, screen : &gen::Screen, out : &call::Output )-> ~[call::Call]	{
 		let size = [out.area.w, out.area.h];
-		let (_,calls) = self.draw( &screen.root, out.area, out, &size );
-		calls
+		self.draw( &screen.root, out.area, out, &size )
 	}
 
 	pub fn get_color_param( color : uint )-> shade::Uniform	{
@@ -188,7 +187,7 @@ impl Context	{
 	}
 
 	pub fn draw( &self, box : &gen::Box, area : Rect, out : &call::Output,
-			screen_size : &gen::Vector )-> (gen::Vector,~[call::Call])	{
+			screen_size : &gen::Vector )-> ~[call::Call]	{
 		let mut off : gen::Vector = [area.x,area.y];
 		let mut calls : ~[call::Call] = ~[];
 		for &gen::Child(_,ref element) in box.children.iter()	{
@@ -222,16 +221,20 @@ impl Context	{
 					[t.width,t.height]
 				},
 				&gen::ElSpace(space)	=> space,
-				&gen::ElBox(ref subox)	=>	{
-					let a2 = Rect{ x:off[0],y:off[1], w:area.x+area.w-off[0], h:area.y+area.h-off[1] };
-					let (size,sub) = self.draw( subox, a2, out, screen_size );
+				&gen::ElBox(ref sx, ref sy, ref subox)	=>	{
+					let size = [ sx.apply(area.w), sy.apply(area.h) ];
+					let a2 = Rect{ x:off[0], y:off[1], w:off[0]+size[0], h:off[1]+size[1] };
+					let sub = self.draw( subox, a2, out, screen_size );
 					calls.push_all_move( sub );
 					size
 				},
 			};
-			off[0] += size[0];
-			off[1] += size[1];
+			match box.align	{
+				gen::AlignHor	=> {off[0] += size[0]},
+				gen::AlignVer	=> {off[1] += size[1]},
+			}
+			assert!( off[0] <= area.w && off[1] <= area.h );
 		}
-		(off,calls)
+		calls
 	}
 }

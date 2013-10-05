@@ -63,19 +63,22 @@ impl Menu	{
 			} else {
 				gen::GroundFrame(0x80808080u)
 			};
-			gen::Child( item.name.clone(), gen::ElBox(gen::Box	{
-				align	: gen::AlignHor,
-				ground	: ground,
-				children: ~[
-					gen::Child( ~"", gen::ElText(gen::Text	{
-						value	: item.name.clone(),
-						font	: font.clone(),
-						color	: 0xFFFFFFFF,
-						bound	: [0,0],
-						edit	: false,
-					})),
-				],
-			}))
+			gen::Child( item.name.clone(), gen::ElBox(
+				gen::SizeRel( 1.0 ), gen::SizeAbs( 100 ),
+				gen::Box	{
+					align	: gen::AlignHor,
+					ground	: ground,
+					children: ~[
+						gen::Child( ~"", gen::ElText(gen::Text	{
+							value	: item.name.clone(),
+							font	: font.clone(),
+							color	: 0xFFFFFFFF,
+							bound	: [0,0],
+							edit	: false,
+						})),
+					],
+				}
+			))
 		}).to_owned_vec()
 	}
 
@@ -87,11 +90,14 @@ impl Menu	{
 				_	=> fail!("Unexpected tail of debug menu: %s", item.name),
 			};
 			item = &list[sel_id];
-			gen::Child( ~"group", gen::ElBox(gen::Box	{
+			gen::Child( ~"group", gen::ElBox(
+				gen::SizeRel( 0.3 ), gen::SizeRel( 1.0 ),
+				gen::Box	{
 					align	: gen::AlignVer,
 					ground	: gen::GroundNone,
 					children: Menu::build_vertical( list, &self.font, sel_id ),
-			}))
+				}
+			))
 		}).to_owned_vec()
 	}
 	
@@ -103,11 +109,14 @@ impl Menu	{
 				ground	: gen::GroundNone,
 				children: ~[
 					gen::Child( ~"tab",		gen::ElSpace( [100,100] ) ),
-					gen::Child( ~"menu",	gen::ElBox(gen::Box{
-						align	: gen::AlignHor,
-						ground	: gen::GroundNone,
-						children: self.build_horisontal(),
-					})),
+					gen::Child( ~"menu",	gen::ElBox(
+						gen::SizeRel( 1.0 ), gen::SizeRel( 1.0 ),
+						gen::Box{
+							align	: gen::AlignHor,
+							ground	: gen::GroundNone,
+							children: self.build_horisontal(),
+						}
+					)),
 				],
 			},
 		}
