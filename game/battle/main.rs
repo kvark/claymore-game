@@ -16,6 +16,7 @@ use engine::space::{Interpolate,Space};
 
 use input;
 use hud = hud::main;
+use debug = hud::debug;
 use scene;
 use battle::grid;
 
@@ -103,6 +104,7 @@ pub struct Scene	{
 	boss	: Character,
 	cache	: gr_mid::draw::Cache,
 	hud		: gen_hud::common::Screen,
+	debug	: debug::Menu,
 }
 
 impl Scene	{
@@ -183,6 +185,10 @@ impl Scene	{
 		// draw hud
 		let hud_calls = hc.draw_all( &self.hud, &output );
 		gc.flush( hud_calls, lg );
+		// draw debug menu
+		let debug_hud = self.debug.build( 0.5 );
+		let debug_calls = hc.draw_all( &debug_hud, &output );
+		gc.flush( debug_calls, lg );
 	}
 	
 	pub fn debug_move( &self, _rot : bool, _x : int, _y : int )	{
@@ -274,6 +280,24 @@ pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon 
 	grid.init( &mut gc.texture );
 	let hud = gen_hud::battle::load();
 	hc.preload( hud.root.children, gc, fcon, lg );
+	// create debug menu
+	let debug = debug::Menu	{
+		root	: debug::MenuItem	{
+			name	: ~"root",
+			action	: debug::ActionList(~[
+				debug::MenuItem	{
+					name	: ~"test",
+					action	: debug::ActionFun(|| {}),
+				},
+			]),
+		},
+		selection	: ~[],
+		font	: gen_hud::common::Font	{
+			path	: ~"Vera.ttf",
+			size	: [10,10],
+			kern	: [0,-10],
+		},
+	};
 	// done
 	Scene{
 		view	: view,
@@ -283,5 +307,6 @@ pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon 
 		boss	: boss,
 		cache	: gr_mid::draw::make_cache(),
 		hud		: hud,
+		debug	: debug,
 	}
 }

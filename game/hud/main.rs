@@ -168,10 +168,6 @@ impl Context	{
 		}
 	}
 
-	pub fn get_rect_corner( r : &Rect )-> gen::Vector	{
-		[r.x+r.w, r.y+r.h]
-	}
-
 	pub fn draw_all( &self, screen : &gen::Screen, out : &call::Output )-> ~[call::Call]	{
 		let size = [out.area.w, out.area.h];
 		self.draw( &screen.root, out.area, out, &size )
