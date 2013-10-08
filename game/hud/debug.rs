@@ -12,23 +12,25 @@ pub struct MenuItem	{
 }
 
 
-pub struct MenuSelectionIter<'self>	{
+pub struct MenuListIter<'self>	{
 	priv item		: &'self MenuItem,
 	priv selection	: &'self [u8],
 }
 
-impl<'self> Iterator<&'self MenuItem> for MenuSelectionIter<'self>	{
-	fn next( &mut self )-> Option<&'self MenuItem>	{
+impl<'self> Iterator<(&'self str, &'self [MenuItem])> for MenuListIter<'self>	{
+	fn next( &mut self )-> Option<(&'self str, &'self [MenuItem])>	{
 		match self.selection	{
 			[head,..tail]	=>	{
-				self.item = match self.item.action	{
-					ActionList(ref list) if list.len()>(head as uint)	=>	{
+				match self.item.action	{
+					ActionList(ref list)	=>	{
+						assert!( (head as uint) < list.len() );
+						let name = self.item.name.as_slice();
 						self.selection = tail;
-						&'self list[head]
+						self.item = &'self list[head];
+						Some(( name, list.as_slice() ))
 					},
 					_	=> fail!("Unexpected end of debug menu on item %s", self.item.name),
-				};
-				Some(self.item)
+				}
 			},
 			[]	=> None,
 		}
@@ -47,14 +49,12 @@ impl Menu	{
 		!self.selection.is_empty()
 	}
 
-	
-	/*
-	pub fn selection_iter( &self )-> MenuSelectionIter<'self>	{
-		MenuSelectionIter	{
-			item		: &'self self.root,
+	pub fn selection_iter<'a>( &'a self )-> MenuListIter<'a>	{
+		MenuListIter	{
+			item		: &'a self.root,
 			selection	: self.selection,
 		}
-	}*/
+	}
 
 	fn build_vertical( items : &[MenuItem], font : &gen::Font, selected : u8 )-> ~[gen::Child]	{
 		items.iter().enumerate().map( |(i,item)|	{

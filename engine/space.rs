@@ -206,7 +206,7 @@ impl Node	{
 
 impl anim::Player<NodeCurve> for Node	{
 	fn find_record( &self, name : &str )-> Option<@NodeRecord>	{
-		match self.actions.iter().find(|a| std::str::eq_slice(a.name,name))	{
+		match self.actions.iter().find(|r| std::str::eq_slice(r.name,name))	{
 			Some(rec)	=> Some(*rec),
 			None		=> None,
 		}
@@ -304,7 +304,7 @@ fn is_same_node( a: Option<@Node>, b : Option<@Node> )-> bool	{
 
 impl anim::Player<ArmatureCurve> for Armature	{
 	fn find_record( &self, name : &str )-> Option<@ArmatureRecord>	{
-		match self.actions.iter().find(|a| std::str::eq_slice(a.name,name))	{
+		match self.actions.iter().find(|r| std::str::eq_slice(r.name,name))	{
 			Some(rec)	=> Some(*rec),
 			None		=> None,
 		}

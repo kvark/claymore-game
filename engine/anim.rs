@@ -77,7 +77,7 @@ pub struct Record<C>	{
 }
 
 pub trait Player<C>	{
-	//fn iter_records()-> Iterator<@Record<C>>	//TODO
+	//fn record_iter( self )-> std::vec::VecIterator< @Record<C> >;
 	fn find_record( &self, name : &str )-> Option< @Record<C> >;
 	fn set_record( &mut self, rec : &Record<C>, time : float );
 }

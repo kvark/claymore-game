@@ -126,10 +126,34 @@ impl Scene	{
 		match event	{
 			&input::Keyboard(key,press) if press	=> {
 				// camera rotation
+				let in_menu = self.debug.is_active();
 				match key	{
-					glfw::KeyE		=> self.view.move(-1),
-					glfw::KeyQ		=> self.view.move(1),
-					_	=> true
+					glfw::KeyE		=> { self.view.move(-1); },
+					glfw::KeyQ		=> { self.view.move(1); },
+					glfw::KeyM if in_menu		=>
+						self.debug.selection.clear(),
+					glfw::KeyM	=> 
+						self.debug.selection.push(0),
+					glfw::KeyUp if in_menu	=> {
+						let last = self.debug.selection.mut_iter().last().
+							expect("Debug menu: nothing is selected");
+						if *last>0	{
+							*last -= 1;
+						}
+					},
+					glfw::KeyDown if in_menu	=> {
+						let menu_len =	{
+							let (_,ref last_list) = self.debug.selection_iter().last().
+								expect("Debug menu: no list found");
+							last_list.len()
+						};
+						let last = self.debug.selection.mut_iter().last().
+							expect("Debug menu: nothing is selected");
+						if ((*last+1) as uint) < menu_len	{
+							*last += 1;
+						}
+					},
+					_	=> ()
 				};
 				
 			},

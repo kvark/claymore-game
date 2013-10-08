@@ -97,38 +97,33 @@ impl Context	{
 		}
 	}
 
+	pub fn preload_font<'a>( &'a mut self, fcon : &font::Context, font : &gen::Font, lg : &engine::journal::Log )-> &'a mut FontCache	{
+		self.cache_fonts.find_or_insert_with( font.clone(), |f|	{
+			let path = ~"data/font/" + f.path;
+			FontCache	{
+				font	: @fcon.load( path, 0u, f.size, f.kern, lg ),
+				cache	: HashMap::new(),
+			}
+		})
+	}
+
 	pub fn preload( &mut self, children : &[gen::Child], gcon : &mut engine::gr_low::context::Context,
 			fcon : &font::Context, lg : &engine::journal::Log )	{
 		for &gen::Child(_,ref elem) in children.iter()	{
 			match elem	{
 				&gen::ElBox(_, _, ref box)	=> self.preload( box.children, gcon, fcon, lg ),
 				&gen::ElImage(ref name)	=>	{
-					if !self.cache_images.contains_key( name )	{
-						let path = ~"data/texture/hud/" + *name;
-						let t = engine::load::load_texture_2D( gcon, path, false );
-						self.cache_images.insert( name.clone(), t );
-					}
+					self.cache_images.find_or_insert_with( name.clone(), |s|	{
+						let path = ~"data/texture/hud/" + *s;
+						engine::load::load_texture_2D( gcon, path, false )
+					});
 				},
 				&gen::ElText(ref text)	=>	{
-					let f = &text.font;
-					{//FIXME
-						if !self.cache_fonts.contains_key(f)	{
-							let path = ~"data/font/" + f.path;
-							let fc = FontCache	{
-								font	: @fcon.load( path, 0u, f.size, f.kern, lg ),
-								cache	: HashMap::new(),
-							};
-							self.cache_fonts.insert( text.font.clone(), fc );
-						}
-					}
-					{
-						let fc = self.cache_fonts.find_mut(f).expect("Fonts contents are bad");
-						if !fc.cache.contains_key( &text.value )	{
-							let bound = ( text.bound[0], text.bound[1] );
-							let t = fc.font.bake( gcon, text.value, bound, lg );
-							fc.cache.insert( text.value.clone(), t );
-						}
-					}
+					let fc = self.preload_font( fcon, &text.font, lg );
+					fc.cache.find_or_insert_with( text.value.clone(), |s|	{
+						let bound = ( text.bound[0], text.bound[1] );
+						fc.font.bake( gcon, *s, bound, lg )
+					});
 				},
 				&gen::ElSpace(_)	=> (),
 			}
