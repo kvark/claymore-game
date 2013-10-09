@@ -39,7 +39,7 @@ struct Game	{
 	technique	: gr_mid::draw::Technique,
 	output		: gr_mid::call::Output,
 	s_intro		: scene::intro::Scene,
-	s_editor	: chared::Scene,
+	//s_editor	: chared::Scene,
 	s_battle	: battle::Scene,
 	screen		: Screen,
 }
@@ -79,7 +79,7 @@ impl Game	{
 		// done
 		gcon.check("init");
 		let intro = scene::intro::Scene{ active:false };
-		let editor = chared::create( el, &mut gcon, &fcon, &journal.load );
+		//let editor = chared::create( el, &mut gcon, &fcon, &journal.load );
 		let battle = battle::create( &mut gcon, &mut hcon, &fcon, &journal.load );
 		Game{
 			gr_context	: gcon,
@@ -90,7 +90,9 @@ impl Game	{
 			frames:0u, call_count:0u,
 			technique	: tech,
 			output		: out,
-			s_intro:intro, s_editor:editor, s_battle:battle,
+			s_intro		: intro,
+			//s_editor	: editor,
+			s_battle	: battle,
 			screen		: ScreenBattle,
 		}
 	}
@@ -109,7 +111,7 @@ impl Game	{
 	pub fn update( &mut self, input : &input::State )-> bool	{
 		let aspect = self.output.area.aspect();
 		match self.screen	{
-			ScreenChar		=> self.s_editor.update( input, &self.journal.main ),
+			//ScreenChar		=> self.s_editor.update( input, &self.journal.main ),
 			ScreenBattle	=> self.s_battle.update( input, aspect ),
 			_ => true
 		}
@@ -118,7 +120,7 @@ impl Game	{
 	pub fn on_input( &mut self, event : input::Event )	{
 		self.journal.main.add( event.to_str() );
 		match self.screen	{
-			ScreenChar		=> self.s_editor.on_input( &event ),
+			//ScreenChar		=> self.s_editor.on_input( &event ),
 			ScreenBattle	=> self.s_battle.on_input( &event ),
 			_	=> ()
 		}
@@ -127,7 +129,7 @@ impl Game	{
 	pub fn render( &mut self, el : &Elements )-> bool	{
 		match self.screen	{
 			ScreenIntro	=> (),
-			ScreenChar	=> self.s_editor.render( el, &mut self.gr_context, &self.journal.render ),
+			//ScreenChar	=> self.s_editor.render( el, &mut self.gr_context, &self.journal.render ),
 			ScreenBattle	=> self.s_battle.render( &mut self.gr_context, &self.hud_context,
 				&self.technique, self.output.clone(), &self.journal.render ),	
 			_ => ()

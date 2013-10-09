@@ -17,8 +17,10 @@ pub struct MenuListIter<'self>	{
 	priv selection	: &'self [u8],
 }
 
-impl<'self> Iterator<(&'self str, &'self [MenuItem])> for MenuListIter<'self>	{
-	fn next( &mut self )-> Option<(&'self str, &'self [MenuItem])>	{
+type IterUnit<'self> = (&'self str, &'self [MenuItem]);
+
+impl<'self> Iterator<IterUnit<'self>> for MenuListIter<'self>	{
+	fn next( &mut self )-> Option<IterUnit<'self>>	{
 		match self.selection	{
 			[head,..tail]	=>	{
 				match self.item.action	{
@@ -110,7 +112,7 @@ impl Menu	{
 				children: ~[
 					gen::Child( ~"tab",		gen::ElSpace( [100,100] ) ),
 					gen::Child( ~"menu",	gen::ElBox(
-						gen::SizeRel( 1.0 ), gen::SizeRel( 1.0 ),
+						gen::SizeRel( 0.8 ), gen::SizeRel( 1.0 ),
 						gen::Box{
 							align	: gen::AlignHor,
 							ground	: gen::GroundNone,
