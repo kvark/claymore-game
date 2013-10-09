@@ -49,7 +49,7 @@ impl Mesh	{
 pub fn create_quad( ct : &mut gr_low::context::Context )-> Mesh	{
 	let vdata = [0i8,0i8,1i8,0i8,0i8,1i8,1i8,1i8];
 	let count = 2u;
-	let mut mesh = ct.create_mesh( ~"grid", "3s", vdata.len()/count, 0u );
+	let mut mesh = ct.create_mesh( ~"quad", "3s", vdata.len()/count, 0u );
 	let vat = ct.create_attribute( vdata, count, false );
 	mesh.attribs.insert( ~"a_Vertex", vat );
 	mesh

@@ -143,7 +143,7 @@ impl Scene	{
 					},
 					glfw::KeyDown if in_menu	=> {
 						let menu_len =	{
-							let (_,ref last_list) = self.debug.selection_iter().last().
+							let (_,ref last_list) = self.debug.selection_list_iter().last().
 								expect("Debug menu: no list found");
 							last_list.len()
 						};
@@ -151,6 +151,16 @@ impl Scene	{
 							expect("Debug menu: nothing is selected");
 						if ((*last+1) as uint) < menu_len	{
 							*last += 1;
+						}
+					},
+					glfw::KeyEnter if in_menu	=> 	{
+						let extend = match self.debug.get_selected_item().action	{
+							debug::ActionFun(ref fun)	=> {(*fun)(); false},
+							debug::ActionList(ref list) if !list.is_empty()	=> true,
+							_	=> false,	//beep
+						};
+						if extend	{
+							self.debug.selection.push(0);
 						}
 					},
 					_	=> ()
@@ -197,7 +207,7 @@ impl Scene	{
 			stencil	:Some( 0u ),
 		};
 		let c0 = gr_mid::call::CallClear( cd, output.clone(), gc.default_rast.mask );
-		// draw battle
+		lg.add("=== Battle scene ===");
 		let mut rast = gc.default_rast;
 		rast.set_depth( "<=", true );
 		rast.prime.cull = true;
@@ -206,10 +216,10 @@ impl Scene	{
 		let c_boss = tech.process( &self.boss.entity,	output.clone(), rast, &mut self.cache, gc, lg );
 		let c_grid = self.grid.call( output.fb, output.pmap.clone(), self.land.input.va );
 		gc.flush( [c0,c_land,c_hero,c_boss,c_grid], lg );
-		// draw hud
+		lg.add("=== HUD ===");
 		let hud_calls = hc.draw_all( &self.hud, &output );
 		gc.flush( hud_calls, lg );
-		// draw debug menu
+		lg.add("=== Debug Menu ===");
 		let debug_hud = self.debug.build( 0.5 );
 		let debug_calls = hc.draw_all( &debug_hud, &output );
 		gc.flush( debug_calls, lg );
@@ -313,15 +323,20 @@ pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon 
 					name	: ~"test",
 					action	: debug::ActionFun(|| {}),
 				},
+				debug::MenuItem	{
+					name	: ~"test-2",
+					action	: debug::ActionFun(|| {}),
+				},
 			]),
 		},
-		selection	: ~[],
+		selection	: ~[0],
 		font	: gen_hud::common::Font	{
 			path	: ~"Vera.ttf",
 			size	: [10,10],
 			kern	: [0,-10],
 		},
 	};
+	debug.preload( hc, fcon, gc, lg );
 	// done
 	Scene{
 		view	: view,

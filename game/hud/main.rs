@@ -97,7 +97,7 @@ impl Context	{
 		}
 	}
 
-	pub fn preload_font<'a>( &'a mut self, fcon : &font::Context, font : &gen::Font, lg : &engine::journal::Log )-> &'a mut FontCache	{
+	pub fn preload_font<'a>( &'a mut self, font : &gen::Font, fcon : &font::Context, lg : &engine::journal::Log )-> &'a mut FontCache	{
 		self.cache_fonts.find_or_insert_with( font.clone(), |f|	{
 			let path = ~"data/font/" + f.path;
 			FontCache	{
@@ -119,7 +119,7 @@ impl Context	{
 					});
 				},
 				&gen::ElText(ref text)	=>	{
-					let fc = self.preload_font( fcon, &text.font, lg );
+					let fc = self.preload_font( &text.font, fcon, lg );
 					fc.cache.find_or_insert_with( text.value.clone(), |s|	{
 						let bound = ( text.bound[0], text.bound[1] );
 						fc.font.bake( gcon, *s, bound, lg )
@@ -205,7 +205,7 @@ impl Context	{
 					data.insert( ~"t_Text",	shade::UniTexture(
 						0, t, Some(self.sampler_text) ));
 					data.insert( ~"u_Color", Context::get_color_param(text.color) );
-					let dr = Rect{ x:off[0], y:off[0], w:t.width, h:t.height };
+					let dr = Rect{ x:off[0], y:off[1], w:t.width, h:t.height };
 					data.insert( ~"u_Transform", self.transform(&dr,screen_size) );
 					// return
 					calls.push( self.make_call( self.program_text, data, out ));

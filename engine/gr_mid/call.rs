@@ -155,9 +155,9 @@ pub enum Call	{
 impl Call	{
 	pub fn log( &self, lg : &journal::Log )	{
 		match self	{
-			&CallEmpty	=> lg.add(~"Call empty"),
+			&CallEmpty	=> lg.add("Call empty"),
 			&CallClear(ref cd, ref out, ref _mask)	=>	{
-				lg.add(~"Call clear");
+				lg.add("Call clear");
 				lg.add(fmt!( "\tValue %s %s %s",
 					match cd.color	{
 						Some(v)	=> fmt!("color(%f,%f,%f,%f)",
@@ -175,19 +175,19 @@ impl Call	{
 				out.log( "Output", lg );
 			}
 			&CallBlit(ref src, ref dst)	=>	{
-				lg.add(~"Call blit");
+				lg.add("Call blit");
 				src.log( "Src", lg );
 				dst.log( "Dst", lg );
 			},
 			&CallDraw(ref inp, ref out, ref _rast, prog, ref data )	=>	{
-				lg.add(~"Call draw");
+				lg.add("Call draw");
 				inp.log( lg );
 				out.log( "Output", lg );
 				lg.add(fmt!( "\tProgram=%i", *prog.handle as int ));
 				data.log( lg );
 			},
 			&CallTransfrom()	=>	{
-				lg.add(~"Call transform");
+				lg.add("Call transform");
 			},
 		}
 	}

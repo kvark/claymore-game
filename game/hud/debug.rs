@@ -1,4 +1,6 @@
+use engine;
 use gen = gen_hud::common;
+use hud = hud::main;
 
 
 pub enum MenuAction	{
@@ -17,10 +19,10 @@ pub struct MenuListIter<'self>	{
 	priv selection	: &'self [u8],
 }
 
-type IterUnit<'self> = (&'self str, &'self [MenuItem]);
+type ListIterUnit<'self> = (&'self str, &'self [MenuItem]);
 
-impl<'self> Iterator<IterUnit<'self>> for MenuListIter<'self>	{
-	fn next( &mut self )-> Option<IterUnit<'self>>	{
+impl<'self> Iterator<ListIterUnit<'self>> for MenuListIter<'self>	{
+	fn next( &mut self )-> Option<ListIterUnit<'self>>	{
 		match self.selection	{
 			[head,..tail]	=>	{
 				match self.item.action	{
@@ -40,6 +42,30 @@ impl<'self> Iterator<IterUnit<'self>> for MenuListIter<'self>	{
 }
 
 
+pub struct MenuAllIter<'self>	{
+	priv stack	: ~[&'self [MenuItem]],
+	priv item	: &'self MenuItem,
+}
+
+impl<'self> Iterator<&'self MenuItem> for MenuAllIter<'self>	{
+	fn next( &mut self )-> Option<&'self MenuItem>	{
+		let list = match self.item.action	{
+			ActionList(ref list) if !list.is_empty()=> list.as_slice(),
+			_	if !self.stack.is_empty()			=> self.stack.pop(),
+			_	=> return None,
+		};
+		self.item = &'self list[0];
+		if list.len() > 1	{
+			self.stack.push( list.slice_from(1) );
+		}
+		Some( self.item )
+	}
+}
+
+
+
+static item_bound : [uint,..2] = [200,50];
+
 pub struct Menu	{
 	root		: MenuItem,
 	selection	: ~[u8],
@@ -51,10 +77,34 @@ impl Menu	{
 		!self.selection.is_empty()
 	}
 
-	pub fn selection_iter<'a>( &'a self )-> MenuListIter<'a>	{
+	pub fn selection_list_iter<'a>( &'a self )-> MenuListIter<'a>	{
 		MenuListIter	{
 			item		: &'a self.root,
 			selection	: self.selection,
+		}
+	}
+
+	pub fn get_selected_item<'a>( &'a self )-> &'a MenuItem	{
+		let (_,ref list) = self.selection_list_iter().last().
+			expect("Debug menu is not active");
+		&'a list[ *self.selection.last() ]
+	}
+
+	pub fn all_iter<'a>( &'a self )-> MenuAllIter<'a>	{
+		MenuAllIter	{
+			stack	: ~[],
+			item	: &'a self.root,
+		}
+	}
+
+	pub fn preload( &self, hcon : &mut hud::Context, fcon : &engine::gr_mid::font::Context, 
+			gcon : &mut engine::gr_low::context::Context, lg : &engine::journal::Log )	{
+		let fc = hcon.preload_font( &self.font, fcon, lg );
+		for item in self.all_iter()	{
+			fc.cache.find_or_insert_with( item.name.clone(), |s|	{
+				let bound = ( item_bound[0], item_bound[1] );
+				fc.font.bake( gcon, *s, bound, lg )
+			});
 		}
 	}
 
@@ -75,7 +125,7 @@ impl Menu	{
 							value	: item.name.clone(),
 							font	: font.clone(),
 							color	: 0xFFFFFFFF,
-							bound	: [0,0],
+							bound	: item_bound,
 							edit	: false,
 						})),
 					],

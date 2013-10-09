@@ -15,7 +15,8 @@
 	"journal":	{
 		"path"	: "build/run.log",
 		"load"	: true,
-		"render": false
+		"render": false,
+		"input"	: false
 	},
 	"elements":	{
 		"character"		: true,

@@ -23,7 +23,7 @@ impl Log	{
 		Log{ name:name, enable:self.enable, wr:self.wr }
 	}
 
-	pub fn add( &self, message : ~str )	{
+	pub fn add( &self, message : &str )	{
 		if self.enable	{
 			self.wr.write_line(message);
 		}

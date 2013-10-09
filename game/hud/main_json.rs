@@ -507,7 +507,7 @@ pub fn load_screen( path : &str, ct : &mut gr_low::context::Context,
 			fail!( ~"\tText frame not found: " + ilabel.frame )
 		}
 	}
-	lg.add(~"\tDone");
+	lg.add("\tDone");
 	Screen{
 		root	: root,
 		images	: map_image,

@@ -25,6 +25,7 @@ struct Journal	{
 	main	: engine::journal::Log,
 	load	: engine::journal::Log,
 	render	: engine::journal::Log,
+	input	: engine::journal::Log,
 }
 
 
@@ -118,7 +119,7 @@ impl Game	{
 	}
 
 	pub fn on_input( &mut self, event : input::Event )	{
-		self.journal.main.add( event.to_str() );
+		self.journal.input.add( event.to_str() );
 		match self.screen	{
 			//ScreenChar		=> self.s_editor.on_input( &event ),
 			ScreenBattle	=> self.s_battle.on_input( &event ),
@@ -159,7 +160,7 @@ struct ConfigGL	{
 }
 #[deriving(Decodable)]
 struct ConfigLog	{
-	path:~str, load:bool, render:bool,
+	path:~str, load:bool, render:bool, input:bool,
 }
 #[deriving(Decodable)]
 struct Config	{
@@ -177,14 +178,16 @@ pub fn main()	{
 	do glfw::start {
 		let config = scene::load_json::load_config::<Config>( "data/config.json" );
 		let lg = engine::journal::Log::create( config.journal.path.clone() );
-		lg.add(~"--- Claymore ---");
+		lg.add("--- Claymore ---");
 		let mut journal = Journal	{
 			load	: lg.fork( ~"Load" ),
 			render	: lg.fork( ~"Render" ),
+			input	: lg.fork( ~"Input" ),
 			main	: lg,
 		};
 		journal.load.enable		= config.journal.load;
 		journal.render.enable	= config.journal.render;
+		journal.input.enable	= config.journal.input;
 
 		glfw::window_hint::resizable( false );
 		glfw::window_hint::opengl_debug_context( config.GL.debug );

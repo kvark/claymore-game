@@ -95,13 +95,13 @@ impl Technique	{
 		let s_vert = self.make_vertex( mat, modifier );
 		let s_frag = self.make_fragment( mat );
 		let shaders = if false	{
-			lg.add(~"Compiling vert");
+			lg.add("Compiling vert");
 			lg.add( s_vert.clone() );
 			let sv = ct.create_shader('v',s_vert);
-			lg.add(~"Compiling frag");
+			lg.add("Compiling frag");
 			lg.add( s_frag.clone() );
 			let sf = ct.create_shader('f',s_frag);
-			lg.add(~"Linking");
+			lg.add("Linking");
 			~[sv,sf]
 		}else	{
 			~[ ct.create_shader('v',s_vert), ct.create_shader('f',s_frag) ]
