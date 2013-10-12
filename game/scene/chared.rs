@@ -156,10 +156,9 @@ impl Scene	{
 		}
 	}
 
-	pub fn render( &mut self, el : &main::Elements, ct : &mut gr_low::context::Context, lg : &engine::journal::Log  )	{
+	pub fn render( &mut self, el : &main::Elements, ct : &mut gr_low::context::Context,
+			output : &gr_mid::call::Output, lg : &engine::journal::Log  )	{
 		// clear screen
-		let pmap = gr_mid::call::PlaneMap::new_main( ct, ~"o_Color" );
-		let output = gr_mid::call::Output::new( ct.default_frame_buffer, pmap );
 		let cdata = gr_mid::call::ClearData{
 			color	:Some( gr_low::rast::Color::new(0x8080FFFF) ),
 			depth	:Some( 1f ),

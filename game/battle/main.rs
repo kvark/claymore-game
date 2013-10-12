@@ -104,7 +104,6 @@ pub struct Scene	{
 	boss	: Character,
 	cache	: gr_mid::draw::Cache,
 	hud		: gen_hud::common::Screen,
-	debug	: debug::Menu,
 }
 
 impl Scene	{
@@ -126,46 +125,11 @@ impl Scene	{
 		match event	{
 			&input::Keyboard(key,press) if press	=> {
 				// camera rotation
-				let in_menu = self.debug.is_active();
 				match key	{
 					glfw::KeyE		=> { self.view.move(-1); },
 					glfw::KeyQ		=> { self.view.move(1); },
-					glfw::KeyM if in_menu		=>
-						self.debug.selection.clear(),
-					glfw::KeyM	=> 
-						self.debug.selection.push(0),
-					glfw::KeyUp if in_menu	=> {
-						let last = self.debug.selection.mut_iter().last().
-							expect("Debug menu: nothing is selected");
-						if *last>0	{
-							*last -= 1;
-						}
-					},
-					glfw::KeyDown if in_menu	=> {
-						let menu_len =	{
-							let (_,ref last_list) = self.debug.selection_list_iter().last().
-								expect("Debug menu: no list found");
-							last_list.len()
-						};
-						let last = self.debug.selection.mut_iter().last().
-							expect("Debug menu: nothing is selected");
-						if ((*last+1) as uint) < menu_len	{
-							*last += 1;
-						}
-					},
-					glfw::KeyEnter if in_menu	=> 	{
-						let extend = match self.debug.get_selected_item().action	{
-							debug::ActionFun(ref fun)	=> {(*fun)(); false},
-							debug::ActionList(ref list) if !list.is_empty()	=> true,
-							_	=> false,	//beep
-						};
-						if extend	{
-							self.debug.selection.push(0);
-						}
-					},
-					_	=> ()
-				};
-				
+					_	=> (),
+				}
 			},
 			&input::MouseClick(key,press) if key==0 && press	=> {
 				match self.grid.selected	{
@@ -184,8 +148,8 @@ impl Scene	{
 		}
 	}
 
-	pub fn render( &mut self, gc : &mut gr_low::context::Context, hc : &hud::Context,
-			tech : &gr_mid::draw::Technique, output : gr_mid::call::Output, lg : &engine::journal::Log )	{
+	pub fn render( &mut self, output : &gr_mid::call::Output, tech : &gr_mid::draw::Technique,
+			gc : &mut gr_low::context::Context, hc : &hud::Context, lg : &engine::journal::Log )	{
 		// update grid
 		self.grid.upload_dirty_cells( &mut gc.texture );
 		{// update matrices
@@ -217,12 +181,8 @@ impl Scene	{
 		let c_grid = self.grid.call( output.fb, output.pmap.clone(), self.land.input.va );
 		gc.flush( [c0,c_land,c_hero,c_boss,c_grid], lg );
 		lg.add("=== HUD ===");
-		let hud_calls = hc.draw_all( &self.hud, &output );
+		let hud_calls = hc.draw_all( &self.hud, output );
 		gc.flush( hud_calls, lg );
-		lg.add("=== Debug Menu ===");
-		let debug_hud = self.debug.build( 0.5 );
-		let debug_calls = hc.draw_all( &debug_hud, &output );
-		gc.flush( debug_calls, lg );
 	}
 	
 	pub fn debug_move( &self, _rot : bool, _x : int, _y : int )	{
@@ -314,29 +274,6 @@ pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon 
 	grid.init( &mut gc.texture );
 	let hud = gen_hud::battle::load();
 	hc.preload( hud.root.children, gc, fcon, lg );
-	// create debug menu
-	let debug = debug::Menu	{
-		root	: debug::MenuItem	{
-			name	: ~"root",
-			action	: debug::ActionList(~[
-				debug::MenuItem	{
-					name	: ~"test",
-					action	: debug::ActionFun(|| {}),
-				},
-				debug::MenuItem	{
-					name	: ~"test-2",
-					action	: debug::ActionFun(|| {}),
-				},
-			]),
-		},
-		selection	: ~[0],
-		font	: gen_hud::common::Font	{
-			path	: ~"Vera.ttf",
-			size	: [10,10],
-			kern	: [0,-10],
-		},
-	};
-	debug.preload( hc, fcon, gc, lg );
 	// done
 	Scene{
 		view	: view,
@@ -346,6 +283,5 @@ pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon 
 		boss	: boss,
 		cache	: gr_mid::draw::make_cache(),
 		hud		: hud,
-		debug	: debug,
 	}
 }

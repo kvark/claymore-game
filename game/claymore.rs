@@ -19,6 +19,7 @@ extern mod extra;
 
 
 pub mod input;
+pub mod logic;
 pub mod main;
 
 pub mod battle	{

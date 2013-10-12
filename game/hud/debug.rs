@@ -3,26 +3,49 @@ use gen = gen_hud::common;
 use hud = hud::main;
 
 
-pub enum MenuAction	{
-	ActionFun( ~fn() ),
-	ActionList( ~[MenuItem] ),
+pub enum MenuAction<T>	{
+	ActionFun( ~fn(&mut T) ),
+	ActionList( ~[MenuItem<T>] ),
 }
 
-pub struct MenuItem	{
+pub struct MenuItem<T>	{
 	name	: ~str,
-	action	: MenuAction,
+	action	: MenuAction<T>,
+}
+
+trait AccessMut<T>{
+	fn access_mut<'a>(&'a mut self)-> &'a mut T;
+}
+
+impl<T> MenuItem<T>	{
+	fn convert<U : AccessMut<T>>( self )-> MenuItem<U>	{
+		let MenuItem{ name, action } = self;
+		MenuItem	{
+			name	: name,
+			action	: match action	{
+				ActionFun(f)		=> ActionFun(
+					|u:&mut U| f(u.access_mut())
+				),
+				ActionList(list)	=> ActionList(
+					list.move_iter().map(
+						|item| {item.convert()}
+					).to_owned_vec()
+				),
+			},
+		}
+	}
 }
 
 
-pub struct MenuListIter<'self>	{
-	priv item		: &'self MenuItem,
+pub struct MenuListIter<'self,T>	{
+	priv item		: &'self MenuItem<T>,
 	priv selection	: &'self [u8],
 }
 
-type ListIterUnit<'self> = (&'self str, &'self [MenuItem]);
+type ListIterUnit<'self,T> = (&'self str, &'self [MenuItem<T>]);
 
-impl<'self> Iterator<ListIterUnit<'self>> for MenuListIter<'self>	{
-	fn next( &mut self )-> Option<ListIterUnit<'self>>	{
+impl<'self,T> Iterator<ListIterUnit<'self,T>> for MenuListIter<'self,T>	{
+	fn next( &mut self )-> Option<ListIterUnit<'self,T>>	{
 		match self.selection	{
 			[head,..tail]	=>	{
 				match self.item.action	{
@@ -42,13 +65,13 @@ impl<'self> Iterator<ListIterUnit<'self>> for MenuListIter<'self>	{
 }
 
 
-pub struct MenuAllIter<'self>	{
-	priv stack	: ~[&'self [MenuItem]],
-	priv item	: &'self MenuItem,
+pub struct MenuAllIter<'self,T>	{
+	priv stack	: ~[&'self [MenuItem<T>]],
+	priv item	: &'self MenuItem<T>,
 }
 
-impl<'self> Iterator<&'self MenuItem> for MenuAllIter<'self>	{
-	fn next( &mut self )-> Option<&'self MenuItem>	{
+impl<'self,T> Iterator<&'self MenuItem<T>> for MenuAllIter<'self,T>	{
+	fn next( &mut self )-> Option<&'self MenuItem<T>>	{
 		let list = match self.item.action	{
 			ActionList(ref list) if !list.is_empty()=> list.as_slice(),
 			_	if !self.stack.is_empty()			=> self.stack.pop(),
@@ -66,39 +89,40 @@ impl<'self> Iterator<&'self MenuItem> for MenuAllIter<'self>	{
 
 static item_bound : [uint,..2] = [200,50];
 
-pub struct Menu	{
-	root		: MenuItem,
+pub struct Menu<T>	{
+	root		: MenuItem<T>,
 	selection	: ~[u8],
 	font		: gen::Font,
 }
 
-impl Menu	{
+impl<T> Menu<T>	{
 	pub fn is_active( &self )-> bool	{
 		!self.selection.is_empty()
 	}
 
-	pub fn selection_list_iter<'a>( &'a self )-> MenuListIter<'a>	{
+	pub fn selection_list_iter<'a>( &'a self )-> MenuListIter<'a,T>	{
 		MenuListIter	{
 			item		: &'a self.root,
 			selection	: self.selection,
 		}
 	}
 
-	pub fn get_selected_item<'a>( &'a self )-> &'a MenuItem	{
+	pub fn get_selected_item<'a>( &'a self )-> &'a MenuItem<T>	{
 		let (_,ref list) = self.selection_list_iter().last().
 			expect("Debug menu is not active");
 		&'a list[ *self.selection.last() ]
 	}
 
-	pub fn all_iter<'a>( &'a self )-> MenuAllIter<'a>	{
+	pub fn all_iter<'a>( &'a self )-> MenuAllIter<'a,T>	{
 		MenuAllIter	{
 			stack	: ~[],
 			item	: &'a self.root,
 		}
 	}
 
-	pub fn preload( &self, hcon : &mut hud::Context, fcon : &engine::gr_mid::font::Context, 
-			gcon : &mut engine::gr_low::context::Context, lg : &engine::journal::Log )	{
+	pub fn preload( &self, gcon : &mut engine::gr_low::context::Context,
+			fcon : &engine::gr_mid::font::Context, hcon : &mut hud::Context,
+			lg : &engine::journal::Log )	{
 		let fc = hcon.preload_font( &self.font, fcon, lg );
 		for item in self.all_iter()	{
 			fc.cache.find_or_insert_with( item.name.clone(), |s|	{
@@ -108,7 +132,7 @@ impl Menu	{
 		}
 	}
 
-	fn build_vertical( items : &[MenuItem], font : &gen::Font, selected : u8 )-> ~[gen::Child]	{
+	fn build_vertical( items : &[MenuItem<T>], font : &gen::Font, selected : u8 )-> ~[gen::Child]	{
 		items.iter().enumerate().map( |(i,item)|	{
 			let ground = if (i as u8)==selected	{
 				gen::GroundSolid(0x80808080u)

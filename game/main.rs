@@ -6,20 +6,11 @@ extern mod std;
 use engine::{gr_low,gr_mid};
 use engine::gr_low::context::ProxyState;
 
+use hud;
 use input;
-use hud = hud::main;
-use scene;
-use scene::chared;
-use battle = battle::main;
+use logic::Logic;
+use scene::load_json;
 
-
-enum Screen	{
-	ScreenIntro,
-	ScreenChar,
-	ScreenBattle,
-	ScreenWorld,
-	ScreenDeath,
-}
 
 struct Journal	{
 	main	: engine::journal::Log,
@@ -28,21 +19,16 @@ struct Journal	{
 	input	: engine::journal::Log,
 }
 
-
 struct Game	{
 	gr_context	: gr_low::context::Context,
 	aud_context	: engine::audio::Context,
 	font_context: gr_mid::font::Context,
-	hud_context	: hud::Context,
+	hud_context	: hud::main::Context,
 	journal		: Journal,
 	frames		: uint,
 	call_count	: uint,
-	technique	: gr_mid::draw::Technique,
-	output		: gr_mid::call::Output,
-	s_intro		: scene::intro::Scene,
-	//s_editor	: chared::Scene,
-	s_battle	: battle::Scene,
-	screen		: Screen,
+	logic 		: Logic,
+	debug_menu	: hud::debug::Menu<Logic>,
 }
 
 local_data_key!(game_singleton : @mut Game)
@@ -70,18 +56,16 @@ impl Game	{
 			src.bind(buf);
 		}
 		//src.play();
-		// create a forward light technique
-		let tech = gr_mid::draw::load_technique( "data/code/tech/forward/light" );
-		let pmap = gr_mid::call::PlaneMap::new_main( &gcon, ~"o_Color" );
-		let out = gr_mid::call::Output::new( gcon.default_frame_buffer, pmap );
 		// create hud
 		let fcon = gr_mid::font::Context::create();
-		let mut hcon = hud::Context::create( &mut gcon, &journal.load );
+		let mut hcon = hud::main::Context::create( &mut gcon, &journal.load );
+		// logic
+		let logic = Logic::create( el, &mut gcon, &fcon, &mut hcon, &journal.load );
+		// debug menu
+		let menu : hud::debug::Menu<Logic> = logic.create_debug_menu();
+		menu.preload( &mut gcon, &fcon, &mut hcon, &journal.load );
 		// done
 		gcon.check("init");
-		let intro = scene::intro::Scene{ active:false };
-		//let editor = chared::create( el, &mut gcon, &fcon, &journal.load );
-		let battle = battle::create( &mut gcon, &mut hcon, &fcon, &journal.load );
 		Game{
 			gr_context	: gcon,
 			aud_context	: acon,
@@ -89,12 +73,8 @@ impl Game	{
 			hud_context	: hcon,
 			journal		: journal,
 			frames:0u, call_count:0u,
-			technique	: tech,
-			output		: out,
-			s_intro		: intro,
-			//s_editor	: editor,
-			s_battle	: battle,
-			screen		: ScreenBattle,
+			logic		: logic,
+			debug_menu	: menu,
 		}
 	}
 
@@ -102,39 +82,19 @@ impl Game	{
 		std::local_data::get( game_singleton, |opt| *opt.expect("Your game is dead") )
 	}
 
-	pub fn reset( &mut self )	{
-		match self.screen	{
-			ScreenBattle	=> self.s_battle.reset(),
-			_ => ()
-		}
-	}
-
 	pub fn update( &mut self, input : &input::State )-> bool	{
-		let aspect = self.output.area.aspect();
-		match self.screen	{
-			//ScreenChar		=> self.s_editor.update( input, &self.journal.main ),
-			ScreenBattle	=> self.s_battle.update( input, aspect ),
-			_ => true
-		}
+		self.logic.update( input, &self.journal.main )
 	}
 
 	pub fn on_input( &mut self, event : input::Event )	{
 		self.journal.input.add( event.to_str() );
-		match self.screen	{
-			//ScreenChar		=> self.s_editor.on_input( &event ),
-			ScreenBattle	=> self.s_battle.on_input( &event ),
-			_	=> ()
-		}
+		self.logic.on_input( &event, &mut self.debug_menu );
 	}
 
 	pub fn render( &mut self, el : &Elements )-> bool	{
-		match self.screen	{
-			ScreenIntro	=> (),
-			//ScreenChar	=> self.s_editor.render( el, &mut self.gr_context, &self.journal.render ),
-			ScreenBattle	=> self.s_battle.render( &mut self.gr_context, &self.hud_context,
-				&self.technique, self.output.clone(), &self.journal.render ),	
-			_ => ()
-		}
+		// scene
+		self.logic.render( el, &mut self.gr_context, &self.hud_context,
+			&self.debug_menu, &self.journal.render );
 		// submit
 		self.call_count = self.gr_context.call_count;
 		self.gr_context.call_count = 0;
@@ -142,10 +102,6 @@ impl Game	{
 		self.gr_context.check( "render" );
 		// exit if logging draw calls
 		!self.journal.render.enable
-	}
-	
-	pub fn debug_move( &mut self, rot : bool, x : int, y : int )	{
-		self.s_battle.debug_move( rot, x, y );
 	}
 }
 
@@ -176,7 +132,7 @@ pub fn main()	{
 		fail!("GLFW Error: %s", description)
 	});
 	do glfw::start {
-		let config = scene::load_json::load_config::<Config>( "data/config.json" );
+		let config = load_json::load_config::<Config>( "data/config.json" );
 		let lg = engine::journal::Log::create( config.journal.path.clone() );
 		lg.add("--- Claymore ---");
 		let mut journal = Journal	{
@@ -217,7 +173,7 @@ pub fn main()	{
 		//window.set_input_mode( glfw::CURSOR_MODE, glfw::CURSOR_CAPTURED as int );
 		window.make_context_current();
 		let game = @mut Game::create( &config.elements, cw.width, cw.height, cw.samples, journal );
-		game.reset();
+		game.logic.reset();
 
 		std::local_data::set( game_singleton, game );
 
