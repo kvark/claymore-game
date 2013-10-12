@@ -33,7 +33,7 @@ pub enum Align	{
 pub enum Ground	{
 	GroundNone,
 	GroundSolid( Color ),
-	GroundFrame( Color ),
+	GroundFrame( Color, float ),
 	GroundImage( Path, [float, ..2] ),
 }
 

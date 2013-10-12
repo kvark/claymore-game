@@ -95,6 +95,15 @@ impl Primitive	{
 	}
 }
 
+pub fn map_poly_mode( dim : uint )-> gl::types::GLenum	{
+	match dim	{
+		1	=> gl::POINT,
+		2	=> gl::LINE,
+		3	=> gl::FILL,
+		_	=> fail!( "Unknown poly dim: %u", dim )
+	}
+}
+
 impl Stage for Primitive	{
 	fn activate( &mut self, new : &Primitive, poly : uint )	{
 		if poly == 3u	{

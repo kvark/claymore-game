@@ -177,7 +177,7 @@ impl Logic	{
 			selection	: ~[],
 			font	: gen_hud::common::Font	{
 				path	: ~"Vera.ttf",
-				size	: [10,10],
+				size	: [20,20],
 				kern	: [0,-10],
 			},
 		}

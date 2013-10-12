@@ -138,10 +138,10 @@ impl<T> Menu<T>	{
 			let ground = if (i as u8)==selected	{
 				gen::GroundSolid(0x80808080u)
 			} else {
-				gen::GroundFrame(0x80808080u)
+				gen::GroundFrame(0x80808080u, 2f)
 			};
 			gen::Child( item.name.clone(), gen::ElBox(
-				gen::SizeRel( 1.0 ), gen::SizeAbs( 100 ),
+				gen::SizeRel( 1.0 ), gen::SizeAbs( 30 ),
 				gen::Box	{
 					align	: gen::AlignHor,
 					ground	: ground,
@@ -179,21 +179,32 @@ impl<T> Menu<T>	{
 	}
 	
 	pub fn build( &self, alpha : float )-> gen::Screen	{
+		let offset = [100u,100u];
 		gen::Screen	{
 			alpha	: alpha,
 			root	: gen::Box{
 				align	: gen::AlignHor,
 				ground	: gen::GroundNone,
 				children: ~[
-					gen::Child( ~"tab",		gen::ElSpace( [100,100] ) ),
-					gen::Child( ~"menu",	gen::ElBox(
+					gen::Child( ~"tab_hor",	gen::ElSpace( [offset[0],0] )),
+					gen::Child( ~"sub-tab",	gen::ElBox(
 						gen::SizeRel( 0.8 ), gen::SizeRel( 1.0 ),
 						gen::Box{
-							align	: gen::AlignHor,
+							align	: gen::AlignVer,
 							ground	: gen::GroundNone,
-							children: self.build_horisontal(),
+							children: ~[
+								gen::Child( ~"tab_ver",	gen::ElSpace( [0,offset[1]] )),
+								gen::Child( ~"menu",	gen::ElBox(
+									gen::SizeRel( 0.8 ), gen::SizeRel( 0.8 ),
+									gen::Box{
+										align	: gen::AlignHor,
+										ground	: gen::GroundNone,
+										children: self.build_horisontal(),
+									}
+								)),	//menu
+							],
 						}
-					)),
+					)),	//sub-tab
 				],
 			},
 		}

@@ -71,6 +71,7 @@ struct FontCache	{
 pub struct Context	{
 	input	: call::Input,
 	rast	: rast::State,
+	program_solid	: @shade::Program,
 	program_image	: @shade::Program,
 	program_text	: @shade::Program,
 	sampler_image	: texture::Sampler,
@@ -88,8 +89,9 @@ impl Context	{
 		Context{
 			input	: call::Input::new( vao, quad ),
 			rast	: hud_rast,
-			program_image	: engine::load::load_program( gc, "data/code/hud/image", lg ),
-			program_text	: engine::load::load_program( gc, "data/code/hud/text", lg ),
+			program_solid	: engine::load::load_program( gc, "data/code/hud/solid",	lg ),
+			program_image	: engine::load::load_program( gc, "data/code/hud/image",	lg ),
+			program_text	: engine::load::load_program( gc, "data/code/hud/text",		lg ),
 			sampler_image	: texture::Sampler::new(1u,0),
 			sampler_text	: texture::Sampler::new(1u,0),
 			cache_images	: HashMap::new(),
@@ -131,8 +133,12 @@ impl Context	{
 	}
 
 	fn make_call( &self, prog : @shade::Program, data : shade::DataMap,
-			output : &call::Output )-> call::Call	{
-		call::CallDraw( self.input.clone(), output.clone(), self.rast, prog, data )
+			output : &call::Output, rast_override : Option<rast::State> )-> call::Call	{
+		let rast = match rast_override	{
+			Some(r)	=> r,
+			None	=> self.rast,
+		};
+		call::CallDraw( self.input.clone(), output.clone(), rast, prog, data )
 	}
 
 	fn transform( &self, r : &Rect, screen_size : &gen::Vector )-> shade::Uniform	{
@@ -142,7 +148,8 @@ impl Context	{
 			dx * (r.w as f32),
 			dy * (r.h as f32),
 			dx * (r.x as f32) - 1f32,
-			dy * (r.y as f32) - 1f32
+			//dy * (r.y as f32) - 1f32
+			1f32 - dy * ((r.y+r.h) as f32)
 			);
 		shade::UniFloatVec(vt)
 	}
@@ -193,7 +200,7 @@ impl Context	{
 					let vc = Vec4::new( 0f32, 0f32, 1f32, 1f32 );
 					data.insert( ~"u_Center",		shade::UniFloatVec(vc) );
 					data.insert( ~"u_Transform",	self.transform(&rect,screen_size) );
-					calls.push( self.make_call( self.program_image, data, out ));
+					calls.push( self.make_call( self.program_image, data, out, None ));
 					[t.width,t.height]
 				},
 				&gen::ElText(ref text)	=>	{
@@ -208,7 +215,7 @@ impl Context	{
 					let dr = Rect{ x:off[0], y:off[1], w:t.width, h:t.height };
 					data.insert( ~"u_Transform", self.transform(&dr,screen_size) );
 					// return
-					calls.push( self.make_call( self.program_text, data, out ));
+					calls.push( self.make_call( self.program_text, data, out, None ));
 					[t.width,t.height]
 				},
 				&gen::ElSpace(space)	=> space,
@@ -226,6 +233,32 @@ impl Context	{
 			}
 			assert!( off[0] <= area.w && off[1] <= area.h );
 		}
+		// draw box
+		let mut abox = area.clone();
+		match box.align	{
+			gen::AlignHor	=> {abox.w = off[0] - area.x},
+			gen::AlignVer	=> {abox.h = off[1] - area.y},
+		}
+		let mut data = shade::DataMap::new();
+		data.insert( ~"u_Transform",self.transform(&abox,screen_size) );
+		let c0 = match box.ground	{
+			gen::GroundNone	=> call::CallEmpty,
+			gen::GroundSolid( color )	=> {
+				data.insert( ~"u_Color", 	Context::get_color_param(color) );
+				self.make_call( self.program_solid, data, out, None )
+			},
+			gen::GroundFrame( color, size )	=> {
+				data.insert( ~"u_Color", 	Context::get_color_param(color) );
+				let mut rast = self.rast.clone();
+				rast.prime.poly_mode = rast::map_poly_mode(2);
+				rast.prime.line_width = size as f32;
+				self.make_call( self.program_solid, data, out, Some(rast) )
+			},
+			gen::GroundImage( ref _path, ref _center )	=> {
+				call::CallEmpty	//TODO
+			},
+		};
+		calls.insert(0,c0);
 		calls
 	}
 }
