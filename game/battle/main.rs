@@ -188,6 +188,22 @@ impl Scene	{
 	pub fn debug_move( &self, _rot : bool, _x : int, _y : int )	{
 		//empty
 	}
+
+	pub fn make_debug_menu_item( &self )-> debug::MenuItem<Scene>	{
+		debug::MenuItem	{
+			name	: ~"battle",
+			action	: debug::ActionList(~[
+				debug::MenuItem	{
+					name	: ~"battle-reset",
+					action	: debug::ActionFun(|s:&mut Scene| {s.reset()}),
+				},
+				debug::MenuItem	{
+					name	: ~"battle-test",
+					action	: debug::ActionFun(|_| {}),
+				},
+			]),
+		}
+	}
 }
 
 

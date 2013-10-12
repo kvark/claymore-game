@@ -30,6 +30,12 @@ struct Logic	{
 	technique	: gr_mid::draw::Technique,
 }
 
+impl debug::AccessMut<battle::Scene> for Logic	{
+	fn access_mut<'a>( &'a mut self )-> &'a mut battle::Scene	{
+		&mut self.s_battle
+	}
+}
+
 impl Logic	{
 	pub fn create( _el : &main::Elements, gcon : &mut gr_low::context::Context, fcon : &gr_mid::font::Context,
 			hcon : &mut hud::main::Context, log : &journal::Log )-> Logic	{
@@ -75,8 +81,9 @@ impl Logic	{
 			}
 		}
 		match key	{
-			glfw::KeyM		=>
-				debug.selection.clear(),
+			glfw::KeyM		=> {
+				debug.selection.clear();
+			},
 			glfw::KeyUp		=> {
 				let last = debug.selection.mut_iter().last().
 					expect("Debug menu: nothing is selected");
@@ -96,7 +103,19 @@ impl Logic	{
 					*last += 1;
 				}
 			},
-			glfw::KeyEnter	=> 	{
+			glfw::KeyLeft	=> {
+				debug.selection.pop();
+			},
+			glfw::KeyRight	=>	{
+				let extend = match debug.get_selected_item().action	{
+					debug::ActionList(ref list) if !list.is_empty()	=> true,
+					_	=> false,	//beep
+				};
+				if extend	{
+					debug.selection.push(0);
+				}
+			},
+			glfw::KeyEnter	=> {
 				let extend = match debug.get_selected_item().action	{
 					debug::ActionFun(ref fun)	=> { (*fun)(self); false }
 					debug::ActionList(ref list) if !list.is_empty()	=> true,
@@ -148,12 +167,9 @@ impl Logic	{
 			root	: debug::MenuItem	{
 				name	: ~"root",
 				action	: debug::ActionList(~[
+					self.s_battle.make_debug_menu_item().convert(),
 					debug::MenuItem	{
-						name	: ~"battle-reset",
-						action	: debug::ActionFun(|c:&mut Logic| {c.s_battle.reset()}),
-					},
-					debug::MenuItem	{
-						name	: ~"test-2",
+						name	: ~"logic-test",
 						action	: debug::ActionFun(|_| {}),
 					},
 				]),

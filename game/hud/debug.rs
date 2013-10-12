@@ -13,12 +13,13 @@ pub struct MenuItem<T>	{
 	action	: MenuAction<T>,
 }
 
-trait AccessMut<T>{
+
+pub trait AccessMut<T>{
 	fn access_mut<'a>(&'a mut self)-> &'a mut T;
 }
 
 impl<T> MenuItem<T>	{
-	fn convert<U : AccessMut<T>>( self )-> MenuItem<U>	{
+	pub fn convert<U : AccessMut<T>>( self )-> MenuItem<U>	{
 		let MenuItem{ name, action } = self;
 		MenuItem	{
 			name	: name,
