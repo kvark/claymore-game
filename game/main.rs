@@ -19,6 +19,29 @@ struct Journal	{
 	input	: engine::journal::Log,
 }
 
+struct Time	{
+	moment	: float,
+	render	: engine::anim::Timer,
+	animate	: engine::anim::Timer,
+}
+
+impl Time	{
+	pub fn new()-> Time	{
+		Time	{
+			moment	: glfw::get_time(),
+			render	: engine::anim::Timer::new(),
+			animate	: engine::anim::Timer::new(),
+		}
+	}
+	pub fn update( &mut self )	{
+		let d = glfw::get_time() - self.moment;
+		self.render.update( d );
+		self.animate.update( d );
+		self.moment += d;
+	}
+}
+
+
 struct Game	{
 	gr_context	: gr_low::context::Context,
 	aud_context	: engine::audio::Context,
@@ -28,6 +51,7 @@ struct Game	{
 	frames		: uint,
 	call_count	: uint,
 	logic 		: Logic,
+	time 		: Time,
 	debug_menu	: hud::debug::Menu<Logic>,
 }
 
@@ -60,7 +84,8 @@ impl Game	{
 		let fcon = gr_mid::font::Context::create();
 		let mut hcon = hud::main::Context::create( &mut gcon, &journal.load );
 		// logic
-		let logic = Logic::create( el, &mut gcon, &fcon, &mut hcon, &journal.load );
+		let mut logic = Logic::create( el, &mut gcon, &fcon, &mut hcon, &journal.load );
+		logic.reset( 0f );
 		// debug menu
 		let menu : hud::debug::Menu<Logic> = logic.create_debug_menu();
 		menu.preload( &mut gcon, &fcon, &mut hcon, &journal.load );
@@ -74,6 +99,7 @@ impl Game	{
 			journal		: journal,
 			frames:0u, call_count:0u,
 			logic		: logic,
+			time		: Time::new(),
 			debug_menu	: menu,
 		}
 	}
@@ -82,13 +108,14 @@ impl Game	{
 		std::local_data::get( game_singleton, |opt| *opt.expect("Your game is dead") )
 	}
 
-	pub fn update( &mut self, input : &input::State )-> bool	{
-		self.logic.update( input, &self.journal.main )
+	pub fn update( &mut self, input : input::State )-> bool	{
+		self.logic.update( &input, &self.journal.main )
 	}
 
 	pub fn on_input( &mut self, event : input::Event )	{
 		self.journal.input.add( event.to_str() );
-		self.logic.on_input( &event, &mut self.debug_menu );
+		self.time.update();
+		self.logic.on_input( &event, self.time.animate.time, &mut self.debug_menu );
 	}
 
 	pub fn render( &mut self, el : &Elements )-> bool	{
@@ -173,31 +200,29 @@ pub fn main()	{
 		//window.set_input_mode( glfw::CURSOR_MODE, glfw::CURSOR_CAPTURED as int );
 		window.make_context_current();
 		let game = @mut Game::create( &config.elements, cw.width, cw.height, cw.samples, journal );
-		game.logic.reset();
-
 		std::local_data::set( game_singleton, game );
 
 		// init callbacks
 		window.set_iconify_callback( |_win,done|	{
-			Game::get().on_input( input::Focus(!done) );
+			Game::get().on_input( input::EvFocus(!done) );
 		});
 		window.set_focus_callback( |_win,done|	{
-			Game::get().on_input( input::Focus(done) );
+			Game::get().on_input( input::EvFocus(done) );
 		});
 		window.set_char_callback( |_win,key|	{
-			Game::get().on_input( input::Character( key ));
+			Game::get().on_input( input::EvCharacter( key ));
 		});
 		window.set_key_callback( |_win,key,_scan,action,_mods|	{
-			Game::get().on_input( input::Keyboard( key, action == glfw::Press ));
+			Game::get().on_input( input::EvKeyboard( key, action == glfw::Press ));
 		});
 		window.set_cursor_pos_callback( |_win,posx,posy|	{
-			Game::get().on_input( input::MouseMove( posx, posy ));
+			Game::get().on_input( input::EvMouseMove( posx, posy ));
 		});
 		window.set_mouse_button_callback( |_win,button,action,_mods|	{
-			Game::get().on_input( input::MouseClick( button as uint, action == glfw::Press ));
+			Game::get().on_input( input::EvMouseClick( button as uint, action == glfw::Press ));
 		});
 		window.set_scroll_callback( |_win,floatx,floaty|	{
-			Game::get().on_input( input::Scroll( floatx, floaty ));
+			Game::get().on_input( input::EvScroll( floatx, floaty ));
 		});
 		
 		loop	{
@@ -217,7 +242,7 @@ pub fn main()	{
 					}
 				}
 				input::State{
-					time	: engine::anim::get_time(),
+					time	: glfw::get_time(),
 					focus	: window.is_visible(),
 					mouse	: input::Mouse{
 						x	: px / (cw.width as float),
@@ -227,7 +252,7 @@ pub fn main()	{
 				}
 			};
 			//TODO: update on a higher frequency than render
-			if !game.update( &input )	{
+			if !game.update( input )	{
 				break
 			}
 			// render

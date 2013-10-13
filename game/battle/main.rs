@@ -30,8 +30,7 @@ pub struct Character	{
 }
 
 impl Character	{
-	pub fn update( &mut self )-> bool	{
-		let time = engine::anim::get_time();
+	pub fn update( &mut self, time : float )-> bool	{
 		let mut moment  = time - self.start_time;
 		if moment>self.record.duration	{
 			//self.record = self.skeleton.find_record(~"ArmatureAction").expect(~"character Idle not found");
@@ -65,8 +64,7 @@ pub struct View	{
 }
 
 impl View	{
-	pub fn move( &mut self, dir : int )-> bool	{
-		let time = engine::anim::get_time();
+	pub fn move( &mut self, dir : int, time : float )-> bool	{
 		if dir!=0 && time > self.start_time + 0.5f	{
 			let l = self.points.len() as int;
 			self.destination = (((self.destination as int) + dir + l) % l) as uint;
@@ -76,8 +74,7 @@ impl View	{
 		}else	{false}
 	}
 
-	pub fn update( &mut self )-> bool	{
-		let time = engine::anim::get_time();
+	pub fn update( &mut self, time : float )-> bool	{
 		match self.source	{
 			Some(source)	=>	{
 				let moment = (time - self.start_time) / self.trans_duration;
@@ -107,31 +104,31 @@ pub struct Scene	{
 }
 
 impl Scene	{
-	pub fn reset( &mut self )	{
+	pub fn reset( &mut self, time : float )	{
 		self.grid.reset();
 		self.hero.move( &mut self.grid, [7,2] );
 		self.boss.move( &mut self.grid, [5,5] );
-		let time = engine::anim::get_time();
 		self.hero.start_time = time;
 		self.boss.start_time = time;
 	}
 
 	pub fn update( &mut self, input : &input::State, aspect : f32 )-> bool	{
+		let t = input.time;	//FIXME
 		let ok = self.grid.update( &self.view.cam, aspect, input.mouse.x, input.mouse.y );
-		self.hero.update() && self.boss.update() && self.view.update() && ok
+		self.hero.update(t) && self.boss.update(t) && self.view.update(t) && ok
 	}
 
-	pub fn on_input( &mut self, event : &input::Event )	{
+	pub fn on_input( &mut self, event : &input::Event, time : float )	{
 		match event	{
-			&input::Keyboard(key,press) if press	=> {
+			&input::EvKeyboard(key,press) if press	=> {
 				// camera rotation
 				match key	{
-					glfw::KeyE		=> { self.view.move(-1); },
-					glfw::KeyQ		=> { self.view.move(1); },
+					glfw::KeyE		=> { self.view.move(-1,time); },
+					glfw::KeyQ		=> { self.view.move(1,time); },
 					_	=> (),
 				}
 			},
-			&input::MouseClick(key,press) if key==0 && press	=> {
+			&input::EvMouseClick(key,press) if key==0 && press	=> {
 				match self.grid.selected	{
 					Some(pos)	=>	{
 						match self.grid.get_cell(pos)	{
@@ -195,7 +192,7 @@ impl Scene	{
 			action	: debug::ActionList(~[
 				debug::MenuItem	{
 					name	: ~"battle-reset",
-					action	: debug::ActionFun(|s:&mut Scene| {s.reset()}),
+					action	: debug::ActionFun(|s:&mut Scene| {s.reset(0f)}),
 				},
 				debug::MenuItem	{
 					name	: ~"battle-test",

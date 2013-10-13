@@ -1,9 +1,33 @@
-extern mod extra;
-
+use std;
 use space::Interpolate;
 
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - //
 //		Timers											//
+
+pub struct Timer	{
+	time		: float,
+	speed		: float,
+	max_delta	: float,
+	active		: bool,
+}
+
+impl Timer	{
+	pub fn new()-> Timer	{
+		Timer	{
+			time		: 0f,
+			speed		: 1f,
+			max_delta	: 1f,
+			active		: true,
+		}
+	}
+	pub fn update( &mut self, delta : float )	{
+		if self.active	{
+			assert!( delta >= 0f );
+			let d = std::num::min( delta, self.max_delta );
+			self.time += self.speed * d;
+		}
+	}
+}
 
 
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - //
@@ -82,32 +106,25 @@ pub trait Player<C>	{
 	fn set_record( &mut self, rec : &Record<C>, time : float );
 }
 
-
-pub fn get_time()-> float	{
-	//extra::time::precise_time_s()
-	let tm = extra::time::get_time();
-	(tm.sec as float) + 0.000000001f * (tm.nsec as float)
-}
-
 pub trait Act	{
-	fn update( &mut self )-> bool;
+	fn update( &mut self, time : float )-> bool;
 }
 
-pub struct Delay	{
+pub struct Wait	{
 	end	: float,
 }
 
-impl Delay	{
-	pub fn new( time : float )-> Delay	{
-		Delay{
-			end : get_time() + time	
+impl Wait	{
+	pub fn new( end_time : float )-> Wait	{
+		Wait{
+			end : end_time	
 		} 
 	}
 }
 
-impl Act for Delay	{
-	fn update( &mut self )-> bool	{
-		get_time() < self.end
+impl Act for Wait	{
+	fn update( &mut self, time : float )-> bool	{
+		time < self.end
 	}
 }
 
@@ -119,12 +136,12 @@ pub struct Action<C>	{
 }
 
 impl<C> Action<C>	{
-	fn new( p : @mut Player<C>, name : ~str )-> Option<Action<C>>	{
+	fn new( p : @mut Player<C>, name : ~str, time : float )-> Option<Action<C>>	{
 		match p.find_record(name)	{
 			Some(r)	=> Some(Action	{
 				player	: p,
 				record	: r,
-				start	: get_time(),
+				start	: time,
 			}),
 			None => None
 		}
@@ -132,8 +149,8 @@ impl<C> Action<C>	{
 }
 
 impl<C> Act for Action<C>	{
-	fn update( &mut self )-> bool	{
-		let t = get_time() - self.start;
+	fn update( &mut self, time : float )-> bool	{
+		let t = time - self.start;
 		if t>=0f && t<=self.record.duration	{
 			self.player.set_record( self.record, t );
 			true

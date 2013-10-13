@@ -228,7 +228,7 @@ fn parse_child( child : &gen::NodeChild, parent : @mut space::Node, scene : &mut
 pub fn parse( path : &str, iscene : &gen::Scene, custom : &[gen::Material], gc : &mut gr_low::context::Context,
 		opt_vao : Option<@mut gr_low::buf::VertexArray>, lg : &engine::journal::Log )-> common::Scene	{
 	lg.add( ~"Loading scene: " + path );
-	let c0 = engine::anim::get_time();
+	let c0 = engine::load::get_time();
 	let mut scene = common::Scene	{
 		context		: common::SceneContext::new( path.to_owned() ),
 		entities	: common::EntityGroup(~[]),
@@ -238,7 +238,7 @@ pub fn parse( path : &str, iscene : &gen::Scene, custom : &[gen::Material], gc :
 	// materials
 	parse_materials( custom, "data/code-game/",			&mut scene.context, gc, lg );
 	parse_materials( iscene.materials, "data/code/mat/",&mut scene.context, gc, lg );
-	let c1 = engine::anim::get_time();
+	let c1 = engine::load::get_time();
 	lg.add(fmt!( "\t[p] Materials: %f sec", c1-c0 ));
 	// nodes and stuff
 	let get_input = |mesh_name : ~str|	{
@@ -253,7 +253,7 @@ pub fn parse( path : &str, iscene : &gen::Scene, custom : &[gen::Material], gc :
 	for child in iscene.nodes.iter()	{
 		parse_child( child, root, &mut scene, |s| get_input(s), lg );
 	}
-	let c2 = engine::anim::get_time();
+	let c2 = engine::load::get_time();
 	lg.add(fmt!( "\t[p] Objects: %f sec", c2-c1 ));
 	// armatures-1
 	for (_,arm) in scene.context.armatures.iter()	{
@@ -262,7 +262,7 @@ pub fn parse( path : &str, iscene : &gen::Scene, custom : &[gen::Material], gc :
 			expect( ~"Unable to find armature root " + *name );
 		arm.change_root( root );
 	}
-	let c3 = engine::anim::get_time();
+	let c3 = engine::load::get_time();
 	lg.add(fmt!( "\t[p] Total: %f sec", c3-c0 ));
 	// done
 	scene

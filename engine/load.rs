@@ -4,7 +4,7 @@ extern mod stb_image;
 
 use std;
 use std::{io,str};
-use extra::future::Future;
+use extra;
 
 use cgmath::angle;
 use cgmath::rotation::Euler;
@@ -134,7 +134,12 @@ impl Reader	{
 
 
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - //
-//		Misc utilities											//
+//		Misc utilities
+
+pub fn get_time()-> float {
+	let tm = extra::time::get_time();
+	(tm.sec as float) + 0.000000001f * (tm.nsec as float)
+}											//
 
 pub fn load_text( path : ~str )-> ~str	{
 	match io::read_whole_file_str(&std::path::Path(path))	{
@@ -198,7 +203,7 @@ pub fn load_texture_2D( ct : &mut context::Context, path : &str, mipmap : bool )
 
 pub struct TextureFuture	{
 	name	: ~str,
-	image	: Future<stb_image::image::LoadResult>,
+	image	: extra::future::Future<stb_image::image::LoadResult>,
 	mipmap	: bool,
 }
 
@@ -206,7 +211,7 @@ impl TextureFuture	{
 	pub fn new_2D( path : ~str, mipmap : bool )-> TextureFuture	{
 		TextureFuture	{
 			name	: path.clone(),
-			image	: Future::from_fn(|| {stb_image::image::load(path.clone())} ),
+			image	: extra::future::Future::from_fn(|| {stb_image::image::load(path.clone())} ),
 			mipmap	: mipmap,
 		}
 	}

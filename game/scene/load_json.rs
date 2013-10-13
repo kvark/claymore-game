@@ -282,10 +282,10 @@ pub struct SceneInfo	{
 pub fn load_scene( path : &str, gc : &mut gr_low::context::Context,
 		opt_vao : Option<@mut gr_low::buf::VertexArray>, lg : &engine::journal::Log )-> common::Scene	{
 	lg.add( "Loading scene: " + path );
-	let c0 = engine::anim::get_time();
+	let c0 = engine::load::get_time();
 	let scene = load_config::<SceneInfo>( path + ".json" );
 	let mat_config = load_config::<~[MaterialInfo]>( path + ".mat.json" );
-	let c1 = engine::anim::get_time();
+	let c1 = engine::load::get_time();
 	lg.add(fmt!( "\t[p] Parse config: %f", c1-c0 ));
 	// materials
 	let mut tex_cache		: HashMap<~str,@gr_low::texture::Texture>	= HashMap::new();
@@ -325,12 +325,12 @@ pub fn load_scene( path : &str, gc : &mut gr_low::context::Context,
 		imat.fill_data( &mut data, &tex_cache );
 		map_data.insert( imat.name.clone(), data );
 	}
-	let c2 = engine::anim::get_time();
+	let c2 = engine::load::get_time();
 	lg.add(fmt!( "\t[p] Materials: %f", c2-c1 ));	
 	// nodes
 	let mut map_node : HashMap<~str,@mut engine::space::Node> = HashMap::new();
 	make_nodes( &scene.nodes, None, &mut map_node );
-	let c3 = engine::anim::get_time();
+	let c3 = engine::load::get_time();
 	lg.add(fmt!( "\t[p] Nodes: %f", c3-c2 ));
 	// context
 	let mut context = common::SceneContext{
@@ -345,7 +345,7 @@ pub fn load_scene( path : &str, gc : &mut gr_low::context::Context,
 	};
 	// armatures
 	context.read_armatures( path, lg );
-	let c4 = engine::anim::get_time();
+	let c4 = engine::load::get_time();
 	lg.add(fmt!( "\t[p] Armatures: %f", c4-c3 ));
 	// entities
 	let entity_group = parse_group( &mut context, scene.entities, gc, opt_vao, lg );
@@ -386,7 +386,7 @@ pub fn load_scene( path : &str, gc : &mut gr_low::context::Context,
 			kind	: data,
 		});
 	}
-	let c5 = engine::anim::get_time();
+	let c5 = engine::load::get_time();
 	lg.add(fmt!( "\t[p] Objects: %f", c5-c4 ));
 	lg.add(fmt!( "\t[p] Total: %f", c5-c0 ));
 	// done

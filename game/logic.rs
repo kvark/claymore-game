@@ -54,9 +54,10 @@ impl Logic	{
 		}
 	}
 
-	pub fn reset( &mut self )	{
+	pub fn reset( &mut self, time : float )	{
 		match self.screen	{
-			ScreenBattle	=> self.s_battle.reset(),
+			ScreenBattle	=> self.s_battle.reset( time ),
+			//ScreenChar	=> self.s_editor.reset( time ),
 			_ => ()
 		}
 	}
@@ -70,7 +71,7 @@ impl Logic	{
 		}
 	}
 
-	fn on_debug_key( &mut self, key : glfw::Key, debug : &mut debug::Menu<Logic> )-> bool	{
+	fn on_debug_key( &mut self, key : input::Key, debug : &mut debug::Menu<Logic> )-> bool	{
 		if !debug.is_active()	{
 			return match key	{
 				glfw::KeyM	=>	{
@@ -130,14 +131,14 @@ impl Logic	{
 		true
 	}
 
-	pub fn on_input( &mut self, event : &input::Event, debug : &mut debug::Menu<Logic> )	{
+	pub fn on_input( &mut self, event : &input::Event, time : float, debug : &mut debug::Menu<Logic> )	{
 		match self.screen	{
-			//ScreenChar		=> self.s_editor.on_input( event ),
-			ScreenBattle	=> self.s_battle.on_input( event ),
+			//ScreenChar	=> self.s_editor.on_input( event, time ),
+			ScreenBattle	=> self.s_battle.on_input( event, time ),
 			_	=> ()
 		}
 		match event	{
-			&input::Keyboard(key,press) if press	=>
+			&input::EvKeyboard(key,press) if press	=>
 				self.on_debug_key( key, debug ),
 			_	=> false
 		};

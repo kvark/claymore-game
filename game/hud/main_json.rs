@@ -582,8 +582,8 @@ impl EditLabel	{
 }
 
 impl engine::anim::Act for EditLabel	{
-	fn update( &mut self )-> bool	{
-		let time_ms = (engine::anim::get_time() * 1000f) as uint;
+	fn update( &mut self, time : float )-> bool	{
+		let time_ms = (time * 1000f) as uint;
 		self.cursor.visible = self.active && (time_ms % 1000u < 500u);
 		true
 	}

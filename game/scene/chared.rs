@@ -99,6 +99,10 @@ pub struct Scene	{
 
 
 impl Scene	{
+	pub fn reset( &mut self, time : float )	{
+		self.start = time;
+	}
+
 	pub fn loose_focus( &mut self )	{
 		self.edit_label.active = false;
 		self.hud_active = AhInactive;
@@ -113,22 +117,22 @@ impl Scene	{
 			//let name = root.trace( x, y, lg );
 			//io::println( ~"Click: " + name );
 		}
-		self.edit_label.update();
+		self.edit_label.update( input.time );
 		self.control.update( input );
 		true
 	}
 
 	pub fn on_input( &mut self, event : &input::Event )	{
 		match event	{
-			&input::Character(c)	=> self.input_queue.push_char(c),
-			&input::Keyboard(key,press)	=> {
+			&input::EvCharacter(c)	=> self.input_queue.push_char(c),
+			&input::EvKeyboard(key,press)	=> {
 				match (key,press)	{
 					(glfw::KeyEscape,true)		=> self.loose_focus(),
 					(glfw::KeyBackspace,true)	=> self.input_queue.push_char( 'c' ),	//FIXME
 					_	=> ()
 				}
 			},
-			&input::MouseClick(key,press) if key==0	=> {
+			&input::EvMouseClick(key,press) if key==0	=> {
 				if press	{
 					self.loose_focus();
 					let (x,y) = self.mouse_point;
@@ -151,13 +155,14 @@ impl Scene	{
 					self.control.in_rotation = false;
 				}
 			},
-			&input::Scroll(_,scroll)	=> self.control.on_scroll(scroll),
+			&input::EvScroll(_,scroll)	=> self.control.on_scroll(scroll),
 			_	=> ()
 		}
 	}
 
-	pub fn render( &mut self, el : &main::Elements, ct : &mut gr_low::context::Context,
-			output : &gr_mid::call::Output, lg : &engine::journal::Log  )	{
+	pub fn render( &mut self, el : &main::Elements, time : float,
+			output : &gr_mid::call::Output, gc : &mut gr_low::context::Context,
+			lg : &engine::journal::Log  )	{
 		// clear screen
 		let cdata = gr_mid::call::ClearData{
 			color	:Some( gr_low::rast::Color::new(0x8080FFFF) ),
@@ -181,7 +186,7 @@ impl Scene	{
 		};
 		let mut queue = ~[c0,c1];
 		if true	{	// update animation
-			let t = engine::anim::get_time() - self.start;
+			let t = time - self.start;
 			let r = self.skel.actions[0];
 			let nloops = (t / r.duration) as uint;
 			let t2 = t - r.duration * (nloops as float);
@@ -216,12 +221,12 @@ impl Scene	{
 					for ent in group.iter()	{
 						queue.push( self.shadow.tech_solid.process( ent,
 							self.shadow.output.clone(), self.shadow.rast,
-							&mut self.cache, ct, lg ));
+							&mut self.cache, gc, lg ));
 					}
 				}
 				/*for [&self.gr_hair].each() |group|	{
 					for group.each() |ent|	{
-						queue.push( self.shadow.tech_alpha.process( ent, ct, lg ));
+						queue.push( self.shadow.tech_alpha.process( ent, gc, lg ));
 					}
 				}*/
 			}
@@ -234,7 +239,7 @@ impl Scene	{
 					for ent in group.mut_iter()	{
 						queue.push( self.depth.tech_solid.process( ent,
 							self.depth.output.clone(), self.depth.rast,
-							&mut self.cache, ct, lg ));
+							&mut self.cache, gc, lg ));
 						lbuf.fill_data( &mut ent.data );
 					}
 				}
@@ -243,7 +248,7 @@ impl Scene	{
 				}
 				queue.push( lbuf.update_depth( self.depth.texture ));
 				queue.push_all_move( lbuf.bake_layer(
-					0u, self.lights, &self.lvolume, self.cam, ct, lg
+					0u, self.lights, &self.lvolume, self.cam, gc, lg
 					));
 				lbuf.tech_apply
 			},
@@ -251,25 +256,25 @@ impl Scene	{
 		};
 		if el.character	{
 			for ent in self.gr_main.iter()	{
-				queue.push( tech.process( ent, output.clone(), self.rast_solid, &mut self.cache, ct, lg ) );
+				queue.push( tech.process( ent, output.clone(), self.rast_solid, &mut self.cache, gc, lg ) );
 			}
 			for ent in self.gr_cape.iter()	{
-				queue.push( tech.process( ent, output.clone(), self.rast_cloak, &mut self.cache, ct, lg ) );	
+				queue.push( tech.process( ent, output.clone(), self.rast_cloak, &mut self.cache, gc, lg ) );	
 			}
 			for ent in self.gr_hair.iter()	{
-				queue.push( tech.process( ent, output.clone(), self.rast_alpha, &mut self.cache, ct, lg ) );
+				queue.push( tech.process( ent, output.clone(), self.rast_alpha, &mut self.cache, gc, lg ) );
 			}
 		}
 		if el.shadow	{
 			for ent in self.gr_other.iter()	{
-				queue.push( tech.process( ent, output.clone(), self.rast_solid, &mut self.cache, ct, lg ) );
+				queue.push( tech.process( ent, output.clone(), self.rast_solid, &mut self.cache, gc, lg ) );
 			}
 		}
 		if el.hud	{
 			if !self.input_queue.is_empty()	{
 				match self.hud_active	{
 					AhEditName	=> {
-						self.edit_label.change( self.input_queue, ct, lg );
+						self.edit_label.change( self.input_queue, gc, lg );
 						self.hud_screen.root.update( lg );
 					},
 					_	=> ()
@@ -280,7 +285,7 @@ impl Scene	{
 				self.hud_screen.root.draw_all( &self.hud_context )
 				);
 			let (x,y) = self.mouse_point;
-			let mut rast  = ct.default_rast;
+			let mut rast  = gc.default_rast;
 			rast.prime.poly_mode = gr_low::rast::map_polygon_fill(2);
 			let mut data = gr_low::shade::DataMap::new();
 			let vc = Vec4::new(1f32,0f32,0f32,1f32);
@@ -295,7 +300,7 @@ impl Scene	{
 		}
 		if el.hud_debug	{
 			queue.push_all_move({
-				let mut rast  = ct.default_rast;
+				let mut rast  = gc.default_rast;
 				rast.prime.poly_mode = gr_low::rast::map_polygon_fill(2);
 				let mut data = gr_low::shade::DataMap::new();
 				let vc = Vec4::new(1f32,0f32,0f32,1f32);
@@ -304,26 +309,26 @@ impl Scene	{
 					self.hud_debug, &mut data, &rast )
 			});
 		}
-		ct.flush( queue, lg );
+		gc.flush( queue, lg );
 	}
 }
 
 
-pub fn create( el : &main::Elements, ct : &mut gr_low::context::Context, fcon : &gr_mid::font::Context,
+pub fn create( el : &main::Elements, gc : &mut gr_low::context::Context, fcon : &gr_mid::font::Context,
 		lg : &engine::journal::Log )-> Scene	{
-	let vao = ct.create_vertex_array();
+	let vao = gc.create_vertex_array();
 	let mut scene = if true	{ //new method
 		let iscene = gen_scene::chared::main::load();
 		let icustom = gen_scene::chared::custom::load();
-		scene::load::parse( "data/scene/claymore-2a", &iscene, icustom, ct, Some(vao), lg )
+		scene::load::parse( "data/scene/claymore-2a", &iscene, icustom, gc, Some(vao), lg )
 	}else	{
-		scene::load_json::load_scene( "data/scene/claymore-2a", ct, Some(vao), lg )
+		scene::load_json::load_scene( "data/scene/claymore-2a", gc, Some(vao), lg )
 	};
 	let detail_info = scene::load_json::load_config::<~[scene::load_json::EntityInfo]>( "data/details.json" );
-	let mut details = scene::load_json::parse_group( &mut scene.context, detail_info, ct, Some(vao), lg );
+	let mut details = scene::load_json::parse_group( &mut scene.context, detail_info, gc, Some(vao), lg );
 	// techniques & rast states
 	let tech = @gr_mid::draw::load_technique( "data/code/tech/forward/spot-shadow" );
-	let mut rast = ct.default_rast;
+	let mut rast = gc.default_rast;
 	rast.depth.test = true;
 	rast.prime.cull = true;
 	let r_solid = rast;
@@ -340,20 +345,20 @@ pub fn create( el : &main::Elements, ct : &mut gr_low::context::Context, fcon : 
 	let hair = group.divide( &~"Hair_Geo2" );
 	lg.add(fmt!( "Group size: %u", group.len() ));
 	let envir = {
-		let mesh = @gr_mid::mesh::create_quad( ct );
+		let mesh = @gr_mid::mesh::create_quad( gc );
 		let mut data = gr_low::shade::DataMap::new();
 		let samp = gr_low::texture::Sampler::new(3u,1);
 		let use_spherical = false;
 		let prog = if use_spherical	{
 			let tex = *scene.context.textures.get( &~"data/texture/Topanga_Forest_B_3k.hdr" );
 			data.insert( ~"t_Environment",	gr_low::shade::UniTexture(0,tex,Some(samp)) );
-			engine::load::load_program( ct, "data/code-game/envir", lg )
+			engine::load::load_program( gc, "data/code-game/envir", lg )
 		}else	{
-			let tex = engine::load::load_texture_2D( ct, "data/texture/bg2.jpg", true );
+			let tex = engine::load::load_texture_2D( gc, "data/texture/bg2.jpg", true );
 			data.insert( ~"t_Image",		gr_low::shade::UniTexture(0,tex,Some(samp)) );
-			engine::load::load_program( ct, "data/code-game/copy", lg )
+			engine::load::load_program( gc, "data/code-game/copy", lg )
 		};
-		let rast = ct.default_rast;
+		let rast = gc.default_rast;
 		//rast.set_depth( ~"<=", false );
 		Envir{
 			input	: gr_mid::call::Input::new( vao, mesh ),
@@ -363,30 +368,30 @@ pub fn create( el : &main::Elements, ct : &mut gr_low::context::Context, fcon : 
 		}		
 	};
 	// load char HUD
-	let mut hud_screen = hud::load_screen( "data/hud/char.json", ct, fcon, lg );
+	let mut hud_screen = hud::load_screen( "data/hud/char.json", gc, fcon, lg );
 	hud_screen.root.update( lg );
 	let hc = {
-		let mut hud_rast = ct.default_rast;
+		let mut hud_rast = gc.default_rast;
 		hud_rast.set_blend( "s+d", "Sa", "1-Sa" );
-		let quad = @gr_mid::mesh::create_quad(ct);
-		let pmap = gr_mid::call::PlaneMap::new_main( ct, ~"o_Color" );
-		let out = gr_mid::call::Output::new( ct.default_frame_buffer, pmap );
+		let quad = @gr_mid::mesh::create_quad(gc);
+		let pmap = gr_mid::call::PlaneMap::new_main( gc, ~"o_Color" );
+		let out = gr_mid::call::Output::new( gc.default_frame_buffer, pmap );
 		hud::Context{
 			input	: gr_mid::call::Input::new( vao, quad ),
 			output	: out,
 			rast	: hud_rast,
-			size	: ct.get_screen_size(),
+			size	: gc.get_screen_size(),
 		}
 	};
 	let edit_label = @mut hud::EditLabel::obtain( &mut hud_screen, ~"id.name.text" );
-	let hdebug = engine::load::load_program( ct, "data/code/hud/debug", lg );
+	let hdebug = engine::load::load_program( gc, "data/code/hud/debug", lg );
 	//arm.set_record( arm.actions[0], 0f );
-	let depth = render::depth::Data::create( ct );
+	let depth = render::depth::Data::create( gc );
 	let lbuf = if el.lbuffer!=0	{
-		Some( render::lbuf::Context::create( ct, 2u, el.lbuffer ))
+		Some( render::lbuf::Context::create( gc, 2u, el.lbuffer ))
 	}else	{None};
-	let lvolume = render::lbuf::LightVolume::create( ct, lg );
-	let shadow = render::shadow::create_data( ct, *scene.lights.get(&~"Lamp"), 0x200u );
+	let lvolume = render::lbuf::LightVolume::create( gc, lg );
+	let shadow = render::shadow::create_data( gc, *scene.lights.get(&~"Lamp"), 0x200u );
 	// load camera
 	let cam = *scene.cameras.get(&~"Camera");
 	//cam.proj = shadow.light.proj;
@@ -428,7 +433,7 @@ pub fn create( el : &main::Elements, ct : &mut gr_low::context::Context, fcon : 
 		lbuf		: lbuf,
 		lvolume		: lvolume,
 		shadow	: shadow,
-		start	: engine::anim::get_time(),
+		start	: 0f,
 		hud_screen	: hud_screen,
 		hud_context : hc,
 		hud_debug	: hdebug,
