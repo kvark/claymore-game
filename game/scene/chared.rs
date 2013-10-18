@@ -339,10 +339,10 @@ pub fn create( el : &main::Elements, gc : &mut gr_low::context::Context, fcon : 
 	let r_alpha = rast;
 	// armature
 	let arm = { *scene.context.armatures.get(&~"Armature.002") };
-	let mut group = scene.entities.divide( &~"noTrasnform" );
-	group.swap_entity( &~"boots", &mut details );
-	let cape = group.divide( &~"polySurface172" );
-	let hair = group.divide( &~"Hair_Geo2" );
+	let mut group = scene.entities.divide( &"noTrasnform" );
+	group.swap_entity( &"boots", &mut details );
+	let cape = group.divide( &"polySurface172" );
+	let hair = group.divide( &"Hair_Geo2" );
 	lg.add(fmt!( "Group size: %u", group.len() ));
 	let envir = {
 		let mesh = @gr_mid::mesh::create_quad( gc );

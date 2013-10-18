@@ -23,9 +23,9 @@ pub mod logic;
 pub mod main;
 
 pub mod battle	{
+	pub mod field;
 	pub mod grid;
 	pub mod main;
-	pub mod time;
 }
 
 pub mod hud	{

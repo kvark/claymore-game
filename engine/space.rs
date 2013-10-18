@@ -196,9 +196,9 @@ impl Node	{
 			None	=> self.space
 		}
 	}
-	pub fn is_under( &self, name : &~str )-> bool	{
-		self.name == *name || match self.parent	{
-			Some(p) => p.is_under(name),
+	pub fn is_under( &self, name : &str )-> bool	{
+		std::str::eq_slice(name,self.name) || match self.parent	{
+			Some(p)	=> p.is_under(name),
 			None	=> false,
 		}
 	}

@@ -255,10 +255,10 @@ pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon 
 	let iscene = gen_scene::battle::main::load();
 	let vao = gc.create_vertex_array();
 	let mut scene = scene::load::parse( "data/scene/battle-test", &iscene, [], gc, Some(vao), lg );
-	let battle_land = scene.entities.exclude( &~"Plane" ).expect("No ground found");
+	let battle_land = scene.entities.exclude( &"Plane" ).expect("No ground found");
 	// load protagonist
 	let hero =	{
-		let ent = scene.entities.exclude( &~"Player" ).expect("No player found");
+		let ent = scene.entities.exclude( &"Player" ).expect("No player found");
 		let skel = *scene.context.armatures.get( &~"Armature" );
 		// done
 		Character{
@@ -271,7 +271,7 @@ pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon 
 	};
 	// load boss
 	let boss =	{
-		let ent = scene.entities.exclude( &~"Boss" ).expect("No player found");
+		let ent = scene.entities.exclude( &"Boss" ).expect("No player found");
 		let skel = *scene.context.armatures.get( &~"ArmatureBoss" );
 		// done
 		Character{

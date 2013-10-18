@@ -158,7 +158,7 @@ impl Light	{
 pub struct EntityGroup( ~[engine::object::Entity] );
 
 impl EntityGroup	{
-	pub fn divide( &mut self, name : &~str )-> EntityGroup	{
+	pub fn divide( &mut self, name : &str )-> EntityGroup	{
 		let mut i = 0u;
 		let mut rez = EntityGroup(~[]);
 		while i<self.len()	{
@@ -171,35 +171,26 @@ impl EntityGroup	{
 		rez	
 	}
 
-	pub fn with<T>( &mut self, name : &~str, fun : &fn(&mut engine::object::Entity)->T )-> Option<T>	{
-		let opt_pos = self.iter().position(|ent|	{ent.node.name == *name});
-		match opt_pos	{
-			Some(p)	=> Some( fun(&mut self[p]) ),
-			None	=> None,
-		}
+	pub fn get_mut<'a,T>( &'a mut self, name : &str )-> Option<&'a mut engine::object::Entity>	{
+		self.mut_iter().find(|ent|	{ std::str::eq_slice(ent.node.name,name) })
 	}
 
 	pub fn change_detail( &mut self, detail : engine::object::Entity )-> Option<engine::object::Entity>	{
 		let opt_pos = self.iter().position(|ent|	{managed::mut_ptr_eq(ent.node,detail.node)});
 		self.push( detail );
-		match opt_pos	{
-			Some(pos)	=> Some( self.swap_remove(pos) ),
-			None		=> None,
-		}
+		opt_pos.map_move(|pos| { self.swap_remove(pos) })
 	}
 
-	pub fn swap_entity( &mut self, name : &~str, other : &mut EntityGroup )	{
-		let opt_pos = other.iter().position(|ent|	{ent.node.name == *name});
-		let e1 = other.swap_remove( opt_pos.expect(~"Remote entity not found: " + *name) );
-		let e2 = self.change_detail( e1 ).expect(	~"Local entity not found: " + *name);
+	pub fn swap_entity( &mut self, name : &str, other : &mut EntityGroup )	{
+		let opt_pos = other.iter().position(|ent|	{ std::str::eq_slice(ent.node.name,name) });
+		let e1 = other.swap_remove( opt_pos.expect(fmt!( "Remote entity not found: %s", name )) );
+		let e2 = self.change_detail( e1 ).expect(fmt!( "Local entity not found: %s", name ));
 		other.push(e2);
 	}
 
-	pub fn exclude( &mut self, name : &~str )-> Option<engine::object::Entity>	{
-		match self.iter().position(|ent|	{ent.node.name == *name})	{
-			Some(pos)	=> Some( self.swap_remove(pos) ),
-			None		=> None,
-		}
+	pub fn exclude( &mut self, name : &str )-> Option<engine::object::Entity>	{
+		self.iter().position(|ent|	{ std::str::eq_slice(ent.node.name,name) }).
+			map_move(|pos| { self.swap_remove(pos) })
 	}
 }
 
