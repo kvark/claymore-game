@@ -169,12 +169,12 @@ impl Grid	{
 		// set up texture
 	}
 
-	pub fn update( &mut self, cam : &scene::Camera, aspect : f32, nx : float, ny : float )-> bool	{
+	pub fn update( &mut self, cam : &scene::Camera, aspect : f32, nx : float, ny : float )	{
 		let view_proj = cam.get_matrix( aspect );
 		self.data.insert( ~"u_ViewProj", gr_low::shade::UniMatrix(false,view_proj) );
 		let sp = self.get_cell_selected( cam, aspect, nx, ny );
 		let op = match self.selected	{
-			Some(sel) if sel==sp	=> return true,
+			Some(sel) if sel==sp	=> return,
 			Some(sel)	=> sel,
 			None		=> [0,0]
 		};
@@ -191,6 +191,5 @@ impl Grid	{
 			},
 			_	=> None
 		};
-		true
 	}
 }

@@ -270,9 +270,11 @@ impl Armature	{
 	}
 }
 
+static armature_name : &'static str = &"Arm";
+
 impl draw::Mod for Armature	{
-	fn get_name( &self )-> ~str	{ ~"Arm" }
-	fn get_code( &self )-> ~str	{ self.code.clone() }
+	fn get_name<'a>( &'a self )-> &'a str	{ armature_name }
+	fn get_code<'a>( &'a self )-> &'a str	{ self.code.as_slice() }
 	//TODO: use float arrays
 	fn fill_data( &self, data : &mut shade::DataMap )	{
 		assert!( self.bones.len() < self.max_bones );

@@ -8,16 +8,19 @@ use load;
 
 
 pub trait Mod	{
-	fn get_name( &self )-> ~str;
-	fn get_code( &self )-> ~str;
+	fn get_name<'a>( &'a self )-> &'a str;
+	fn get_code<'a>( &'a self )-> &'a str;
 	fn fill_data( &self, data : &mut shade::DataMap );
 }
 
-impl Mod for ()	{
-	fn get_name( &self )->~str	{~"Dummy"}
-	fn get_code( &self )->~str	{~"
+static empty_name : &'static str = &"Dummy";
+static empty_code : &'static str = &"
 vec3 modifyInit  (vec3 p) {return p;}
-vec3 modifyVector(vec3 v) {return v;}"}
+vec3 modifyVector(vec3 v) {return v;}";
+
+impl Mod for ()	{
+	fn get_name<'a>( &'a self )-> &'a str	{empty_name}
+	fn get_code<'a>( &'a self )-> &'a str	{empty_code}
 	fn fill_data( &self, _data : &mut shade::DataMap )	{}
 }
 
@@ -60,28 +63,33 @@ pub struct Technique	{
 	code_fragment	: ~str,
 }
 
+static glsl_header_150 : &'static str = &"#version 150 core";
 
 impl Technique	{
-	pub fn get_header( &self )-> ~str	{~"#version 150 core"}
+	pub fn get_header<'a>( &'a self )-> &'a str	{glsl_header_150}
 	
 	pub fn make_vertex( &self, material : &Material, modifier : @Mod )-> ~str	{
-		[
-			self.get_header(),
-			fmt!( "//--- Modifier: %s ---//", modifier.get_name() ),
+		let smod = fmt!( "//--- Modifier: %s ---//", modifier.get_name() );
+		let smat = fmt!( "//--- Material: %s ---//", material.name );
+		let stek = fmt!( "//--- Technique: %s ---//", self.name );
+		[	self.get_header(),
+			smod				.as_slice(),
 			modifier.get_code(),
-			fmt!( "//--- Material: %s ---//", material.name ),
-			material.code_vertex.clone(),
-			fmt!( "//--- Technique: %s ---//", self.name ),
-			self.code_vertex.clone()
+			smat				.as_slice(),
+			material.code_vertex.as_slice(),
+			stek				.as_slice(),
+			self.code_vertex	.as_slice()
 		].connect("\n")
 	}
 	
 	pub fn make_fragment( &self, mat : &Material )-> ~str	{
-		[ self.get_header(),
-			fmt!("//--- Material: %s ---//",mat.name),
-			mat.code_fragment.clone(),
-			fmt!("//--- Technique: %s ---//",self.name),
-			self.code_fragment.clone(),
+		let smat = fmt!( "//--- Material: %s ---//", mat.name );
+		let stek = fmt!( "//--- Technique: %s ---//", self.name );
+		[	self.get_header(),
+			smat				.as_slice(),
+			mat.code_fragment	.as_slice(),
+			stek				.as_slice(),
+			self.code_fragment	.as_slice(),
 		].connect("\n")
 	}
 	

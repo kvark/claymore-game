@@ -18,7 +18,7 @@ use input;
 use hud = hud::main;
 use debug = hud::debug;
 use scene;
-use battle::grid;
+use battle::{field,grid};
 
 
 pub struct Character	{
@@ -30,7 +30,7 @@ pub struct Character	{
 }
 
 impl Character	{
-	pub fn update( &mut self, time : float )-> bool	{
+	pub fn update_view( &mut self, time : float )	{
 		let mut moment  = time - self.start_time;
 		if moment>self.record.duration	{
 			//self.record = self.skeleton.find_record(~"ArmatureAction").expect(~"character Idle not found");
@@ -39,7 +39,10 @@ impl Character	{
 		}
 		self.skeleton.set_record( self.record, moment );
 		self.skeleton.fill_data( &mut self.entity.data );
-		true
+	}
+
+	pub fn update_logic( &mut self, _time : float, _field : &mut field::Field )	{
+		//TODO
 	}
 
 	pub fn move( &mut self, grid : &mut grid::Grid, d : grid::Coordinate )	{
@@ -52,6 +55,10 @@ impl Character	{
 		//sp.orientation = Quat::new( 0.707f32, 0f32, 0f32, 0.707f32 );
 	}
 }
+
+//impl field::Member for Character	{
+	//FIXME
+//}
 
 
 pub struct View	{
@@ -74,7 +81,7 @@ impl View	{
 		}else	{false}
 	}
 
-	pub fn update( &mut self, time : float )-> bool	{
+	pub fn update( &mut self, time : float )	{
 		match self.source	{
 			Some(source)	=>	{
 				let moment = (time - self.start_time) / self.trans_duration;
@@ -88,7 +95,6 @@ impl View	{
 			},
 			None	=> ()
 		}
-		true
 	}
 }
 
@@ -97,8 +103,9 @@ pub struct Scene	{
 	view	: View,
 	land	: engine::object::Entity,
 	grid	: grid::Grid,
-	hero	: Character,
-	boss	: Character,
+	field	: field::Field,
+	hero	: @mut Character,
+	boss	: @mut Character,
 	cache	: gr_mid::draw::Cache,
 	hud		: gen_hud::common::Screen,
 }
@@ -113,9 +120,15 @@ impl Scene	{
 	}
 
 	pub fn update( &mut self, input : &input::State, aspect : f32 )-> bool	{
-		let t = input.time;	//FIXME
-		let ok = self.grid.update( &self.view.cam, aspect, input.mouse.x, input.mouse.y );
-		self.hero.update(t) && self.boss.update(t) && self.view.update(t) && ok
+		let tv = input.time;	//FIXME
+		self.grid.update( &self.view.cam, aspect, input.mouse.x, input.mouse.y );
+		self.hero.update_view( tv );
+		self.boss.update_view( tv );
+		self.view.update( tv );
+		let tl = input.time; //FIXME
+		self.hero.update_logic( tl, &mut self.field );
+		self.boss.update_logic( tl, &mut self.field );
+		true
 	}
 
 	pub fn on_input( &mut self, event : &input::Event, time : float )	{
@@ -257,7 +270,7 @@ pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon 
 	let mut scene = scene::load::parse( "data/scene/battle-test", &iscene, [], gc, Some(vao), lg );
 	let battle_land = scene.entities.exclude( &"Plane" ).expect("No ground found");
 	// load protagonist
-	let hero =	{
+	let hero =	@mut {
 		let ent = scene.entities.exclude( &"Player" ).expect("No player found");
 		let skel = *scene.context.armatures.get( &~"Armature" );
 		// done
@@ -270,7 +283,7 @@ pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon 
 		}
 	};
 	// load boss
-	let boss =	{
+	let boss =	@mut {
 		let ent = scene.entities.exclude( &"Boss" ).expect("No player found");
 		let skel = *scene.context.armatures.get( &~"ArmatureBoss" );
 		// done
@@ -285,6 +298,9 @@ pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon 
 	// create grid
 	let mut grid = grid::Grid::create( gc, 10u, lg );
 	grid.init( &mut gc.texture );
+	// create field
+	let field = field::Field::new();
+	// create hud
 	let hud = gen_hud::battle::load();
 	hc.preload( hud.root.children, gc, fcon, lg );
 	// done
@@ -292,6 +308,7 @@ pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon 
 		view	: view,
 		land	: battle_land,
 		grid	: grid,
+		field	: field,
 		hero	: hero,
 		boss	: boss,
 		cache	: gr_mid::draw::make_cache(),
