@@ -30,16 +30,16 @@ impl Position	{
 
 pub enum DamageResult	{
 	DamageNone,
-	DamageDone,
+	DamageSome,
 	DamagePartCut,
 	DamageKill,
 }
 
 pub trait Member	{
 	fn get_name<'a>( &'a self )-> &'a str;
-	fn iter_parts<'a>( &self )-> std::vec::VecIterator<Position>;
-	fn receive_damage( &mut self, damage : Health, part : PartId )-> DamageResult;
 	fn get_health( &self )-> Health;
+	fn get_parts<'a>( &'a self )-> &'a [Position];
+	fn receive_damage( &mut self, damage : Health, part : PartId )-> DamageResult;
 }
 
 fn is_same_member(a : @mut Member, b : @mut Member)-> bool	{
@@ -77,7 +77,7 @@ impl Field	{
 
 	pub fn add_member( &mut self, m : @mut Member, p : Position, o : Orientation )	{
 		self.members.push(( m, o ));
-		for (i,&offset) in m.iter_parts().enumerate()	{
+		for (i,&offset) in m.get_parts().iter().enumerate()	{
 			let pos = p.add( &offset, o );
 			self.cells.insert( pos, (m,i as PartId) );
 		}

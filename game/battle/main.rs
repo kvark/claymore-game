@@ -22,6 +22,9 @@ use battle::{field,grid};
 
 
 pub struct Character	{
+	name		: ~str,
+	health		: field::Health,
+	parts		: ~[field::Position],
 	entity		: engine::object::Entity,
 	skeleton	: @mut engine::space::Armature,
 	record		: @engine::space::ArmatureRecord,
@@ -56,9 +59,21 @@ impl Character	{
 	}
 }
 
-//impl field::Member for Character	{
-	//FIXME
-//}
+impl field::Member for Character	{
+	fn get_name<'a>( &'a self )-> &'a str	{self.name.as_slice()}
+	fn get_health( &self )-> field::Health	{self.health}
+	fn get_parts<'a>( &'a self )-> &'a [field::Position]	{self.parts.as_slice()}
+	fn receive_damage( &mut self, damage : field::Health, part : field::PartId )-> field::DamageResult	{
+		assert_eq!( part, 0 );
+		if self.health > damage	{
+			self.health -= damage;
+			field::DamageSome
+		}else	{
+			self.health = 0;
+			field::DamageKill
+		}
+	}
+}
 
 
 pub struct View	{
@@ -275,6 +290,9 @@ pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon 
 		let skel = *scene.context.armatures.get( &~"Armature" );
 		// done
 		Character{
+			name	: ~"Clare",
+			health	: 100,
+			parts	: ~[field::Position([0,0])],
 			entity		: ent,
 			skeleton	: skel,
 			record		: skel.find_record("ArmatureBossAction").expect("Hero has to have Idle"),
@@ -288,6 +306,9 @@ pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon 
 		let skel = *scene.context.armatures.get( &~"ArmatureBoss" );
 		// done
 		Character{
+			name	: ~"Boss",
+			health	: 300,
+			parts	: ~[field::Position([0,0])],
 			entity		: ent,
 			skeleton	: skel,
 			record		: skel.find_record("ArmatureBossAction").expect("Boss has to have Idle"),
