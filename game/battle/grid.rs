@@ -2,32 +2,40 @@ extern mod cgmath;
 extern mod engine;
 
 use std;
-use cgmath::vector::*;
+use cgmath::{angle,rotation,vector};
+use cgmath::quaternion::ToQuat;
+use cgmath::vector::Vector;
 use engine::{gr_low,gr_mid};
 use engine::gr_low::context::GLType;
-use engine::space::Space;
+use engine::space::{QuatSpace,Space};
 
 use scene = scene::common;
 
-pub type Coordinate = [int, ..2];
+
+pub struct Location([int, ..2]);
+pub type Orientation = int;
+
+impl Location	{
+	pub fn new( x : int, y : int )-> Location	{
+		Location([x,y])
+	}
+}
 
 
 pub struct Grid	{
-	selected		: Option<Coordinate>,
+	priv cells		: ~[u32],
 	priv mesh		: @gr_mid::mesh::Mesh,
 	priv program	: @gr_low::shade::Program,
 	priv data		: gr_low::shade::DataMap,
 	priv rast		: gr_low::rast::State,
 	priv nseg		: uint,
 	priv texture	: @gr_low::texture::Texture,
-	priv cells		: ~[u32],
-	priv v_scale	: Vec4<f32>,
-	priv dirty_coords	: ~[Coordinate],
+	priv v_scale	: vector::Vec4<f32>,
 }
 
-pub static CELL_EMPTY 	: u32	= 0x20802000;
-pub static CELL_OCCUPIED: u32	= 0x80202020;
-pub static CELL_ACTIVE	: u32	= 0x2040E040;
+static CELL_EMPTY 	: u32	= 0x20802000;
+static CELL_OCCUPIED: u32	= 0x80202020;
+static CELL_ACTIVE	: u32	= 0x2040E040;
 
 
 impl Grid	{
@@ -41,155 +49,135 @@ impl Grid	{
 		let tex = ct.create_texture( "2D", segments, segments, 0u, 0u );
 		let s_opt = Some( gr_low::texture::Sampler::new(1u,0) );
 		data.insert( ~"t_Grid",		gr_low::shade::UniTexture(0,tex,s_opt) );
-		let par_scale = Vec4::new( 10f32, 10f32, 0.1f32, 0f32 );
+		let par_scale = vector::Vec4::new( 10f32, 10f32, 0.1f32, 0f32 );
 		data.insert( ~"u_ScaleZ",	gr_low::shade::UniFloatVec(par_scale) );
 		let oo_seg = 1f32 / (segments as f32);
-		let par_size = Vec4::new( oo_seg, oo_seg, 0f32, 0f32 );
+		let par_size = vector::Vec4::new( oo_seg, oo_seg, 0f32, 0f32 );
 		data.insert( ~"u_Size",		gr_low::shade::UniFloatVec(par_size) );
 		Grid{
-			selected: None,
+			cells	: cells,
 			mesh	: @gr_mid::mesh::create_quad( ct ),
 			program	: engine::load::load_program( ct, "data/code-game/grid", lg ),
 			data	: data,
 			rast	: rast,
 			nseg	: segments,
 			texture	: tex,
-			cells	: cells,
 			v_scale	: par_scale,
-			dirty_coords	: ~[],
 		}
 	}
 
-	pub fn reset( &mut self )	{
+	pub fn get_rectangle( &self )-> gr_low::frame::Rect	{
+		gr_low::frame::Rect::new( self.nseg, self.nseg )
+	}
+
+	pub fn update( &mut self, cam : &scene::Camera, aspect : f32 )	{
+		cam.fill_data( &mut self.data, aspect );
+	}
+
+	pub fn compute_space( &self, pos : Location, orient : Orientation, elevation : f32 )-> QuatSpace	{
+		let mut center = self.get_cell_center( pos );
+		center.z = elevation;
+		let angle = angle::deg( (orient as f32) * 90f32 );
+		let rot = rotation::AxisAngle::new( vector::Vec3::unit_z(), angle );
+		QuatSpace	{
+			position 	: center,
+			orientation	: rot.to_quat(),
+			scale		: 1.0,
+		}
+	}
+}
+
+
+pub enum Cell	{
+	CellEmpty,
+	CellOccupied,
+	CellFocus,
+}
+
+pub trait MutableGrid	{
+	fn clear( &mut self );
+	fn set_cell( &mut self, d : Location, cell : Cell )-> bool;
+}
+
+impl MutableGrid for Grid	{
+	fn clear( &mut self )	{
 		for c in self.cells.mut_iter()	{
 			*c = CELL_EMPTY;
 		}
 	}
-
-	pub fn get_cell_size( &self )-> (f32,f32)	{
-		(2f32*self.v_scale.x / (self.nseg as f32),
-		 2f32*self.v_scale.y / (self.nseg as f32))
-	}
-	pub fn get_cell_center( &self, d : Coordinate )-> Vec3<f32>	{
-		let (x_unit,y_unit) = self.get_cell_size();
-		let half = (self.nseg as f32) * 0.5f32;
-		Vec3::new(
-			((d[0] as f32)+0.5f32-half)*x_unit,
-			((d[1] as f32)+0.5f32-half)*y_unit,
-			self.v_scale.z )
-	}
-	pub fn get_rectangle( &self )-> gr_low::frame::Rect	{
-		gr_low::frame::Rect{
-			x:0u, y:0u, w:self.nseg, h:self.nseg
-		}
-	}
-
-	pub fn get_cell( &self, d : Coordinate )-> Option<u32>	{
+	fn set_cell( &mut self, d : Location, cell : Cell )-> bool	{
 		let ns = self.nseg as int;
 		if d[0]>=0 && d[0]<ns && d[1]>=0 && d[1]<ns	{
-			Some(self.cells[ d[0] + d[1]*ns ])
-		}else	{None}
-	}
-	pub fn mut_cell( &mut self, d : Coordinate, fun : &fn(&mut u32) )-> bool	{
-		let ns = self.nseg as int;
-		if d[0]>=0 && d[0]<ns && d[1]>=0 && d[1]<ns	{
-			fun( &mut self.cells[ d[0] + d[1]*ns ] );
+			self.cells[d[0] + d[1]*ns] = match cell	{
+				CellEmpty		=> CELL_EMPTY,
+				CellOccupied	=> CELL_OCCUPIED,
+				CellFocus		=> CELL_ACTIVE,
+			};
 			true
 		}else	{false}
 	}
-	pub fn set_cell( &mut self, d : Coordinate, col : u32, tb_opt : Option<&mut gr_low::texture::Binding> )-> bool	{
-		if self.mut_cell( d, |c| {*c = col;} )	{
-			match tb_opt	{
-				Some(tb)	=> self.upload_single_cell(tb,d),
-				None		=> {self.dirty_coords.push(d); true},
-			}
-		}else	{false}
-	}
+}
 
-	pub fn call( &self, fbo : @mut gr_low::frame::Buffer, pmap : gr_mid::call::PlaneMap,
-			vao : @mut gr_low::buf::VertexArray )-> gr_mid::call::Call	{
-		gr_mid::call::CallDraw(
-			gr_mid::call::Input::new( vao, self.mesh ),
-			gr_mid::call::Output::new( fbo, pmap ),
-			self.rast, self.program, self.data.clone() )
-	}
 
-	fn upload_all_cells( &mut self, tb : &mut gr_low::texture::Binding )	{
+pub trait DrawableGrid	{
+	fn init( &mut self, tb : &mut gr_low::texture::Binding );
+	fn upload( &mut self, tb : &mut gr_low::texture::Binding );
+	fn draw( &self, output : gr_mid::call::Output, vao : @mut gr_low::buf::VertexArray )-> gr_mid::call::Call;
+}
+
+impl DrawableGrid for Grid	{
+	fn init( &mut self, tb : &mut gr_low::texture::Binding )	{
+		// init storage
+		tb.bind( self.texture );
+		let fm_int = gr_low::texture::map_int_format( "rgba8" );
+		tb.init( self.texture, 1u, fm_int, true );
+		// load data
+		self.upload(tb);
+		// set up texture
+	}
+	fn upload( &mut self, tb : &mut gr_low::texture::Binding )	{
 		tb.bind( self.texture );
 		let fm_pix = gr_low::texture::map_pix_format( "rgba" );
 		let component = 0u8.to_gl_type();
 		let r = self.get_rectangle();
 		tb.load_sub_2D(	self.texture, 0u, &r, fm_pix, component, self.cells );
-		self.dirty_coords.clear();
 	}
-
-	fn upload_single_cell( &self, tb : &mut gr_low::texture::Binding, d : Coordinate )-> bool	{
-		tb.bind( self.texture );
-		match self.get_cell(d)	{
-			Some(col)	=>	{
-				let fm_pix = gr_low::texture::map_pix_format( "rgba" );
-				let component = 0u8.to_gl_type();
-				let r = gr_low::frame::Rect{ x:d[0] as uint, y:d[1] as uint, w:1u, h:1u };
-				tb.load_sub_2D(	self.texture, 0u, &r, fm_pix, component, &[col] );
-				true
-			},
-			None	=> false
-		}	
+	fn draw( &self, output : gr_mid::call::Output, vao : @mut gr_low::buf::VertexArray )-> gr_mid::call::Call	{
+		gr_mid::call::CallDraw(
+			gr_mid::call::Input::new( vao, self.mesh ),
+			output,
+			self.rast, self.program, self.data.clone() )
 	}
+}
 
-	pub fn upload_dirty_cells( &mut self, tb : &mut gr_low::texture::Binding )	{
-		if self.dirty_coords.len() >= self.nseg	{
-			self.upload_all_cells( tb );
-		}else	{
-			for d in self.dirty_coords.iter()	{
-				self.upload_single_cell( tb, *d );
-			}
-			self.dirty_coords.clear();
-		}
+
+pub trait TopologyGrid	{
+	fn get_cell_size( &self )-> (f32,f32);
+	fn get_cell_center( &self, d : Location )-> vector::Vec3<f32>;
+	fn ray_cast( &self, cam : &scene::Camera, aspect : f32, np : &[f32,..2] )-> Location;
+}
+
+impl TopologyGrid for Grid	{
+	fn get_cell_size( &self )-> (f32,f32)	{
+		(2f32*self.v_scale.x / (self.nseg as f32),
+		 2f32*self.v_scale.y / (self.nseg as f32))
 	}
-
-	fn get_cell_selected( &self, cam : &scene::Camera, aspect : f32, nx : float, ny : float )-> Coordinate	{
-		let ndc = Vec3::new( (nx as f32)*2f32-1f32, 1f32-(ny as f32)*2f32, 0f32 );
+	fn get_cell_center( &self, d : Location )-> vector::Vec3<f32>	{
+		let (x_unit,y_unit) = self.get_cell_size();
+		let half = (self.nseg as f32) * 0.5f32;
+		vector::Vec3::new(
+			((d[0] as f32)+0.5f32-half)*x_unit,
+			((d[1] as f32)+0.5f32-half)*y_unit,
+			self.v_scale.z )
+	}
+	fn ray_cast( &self, cam : &scene::Camera, aspect : f32, np : &[f32,..2] )-> Location	{
+		let ndc = vector::Vec3::new( np[0]*2f32-1f32, 1f32-np[1]*2f32, 0f32 );
 		let origin = cam.node.world_space().position;
 		let ray = cam.get_matrix(aspect).inverted().transform( &ndc ).sub_v( &origin );
 		let (x_unit,y_unit) = self.get_cell_size();
 		let k = (self.v_scale.z - origin.z) / ray.z;
 		let x = (origin.x + ray.x*k + self.v_scale.x) / x_unit;
 		let y = (origin.y + ray.y*k + self.v_scale.y) / y_unit;
-		[x as int, y as int]
-	}
-
-	pub fn init( &mut self, tb : &mut gr_low::texture::Binding )	{
-		// init storage
-		tb.bind( self.texture );
-		let fm_int = gr_low::texture::map_int_format( "rgba8" );
-		tb.init( self.texture, 1u, fm_int, true );
-		// load data
-		self.upload_all_cells(tb);
-		// set up texture
-	}
-
-	pub fn update( &mut self, cam : &scene::Camera, aspect : f32, nx : float, ny : float )	{
-		let view_proj = cam.get_matrix( aspect );
-		self.data.insert( ~"u_ViewProj", gr_low::shade::UniMatrix(false,view_proj) );
-		let sp = self.get_cell_selected( cam, aspect, nx, ny );
-		let op = match self.selected	{
-			Some(sel) if sel==sp	=> return,
-			Some(sel)	=> sel,
-			None		=> [0,0]
-		};
-		match self.get_cell(op)	{
-			Some(col) if col==CELL_ACTIVE	=>	{
-				self.set_cell( op, CELL_EMPTY, None );
-			},
-			_	=> ()
-		}
-		self.selected = match self.get_cell(sp)	{
-			Some(col) if col==CELL_EMPTY	=>	{
-				self.set_cell( sp, CELL_ACTIVE, None );
-				Some(sp)
-			},
-			_	=> None
-		};
+		Location::new( x as int, y as int )
 	}
 }

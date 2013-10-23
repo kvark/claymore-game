@@ -63,10 +63,9 @@ impl Logic	{
 	}
 
 	pub fn update( &mut self, input : &input::State, _log : &journal::Log )-> bool	{
-		let aspect = self.output.area.aspect();
 		match self.screen	{
 			//ScreenChar		=> self.s_editor.update( input, log ),
-			ScreenBattle	=> self.s_battle.update( input, aspect ),
+			ScreenBattle	=> self.s_battle.update( input ),
 			_ => true
 		}
 	}

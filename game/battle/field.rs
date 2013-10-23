@@ -2,10 +2,10 @@ extern mod engine;
 
 use std;
 use std::hashmap::HashMap;
+use battle::grid;
 
-
-pub struct Position([int,..2]);
-pub type Orientation = int;
+pub use Position	= battle::grid::Location;
+pub use battle::grid::Orientation;
 pub type PartId		= u8;
 pub type Health		= uint;
 
@@ -21,10 +21,8 @@ impl IterBytes for Position	{
   	}
 }
 
-impl Position	{
-	pub fn add( &self, p : &Position, _o : Orientation )-> Position	{
-		Position([ self[0] + p[0], self[1] + p[1] ])
-	}
+fn compute_position( base : &Position, _o : Orientation, off : &Position )-> Position	{
+	Position::new( base[0] + off[0], base[1] + off[1] )
 }
 
 
@@ -40,6 +38,7 @@ pub trait Member	{
 	fn get_health( &self )-> Health;
 	fn get_parts<'a>( &'a self )-> &'a [Position];
 	fn receive_damage( &mut self, damage : Health, part : PartId )-> DamageResult;
+	fn is_busy( &self )-> bool;
 }
 
 fn is_same_member(a : @mut Member, b : @mut Member)-> bool	{
@@ -70,25 +69,36 @@ impl Field	{
 		self.cells.find(&p).map_move(|&(m,part)| {( m.get_name().to_owned(), part )})
 	}
 
-	pub fn clear( &mut self )	{
+	pub fn reset( &mut self )	{
 		self.members.clear();
 		self.cells.clear();
 	}
 
-	pub fn add_member( &mut self, m : @mut Member, p : Position, o : Orientation )	{
-		self.members.push(( m, o ));
-		for (i,&offset) in m.get_parts().iter().enumerate()	{
-			let pos = p.add( &offset, o );
-			self.cells.insert( pos, (m,i as PartId) );
+	fn has_member( &mut self, member : @mut Member )-> bool	{
+		self.cells.iter().
+			find( |&(_,&(m,_))| is_same_member(m,member) ).
+			is_some()
+	}
+
+	pub fn add_member( &mut self, member : @mut Member, p : Position, o : Orientation )	{
+		assert!( !self.has_member(member) );
+		self.members.push(( member, o ));
+		for (i,&offset) in member.get_parts().iter().enumerate()	{
+			let pos = compute_position( &p, o, &offset );
+			self.cells.insert( pos, (member,i as PartId) );
 		}
 	}
 
-	pub fn remove_member( &mut self, member : @mut Member )	{
-		let positions = self.cells.iter().
-			filter( |&(_,&(m,_))| is_same_member(m,member) )
-			.map( |(&p,_)| p ).to_owned_vec();
-		for p in positions.iter()	{
-			self.cells.remove(p);
+	pub fn remove_member( &mut self, member : @mut Member, parts_removed : uint )	{
+		let parts_left = member.get_parts().len() - parts_removed;
+		if parts_left > 0	{
+			let positions = self.cells.iter().
+				filter( |&(_,&(m,_))| is_same_member(m,member) )
+				.map( |(&p,_)| p ).to_owned_vec();
+			assert_eq!( positions.len(), parts_left );
+			for p in positions.iter()	{
+				self.cells.remove(p);
+			}
 		}
 		self.members.retain( |&(m,_)| is_same_member(m,member) );
 	}
@@ -104,10 +114,16 @@ impl Field	{
 			},
 			DamageKill		=> {
 				let (member,_) = self.cells.pop(&pos).unwrap();
-				self.remove_member( member );
+				self.remove_member( member, 1 );
 			},
 			_	=> ()
 		}
 		dr
+	}
+
+	pub fn fill_grid( &self, grid : &mut grid::MutableGrid )	{
+		for (&pos,_) in self.cells.iter()	{
+			grid.set_cell( pos, grid::CellOccupied );
+		}
 	}
 }

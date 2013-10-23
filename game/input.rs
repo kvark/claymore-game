@@ -36,5 +36,6 @@ pub struct Mouse	{
 pub struct State	{
 	time	: float,
 	focus	: bool,
+	aspect	: float,
 	mouse	: Mouse,
 }

@@ -244,6 +244,7 @@ pub fn main()	{
 				input::State{
 					time	: glfw::get_time(),
 					focus	: window.is_visible(),
+					aspect	: (cw.width as float) / (cw.height as float),
 					mouse	: input::Mouse{
 						x	: px / (cw.width as float),
 						y	: py / (cw.height as float),
