@@ -4,6 +4,82 @@
 		"selected_items":
 		[
 			[
+				"par",
+				"PartId"
+			],
+			[
+				"get",
+				"get_name"
+			],
+			[
+				"cel",
+				"CellObstacle"
+			],
+			[
+				"has",
+				"has_member"
+			],
+			[
+				"Me",
+				"Member"
+			],
+			[
+				"last",
+				"last_mouse"
+			],
+			[
+				"CELL",
+				"CELL_ACTIVE"
+			],
+			[
+				"CEl",
+				"CellFocus"
+			],
+			[
+				"gr",
+				"gr_low"
+			],
+			[
+				"Muta",
+				"MutableGrid"
+			],
+			[
+				"part",
+				"parts_removed"
+			],
+			[
+				"M",
+				"Member"
+			],
+			[
+				"loc_",
+				"loc_hero"
+			],
+			[
+				"Lo",
+				"location"
+			],
+			[
+				"Damage",
+				"DamagePartCut"
+			],
+			[
+				"memb",
+				"member"
+			],
+			[
+				"iter",
+				"iter_parts"
+			],
+			[
+				"Dama",
+				"DamageNone"
+			],
+			[
+				"meb",
+				"member"
+			],
+			[
 				"an",
 				"animate"
 			],
@@ -100,10 +176,6 @@
 				"FontCache"
 			],
 			[
-				"get",
-				"get_among"
-			],
-			[
 				"child",
 				"children"
 			],
@@ -118,10 +190,6 @@
 			[
 				"collec",
 				"collection_node_anim"
-			],
-			[
-				"par",
-				"parse_space"
 			],
 			[
 				"arma",
@@ -446,92 +514,16 @@
 			[
 				"f",
 				"filter"
-			],
-			[
-				"map_ma",
-				"map_matererial_data"
-			],
-			[
-				"De",
-				"Deserializer"
-			],
-			[
-				"dese",
-				"deserialize"
-			],
-			[
-				"creat",
-				"create_data"
-			],
-			[
-				"Mat",
-				"Material"
-			],
-			[
-				"Mater",
-				"MaterialInfo"
-			],
-			[
-				"Entit",
-				"EntityGroup"
-			],
-			[
-				"spa",
-				"spawn"
-			],
-			[
-				"ma",
-				"map_node"
-			],
-			[
-				"du",
-				"dual_quat"
-			],
-			[
-				"Came",
-				"Camera"
-			],
-			[
-				"Camer",
-				"CameraInfo"
-			],
-			[
-				"Li",
-				"LinearMap"
-			],
-			[
-				"fo",
-				"fov"
-			],
-			[
-				"Proje",
-				"ProjectorInfo"
-			],
-			[
-				"Light",
-				"LightInfo"
-			],
-			[
-				"fov",
-				"fov_y"
 			]
 		]
 	},
 	"buffers":
 	[
 		{
-			"file": "/mnt/code/claymore/claymore-game/engine/anim.rs",
+			"file": "/mnt/code/claymore/claymore-game/game/scene/chared.rs",
 			"settings":
 			{
-				"buffer_size": 3023,
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"file": "/mnt/code/claymore/claymore-game/game/main.rs",
-			"settings":
-			{
-				"buffer_size": 7104,
+				"buffer_size": 13832,
 				"line_ending": "Unix"
 			}
 		},
@@ -539,63 +531,26 @@
 			"file": "/mnt/code/claymore/claymore-game/game/battle/main.rs",
 			"settings":
 			{
-				"buffer_size": 8428,
+				"buffer_size": 10395,
 				"line_ending": "Unix"
 			}
 		},
 		{
-			"file": "/mnt/code/claymore/claymore-game/game/scene/chared.rs",
+			"file": "/mnt/code/claymore/claymore-game/game/battle/grid.rs",
 			"settings":
 			{
-				"buffer_size": 13836,
+				"buffer_size": 5817,
 				"line_ending": "Unix"
 			}
 		},
 		{
-			"file": "/mnt/code/claymore/claymore-game/game/logic.rs",
+			"contents": "extern mod engine;\n\nuse std;\nuse std::hashmap::HashMap;\nuse battle::grid;\n\npub use battle::grid::Location;\npub use battle::grid::Orientation;\npub type PartId		= u8;\npub type Health		= uint;\n\n\npub enum DamageResult	{\n	DamageNone,\n	DamageSome,\n	DamagePartCut,\n	DamageKill,\n}\n\npub trait Member	{\n	fn get_name<'a>( &'a self )-> &'a str;\n	fn get_health( &self )-> Health;\n	fn get_parts<'a>( &'a self )-> &'a [Location];\n	fn receive_damage( &mut self, damage : Health, part : PartId )-> DamageResult;\n	fn is_busy( &self )-> bool;\n}\n\nfn is_same_member(a : @mut Member, b : @mut Member)-> bool	{\n	//std::managed::mut_ptr_eq(a,b)\n	std::str::eq_slice( a.get_name(), b.get_name() )\n}\n\n\npub enum Cell<T>	{\n	CellEmpty,\n	CellObstacle,\n	CellCore(T,Orientation),\n	CellPart(T,PartId),\n}\n\nstruct Field	{\n	priv cells		: ~[Cell<@mut Member>],\n}\n\nimpl Field	{\n	pub fn new( size : uint )-> Field	{\n		Field	{\n			cells	: std::vec::from_elem( size, CellEmpty ),\n		}\n	}\n\n	pub fn get( &self, index : uint )-> Cell<~str>	{\n		match self.cells[index]	{\n			CellEmpty		=> CellEmpty,\n			CellObstacle	=> CellObstacle,\n			CellCore(m,o)	=> CellCore( m.get_name().to_owned(), o ),\n			CellPart(m,p)	=> CellPart( m.get_name().to_owned(), p ),\n		}\n	}\n\n	pub fn with_member<T>( &self, name : &str, fun : &fn(&Member,Orientation)->T )->Option<T>	{\n		for cell in self.cells	{\n			match cell	{\n				CellCore(m,o) if std::str::eq_slice(name,m.get_name())	=> Some(fun(m,o)),\n				_	=> None\n			}\n		}\n	}\n\n	pub fn clear( &mut self )	{\n		for cell in self.cells.mut_iter()	{\n			*cell = CellEmpty;\n		}\n	}\n\n	pub fn add_member( &mut self, member : @mut Member, p : Position, o : Orientation, grid : &grid::TopologyGrid )	{\n		assert!( !self.has_member(member) );\n		let core_index = grid.get_index(p).expect(\"Member core position should exist\");\n		self.cells[ core_index ] = CellCore( member, o );\n		for (i,offset) in member.get_parts().iter().enumerate()	{\n			let pos = grid.offset_position( &p, o, offset );\n			match grid.get_index(pos)	{\n				Some(index)	=> self.cells[index] = CellPart(member,i as PartId),\n				None		=> ()\n			}\n			self.cells[pos] = .insert( pos, (member,i as PartId) );\n		}\n	}\n\n	/*pub fn with<T>( &self, name : &str, fun : &fn(&Member)->T )->Option<T>	{\n		self.members.iter().find(|& &(m,_)| { std::str::eq_slice(name,m.get_name()) }).\n			map_move(|&(m,_)| { fun(m) })\n	}\n\n	pub fn query( &self, d : Location )-> Option<(~str,PartId)>	{\n		self.cells.find(&p).map_move(|&(m,part)| {( m.get_name().to_owned(), part )})\n	}\n\n	pub fn reset( &mut self )	{\n		self.members.clear();\n		self.cells.clear();\n	}\n\n	fn has_member( &mut self, member : @mut Member )-> bool	{\n		self.cells.iter().\n			find( |&(_,&(m,_))| is_same_member(m,member) ).\n			is_some()\n	}\n\n	pub fn add_member( &mut self, member : @mut Member, p : Position, o : Orientation )	{\n		assert!( !self.has_member(member) );\n		self.members.push(( member, o ));\n		for (i,&offset) in member.get_parts().iter().enumerate()	{\n			let pos = compute_position( &p, o, &offset );\n			self.cells.insert( pos, (member,i as PartId) );\n		}\n	}\n\n	pub fn remove_member( &mut self, member : @mut Member, parts_removed : uint )	{\n		let parts_left = member.get_parts().len() - parts_removed;\n		if parts_left > 0	{\n			let positions = self.cells.iter().\n				filter( |&(_,&(m,_))| is_same_member(m,member) )\n				.map( |(&p,_)| p ).to_owned_vec();\n			assert_eq!( positions.len(), parts_left );\n			for p in positions.iter()	{\n				self.cells.remove(p);\n			}\n		}\n		self.members.retain( |&(m,_)| is_same_member(m,member) );\n	}\n\n	pub fn deal_damage( &mut self, pos : Position, damage : Health )-> DamageResult	{\n		let dr = match self.cells.find(&pos)	{\n			Some(&(m,part))	=> m.receive_damage( damage, part ),	//FIXME\n			None	=> DamageNone,\n		};\n		match dr	{\n			DamagePartCut	=> {\n				self.cells.remove(&pos);\n			},\n			DamageKill		=> {\n				let (member,_) = self.cells.pop(&pos).unwrap();\n				self.remove_member( member, 1 );\n			},\n			_	=> ()\n		}\n		dr\n	}\n\n	pub fn fill_grid( &self, grid : &mut grid::MutableGrid )	{\n		for (&pos,_) in self.cells.iter()	{\n			grid.set_cell( pos, grid::CellOccupied );\n		}\n	}*/\n}\n",
+			"file": "/mnt/code/claymore/claymore-game/game/battle/field.rs",
+			"file_size": 4070,
+			"file_write_time": 1382701016000000,
 			"settings":
 			{
-				"buffer_size": 4715,
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"file": "/mnt/code/claymore/claymore-game/engine/load.rs",
-			"settings":
-			{
-				"buffer_size": 12848,
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"file": "/mnt/code/claymore/claymore-game/game/scene/load.rs",
-			"settings":
-			{
-				"buffer_size": 9116,
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"file": "/mnt/code/claymore/claymore-game/game/scene/load_json.rs",
-			"settings":
-			{
-				"buffer_size": 11004,
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"file": "/mnt/code/claymore/claymore-game/game/input.rs",
-			"settings":
-			{
-				"buffer_size": 815,
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"file": "/mnt/code/claymore/claymore-game/game/battle/time.rs",
-			"settings":
-			{
-				"buffer_size": 2224,
+				"buffer_size": 4087,
 				"line_ending": "Unix"
 			}
 		}
@@ -640,46 +595,48 @@
 	},
 	"file_history":
 	[
+		"/mnt/code/claymore/claymore-game/game/battle/field.rs",
+		"/mnt/code/claymore/claymore-game/game/claymore.rs",
+		"/mnt/code/claymore/claymore-game/game/scene/common.rs",
+		"/mnt/code/claymore/claymore-game/engine/space.rs",
+		"/mnt/code/claymore/claymore-game/game/battle/main.rs",
+		"/mnt/code/claymore/claymore-game/game/input.rs",
+		"/mnt/code/claymore/claymore-game/test.rs",
+		"/mnt/code/claymore/claymore-game/game/battle/grid.rs",
+		"/mnt/code/claymore/claymore-game/engine/gr_mid/draw.rs",
+		"/mnt/code/claymore/claymore-game/game/main.rs",
+		"/mnt/code/claymore/claymore-game/game/logic.rs",
+		"/mnt/code/claymore/claymore-game/engine/anim.rs",
+		"/mnt/code/claymore/claymore-game/game/scene/chared.rs",
+		"/mnt/code/claymore/claymore-game/engine/load.rs",
+		"/mnt/code/claymore/claymore-game/game/scene/load.rs",
+		"/mnt/code/claymore/claymore-game/game/scene/load_json.rs",
 		"/mnt/code/claymore/claymore-game/game/hud/main.rs",
 		"/mnt/code/claymore/claymore-game/data/config.json",
 		"/mnt/code/claymore/claymore-game/game/hud/debug.rs",
-		"/mnt/code/claymore/claymore-game/game/battle/main.rs",
-		"/mnt/code/claymore/claymore-game/game/main.rs",
-		"/mnt/code/claymore/claymore-game/game/logic.rs",
-		"/mnt/code/claymore/claymore-game/game/claymore.rs",
-		"/mnt/code/claymore/claymore-game/game/scene/chared.rs",
 		"/mnt/code/claymore/claymore-game/data/code/hud/solid.glslv",
 		"/mnt/code/claymore/claymore-game/data/code/hud/solid.glslf",
 		"/mnt/code/claymore/claymore-game/engine/gr_low/rast.rs",
 		"/mnt/code/claymore/claymore-game/util/codata/hud/common.rs",
-		"/mnt/code/claymore/claymore-game/engine/anim.rs",
 		"/mnt/code/claymore/claymore-game/game/hud/main_json.rs",
 		"/mnt/code/claymore/cgmath-rs/src/cgmath/projection.rs",
 		"/mnt/code/claymore/claymore-game/engine/journal.rs",
 		"/mnt/code/claymore/claymore-game/engine/gr_mid/call.rs",
-		"/mnt/code/claymore/claymore-game/engine/gr_mid/draw.rs",
 		"/mnt/code/claymore/claymore-game/engine/gr_mid/mesh.rs",
-		"/mnt/code/claymore/claymore-game/game/battle/grid.rs",
 		"/mnt/code/claymore/claymore-game/game/battle/time.rs",
 		"/mnt/code/claymore/lmath-rs/src/quat.rs",
-		"/mnt/code/claymore/claymore-game/engine/space.rs",
-		"/mnt/code/claymore/claymore-game/engine/load.rs",
 		"/mnt/code/claymore/claymore-game/Makefile",
 		"/mnt/code/claymore/claymore-game/engine/gr_low/texture.rs",
 		"/mnt/code/claymore/claymore-game/data/code-game/grid.glslf",
 		"/mnt/code/claymore/claymore-game/game/scene/battle.rs",
-		"/mnt/code/claymore/claymore-game/game/input.rs",
-		"/mnt/code/claymore/claymore-game/game/scene/common.rs",
 		"/mnt/code/claymore/claymore-game/util/codata/scene/battle/main.rs",
 		"/mnt/code/claymore/glfw3-rs/src/support/consts.rs",
 		"/mnt/code/claymore/claymore-game/game/scene/grid.rs",
-		"/mnt/code/claymore/claymore-game/game/scene/load_json.rs",
 		"/mnt/code/claymore/claymore-game/game/render/depth.rs",
 		"/mnt/code/claymore/claymore-game/game/render/lbuf.rs",
 		"/mnt/code/claymore/claymore-game/game/render/shadow.rs",
 		"/mnt/code/claymore/claymore-game/game/hud_new.rs",
 		"/mnt/code/claymore/claymore-game/engine/gr_low/shade.rs",
-		"/mnt/code/claymore/claymore-game/game/scene/load.rs",
 		"/mnt/code/claymore/claymore-game/engine/gr_low/frame.rs",
 		"/mnt/code/claymore/claymore-game/game/hud.rs",
 		"/mnt/code/claymore/claymore-game/engine/gr_mid/font.rs",
@@ -765,9 +722,7 @@
 		"/Users/kvark/Code/rust/claymore-game/data/hud/char-orig.json",
 		"/Users/kvark/Code/rust/claymore-game/engine/audio.rs",
 		"/Users/kvark/Code/rust/claymore-game/engine/space.rs",
-		"/Users/kvark/Code/rust/lmath-rs/src/mat4.rs",
-		"/Users/kvark/Code/rust/rust-freetype/freetype.rs",
-		"/Users/kvark/Code/rust/claymore-game/util/claymore"
+		"/Users/kvark/Code/rust/lmath-rs/src/mat4.rs"
 	],
 	"find":
 	{
@@ -788,6 +743,39 @@
 		"case_sensitive": true,
 		"find_history":
 		[
+			"Position",
+			"TopologyGrid",
+			"get_index",
+			"u32",
+			"get_cell_center",
+			"get_rectangle",
+			"ray_cast",
+			"TopologyGrid",
+			".move",
+			"TopologyGrid",
+			"set",
+			"on_input",
+			"update",
+			"cw",
+			"render",
+			"output",
+			"aspect",
+			"get_rectangle",
+			"selected",
+			"CELL_EMPTY",
+			"fill_data",
+			"u_ViewProj",
+			"grid::",
+			"Grid",
+			"ToQuat",
+			"vector",
+			"Vec3",
+			"Vec4",
+			"v_scale",
+			"dirty_",
+			"Coordinate",
+			"iter_parts",
+			"impl IterBytes",
 			"on_input",
 			"reset",
 			"get_time",
@@ -882,40 +870,7 @@
 			"id.caption.text",
 			"id.caption.frame",
 			"id.frame",
-			"load_config",
-			"grid::",
-			"grid",
-			"scene::",
-			"vfov",
-			"ChildCam",
-			"required attribute",
-			"has_more",
-			"mesh",
-			"mesh:",
-			"parse_child",
-			"get_input",
-			"query_mesh",
-			"parse_bones",
-			"parse_child",
-			"read_action",
-			"out_arm",
-			"ChildArm",
-			"Armature",
-			"mouse",
-			"KeyFun",
-			"self",
-			"~\"\";\n",
-			"game",
-			"CharFun",
-			"focus",
-			"glfwSetInputMode",
-			"fullscreen",
-			"error",
-			"update",
-			"));\n",
-			"el",
-			";\n",
-			");\n"
+			"load_config"
 		],
 		"highlight": true,
 		"in_selection": false,
@@ -934,29 +889,29 @@
 		"reverse": false,
 		"show_context": true,
 		"use_buffer2": true,
-		"whole_word": true,
+		"whole_word": false,
 		"wrap": true
 	},
 	"groups":
 	[
 		{
-			"selected": 9,
+			"selected": 3,
 			"sheets":
 			[
 				{
 					"buffer": 0,
-					"file": "/mnt/code/claymore/claymore-game/engine/anim.rs",
+					"file": "/mnt/code/claymore/claymore-game/game/scene/chared.rs",
 					"settings":
 					{
-						"buffer_size": 3023,
+						"buffer_size": 13832,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								622,
-								622
+								10578,
+								10578
 							]
 						],
 						"settings":
@@ -965,25 +920,25 @@
 							"translate_tabs_to_spaces": false
 						},
 						"translation.x": 0.0,
-						"translation.y": 450.0,
+						"translation.y": 4861.0,
 						"zoom_level": 1.0
 					},
 					"type": "text"
 				},
 				{
 					"buffer": 1,
-					"file": "/mnt/code/claymore/claymore-game/game/main.rs",
+					"file": "/mnt/code/claymore/claymore-game/game/battle/main.rs",
 					"settings":
 					{
-						"buffer_size": 7104,
+						"buffer_size": 10395,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								6783,
-								6783
+								5789,
+								5789
 							]
 						],
 						"settings":
@@ -992,187 +947,25 @@
 							"translate_tabs_to_spaces": false
 						},
 						"translation.x": 0.0,
-						"translation.y": 3339.0,
+						"translation.y": 2654.0,
 						"zoom_level": 1.0
 					},
 					"type": "text"
 				},
 				{
 					"buffer": 2,
-					"file": "/mnt/code/claymore/claymore-game/game/battle/main.rs",
+					"file": "/mnt/code/claymore/claymore-game/game/battle/grid.rs",
 					"settings":
 					{
-						"buffer_size": 8428,
+						"buffer_size": 5817,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								428,
-								428
-							]
-						],
-						"settings":
-						{
-							"syntax": "Packages/Rust/Rust.tmLanguage",
-							"translate_tabs_to_spaces": false
-						},
-						"translation.x": 0.0,
-						"translation.y": 1440.0,
-						"zoom_level": 1.0
-					},
-					"type": "text"
-				},
-				{
-					"buffer": 3,
-					"file": "/mnt/code/claymore/claymore-game/game/scene/chared.rs",
-					"settings":
-					{
-						"buffer_size": 13836,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								3930,
-								3930
-							]
-						],
-						"settings":
-						{
-							"syntax": "Packages/Rust/Rust.tmLanguage",
-							"translate_tabs_to_spaces": false
-						},
-						"translation.x": 0.0,
-						"translation.y": 1930.0,
-						"zoom_level": 1.0
-					},
-					"type": "text"
-				},
-				{
-					"buffer": 4,
-					"file": "/mnt/code/claymore/claymore-game/game/logic.rs",
-					"settings":
-					{
-						"buffer_size": 4715,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								471,
-								471
-							]
-						],
-						"settings":
-						{
-							"syntax": "Packages/Rust/Rust.tmLanguage",
-							"translate_tabs_to_spaces": false
-						},
-						"translation.x": 0.0,
-						"translation.y": 45.0,
-						"zoom_level": 1.0
-					},
-					"type": "text"
-				},
-				{
-					"buffer": 5,
-					"file": "/mnt/code/claymore/claymore-game/engine/load.rs",
-					"settings":
-					{
-						"buffer_size": 12848,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								2900,
-								2900
-							]
-						],
-						"settings":
-						{
-							"syntax": "Packages/Rust/Rust.tmLanguage",
-							"translate_tabs_to_spaces": false
-						},
-						"translation.x": 0.0,
-						"translation.y": 1860.0,
-						"zoom_level": 1.0
-					},
-					"type": "text"
-				},
-				{
-					"buffer": 6,
-					"file": "/mnt/code/claymore/claymore-game/game/scene/load.rs",
-					"settings":
-					{
-						"buffer_size": 9116,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								9116,
-								9116
-							]
-						],
-						"settings":
-						{
-							"syntax": "Packages/Rust/Rust.tmLanguage",
-							"translate_tabs_to_spaces": false
-						},
-						"translation.x": 0.0,
-						"translation.y": 3632.0,
-						"zoom_level": 1.0
-					},
-					"type": "text"
-				},
-				{
-					"buffer": 7,
-					"file": "/mnt/code/claymore/claymore-game/game/scene/load_json.rs",
-					"settings":
-					{
-						"buffer_size": 11004,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								11004,
-								11004
-							]
-						],
-						"settings":
-						{
-							"syntax": "Packages/Rust/Rust.tmLanguage",
-							"translate_tabs_to_spaces": false
-						},
-						"translation.x": 0.0,
-						"translation.y": 5520.0,
-						"zoom_level": 1.0
-					},
-					"type": "text"
-				},
-				{
-					"buffer": 8,
-					"file": "/mnt/code/claymore/claymore-game/game/input.rs",
-					"settings":
-					{
-						"buffer_size": 815,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								815,
-								815
+								4462,
+								4462
 							]
 						],
 						"settings":
@@ -1187,19 +980,19 @@
 					"type": "text"
 				},
 				{
-					"buffer": 9,
-					"file": "/mnt/code/claymore/claymore-game/game/battle/time.rs",
+					"buffer": 3,
+					"file": "/mnt/code/claymore/claymore-game/game/battle/field.rs",
 					"settings":
 					{
-						"buffer_size": 2224,
+						"buffer_size": 4087,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								545,
-								545
+								2048,
+								2048
 							]
 						],
 						"settings":
@@ -1208,7 +1001,7 @@
 							"translate_tabs_to_spaces": false
 						},
 						"translation.x": 0.0,
-						"translation.y": 360.0,
+						"translation.y": 990.0,
 						"zoom_level": 1.0
 					},
 					"type": "text"

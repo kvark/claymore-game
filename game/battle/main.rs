@@ -20,13 +20,13 @@ use debug = hud::debug;
 use scene;
 use battle::{field,grid};
 use battle::field::Member;
-use battle::grid::{MutableGrid,DrawableGrid,TopologyGrid};
+use battle::grid::{DrawableGrid,TopologyGrid,GeometryGrid};
 
 
 pub struct Character	{
 	name		: ~str,
 	health		: field::Health,
-	parts		: ~[field::Position],
+	parts		: ~[field::Offset],
 	entity		: engine::object::Entity,
 	skeleton	: @mut engine::space::Armature,
 	record		: @engine::space::ArmatureRecord,
@@ -52,13 +52,13 @@ impl Character	{
 	}
 
 	pub fn spawn( @mut self, d : grid::Location, field : &mut field::Field, grid : &grid::Grid )	{
-		field.add_member( self as @mut field::Member, d, 0 );
+		field.add_member( self as @mut field::Member, d, 0, grid as &TopologyGrid );
 		self.location = d;
 		self.skeleton.root.space = grid.compute_space( d, self.orientation, 1.5 );
 	}
 
 	pub fn move( @mut self, d : grid::Location, field : &mut field::Field, grid : &grid::Grid )	{
-		field.remove_member( self as @mut field::Member, 0 );
+		field.remove_member( self.get_name() );
 		self.spawn( d, field, grid );
 	}
 }
@@ -66,10 +66,10 @@ impl Character	{
 impl field::Member for Character	{
 	fn get_name<'a>( &'a self )-> &'a str	{self.name.as_slice()}
 	fn get_health( &self )-> field::Health	{self.health}
-	fn get_parts<'a>( &'a self )-> &'a [field::Position]	{self.parts.as_slice()}
+	fn get_parts<'a>( &'a self )-> &'a [grid::Offset]	{self.parts.as_slice()}
 	fn is_busy( &self )-> bool	{ false }
-	fn receive_damage( &mut self, damage : field::Health, part : field::PartId )-> field::DamageResult	{
-		assert_eq!( part, 0 );
+	fn receive_damage( &mut self, damage : field::Health, part : Option<field::PartId> )-> field::DamageResult	{
+		assert!( part.is_none() );
 		if self.health > damage	{
 			self.health -= damage;
 			field::DamageSome
@@ -136,7 +136,7 @@ impl Scene	{
 	pub fn reset( &mut self, time : float )	{
 		// common
 		self.grid.clear();
-		self.field.reset();
+		self.field.clear();
 		// hero
 		self.hero.spawn( grid::Location::new(7,2), &mut self.field, &self.grid );
 		self.hero.start_time = time;
@@ -180,16 +180,17 @@ impl Scene	{
 			&input::EvKeyboard(key,press) if press	=> {
 				// camera rotation
 				match key	{
-					glfw::KeyE		=> { self.view.move(-1,time); },
-					glfw::KeyQ		=> { self.view.move(1,time); },
+					glfw::KeyE		=> { self.view.move(1,time); },
+					glfw::KeyQ		=> { self.view.move(-1,time); },
 					_	=> (),
 				}
 			},
 			&input::EvMouseClick(key,press) if hero_command && key==0 && press	=> {
 				let pos = self.grid.ray_cast( &self.view.cam, self.last_aspect, &self.last_mouse );
-				match self.field.query(pos)	{
-					None	=>	self.hero.move( pos, &mut self.field, &self.grid ),
-					_	=> ()	//attack
+				match self.field.get_by_location( pos, &self.grid as &TopologyGrid )	{
+					(Some(_),field::CellEmpty)	=> self.hero.move( pos, &mut self.field, &self.grid ),
+					(Some(_),_)	=> (),	//attack
+					_	=> (),	//ignore
 				}
 			},
 			_	=> (),
@@ -199,14 +200,20 @@ impl Scene	{
 	pub fn render( &mut self, output : &gr_mid::call::Output, tech : &gr_mid::draw::Technique,
 			gc : &mut gr_low::context::Context, hc : &hud::Context, lg : &engine::journal::Log )	{
 		// update grid
-		self.grid.clear();
-		self.field.fill_grid( &mut self.grid as &mut MutableGrid );
-		let active = self.grid.ray_cast( &self.view.cam, self.last_aspect, &self.last_mouse );
-		match self.field.query(active)	{
-			None	=>	{ self.grid.set_cell( active, grid::CellFocus ); },
-			_		=> ()	//attack
+		if true	{
+			self.grid.clear();
+			self.field.fill_grid( self.grid.mut_cells() );
+			let active = self.grid.ray_cast( &self.view.cam, self.last_aspect, &self.last_mouse );
+			match self.field.get_by_location( active, &self.grid as &TopologyGrid )	{
+				(Some(index),field::CellEmpty)	=>	{
+					print(fmt!( "loc(%i,%i) index = %u\n", active[0], active[1], index ));
+					self.grid.mut_cells()[index] = grid::CELL_ACTIVE
+				},
+				(Some(_),_)	=> (),	//attack animation
+				_		=> ()
+			}
+			self.grid.upload( &mut gc.texture );
 		}
-		self.grid.upload( &mut gc.texture );
 		// clear screen
 		let cd = gr_mid::call::ClearData{
 			color	:Some( gr_low::rast::Color::new(0x8080FFFF) ),
@@ -310,7 +317,7 @@ pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon 
 		Character{
 			name	: ~"Clare",
 			health	: 100,
-			parts	: ~[field::Position([0,0])],
+			parts	: ~[grid::Offset([0,0])],
 			entity		: ent,
 			skeleton	: skel,
 			record		: skel.find_record("ArmatureBossAction").expect("Hero has to have Idle"),
@@ -327,7 +334,7 @@ pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon 
 		Character{
 			name	: ~"Boss",
 			health	: 300,
-			parts	: ~[field::Position([0,0])],
+			parts	: ~[grid::Offset([0,0])],
 			entity		: ent,
 			skeleton	: skel,
 			record		: skel.find_record("ArmatureBossAction").expect("Boss has to have Idle"),
@@ -340,7 +347,7 @@ pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon 
 	let mut grid = grid::Grid::create( gc, 10u, lg );
 	grid.init( &mut gc.texture );
 	// create field
-	let field = field::Field::new();
+	let field = field::Field::new( grid.get_index_size() );
 	// create hud
 	let hud = gen_hud::battle::load();
 	hc.preload( hud.root.children, gc, fcon, lg );

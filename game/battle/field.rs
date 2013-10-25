@@ -1,29 +1,11 @@
 extern mod engine;
 
 use std;
-use std::hashmap::HashMap;
 use battle::grid;
 
-pub use Position	= battle::grid::Location;
-pub use battle::grid::Orientation;
+pub use battle::grid::{Location,Offset,Orientation};
 pub type PartId		= u8;
 pub type Health		= uint;
-
-impl Eq for Position	{
-	fn eq( &self, other : &Position )-> bool	{
-		self[0]==other[0] && self[1]==other[1]
-	}
-}
-impl IterBytes for Position	{
-	fn iter_bytes( &self, lsb0 : bool, f : std::to_bytes::Cb )-> bool	{
-		self[0].iter_bytes( lsb0, |x| f(x) ) &&
-		self[1].iter_bytes( lsb0, |x| f(x) )
-  	}
-}
-
-fn compute_position( base : &Position, _o : Orientation, off : &Position )-> Position	{
-	Position::new( base[0] + off[0], base[1] + off[1] )
-}
 
 
 pub enum DamageResult	{
@@ -36,8 +18,8 @@ pub enum DamageResult	{
 pub trait Member	{
 	fn get_name<'a>( &'a self )-> &'a str;
 	fn get_health( &self )-> Health;
-	fn get_parts<'a>( &'a self )-> &'a [Position];
-	fn receive_damage( &mut self, damage : Health, part : PartId )-> DamageResult;
+	fn get_parts<'a>( &'a self )-> &'a [Offset];
+	fn receive_damage( &mut self, damage : Health, part : Option<PartId> )-> DamageResult;
 	fn is_busy( &self )-> bool;
 }
 
@@ -46,84 +28,106 @@ fn is_same_member(a : @mut Member, b : @mut Member)-> bool	{
 	std::str::eq_slice( a.get_name(), b.get_name() )
 }
 
+pub enum Cell<T>	{
+	CellEmpty,
+	CellObstacle,
+	CellCore(T,Orientation),
+	CellPart(T,PartId),
+}
 
 struct Field	{
-	priv members	: ~[(@mut Member,Orientation)],
-	priv cells		: HashMap<Position,(@mut Member,PartId)>,
+	priv cells		: ~[Cell<@mut Member>],
 }
 
 impl Field	{
-	pub fn new()-> Field	{
+	pub fn new( size : uint )-> Field	{
 		Field	{
-			members	: ~[],
-			cells	: HashMap::new(),
+			cells	: std::vec::from_fn( size, |_i| CellEmpty ),
 		}
 	}
 
-	pub fn with<T>( &self, name : &str, fun : &fn(&Member)->T )->Option<T>	{
-		self.members.iter().find(|& &(m,_)| { std::str::eq_slice(name,m.get_name()) }).
-			map_move(|&(m,_)| { fun(m) })
-	}
-
-	pub fn query( &self, p : Position )-> Option<(~str,PartId)>	{
-		self.cells.find(&p).map_move(|&(m,part)| {( m.get_name().to_owned(), part )})
-	}
-
-	pub fn reset( &mut self )	{
-		self.members.clear();
-		self.cells.clear();
-	}
-
-	fn has_member( &mut self, member : @mut Member )-> bool	{
-		self.cells.iter().
-			find( |&(_,&(m,_))| is_same_member(m,member) ).
-			is_some()
-	}
-
-	pub fn add_member( &mut self, member : @mut Member, p : Position, o : Orientation )	{
-		assert!( !self.has_member(member) );
-		self.members.push(( member, o ));
-		for (i,&offset) in member.get_parts().iter().enumerate()	{
-			let pos = compute_position( &p, o, &offset );
-			self.cells.insert( pos, (member,i as PartId) );
+	pub fn get( &self, index : uint )-> Cell<~str>	{
+		match self.cells[index]	{
+			CellEmpty		=> CellEmpty,
+			CellObstacle	=> CellObstacle,
+			CellCore(m,o)	=> CellCore( m.get_name().to_owned(), o ),
+			CellPart(m,p)	=> CellPart( m.get_name().to_owned(), p ),
 		}
 	}
 
-	pub fn remove_member( &mut self, member : @mut Member, parts_removed : uint )	{
-		let parts_left = member.get_parts().len() - parts_removed;
-		if parts_left > 0	{
-			let positions = self.cells.iter().
-				filter( |&(_,&(m,_))| is_same_member(m,member) )
-				.map( |(&p,_)| p ).to_owned_vec();
-			assert_eq!( positions.len(), parts_left );
-			for p in positions.iter()	{
-				self.cells.remove(p);
+	pub fn get_by_location( &self, loc : Location, grid : &grid::TopologyGrid )-> (Option<uint>,Cell<~str>)	{
+		match grid.get_index(loc)	{
+			Some(index)	=> (Some(index), self.get(index)),
+			None	=> (None, CellEmpty),
+		}
+	}
+
+	pub fn with_member<T>( &self, name : &str, fun : &fn(&Member,Orientation)->T )->Option<T>	{
+		for cell in self.cells.iter()	{
+			match cell	{
+				&CellCore(m,o) if std::str::eq_slice(name,m.get_name())	=> return Some(fun(m,o)),
+				_	=> ()
 			}
 		}
-		self.members.retain( |&(m,_)| is_same_member(m,member) );
+		None
 	}
 
-	pub fn deal_damage( &mut self, pos : Position, damage : Health )-> DamageResult	{
-		let dr = match self.cells.find(&pos)	{
-			Some(&(m,part))	=> m.receive_damage( damage, part ),	//FIXME
-			None	=> DamageNone,
+	pub fn has_member( &self, m : &Member )-> bool	{
+		self.with_member( m.get_name(), |_,_| () ).is_some()
+	}
+
+	pub fn clear( &mut self )	{
+		for cell in self.cells.mut_iter()	{
+			*cell = CellEmpty;
+		}
+	}
+
+	pub fn add_member( &mut self, member : @mut Member, d : Location, o : Orientation, grid : &grid::TopologyGrid )	{
+		assert!( !self.has_member(member) );
+		let core_index = grid.get_index(d).expect("Member core position should exist");
+		self.cells[ core_index ] = CellCore( member, o );
+		for (i,&offset) in member.get_parts().iter().enumerate()	{
+			let pos = grid.offset_position( d, o, offset );
+			match grid.get_index(pos)	{
+				Some(index)	=> self.cells[index] = CellPart(member,i as PartId),
+				None		=> ()
+			}
+		}
+	}
+
+	pub fn fill_grid( &self, texels : &mut [grid::Texel] )	{
+		for (src,dst) in self.cells.iter().zip(texels.mut_iter())	{
+			*dst = match *src	{
+				CellEmpty	=> grid::CELL_EMPTY,
+				_			=> grid::CELL_OCCUPIED,
+			}
+		}
+	}
+
+	pub fn remove_member( &mut self, name : &str )	{
+		for cell in self.cells.mut_iter()	{
+			let clear = match cell	{
+				&CellCore(m,_)	if std::str::eq_slice(name,m.get_name())	=> true,
+				&CellPart(m,_)	if std::str::eq_slice(name,m.get_name())	=> true,
+				_	=> false
+			};
+			if clear	{
+				*cell = CellEmpty;
+			}
+		}
+	}
+
+	pub fn deal_damage( &mut self, index : uint, damage : Health )-> DamageResult	{
+		let (dr,mo) = match self.cells[index]	{
+			CellCore(m,_)	=> (m.receive_damage( damage, None ),	Some(m)),
+			CellPart(m,p)	=> (m.receive_damage( damage, Some(p) ),Some(m)),
+			_	=> (DamageNone,None),
 		};
 		match dr	{
-			DamagePartCut	=> {
-				self.cells.remove(&pos);
-			},
-			DamageKill		=> {
-				let (member,_) = self.cells.pop(&pos).unwrap();
-				self.remove_member( member, 1 );
-			},
+			DamagePartCut	=> self.cells[index] = CellEmpty,
+			DamageKill		=> self.remove_member( mo.unwrap().get_name() ),
 			_	=> ()
 		}
 		dr
-	}
-
-	pub fn fill_grid( &self, grid : &mut grid::MutableGrid )	{
-		for (&pos,_) in self.cells.iter()	{
-			grid.set_cell( pos, grid::CellOccupied );
-		}
 	}
 }
