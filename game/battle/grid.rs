@@ -4,7 +4,8 @@ extern mod engine;
 use std;
 use cgmath::{angle,rotation,vector};
 use cgmath::quaternion::ToQuat;
-use cgmath::vector::Vector;
+use cgmath::point::*;
+use cgmath::vector::*;
 use engine::{gr_low,gr_mid};
 use engine::gr_low::context::GLType;
 use engine::space::{QuatSpace,Space};
@@ -13,32 +14,9 @@ use scene = scene::common;
 
 
 pub type Orientation	= int;
-pub struct Location	([int, ..2]);
-pub struct Offset	([int,..2]);
-pub type Texel	= u32;
-
-impl Location	{
-	pub fn new( x : int, y : int )-> Location	{
-		Location([x,y])
-	}
-}
-
-impl Add<Offset,Location> for Location	{
-	fn add( &self, f : &Offset )-> Location	{
-		Location([ self[0]+f[0], self[1]+f[1] ])
-	}
-}
-
-impl Add<Offset,Offset> for Offset	{
-	fn add( &self, f : &Offset )-> Offset	{
-		Offset([ self[0]+f[0], self[1]+f[1] ])
-	}
-}
-impl Mul<int,Offset> for Offset	{
-	fn mul( &self, s : &int )-> Offset	{
-		Offset([ self[0] * *s, self[1] * *s ])
-	}
-}
+pub type Location		= Point2<int>;
+pub type Offset			= Vec2<int>;
+pub type Texel			= u32;
 
 
 pub struct Grid	{
@@ -146,24 +124,27 @@ pub trait TopologyGrid	{
 
 impl TopologyGrid for Grid	{
 	fn get_location( &self, index : uint )-> Location	{
-		Location([ (index%self.nseg) as int, (index/self.nseg) as int ])
+		Point2::new( (index%self.nseg) as int, (index/self.nseg) as int )
 	}
 	fn get_index( &self, d : Location )-> Option<uint>	{
 		let ns = self.nseg as int;
-		if d[0]>=0 && d[0]<ns && d[1]>=0 && d[1]<ns	{
-			Some((d[0] + d[1]*ns) as uint)
+		if d.x>=0 && d.y<ns && d.y>=0 && d.y<ns	{
+			Some((d.x + d.y*ns) as uint)
 		}else	{None}
 	}
 	fn offset_position( &self, d : Location, o : Orientation, f : Offset )-> Location	{
-		let offsets = [	Offset([1i,0i]), Offset([0i,-1i]), Offset([-1i,0i]), Offset([0i,1i]),
-			Offset([1i,0i]), Offset([0i,-1i])];
-		let off = offsets[o]*f[0] + offsets[o+2]*f[1];
-		d + off
+		let offsets = [
+			Vec2::new( 1i, 0i),	Vec2::new( 0i,-1i),
+			Vec2::new(-1i, 0i),	Vec2::new( 0i, 1i),
+			Vec2::new( 1i, 0i),	Vec2::new( 0i,-1i),
+			];
+		let off = offsets[o].mul_s(f.x).add_v( &offsets[o+2].mul_s(f.y) );
+		d.add_v( &off )
 	}
 	fn get_neighbors( &self, index : uint )-> ~[uint]	{
 		let d = self.get_location( index );
 		range(0,4).filter_map( |o| {
-			let dof = self.offset_position( d, o, Offset([1,0]) );
+			let dof = self.offset_position( d, o, Vec2::new(1i,0i) );
 			self.get_index(dof)
 		}).to_owned_vec()
 	}
@@ -171,23 +152,25 @@ impl TopologyGrid for Grid	{
 
 
 pub trait GeometryGrid : TopologyGrid	{
-	fn get_cell_size( &self )-> [f32,..2];
+	fn get_cell_size( &self )-> Vec2<f32>;
 	fn get_cell_center( &self, pos : Location )-> vector::Vec3<f32>;
 	fn compute_space( &self, pos : Location, orient : Orientation, elevation : f32 )-> QuatSpace;
 	fn ray_cast( &self, cam : &scene::Camera, aspect : f32, np : &[f32,..2] )-> Location;
 }
 
 impl GeometryGrid for Grid	{
-	fn get_cell_size( &self )-> [f32,..2]	{
-		[2f32*self.v_scale.x / (self.nseg as f32),
-		 2f32*self.v_scale.y / (self.nseg as f32)]
+	fn get_cell_size( &self )-> Vec2<f32>	{
+		Vec2::new(
+			2f32*self.v_scale.x / (self.nseg as f32),
+		 	2f32*self.v_scale.y / (self.nseg as f32)
+		 	)
 	}
 	fn get_cell_center( &self, pos : Location )-> vector::Vec3<f32>	{
 		let unit = self.get_cell_size();
 		let half = (self.nseg as f32) * 0.5f32;
 		vector::Vec3::new(
-			((pos[0] as f32)+0.5f32-half)*unit[0],
-			((pos[1] as f32)+0.5f32-half)*unit[1],
+			((pos.x as f32)+0.5f32-half)*unit.x,
+			((pos.y as f32)+0.5f32-half)*unit.y,
 			self.v_scale.z )
 	}
 	fn compute_space( &self, pos : Location, orient : Orientation, elevation : f32 )-> QuatSpace	{
@@ -207,8 +190,9 @@ impl GeometryGrid for Grid	{
 		let ray = cam.get_matrix(aspect).inverted().transform( &ndc ).sub_v( &origin );
 		let unit = self.get_cell_size();
 		let k = (self.v_scale.z - origin.z) / ray.z;
-		let x = (origin.x + ray.x*k + self.v_scale.x) / unit[0];
-		let y = (origin.y + ray.y*k + self.v_scale.y) / unit[1];
-		Location::new( x as int, y as int )
+		//origin.add_v( &ray.mul_s(k) ).add_v( &self.v_scale ).div_v( &unit )
+		let x = (origin.x + ray.x*k + self.v_scale.x) / unit.x;
+		let y = (origin.y + ray.y*k + self.v_scale.y) / unit.y;
+		Point2::new( x as int, y as int )
 	}
 }

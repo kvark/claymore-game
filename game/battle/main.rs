@@ -7,6 +7,7 @@ use std;
 use glfw;
 use cgmath::{angle,projection,rotation};
 use cgmath::angle::ToRad;
+use cgmath::point::*;
 use cgmath::quaternion::*;
 use cgmath::vector::*;
 use engine::anim::Player;
@@ -130,6 +131,8 @@ pub struct Scene	{
 	hud		: gen_hud::common::Screen,
 	last_aspect	: f32,
 	last_mouse	: [f32,..2],
+	grid_dirty	: bool,
+	loc_selected: grid::Location,
 }
 
 impl Scene	{
@@ -138,10 +141,10 @@ impl Scene	{
 		self.grid.clear();
 		self.field.clear();
 		// hero
-		self.hero.spawn( grid::Location::new(7,2), &mut self.field, &self.grid );
+		self.hero.spawn( Point2::new(7,2), &mut self.field, &self.grid );
 		self.hero.start_time = time;
 		// boss
-		self.boss.spawn( grid::Location::new(5,5), &mut self.field, &self.grid );
+		self.boss.spawn( Point2::new(5,5), &mut self.field, &self.grid );
 		self.boss.start_time = time;
 	}
 
@@ -200,19 +203,21 @@ impl Scene	{
 	pub fn render( &mut self, output : &gr_mid::call::Output, tech : &gr_mid::draw::Technique,
 			gc : &mut gr_low::context::Context, hc : &hud::Context, lg : &engine::journal::Log )	{
 		// update grid
-		if true	{
+		let active = self.grid.ray_cast( &self.view.cam, self.last_aspect, &self.last_mouse );
+		if self.grid_dirty || active != self.loc_selected	{
 			self.grid.clear();
-			self.field.fill_grid( self.grid.mut_cells() );
-			let active = self.grid.ray_cast( &self.view.cam, self.last_aspect, &self.last_mouse );
+			self.field.fill_grid( self.grid.mut_cells() );;
 			match self.field.get_by_location( active, &self.grid as &TopologyGrid )	{
 				(Some(index),field::CellEmpty)	=>	{
-					print(fmt!( "loc(%i,%i) index = %u\n", active[0], active[1], index ));
+					//print(fmt!( "loc(%i,%i) index = %u\n", active[0], active[1], index ));
 					self.grid.mut_cells()[index] = grid::CELL_ACTIVE
 				},
 				(Some(_),_)	=> (),	//attack animation
 				_		=> ()
 			}
 			self.grid.upload( &mut gc.texture );
+			self.grid_dirty = false;
+			self.loc_selected = active;
 		}
 		// clear screen
 		let cd = gr_mid::call::ClearData{
@@ -317,12 +322,12 @@ pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon 
 		Character{
 			name	: ~"Clare",
 			health	: 100,
-			parts	: ~[grid::Offset([0,0])],
+			parts	: ~[Vec2::new(0i,0i)],
 			entity		: ent,
 			skeleton	: skel,
 			record		: skel.find_record("ArmatureBossAction").expect("Hero has to have Idle"),
 			start_time	: 0f,
-			location	: grid::Location::new(0,0),
+			location	: Point2::new(0i,0i),
 			orientation	: 0,
 		}
 	};
@@ -334,12 +339,12 @@ pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon 
 		Character{
 			name	: ~"Boss",
 			health	: 300,
-			parts	: ~[grid::Offset([0,0])],
+			parts	: ~[Vec2::new(0i,0i)],
 			entity		: ent,
 			skeleton	: skel,
 			record		: skel.find_record("ArmatureBossAction").expect("Boss has to have Idle"),
 			start_time	: 0f,
-			location	: grid::Location::new(0,0),
+			location	: Point2::new(0i,0i),
 			orientation	: 0,
 		}
 	};
@@ -363,5 +368,7 @@ pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon 
 		hud		: hud,
 		last_aspect	: 1f32,
 		last_mouse	: [0f32,0f32],
+		grid_dirty	: true,
+		loc_selected: Point2::new(0i,0i),
 	}
 }
