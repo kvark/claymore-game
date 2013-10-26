@@ -108,14 +108,19 @@ impl Game	{
 		std::local_data::get( game_singleton, |opt| *opt.expect("Your game is dead") )
 	}
 
-	pub fn update( &mut self, input : input::State )-> bool	{
-		self.logic.update( &input, &self.journal.main )
-	}
-
-	pub fn on_input( &mut self, event : input::Event )	{
-		self.journal.input.add( event.to_str() );
+	pub fn on_input( &mut self, win : &glfw::Window, event : input::Event )	{
 		self.time.update();
-		self.logic.on_input( &event, self.time.animate.time, &mut self.debug_menu );
+		self.journal.input.add( event.to_str() );
+		let (px,py) = win.get_cursor_pos();
+		let (sw,sh) = win.get_size();
+		let state = input::State{
+			time	: self.time.animate.time,
+			focus	: win.is_visible(),
+			aspect	: (sw as float) / (sh as float),
+			mouse	: [px / (sw as float), py / (sh as float)],
+			log		: self.journal.main.fork( ~"update" ),
+		};
+		self.logic.on_input( &event, &state, &mut self.debug_menu );
 	}
 
 	pub fn render( &mut self, el : &Elements )-> bool	{
@@ -203,26 +208,26 @@ pub fn main()	{
 		std::local_data::set( game_singleton, game );
 
 		// init callbacks
-		window.set_iconify_callback( |_win,done|	{
-			Game::get().on_input( input::EvFocus(!done) );
+		window.set_iconify_callback( |win,done|	{
+			Game::get().on_input( win, input::EvFocus(!done) );
 		});
-		window.set_focus_callback( |_win,done|	{
-			Game::get().on_input( input::EvFocus(done) );
+		window.set_focus_callback( |win,done|	{
+			Game::get().on_input( win, input::EvFocus(done) );
 		});
-		window.set_char_callback( |_win,key|	{
-			Game::get().on_input( input::EvCharacter( key ));
+		window.set_char_callback( |win,key|	{
+			Game::get().on_input( win, input::EvCharacter( key ));
 		});
-		window.set_key_callback( |_win,key,_scan,action,_mods|	{
-			Game::get().on_input( input::EvKeyboard( key, action == glfw::Press ));
+		window.set_key_callback( |win,key,_scan,action,_mods|	{
+			Game::get().on_input( win, input::EvKeyboard( key, action == glfw::Press ));
 		});
-		window.set_cursor_pos_callback( |_win,posx,posy|	{
-			Game::get().on_input( input::EvMouseMove( posx, posy ));
+		window.set_cursor_pos_callback( |win,posx,posy|	{
+			Game::get().on_input( win, input::EvMouseMove( posx, posy ));
 		});
-		window.set_mouse_button_callback( |_win,button,action,_mods|	{
-			Game::get().on_input( input::EvMouseClick( button as uint, action == glfw::Press ));
+		window.set_mouse_button_callback( |win,button,action,_mods|	{
+			Game::get().on_input( win, input::EvMouseClick( button as uint, action == glfw::Press ));
 		});
-		window.set_scroll_callback( |_win,floatx,floaty|	{
-			Game::get().on_input( input::EvScroll( floatx, floaty ));
+		window.set_scroll_callback( |win,floatx,floaty|	{
+			Game::get().on_input( win, input::EvScroll( floatx, floaty ));
 		});
 		
 		loop	{
@@ -231,31 +236,8 @@ pub fn main()	{
 				window.close();
 				break;
 			}
-			// update
-			let input = {
-				let (px,py) = window.get_cursor_pos();
-				let mut buttons = 0u;
-				let all_buttons = [glfw::MouseButtonLeft,glfw::MouseButtonRight,glfw::MouseButtonMiddle];
-				for (i,but) in all_buttons.iter().enumerate()	{
-					if window.get_mouse_button(*but) == glfw::Press	{
-						buttons |= (1<<i) as uint;
-					}
-				}
-				input::State{
-					time	: glfw::get_time(),
-					focus	: window.is_visible(),
-					aspect	: (cw.width as float) / (cw.height as float),
-					mouse	: input::Mouse{
-						x	: px / (cw.width as float),
-						y	: py / (cw.height as float),
-						buttons	: buttons,
-					},
-				}
-			};
 			//TODO: update on a higher frequency than render
-			if !game.update( input )	{
-				break
-			}
+			game.on_input( &window, input::EvRender( game.frames ));
 			// render
 			if !game.render( &config.elements )	{
 				break;

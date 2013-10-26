@@ -62,14 +62,6 @@ impl Logic	{
 		}
 	}
 
-	pub fn update( &mut self, input : &input::State, _log : &journal::Log )-> bool	{
-		match self.screen	{
-			//ScreenChar		=> self.s_editor.update( input, log ),
-			ScreenBattle	=> self.s_battle.update( input ),
-			_ => true
-		}
-	}
-
 	fn on_debug_key( &mut self, key : input::Key, debug : &mut debug::Menu<Logic> )-> bool	{
 		if !debug.is_active()	{
 			return match key	{
@@ -130,17 +122,17 @@ impl Logic	{
 		true
 	}
 
-	pub fn on_input( &mut self, event : &input::Event, time : float, debug : &mut debug::Menu<Logic> )	{
+	pub fn on_input( &mut self, event : &input::Event, state : &input::State, debug : &mut debug::Menu<Logic> )	{
 		match self.screen	{
-			//ScreenChar	=> self.s_editor.on_input( event, time ),
-			ScreenBattle	=> self.s_battle.on_input( event, time ),
+			//ScreenChar	=> self.s_editor.on_input( event, state ),
+			ScreenBattle	=> self.s_battle.on_input( event, state ),
 			_	=> ()
 		}
 		match event	{
 			&input::EvKeyboard(key,press) if press	=>
-				self.on_debug_key( key, debug ),
-			_	=> false
-		};
+				{ self.on_debug_key( key, debug ); },
+			_	=> ()
+		}
 	}
 
 	pub fn render( &mut self, _el : &main::Elements, gcon : &mut gr_low::context::Context,

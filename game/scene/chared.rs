@@ -35,11 +35,11 @@ struct CamControl	{
 }
 
 impl CamControl	{
-	pub fn update( &mut self, input : &input::State )	{
+	pub fn update( &mut self, state : &input::State )	{
 		// calculate rotation
 		if self.in_rotation	{
 			let dt = 1f32/30f32;	//FIXME
-			let axis = Vec3::new( 0f32, 0f32, if input.mouse.x>0.5f {1f32} else {-1f32} );
+			let axis = Vec3::new( 0f32, 0f32, if state.mouse[0]>0.5f {1f32} else {-1f32} );
 			let angle = angle::deg( dt as f32 * self.speed_rot );
 			let qr = rotation::AxisAngle::new( axis, angle ).to_quat();
 			let sq = engine::space::QuatSpace{
@@ -108,21 +108,7 @@ impl Scene	{
 		self.hud_active = AhInactive;
 	}
 
-	pub fn update( &mut self, input : &input::State, _lg : &engine::journal::Log )-> bool	{
-		if true	{
-			let (mx,my) = self.hud_screen.root.min_size;
-			let x = ((0f+input.mouse.x) * (mx as float)) as int;
-			let y = ((1f-input.mouse.y) * (my as float)) as int;
-			self.mouse_point = (x,y);
-			//let name = root.trace( x, y, lg );
-			//io::println( ~"Click: " + name );
-		}
-		self.edit_label.update( input.time );
-		self.control.update( input );
-		true
-	}
-
-	pub fn on_input( &mut self, event : &input::Event )	{
+	pub fn on_input( &mut self, event : &input::Event, state : &input::State )	{
 		match event	{
 			&input::EvCharacter(c)	=> self.input_queue.push_char(c),
 			&input::EvKeyboard(key,press)	=> {
@@ -156,6 +142,18 @@ impl Scene	{
 				}
 			},
 			&input::EvScroll(_,scroll)	=> self.control.on_scroll(scroll),
+			&input::EvRender(_)	=>	{
+				if true	{
+					let (mx,my) = self.hud_screen.root.min_size;
+					let x = ((0f+state.mouse[0]) * (mx as float)) as int;
+					let y = ((1f-state.mouse[1]) * (my as float)) as int;
+					self.mouse_point = (x,y);
+					//let name = root.trace( x, y, lg );
+					//io::println( ~"Click: " + name );
+				}
+				self.edit_label.update( state.time );
+				self.control.update( state );
+			},
 			_	=> ()
 		}
 	}

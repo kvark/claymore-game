@@ -1,5 +1,6 @@
 use std;
 use glfw;
+use engine;
 
 pub type Key = glfw::Key;
 
@@ -10,6 +11,7 @@ pub enum Event	{
 	EvMouseMove(float,float),
 	EvMouseClick(uint,bool),
 	EvScroll(float,float),
+	EvRender(uint),
 }
 
 impl std::to_str::ToStr for Event	{
@@ -22,20 +24,16 @@ impl std::to_str::ToStr for Event	{
 			&EvMouseMove(x,y)	=> fmt!( "mouse_move(%f,%f)", x, y ),
 			&EvMouseClick(k,p)	=> fmt!( "mouse_hit(%c,%u)", b2c(p), k ),
 			&EvScroll(x,y)		=> fmt!( "scroll(%f,%f)", x, y ),
+			&EvRender(id)		=> fmt!( "render(%u)", id ),
 		}
 	}
 }
 
 
-pub struct Mouse	{
-	x	: float,
-	y	: float,
-	buttons	: uint,
-}
-
 pub struct State	{
 	time	: float,
 	focus	: bool,
 	aspect	: float,
-	mouse	: Mouse,
+	mouse	: [float,..2],
+	log		: engine::journal::Log,
 }

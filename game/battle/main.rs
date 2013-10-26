@@ -129,8 +129,6 @@ pub struct Scene	{
 	boss	: @mut Character,
 	cache	: gr_mid::draw::Cache,
 	hud		: gen_hud::common::Screen,
-	last_aspect	: f32,
-	last_mouse	: [f32,..2],
 	grid_dirty	: bool,
 	loc_selected: grid::Location,
 }
@@ -160,40 +158,44 @@ impl Scene	{
 		}
 	}
 
-	pub fn update( &mut self, input : &input::State )-> bool	{
-		let aspect = input.aspect as f32;
-		self.last_aspect = aspect;
-		self.last_mouse[0] = input.mouse.x as f32;
-		self.last_mouse[1] = input.mouse.y as f32;
-		let tv = input.time;	//FIXME
-		self.grid.update( &self.view.cam, aspect );
-		self.hero.update_view( tv );
-		self.boss.update_view( tv );
-		self.view.update( tv );
-		let tl = input.time; //FIXME
-		self.hero.update_logic( tl, &mut self.field );
-		self.boss.update_logic( tl, &mut self.field );
-		self.update_matrices( aspect );
-		true
+	fn ray_cast( &self, state : &input::State )-> grid::Location	{
+		let m = [state.mouse[0] as f32, state.mouse[1] as f32];
+		self.grid.ray_cast( &self.view.cam, state.aspect as f32, &m )
 	}
 
-	pub fn on_input( &mut self, event : &input::Event, time : float )	{
+	pub fn on_input( &mut self, event : &input::Event, state : &input::State )	{
 		let hero_command = !self.hero.is_busy();
 		match event	{
 			&input::EvKeyboard(key,press) if press	=> {
 				// camera rotation
 				match key	{
-					glfw::KeyE		=> { self.view.move(1,time); },
-					glfw::KeyQ		=> { self.view.move(-1,time); },
+					glfw::KeyE		=> { self.view.move( 1, state.time ); },
+					glfw::KeyQ		=> { self.view.move(-1, state.time ); },
 					_	=> (),
 				}
 			},
 			&input::EvMouseClick(key,press) if hero_command && key==0 && press	=> {
-				let pos = self.grid.ray_cast( &self.view.cam, self.last_aspect, &self.last_mouse );
+				let pos = self.ray_cast( state );
 				match self.field.get_by_location( pos, &self.grid as &TopologyGrid )	{
 					(Some(_),field::CellEmpty)	=> self.hero.move( pos, &mut self.field, &self.grid ),
 					(Some(_),_)	=> (),	//attack
 					_	=> (),	//ignore
+				}
+			},
+			&input::EvRender(_)	=>	{
+				let tv = state.time;	//FIXME
+				self.grid.update( &self.view.cam, state.aspect as f32 );
+				self.hero.update_view( tv );
+				self.boss.update_view( tv );
+				self.view.update( tv );
+				let tl = state.time;	//FIXME
+				self.hero.update_logic( tl, &mut self.field );
+				self.boss.update_logic( tl, &mut self.field );
+				self.update_matrices( state.aspect as f32 );
+				let active = self.ray_cast( state );
+				if active != self.loc_selected	{
+					self.loc_selected = active;
+					self.grid_dirty = true;
 				}
 			},
 			_	=> (),
@@ -203,11 +205,10 @@ impl Scene	{
 	pub fn render( &mut self, output : &gr_mid::call::Output, tech : &gr_mid::draw::Technique,
 			gc : &mut gr_low::context::Context, hc : &hud::Context, lg : &engine::journal::Log )	{
 		// update grid
-		let active = self.grid.ray_cast( &self.view.cam, self.last_aspect, &self.last_mouse );
-		if self.grid_dirty || active != self.loc_selected	{
+		if self.grid_dirty	{
 			self.grid.clear();
-			self.field.fill_grid( self.grid.mut_cells() );;
-			match self.field.get_by_location( active, &self.grid as &TopologyGrid )	{
+			self.field.fill_grid( self.grid.mut_cells() );
+			match self.field.get_by_location( self.loc_selected, &self.grid as &TopologyGrid )	{
 				(Some(index),field::CellEmpty)	=>	{
 					//print(fmt!( "loc(%i,%i) index = %u\n", active[0], active[1], index ));
 					self.grid.mut_cells()[index] = grid::CELL_ACTIVE
@@ -217,7 +218,6 @@ impl Scene	{
 			}
 			self.grid.upload( &mut gc.texture );
 			self.grid_dirty = false;
-			self.loc_selected = active;
 		}
 		// clear screen
 		let cd = gr_mid::call::ClearData{
@@ -366,8 +366,6 @@ pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon 
 		boss	: boss,
 		cache	: gr_mid::draw::make_cache(),
 		hud		: hud,
-		last_aspect	: 1f32,
-		last_mouse	: [0f32,0f32],
 		grid_dirty	: true,
 		loc_selected: Point2::new(0i,0i),
 	}
