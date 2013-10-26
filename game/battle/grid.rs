@@ -155,6 +155,7 @@ pub trait GeometryGrid : TopologyGrid	{
 	fn get_cell_size( &self )-> Vec2<f32>;
 	fn get_cell_center( &self, pos : Location )-> vector::Vec3<f32>;
 	fn compute_space( &self, pos : Location, orient : Orientation, elevation : f32 )-> QuatSpace;
+	fn point_cast( &self, point : &vector::Vec3<f32> )-> Location;
 	fn ray_cast( &self, cam : &scene::Camera, aspect : f32, np : &[f32,..2] )-> Location;
 }
 
@@ -184,15 +185,18 @@ impl GeometryGrid for Grid	{
 			scale		: 1.0,
 		}
 	}
+	fn point_cast( &self, point : &vector::Vec3<f32> )-> Location	{
+		let unit = self.get_cell_size();
+		let x = (point.x + self.v_scale.x) / unit.x;
+		let y = (point.y + self.v_scale.y) / unit.y;
+		Point2::new( x as int, y as int )
+	}
 	fn ray_cast( &self, cam : &scene::Camera, aspect : f32, np : &[f32,..2] )-> Location	{
 		let ndc = vector::Vec3::new( np[0]*2f32-1f32, 1f32-np[1]*2f32, 0f32 );
 		let origin = cam.node.world_space().position;
 		let ray = cam.get_matrix(aspect).inverted().transform( &ndc ).sub_v( &origin );
-		let unit = self.get_cell_size();
 		let k = (self.v_scale.z - origin.z) / ray.z;
 		//origin.add_v( &ray.mul_s(k) ).add_v( &self.v_scale ).div_v( &unit )
-		let x = (origin.x + ray.x*k + self.v_scale.x) / unit.x;
-		let y = (origin.y + ray.y*k + self.v_scale.y) / unit.y;
-		Point2::new( x as int, y as int )
+		self.point_cast( &origin.add_v( &ray.mul_s(k) ) )
 	}
 }

@@ -37,13 +37,19 @@ pub enum Cell<T>	{
 
 struct Field	{
 	priv cells		: ~[Cell<@mut Member>],
+	priv revision	: uint,
 }
 
 impl Field	{
 	pub fn new( size : uint )-> Field	{
 		Field	{
 			cells	: std::vec::from_fn( size, |_i| CellEmpty ),
+			revision: 0,
 		}
+	}
+
+	pub fn get_revision( &self )-> uint	{
+		self.revision
 	}
 
 	pub fn get( &self, index : uint )-> Cell<~str>	{
@@ -93,6 +99,7 @@ impl Field	{
 				None		=> ()
 			}
 		}
+		self.revision += 1;
 	}
 
 	pub fn fill_grid( &self, texels : &mut [grid::Texel] )	{
@@ -115,6 +122,7 @@ impl Field	{
 				*cell = CellEmpty;
 			}
 		}
+		self.revision += 1;
 	}
 
 	pub fn deal_damage( &mut self, index : uint, damage : Health )-> DamageResult	{
@@ -123,11 +131,11 @@ impl Field	{
 			CellPart(m,p)	=> (m.receive_damage( damage, Some(p) ),Some(m)),
 			_	=> (DamageNone,None),
 		};
-		match dr	{
-			DamagePartCut	=> self.cells[index] = CellEmpty,
-			DamageKill		=> self.remove_member( mo.unwrap().get_name() ),
-			_	=> ()
-		}
+		self.revision += match dr	{
+			DamagePartCut	=> {self.cells[index] = CellEmpty; 1},
+			DamageKill		=> {self.remove_member( mo.unwrap().get_name() ); 1},
+			_	=> 0
+		};
 		dr
 	}
 }

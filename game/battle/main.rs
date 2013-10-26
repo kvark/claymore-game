@@ -24,16 +24,27 @@ use battle::field::Member;
 use battle::grid::{DrawableGrid,TopologyGrid,GeometryGrid};
 
 
+struct Motion	{
+	destination	: engine::space::QuatSpace,
+	last_update	: float,
+}
+
 pub struct Character	{
 	name		: ~str,
-	health		: field::Health,
 	parts		: ~[field::Offset],
+	// stats
+	health		: field::Health,
+	move_speed	: f32,
+	// view
 	entity		: engine::object::Entity,
 	skeleton	: @mut engine::space::Armature,
 	record		: @engine::space::ArmatureRecord,
 	priv start_time	: float,
-	location	: grid::Location,
-	orientation	: field::Orientation,
+	// state
+	priv location	: grid::Location,
+	priv orientation: field::Orientation,
+	priv elevation	: f32,
+	priv motion		: Option<Motion>,
 }
 
 impl Character	{
@@ -48,19 +59,68 @@ impl Character	{
 		self.skeleton.fill_data( &mut self.entity.data );
 	}
 
-	pub fn update_logic( &mut self, _time : float, _field : &mut field::Field )	{
-		//TODO
+	fn recompute_space( &self, grid : &grid::Grid )-> engine::space::QuatSpace	{
+		grid.compute_space( self.location, self.orientation, self.elevation )
+	}
+
+	pub fn update_logic( @mut self, time : float, field : &mut field::Field, grid : &grid::Grid )	{
+		let (ref mut dest_opt, ref mut done) = match self.motion	{
+			Some(ref mut mo)	=>	{
+				let pos = self.skeleton.root.space.position;
+				let dest_vector = mo.destination.position.sub_v( &pos );
+				let dest_len = dest_vector.length();
+				let delta = (time - mo.last_update) as f32;
+				let travel_dist = std::num::min( dest_len, delta * self.move_speed );
+				let move_vector = dest_vector.mul_s( travel_dist/dest_len );
+				mo.last_update = time;
+				(Some(pos.add_v( &move_vector )), travel_dist == dest_len)
+			},
+			None	=> (None,false)
+		};
+		match dest_opt	{
+			&Some(ref mut dest_pos)	=>	{
+				let dest_loc = grid.point_cast( dest_pos );
+				if dest_loc != self.location	{
+					//print(fmt!( "Location %s -> %s\n", self.location.to_str(), dest_loc.to_str() ));
+					match field.get_by_location( dest_loc, grid as &TopologyGrid )	{
+						(Some(_),field::CellEmpty)	=>	{
+							field.remove_member( self.get_name() );
+							self.spawn( dest_loc, field, grid );
+						},
+						(Some(_),_)	=>	{	//collide
+							*dest_pos = self.recompute_space( grid ).position;
+							*done = true;
+						},
+						_	=> fail!("Unexpected path cell: %s", dest_loc.to_str())
+					}
+				}
+				self.skeleton.root.space.position = *dest_pos;
+			}
+			_	=> ()
+		}
+		if *done	{
+			self.motion = None;
+		}
 	}
 
 	pub fn spawn( @mut self, d : grid::Location, field : &mut field::Field, grid : &grid::Grid )	{
 		field.add_member( self as @mut field::Member, d, 0, grid as &TopologyGrid );
 		self.location = d;
-		self.skeleton.root.space = grid.compute_space( d, self.orientation, 1.5 );
+		self.skeleton.root.space = self.recompute_space( grid );
 	}
 
-	pub fn move( @mut self, d : grid::Location, field : &mut field::Field, grid : &grid::Grid )	{
-		field.remove_member( self.get_name() );
-		self.spawn( d, field, grid );
+	pub fn move( @mut self, d : grid::Location, time : float, field : &mut field::Field, grid : &grid::Grid )	{
+		if false	{	//instant?
+			field.remove_member( self.get_name() );
+			self.spawn( d, field, grid );
+		}else	{
+			assert!( !self.is_busy() );
+			let space = grid.compute_space( d, self.orientation, self.elevation );
+			self.motion = Some(Motion{
+				destination	: space,
+				last_update	: time,
+			});
+		}
 	}
 }
 
@@ -68,7 +128,7 @@ impl field::Member for Character	{
 	fn get_name<'a>( &'a self )-> &'a str	{self.name.as_slice()}
 	fn get_health( &self )-> field::Health	{self.health}
 	fn get_parts<'a>( &'a self )-> &'a [grid::Offset]	{self.parts.as_slice()}
-	fn is_busy( &self )-> bool	{ false }
+	fn is_busy( &self )-> bool	{ self.motion.is_some() }
 	fn receive_damage( &mut self, damage : field::Health, part : Option<field::PartId> )-> field::DamageResult	{
 		assert!( part.is_none() );
 		if self.health > damage	{
@@ -129,8 +189,8 @@ pub struct Scene	{
 	boss	: @mut Character,
 	cache	: gr_mid::draw::Cache,
 	hud		: gen_hud::common::Screen,
-	grid_dirty	: bool,
-	loc_selected: grid::Location,
+	field_revision	: uint,
+	loc_selected	: grid::Location,
 }
 
 impl Scene	{
@@ -169,33 +229,37 @@ impl Scene	{
 			&input::EvKeyboard(key,press) if press	=> {
 				// camera rotation
 				match key	{
-					glfw::KeyE		=> { self.view.move( 1, state.time ); },
-					glfw::KeyQ		=> { self.view.move(-1, state.time ); },
+					glfw::KeyE		=> { self.view.move( 1, state.time_view ); },
+					glfw::KeyQ		=> { self.view.move(-1, state.time_view ); },
 					_	=> (),
 				}
 			},
 			&input::EvMouseClick(key,press) if hero_command && key==0 && press	=> {
 				let pos = self.ray_cast( state );
 				match self.field.get_by_location( pos, &self.grid as &TopologyGrid )	{
-					(Some(_),field::CellEmpty)	=> self.hero.move( pos, &mut self.field, &self.grid ),
+					(Some(_),field::CellEmpty)	=>	{
+						if !self.hero.is_busy()	{
+							self.hero.move( pos, state.time_game, &mut self.field, &self.grid );
+						}
+					},
 					(Some(_),_)	=> (),	//attack
 					_	=> (),	//ignore
 				}
 			},
 			&input::EvRender(_)	=>	{
-				let tv = state.time;	//FIXME
+				let tv = state.time_view;
 				self.grid.update( &self.view.cam, state.aspect as f32 );
 				self.hero.update_view( tv );
 				self.boss.update_view( tv );
 				self.view.update( tv );
-				let tl = state.time;	//FIXME
-				self.hero.update_logic( tl, &mut self.field );
-				self.boss.update_logic( tl, &mut self.field );
+				let tg = state.time_game;
+				self.hero.update_logic( tg, &mut self.field, &self.grid );
+				self.boss.update_logic( tg, &mut self.field, &self.grid );
 				self.update_matrices( state.aspect as f32 );
 				let active = self.ray_cast( state );
 				if active != self.loc_selected	{
 					self.loc_selected = active;
-					self.grid_dirty = true;
+					self.field_revision = 0;
 				}
 			},
 			_	=> (),
@@ -205,7 +269,7 @@ impl Scene	{
 	pub fn render( &mut self, output : &gr_mid::call::Output, tech : &gr_mid::draw::Technique,
 			gc : &mut gr_low::context::Context, hc : &hud::Context, lg : &engine::journal::Log )	{
 		// update grid
-		if self.grid_dirty	{
+		if self.field_revision != self.field.get_revision()	{
 			self.grid.clear();
 			self.field.fill_grid( self.grid.mut_cells() );
 			match self.field.get_by_location( self.loc_selected, &self.grid as &TopologyGrid )	{
@@ -217,7 +281,7 @@ impl Scene	{
 				_		=> ()
 			}
 			self.grid.upload( &mut gc.texture );
-			self.grid_dirty = false;
+			self.field_revision = self.field.get_revision();
 		}
 		// clear screen
 		let cd = gr_mid::call::ClearData{
@@ -321,14 +385,17 @@ pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon 
 		// done
 		Character{
 			name	: ~"Clare",
-			health	: 100,
 			parts	: ~[Vec2::new(0i,0i)],
+			health		: 100,
+			move_speed	: 5.0,
 			entity		: ent,
 			skeleton	: skel,
 			record		: skel.find_record("ArmatureBossAction").expect("Hero has to have Idle"),
 			start_time	: 0f,
 			location	: Point2::new(0i,0i),
 			orientation	: 0,
+			elevation	: 1.5,
+			motion		: None,
 		}
 	};
 	// load boss
@@ -338,14 +405,17 @@ pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon 
 		// done
 		Character{
 			name	: ~"Boss",
-			health	: 300,
 			parts	: ~[Vec2::new(0i,0i)],
+			health		: 300,
+			move_speed	: 1.0,
 			entity		: ent,
 			skeleton	: skel,
 			record		: skel.find_record("ArmatureBossAction").expect("Boss has to have Idle"),
 			start_time	: 0f,
 			location	: Point2::new(0i,0i),
 			orientation	: 0,
+			elevation	: 1.5,
+			motion		: None,
 		}
 	};
 	// create grid
@@ -366,7 +436,7 @@ pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon 
 		boss	: boss,
 		cache	: gr_mid::draw::make_cache(),
 		hud		: hud,
-		grid_dirty	: true,
-		loc_selected: Point2::new(0i,0i),
+		field_revision	: 0,
+		loc_selected	: Point2::new(0i,0i),
 	}
 }

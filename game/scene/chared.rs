@@ -151,7 +151,7 @@ impl Scene	{
 					//let name = root.trace( x, y, lg );
 					//io::println( ~"Click: " + name );
 				}
-				self.edit_label.update( state.time );
+				self.edit_label.update( state.time_view );
 				self.control.update( state );
 			},
 			_	=> ()

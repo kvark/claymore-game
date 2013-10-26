@@ -31,7 +31,8 @@ impl std::to_str::ToStr for Event	{
 
 
 pub struct State	{
-	time	: float,
+	time_game	: float,
+	time_view	: float,
 	focus	: bool,
 	aspect	: float,
 	mouse	: [float,..2],

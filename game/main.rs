@@ -114,7 +114,8 @@ impl Game	{
 		let (px,py) = win.get_cursor_pos();
 		let (sw,sh) = win.get_size();
 		let state = input::State{
-			time	: self.time.animate.time,
+			time_game	: self.time.animate.time,
+			time_view	: self.time.render.time,
 			focus	: win.is_visible(),
 			aspect	: (sw as float) / (sh as float),
 			mouse	: [px / (sw as float), py / (sh as float)],
