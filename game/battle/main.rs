@@ -7,13 +7,14 @@ use std;
 use glfw;
 use cgmath::{angle,projection};
 use cgmath::angle::ToRad;
+use cgmath::matrix::ToMat4;
 use cgmath::point::*;
 use cgmath::quaternion::*;
 use cgmath::vector::*;
 use engine::{anim,gr_low,gr_mid};
 use engine::anim::Player;
 use engine::gr_mid::draw::Mod;
-use engine::space::{Interpolate,Space};
+use engine::space::Interpolate;
 
 use input;
 use hud = hud::main;
@@ -25,7 +26,7 @@ use battle::grid::{DrawableGrid,TopologyGrid,GeometryGrid};
 
 
 struct Motion	{
-	destination	: engine::space::QuatSpace,
+	destination	: engine::space::Space,
 	last_update	: anim::float,
 }
 
@@ -59,15 +60,15 @@ impl Character	{
 		self.skeleton.fill_data( &mut self.entity.data );
 	}
 
-	fn recompute_space( &self, grid : &grid::Grid )-> engine::space::QuatSpace	{
+	fn recompute_space( &self, grid : &grid::Grid )-> engine::space::Space	{
 		grid.compute_space( self.location, self.orientation, self.elevation )
 	}
 
 	pub fn update_logic( @mut self, time : anim::float, field : &mut field::Field, grid : &grid::Grid )	{
 		let (ref mut dest_opt, ref mut done) = match self.motion	{
 			Some(ref mut mo)	=>	{
-				let pos = self.skeleton.root.space.position;
-				let dest_vector = mo.destination.position.sub_v( &pos );
+				let pos	= &self.skeleton.root.space.disp;
+				let dest_vector = mo.destination.disp.sub_v( pos );
 				let dest_len = dest_vector.length();
 				let delta = (time - mo.last_update) as f32;
 				let travel_dist = std::num::min( dest_len, delta * self.move_speed );
@@ -79,7 +80,7 @@ impl Character	{
 		};
 		match dest_opt	{
 			&Some(ref mut dest_pos)	=>	{
-				let dest_loc = grid.point_cast( dest_pos );
+				let dest_loc = grid.point_cast( &Point::from_vec(dest_pos) );
 				if dest_loc != self.location	{
 					//print(format!( "Location {:s} -> {:s}\n", self.location.to_str(), dest_loc.to_str() ));
 					match field.get_by_location( dest_loc, grid as &TopologyGrid )	{
@@ -88,13 +89,13 @@ impl Character	{
 							self.spawn( dest_loc, field, grid );
 						},
 						(Some(_),_)	=>	{	//collide
-							*dest_pos = self.recompute_space( grid ).position;
+							*dest_pos = self.recompute_space( grid ).disp;
 							*done = true;
 						},
 						_	=> fail!("Unexpected path cell: {:s}", dest_loc.to_str())
 					}
 				}
-				self.skeleton.root.space.position = *dest_pos;
+				self.skeleton.root.space.disp = *dest_pos;
 			}
 			_	=> ()
 		}
@@ -145,8 +146,8 @@ impl field::Member for Character	{
 pub struct View	{
 	cam				: scene::common::Camera,
 	trans_duration	: anim::float,
-	points			: ~[engine::space::QuatSpace],
-	source			: Option<engine::space::QuatSpace>,
+	points			: ~[engine::space::Space],
+	source			: Option<engine::space::Space>,
 	destination		: uint,
 	start_time		: anim::float,
 }
@@ -213,7 +214,7 @@ impl Scene	{
 			let d = &mut ent.data;
 			self.view.cam.fill_data( d, aspect );
 			d.insert( ~"u_LightPos",	gr_low::shade::UniFloatVec(light_pos) );
-			let world = ent.node.world_space().to_matrix();
+			let world = ent.node.world_space().to_mat4();
 			d.insert( ~"u_World",		gr_low::shade::UniMatrix(false,world) );
 		}
 	}
@@ -331,11 +332,10 @@ pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon 
 	let view = 	{
 		// create camera
 		let cam =	{
-			let cam_space = engine::space::QuatSpace{
-				position 	: Vec3::new( 10f32, -10f32, 5f32 ),
-				orientation	: Quat::new( 0.802f32, 0.447f32, 0.198f32, 0.343f32 ),
-				scale		: 1f32
-			};
+			let cam_space = engine::space::make( 1.0,
+				Quat::new( 0.802f32, 0.447f32, 0.198f32, 0.343f32 ),
+				Vec3::new( 10f32, -10f32, 5f32 )
+			);
 			let cam_node = @mut engine::space::Node{
 				name	: ~"cam",
 				space	: cam_space,
@@ -358,11 +358,9 @@ pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon 
 			let angle = angle::deg( (i as f32) * 180f32 / 4f32 );
 			let q = Quat::from_axis_angle( &axis, angle.to_rad() );
 			let cs = cam.node.space;
-			engine::space::QuatSpace{
-				position	: q.mul_v( &cs.position ),
-				orientation	: q.mul_q( &cs.orientation ),
-				scale		: cs.scale,
-			}
+			engine::space::make( cs.scale,
+				q.mul_q( &cs.rot ),
+				q.mul_v( &cs.disp ))
 		});
 		View{
 			cam	: cam,

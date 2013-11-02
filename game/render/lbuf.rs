@@ -1,10 +1,10 @@
 extern mod engine;
 extern mod cgmath;
 
+use cgmath::matrix::ToMat4;
 use cgmath::vector::Vec4;
 
 use engine::{gr_low,gr_mid};
-use engine::space::Space;
 
 use scene = scene::common;
 
@@ -122,7 +122,7 @@ impl Context	{
 		let mut queue = lights.iter().map( |lit|	{
 			let (mesh,mat) = vol.query( lit.kind );
 			lit.fill_data( &mut data, 1f32, 30f32 );
-			let mw = lit.node.world_space().to_matrix();
+			let mw = lit.node.world_space().to_mat4();
 			data.insert( ~"u_World",	gr_low::shade::UniMatrix(false,mw) );
 			let e = engine::object::Entity	{
 				node	: lit.node,

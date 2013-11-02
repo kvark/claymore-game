@@ -71,7 +71,7 @@ pub struct Light	{
 	spherical	: bool,
 }
 
-pub struct QuatSpace	{
+pub struct Space	{
 	pos		: Vector3,
 	rot		: Quaternion,
 	scale	: Scalar,
@@ -87,14 +87,14 @@ pub enum NodeChild	{
 
 pub struct Node	{
 	name		: Name,
-	space		: QuatSpace,
+	space		: Space,
 	children	: ~[NodeChild],
 	actions		: ~[Action],
 }
 
 pub struct Bone	{
 	name		: Name,
-	space		: QuatSpace,
+	space		: Space,
 	children	: ~[Bone],
 }
 

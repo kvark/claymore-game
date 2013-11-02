@@ -9,8 +9,8 @@ use std::rt::io::{Reader,Seek};
 use extra;
 
 use cgmath::angle;
-//use cgmath::rotation::Euler;
 use cgmath::quaternion::Quat;
+use cgmath::transform::Transform;
 use cgmath::vector::Vec3;
 
 use gr_low::{buf,context,shade,texture};
@@ -18,7 +18,7 @@ use gr_mid::mesh;
 use anim;
 use journal;
 use space;
-use space::Space;
+
 
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - //
 //		Chunk reader									//
@@ -152,13 +152,9 @@ pub fn load_text( path : &str )-> ~str	{
 	}
 }
 
-pub fn read_space( br : &mut Reader )-> space::QuatSpace	{
+pub fn read_space( br : &mut Reader )-> space::Space	{
 	let d = br.get_floats(8u);
-	space::QuatSpace{
-		position	: Vec3::new(d[0],d[1],d[2]),
-		orientation	: Quat::new(d[7],d[4],d[5],d[6]),
-		scale		: d[3],
-	}
+	space::make( d[3], Quat::new(d[7],d[4],d[5],d[6]), Vec3::new(d[0],d[1],d[2]) )
 }
 
 pub fn load_program( ct : &context::Context, path : &str, lg : &journal::Log )-> @shade::Program	{
@@ -408,13 +404,15 @@ pub fn read_armature( br : &mut Reader, root : @mut space::Node, dual_quat : boo
 		let pid = br.get_uint(1u);
 		let parent = Some(if pid==0u {root}	else {bones[pid-1u].node});
 		let space = read_space(br);
-		let bind_inv = space.inverted();
+		let bind_inv = space.invert().expect(format!(
+			"Uninvertable bind pose detected at bone {:u} of armature {:s}",
+			bones.len(), root.name ));
 		let bind_pose_inv = if pid==0u {bind_inv} else {bind_inv.concat( &bones[pid-1u].bind_pose_inv )};
 		bones.push(space::Bone{
 			node			: @mut space::Node{ name:name, space:space, parent:parent, actions:~[] },
 			bind_space		: space,
 			bind_pose_inv	: bind_pose_inv,
-			transform		: space::QuatSpace::identity(),
+			transform		: Transform::identity(),
 			parent_id		: if pid==0u {None} else {Some(pid-1u)},
 		});
 	}

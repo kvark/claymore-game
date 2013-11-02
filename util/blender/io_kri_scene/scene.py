@@ -54,7 +54,7 @@ def cook_space(matrix):
 	scale = (sca.x + sca.y + sca.z)/3.0
 	if sca.x*sca.x+sca.y*sca.y+sca.z*sca.z > 0.01 + sca.x*sca.y+sca.y*sca.z+sca.z*sca.x:
 		log.log(1,'w', 'Non-uniform scale: (%.1f,%.1f,%.1f)' % sca.to_tuple(1))
-	return ('QuatSpace',{
+	return ('Space',{
 		'pos'	: list(pos),
 		'rot'	: [rot.x,rot.y,rot.z,rot.w],
 		'scale'	: scale

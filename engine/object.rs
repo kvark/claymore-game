@@ -1,8 +1,9 @@
+use cgmath::matrix::ToMat4;
+
 use gr_low;
 use gr_mid;
 use journal;
 use space;
-use space::Space;
 
 
 pub struct Entity	{
@@ -16,7 +17,7 @@ pub struct Entity	{
 
 impl Entity	{
 	pub fn update_world( &mut self )	{
-		let world = self.node.world_space().to_matrix();
+		let world = self.node.world_space().to_mat4();
 		self.data.insert( ~"u_World", gr_low::shade::UniMatrix(false,world) );
 	}
 }

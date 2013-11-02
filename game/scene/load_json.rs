@@ -36,18 +36,10 @@ struct SpaceInfo	{
 }
 
 impl SpaceInfo	{
-	pub fn spawn( &self )-> engine::space::QuatSpace	{
-		engine::space::QuatSpace{
-			position : {
-				let (x,y,z) = self.position;
-				Vec3::new(x,y,z)
-			},
-			orientation : {
-				let (w,x,y,z) = self.orientation;
-				Quat::new(w,x,y,z).normalize()
-			},
-			scale : self.scale,
-		}
+	pub fn spawn( &self )-> engine::space::Space	{
+		engine::space::make( self.scale,
+			{ let (w,x,y,z) = self.orientation; Quat::new(w,x,y,z).normalize() },
+			{ let (x,y,z) = self.position; Vec3::new(x,y,z) })
 	}
 }
 

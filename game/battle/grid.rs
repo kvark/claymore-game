@@ -2,21 +2,23 @@ extern mod cgmath;
 extern mod engine;
 
 use std;
-use cgmath::{angle,vector};
+use cgmath::{angle,point,transform,vector};
 use cgmath::angle::ToRad;
+use cgmath::matrix::Matrix;
+use cgmath::point::Point;
 use cgmath::quaternion::Quat;
-use cgmath::point::*;
-use cgmath::vector::*;
+use cgmath::transform::Transform;
+use cgmath::vector::Vector;
 use engine::{gr_low,gr_mid};
 use engine::gr_low::context::GLType;
-use engine::space::{QuatSpace,Space};
+use engine::space;
 
 use scene = scene::common;
 
 
 pub type Orientation	= int;
-pub type Location		= Point2<int>;
-pub type Offset			= Vec2<int>;
+pub type Location		= point::Point2<int>;
+pub type Offset			= vector::Vec2<int>;
 pub type Texel			= u32;
 
 
@@ -125,7 +127,7 @@ pub trait TopologyGrid	{
 
 impl TopologyGrid for Grid	{
 	fn get_location( &self, index : uint )-> Location	{
-		Point2::new( (index % self.nseg) as int, (index / self.nseg) as int )
+		point::Point2::new( (index % self.nseg) as int, (index / self.nseg) as int )
 	}
 	fn get_index( &self, d : Location )-> Option<uint>	{
 		let ns = self.nseg as int;
@@ -135,9 +137,9 @@ impl TopologyGrid for Grid	{
 	}
 	fn offset_position( &self, d : Location, o : Orientation, f : Offset )-> Location	{
 		let offsets = [
-			Vec2::new( 1i, 0i),	Vec2::new( 0i,-1i),
-			Vec2::new(-1i, 0i),	Vec2::new( 0i, 1i),
-			Vec2::new( 1i, 0i),	Vec2::new( 0i,-1i),
+			vector::Vec2::new( 1i, 0i),	vector::Vec2::new( 0i,-1i),
+			vector::Vec2::new(-1i, 0i),	vector::Vec2::new( 0i, 1i),
+			vector::Vec2::new( 1i, 0i),	vector::Vec2::new( 0i,-1i),
 			];
 		let off = offsets[o].mul_s(f.x).add_v( &offsets[o+2].mul_s(f.y) );
 		d.add_v( &off )
@@ -145,7 +147,7 @@ impl TopologyGrid for Grid	{
 	fn get_neighbors( &self, index : uint )-> ~[uint]	{
 		let d = self.get_location( index );
 		range(0,4).filter_map( |o| {
-			let dof = self.offset_position( d, o, Vec2::new(1i,0i) );
+			let dof = self.offset_position( d, o, vector::Vec2::new(1i,0i) );
 			self.get_index(dof)
 		}).to_owned_vec()
 	}
@@ -153,49 +155,46 @@ impl TopologyGrid for Grid	{
 
 
 pub trait GeometryGrid : TopologyGrid	{
-	fn get_cell_size( &self )-> Vec2<f32>;
-	fn get_cell_center( &self, pos : Location )-> vector::Vec3<f32>;
-	fn compute_space( &self, pos : Location, orient : Orientation, elevation : f32 )-> QuatSpace;
-	fn point_cast( &self, point : &vector::Vec3<f32> )-> Location;
+	fn get_cell_size( &self )-> vector::Vec2<f32>;
+	fn get_cell_center( &self, pos : Location )-> point::Point3<f32>;
+	fn compute_space( &self, pos : Location, orient : Orientation, elevation : f32 )-> space::Space;
+	fn point_cast( &self, point : &point::Point3<f32> )-> Location;
 	fn ray_cast( &self, cam : &scene::Camera, aspect : f32, np : &[f32,..2] )-> Location;
 }
 
 impl GeometryGrid for Grid	{
-	fn get_cell_size( &self )-> Vec2<f32>	{
-		Vec2::new(
+	fn get_cell_size( &self )-> vector::Vec2<f32>	{
+		vector::Vec2::new(
 			2f32*self.v_scale.x / (self.nseg as f32),
 		 	2f32*self.v_scale.y / (self.nseg as f32)
 		 	)
 	}
-	fn get_cell_center( &self, pos : Location )-> vector::Vec3<f32>	{
+	fn get_cell_center( &self, pos : Location )-> point::Point3<f32>	{
 		let unit = self.get_cell_size();
 		let half = (self.nseg as f32) * 0.5f32;
-		vector::Vec3::new(
+		point::Point3::new(
 			((pos.x as f32)+0.5f32-half)*unit.x,
 			((pos.y as f32)+0.5f32-half)*unit.y,
 			self.v_scale.z )
 	}
-	fn compute_space( &self, pos : Location, orient : Orientation, elevation : f32 )-> QuatSpace	{
+	fn compute_space( &self, pos : Location, orient : Orientation, elevation : f32 )-> space::Space	{
 		let mut center = self.get_cell_center( pos );
 		center.z = elevation;
 		let angle = angle::deg( (orient as f32) * 90f32 );
 		let rot = Quat::from_axis_angle( &vector::Vec3::unit_z(), angle.to_rad() );
-		QuatSpace	{
-			position 	: center,
-			orientation	: rot,
-			scale		: 1.0,
-		}
+		space::make( 1.0, rot, center.to_vec() )
 	}
-	fn point_cast( &self, point : &vector::Vec3<f32> )-> Location	{
+	fn point_cast( &self, point : &point::Point3<f32> )-> Location	{
 		let unit = self.get_cell_size();
 		let x = (point.x + self.v_scale.x) / unit.x;
 		let y = (point.y + self.v_scale.y) / unit.y;
-		Point2::new( x as int, y as int )
+		point::Point2::new( x as int, y as int )
 	}
 	fn ray_cast( &self, cam : &scene::Camera, aspect : f32, np : &[f32,..2] )-> Location	{
-		let ndc = vector::Vec3::new( np[0]*2f32-1f32, 1f32-np[1]*2f32, 0f32 );
-		let origin = cam.node.world_space().position;
-		let ray = cam.get_matrix(aspect).inverted().transform( &ndc ).sub_v( &origin );
+		let ndc = point::Point3::new( np[0]*2f32-1f32, 1f32-np[1]*2f32, 0f32 );
+		let origin = Point::from_vec( &cam.node.world_space().disp );
+		let cit = transform::AffineMatrix3{ mat:cam.get_inverse_matrix(aspect) };
+		let ray = cit.transform_point( &ndc ).sub_p( &origin );
 		let k = (self.v_scale.z - origin.z) / ray.z;
 		//origin.add_v( &ray.mul_s(k) ).add_v( &self.v_scale ).div_v( &unit )
 		self.point_cast( &origin.add_v( &ray.mul_s(k) ) )

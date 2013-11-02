@@ -41,7 +41,7 @@
 			],
 			[
 				"Quat",
-				"QuatSpace"
+				"Space"
 			],
 			[
 				"loc_",
@@ -365,7 +365,7 @@
 			],
 			[
 				"QUat",
-				"QuatSpace"
+				"Space"
 			],
 			[
 				"Deco",

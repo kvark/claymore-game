@@ -166,7 +166,7 @@ pub fn load()-> Scene	{Scene{
 						range	: [0, 6],
 					})
 				],
-				space	: QuatSpace{
+				space	: Space{
 					scale	: 100.00,
 					pos	: [0.00, 0.00, -1.00],
 					rot	: [0.00, 0.00, 0.00, 1.00],
@@ -182,7 +182,7 @@ pub fn load()-> Scene	{Scene{
 						range	: [10.00, 300.00],
 					})
 				],
-				space	: QuatSpace{
+				space	: Space{
 					scale	: 1.00,
 					pos	: [140.00, 0.00, 90.00],
 					rot	: [0.41, 0.41, 0.58, 0.58],
@@ -198,7 +198,7 @@ pub fn load()-> Scene	{Scene{
 							ChildNode(Node{
 								name	: ~"ikHandle8",
 								children	: ~[],
-								space	: QuatSpace{
+								space	: Space{
 									scale	: 1.00,
 									pos	: [0.00, 0.00, 0.00],
 									rot	: [0.00, 0.00, 0.00, 1.00],
@@ -206,7 +206,7 @@ pub fn load()-> Scene	{Scene{
 								actions	: ~[],
 							})
 						],
-						space	: QuatSpace{
+						space	: Space{
 							scale	: 1.00,
 							pos	: [0.00, 0.00, 0.00],
 							rot	: [0.00, 0.00, 0.00, 1.00],
@@ -216,7 +216,7 @@ pub fn load()-> Scene	{Scene{
 					ChildNode(Node{
 						name	: ~"L_leg_ikHandle_zero.001",
 						children	: ~[],
-						space	: QuatSpace{
+						space	: Space{
 							scale	: 1.00,
 							pos	: [0.00, 0.00, 0.00],
 							rot	: [0.00, 0.00, 0.00, 1.00],
@@ -229,7 +229,7 @@ pub fn load()-> Scene	{Scene{
 							ChildNode(Node{
 								name	: ~"ikHandle7",
 								children	: ~[],
-								space	: QuatSpace{
+								space	: Space{
 									scale	: 1.00,
 									pos	: [0.00, 0.00, 0.00],
 									rot	: [0.00, 0.00, 0.00, 1.00],
@@ -237,7 +237,7 @@ pub fn load()-> Scene	{Scene{
 								actions	: ~[],
 							})
 						],
-						space	: QuatSpace{
+						space	: Space{
 							scale	: 1.00,
 							pos	: [0.00, 0.00, 0.00],
 							rot	: [0.00, 0.00, 0.00, 1.00],
@@ -302,14 +302,14 @@ pub fn load()-> Scene	{Scene{
 																																									Bone{
 																																										name	: ~"L_eye_end_joint",
 																																										children	: ~[],
-																																										space	: QuatSpace{
+																																										space	: Space{
 																																											scale	: 1.00,
 																																											pos	: [0.00, 0.69, 0.00],
 																																											rot	: [0.00, 0.71, -0.00, 0.70],
 																																										},
 																																									}
 																																								],
-																																								space	: QuatSpace{
+																																								space	: Space{
 																																									scale	: 1.00,
 																																									pos	: [1.26, -4.62, 3.06],
 																																									rot	: [0.71, -0.01, 0.01, 0.71],
@@ -321,14 +321,14 @@ pub fn load()-> Scene	{Scene{
 																																									Bone{
 																																										name	: ~"R_eye_end_joint",
 																																										children	: ~[],
-																																										space	: QuatSpace{
+																																										space	: Space{
 																																											scale	: 1.00,
 																																											pos	: [0.00, 0.69, -0.00],
 																																											rot	: [-0.00, 0.70, -0.00, 0.71],
 																																										},
 																																									}
 																																								],
-																																								space	: QuatSpace{
+																																								space	: Space{
 																																									scale	: 1.00,
 																																									pos	: [-1.26, -4.62, 3.06],
 																																									rot	: [0.71, 0.01, -0.01, 0.71],
@@ -340,14 +340,14 @@ pub fn load()-> Scene	{Scene{
 																																									Bone{
 																																										name	: ~"R_eye_blink_01_joint",
 																																										children	: ~[],
-																																										space	: QuatSpace{
+																																										space	: Space{
 																																											scale	: 1.00,
 																																											pos	: [-0.00, 0.50, -0.00],
 																																											rot	: [0.00, 0.71, -0.00, 0.71],
 																																										},
 																																									}
 																																								],
-																																								space	: QuatSpace{
+																																								space	: Space{
 																																									scale	: 1.00,
 																																									pos	: [-1.26, -4.62, 3.06],
 																																									rot	: [0.77, -0.00, 0.00, 0.64],
@@ -359,14 +359,14 @@ pub fn load()-> Scene	{Scene{
 																																									Bone{
 																																										name	: ~"L_eye_blink_01_joint",
 																																										children	: ~[],
-																																										space	: QuatSpace{
+																																										space	: Space{
 																																											scale	: 1.00,
 																																											pos	: [0.00, 0.50, -0.00],
 																																											rot	: [0.00, 0.71, -0.00, 0.71],
 																																										},
 																																									}
 																																								],
-																																								space	: QuatSpace{
+																																								space	: Space{
 																																									scale	: 1.00,
 																																									pos	: [1.26, -4.62, 3.06],
 																																									rot	: [0.77, -0.00, 0.00, 0.64],
@@ -378,14 +378,14 @@ pub fn load()-> Scene	{Scene{
 																																									Bone{
 																																										name	: ~"R_eye_blink_02_joint",
 																																										children	: ~[],
-																																										space	: QuatSpace{
+																																										space	: Space{
 																																											scale	: 1.00,
 																																											pos	: [-0.00, 0.67, -0.00],
 																																											rot	: [-0.00, 0.71, -0.00, 0.71],
 																																										},
 																																									}
 																																								],
-																																								space	: QuatSpace{
+																																								space	: Space{
 																																									scale	: 1.00,
 																																									pos	: [-1.26, -4.62, 3.06],
 																																									rot	: [0.60, -0.00, 0.00, 0.80],
@@ -397,21 +397,21 @@ pub fn load()-> Scene	{Scene{
 																																									Bone{
 																																										name	: ~"L_eye_blink_02_joint",
 																																										children	: ~[],
-																																										space	: QuatSpace{
+																																										space	: Space{
 																																											scale	: 1.00,
 																																											pos	: [-0.00, 0.67, -0.00],
 																																											rot	: [0.00, 0.71, 0.00, 0.71],
 																																										},
 																																									}
 																																								],
-																																								space	: QuatSpace{
+																																								space	: Space{
 																																									scale	: 1.00,
 																																									pos	: [1.26, -4.62, 3.06],
 																																									rot	: [0.60, -0.00, 0.00, 0.80],
 																																								},
 																																							}
 																																						],
-																																						space	: QuatSpace{
+																																						space	: Space{
 																																							scale	: 1.00,
 																																							pos	: [-0.00, 6.34, 0.04],
 																																							rot	: [-0.04, 0.00, 0.00, 1.00],
@@ -423,35 +423,35 @@ pub fn load()-> Scene	{Scene{
 																																							Bone{
 																																								name	: ~"jaw_end_joint",
 																																								children	: ~[],
-																																								space	: QuatSpace{
+																																								space	: Space{
 																																									scale	: 1.00,
 																																									pos	: [0.00, 3.68, -0.00],
 																																									rot	: [-0.00, 0.71, 0.00, 0.71],
 																																								},
 																																							}
 																																						],
-																																						space	: QuatSpace{
+																																						space	: Space{
 																																							scale	: 1.00,
 																																							pos	: [-0.00, -0.41, 0.55],
 																																							rot	: [0.82, 0.00, 0.00, 0.57],
 																																						},
 																																					}
 																																				],
-																																				space	: QuatSpace{
+																																				space	: Space{
 																																					scale	: 1.00,
 																																					pos	: [0.00, 2.37, -0.00],
 																																					rot	: [-0.00, 0.00, 0.00, 1.00],
 																																				},
 																																			}
 																																		],
-																																		space	: QuatSpace{
+																																		space	: Space{
 																																			scale	: 1.00,
 																																			pos	: [-0.00, 2.10, -1.00],
 																																			rot	: [-0.00, 0.98, -0.21, -0.00],
 																																		},
 																																	}
 																																],
-																																space	: QuatSpace{
+																																space	: Space{
 																																	scale	: 1.00,
 																																	pos	: [0.00, 0.44, -0.29],
 																																	rot	: [0.00, -0.00, 0.00, 1.00],
@@ -463,14 +463,14 @@ pub fn load()-> Scene	{Scene{
 																																	Bone{
 																																		name	: ~"c_shealth_end_joint",
 																																		children	: ~[],
-																																		space	: QuatSpace{
+																																		space	: Space{
 																																			scale	: 1.00,
 																																			pos	: [0.00, 1.81, 0.00],
 																																			rot	: [0.00, 1.00, -0.00, -0.00],
 																																		},
 																																	}
 																																],
-																																space	: QuatSpace{
+																																space	: Space{
 																																	scale	: 1.00,
 																																	pos	: [-0.00, 0.04, 2.55],
 																																	rot	: [-0.00, 0.16, 0.99, 0.00],
@@ -518,28 +518,28 @@ pub fn load()-> Scene	{Scene{
 																																																									Bone{
 																																																										name	: ~"L_pinkyFinger_04_joint",
 																																																										children	: ~[],
-																																																										space	: QuatSpace{
+																																																										space	: Space{
 																																																											scale	: 1.00,
 																																																											pos	: [-0.00, 0.96, 0.00],
 																																																											rot	: [0.00, 0.94, 0.00, 0.35],
 																																																										},
 																																																									}
 																																																								],
-																																																								space	: QuatSpace{
+																																																								space	: Space{
 																																																									scale	: 1.00,
 																																																									pos	: [-0.00, 0.75, 0.00],
 																																																									rot	: [0.12, 0.34, 0.07, 0.93],
 																																																								},
 																																																							}
 																																																						],
-																																																						space	: QuatSpace{
+																																																						space	: Space{
 																																																							scale	: 1.00,
 																																																							pos	: [-0.00, 1.18, 0.00],
 																																																							rot	: [0.25, 0.56, -0.16, 0.77],
 																																																						},
 																																																					}
 																																																				],
-																																																				space	: QuatSpace{
+																																																				space	: Space{
 																																																					scale	: 1.00,
 																																																					pos	: [-0.54, -0.80, -1.23],
 																																																					rot	: [-0.37, 0.10, -0.71, 0.59],
@@ -557,28 +557,28 @@ pub fn load()-> Scene	{Scene{
 																																																									Bone{
 																																																										name	: ~"L_ringFinger_04_joint",
 																																																										children	: ~[],
-																																																										space	: QuatSpace{
+																																																										space	: Space{
 																																																											scale	: 1.00,
 																																																											pos	: [-0.00, 1.00, 0.00],
 																																																											rot	: [0.00, 0.96, -0.00, 0.29],
 																																																										},
 																																																									}
 																																																								],
-																																																								space	: QuatSpace{
+																																																								space	: Space{
 																																																									scale	: 1.00,
 																																																									pos	: [0.00, 0.95, -0.00],
 																																																									rot	: [0.12, 0.37, 0.10, 0.92],
 																																																								},
 																																																							}
 																																																						],
-																																																						space	: QuatSpace{
+																																																						space	: Space{
 																																																							scale	: 1.00,
 																																																							pos	: [0.00, 1.63, 0.00],
 																																																							rot	: [0.27, 0.81, -0.24, 0.46],
 																																																						},
 																																																					}
 																																																				],
-																																																				space	: QuatSpace{
+																																																				space	: Space{
 																																																					scale	: 1.00,
 																																																					pos	: [0.26, -0.29, -0.98],
 																																																					rot	: [-0.54, -0.07, -0.59, 0.60],
@@ -596,28 +596,28 @@ pub fn load()-> Scene	{Scene{
 																																																									Bone{
 																																																										name	: ~"L_middleFinger_04_joint",
 																																																										children	: ~[],
-																																																										space	: QuatSpace{
+																																																										space	: Space{
 																																																											scale	: 1.00,
 																																																											pos	: [0.00, 1.24, 0.00],
 																																																											rot	: [-0.00, 0.24, 0.00, 0.97],
 																																																										},
 																																																									}
 																																																								],
-																																																								space	: QuatSpace{
+																																																								space	: Space{
 																																																									scale	: 1.00,
 																																																									pos	: [0.00, 1.01, -0.00],
 																																																									rot	: [0.07, 0.19, 0.02, 0.98],
 																																																								},
 																																																							}
 																																																						],
-																																																						space	: QuatSpace{
+																																																						space	: Space{
 																																																							scale	: 1.00,
 																																																							pos	: [0.00, 1.64, 0.00],
 																																																							rot	: [0.16, 0.83, -0.31, 0.44],
 																																																						},
 																																																					}
 																																																				],
-																																																				space	: QuatSpace{
+																																																				space	: Space{
 																																																					scale	: 1.00,
 																																																					pos	: [0.92, 0.08, -0.55],
 																																																					rot	: [-0.58, -0.15, -0.55, 0.58],
@@ -635,35 +635,35 @@ pub fn load()-> Scene	{Scene{
 																																																									Bone{
 																																																										name	: ~"L_indexFinger_04_joint",
 																																																										children	: ~[],
-																																																										space	: QuatSpace{
+																																																										space	: Space{
 																																																											scale	: 1.00,
 																																																											pos	: [-0.00, 1.09, -0.00],
 																																																											rot	: [-0.00, 0.99, -0.00, 0.17],
 																																																										},
 																																																									}
 																																																								],
-																																																								space	: QuatSpace{
+																																																								space	: Space{
 																																																									scale	: 1.00,
 																																																									pos	: [-0.00, 1.03, -0.00],
 																																																									rot	: [0.14, 0.36, -0.05, 0.92],
 																																																								},
 																																																							}
 																																																						],
-																																																						space	: QuatSpace{
+																																																						space	: Space{
 																																																							scale	: 1.00,
 																																																							pos	: [0.00, 1.48, -0.00],
 																																																							rot	: [-0.05, 0.73, -0.36, 0.58],
 																																																						},
 																																																					}
 																																																				],
-																																																				space	: QuatSpace{
+																																																				space	: Space{
 																																																					scale	: 1.00,
 																																																					pos	: [1.60, 0.39, 0.17],
 																																																					rot	: [-0.63, -0.19, -0.46, 0.59],
 																																																				},
 																																																			}
 																																																		],
-																																																		space	: QuatSpace{
+																																																		space	: Space{
 																																																			scale	: 1.00,
 																																																			pos	: [-0.06, 2.48, -0.37],
 																																																			rot	: [0.11, -0.29, 0.75, 0.59],
@@ -681,77 +681,77 @@ pub fn load()-> Scene	{Scene{
 																																																							Bone{
 																																																								name	: ~"L_thumb_04_joint",
 																																																								children	: ~[],
-																																																								space	: QuatSpace{
+																																																								space	: Space{
 																																																									scale	: 1.00,
 																																																									pos	: [0.00, 1.17, 0.00],
 																																																									rot	: [0.00, -0.82, 0.00, 0.57],
 																																																								},
 																																																							}
 																																																						],
-																																																						space	: QuatSpace{
+																																																						space	: Space{
 																																																							scale	: 1.00,
 																																																							pos	: [-0.00, 1.10, -0.00],
 																																																							rot	: [0.01, 0.12, 0.02, 0.99],
 																																																						},
 																																																					}
 																																																				],
-																																																				space	: QuatSpace{
+																																																				space	: Space{
 																																																					scale	: 1.00,
 																																																					pos	: [0.00, 1.91, 0.00],
 																																																					rot	: [-0.06, -0.32, -0.13, 0.94],
 																																																				},
 																																																			}
 																																																		],
-																																																		space	: QuatSpace{
+																																																		space	: Space{
 																																																			scale	: 1.00,
 																																																			pos	: [-0.43, 1.21, 0.79],
 																																																			rot	: [0.38, 0.51, 0.19, 0.75],
 																																																		},
 																																																	}
 																																																],
-																																																space	: QuatSpace{
+																																																space	: Space{
 																																																	scale	: 1.00,
 																																																	pos	: [0.00, 5.42, -0.00],
 																																																	rot	: [-0.00, 0.02, 0.00, 1.00],
 																																																},
 																																															}
 																																														],
-																																														space	: QuatSpace{
+																																														space	: Space{
 																																															scale	: 1.00,
 																																															pos	: [-0.00, 2.64, -0.00],
 																																															rot	: [-0.00, -0.02, 0.02, 1.00],
 																																														},
 																																													}
 																																												],
-																																												space	: QuatSpace{
+																																												space	: Space{
 																																													scale	: 1.00,
 																																													pos	: [0.00, 2.77, 0.00],
 																																													rot	: [0.00, 0.01, 0.00, 1.00],
 																																												},
 																																											}
 																																										],
-																																										space	: QuatSpace{
+																																										space	: Space{
 																																											scale	: 1.00,
 																																											pos	: [-0.00, 3.95, -0.00],
 																																											rot	: [0.24, 0.27, 0.02, 0.93],
 																																										},
 																																									}
 																																								],
-																																								space	: QuatSpace{
+																																								space	: Space{
 																																									scale	: 1.00,
 																																									pos	: [0.00, 3.58, 0.00],
 																																									rot	: [0.00, 0.00, 0.00, 1.00],
 																																								},
 																																							}
 																																						],
-																																						space	: QuatSpace{
+																																						space	: Space{
 																																							scale	: 1.00,
 																																							pos	: [0.00, 3.42, 0.00],
 																																							rot	: [0.00, 0.91, 0.00, 0.40],
 																																						},
 																																					}
 																																				],
-																																				space	: QuatSpace{
+																																				space	: Space{
 																																					scale	: 1.00,
 																																					pos	: [-0.52, 0.95, -0.03],
 																																					rot	: [-0.15, 0.73, 0.20, 0.63],
@@ -769,28 +769,28 @@ pub fn load()-> Scene	{Scene{
 																																									Bone{
 																																										name	: ~"L_subSpaulder_end_joint",
 																																										children	: ~[],
-																																										space	: QuatSpace{
+																																										space	: Space{
 																																											scale	: 1.00,
 																																											pos	: [0.00, 2.16, -0.00],
 																																											rot	: [0.00, 0.87, 0.00, 0.50],
 																																										},
 																																									}
 																																								],
-																																								space	: QuatSpace{
+																																								space	: Space{
 																																									scale	: 1.00,
 																																									pos	: [0.00, 1.03, -0.00],
 																																									rot	: [0.24, 0.35, -0.81, 0.40],
 																																								},
 																																							}
 																																						],
-																																						space	: QuatSpace{
+																																						space	: Space{
 																																							scale	: 1.00,
 																																							pos	: [0.00, 3.22, 0.00],
 																																							rot	: [0.33, -0.01, 0.91, 0.25],
 																																						},
 																																					}
 																																				],
-																																				space	: QuatSpace{
+																																				space	: Space{
 																																					scale	: 1.00,
 																																					pos	: [-0.31, -0.70, 0.27],
 																																					rot	: [-0.37, 0.26, -0.12, 0.89],
@@ -805,35 +805,35 @@ pub fn load()-> Scene	{Scene{
 																																							Bone{
 																																								name	: ~"L_armIK_03_joint",
 																																								children	: ~[],
-																																								space	: QuatSpace{
+																																								space	: Space{
 																																									scale	: 1.00,
 																																									pos	: [-0.00, 10.84, -0.00],
 																																									rot	: [-0.00, -0.00, -0.00, 1.00],
 																																								},
 																																							}
 																																						],
-																																						space	: QuatSpace{
+																																						space	: Space{
 																																							scale	: 1.00,
 																																							pos	: [0.00, 10.95, 0.00],
 																																							rot	: [0.13, 0.96, -0.21, 0.13],
 																																						},
 																																					}
 																																				],
-																																				space	: QuatSpace{
+																																				space	: Space{
 																																					scale	: 1.00,
 																																					pos	: [-0.52, 0.95, -0.03],
 																																					rot	: [-0.15, 0.73, 0.20, 0.63],
 																																				},
 																																			}
 																																		],
-																																		space	: QuatSpace{
+																																		space	: Space{
 																																			scale	: 1.00,
 																																			pos	: [-0.00, 5.59, -0.00],
 																																			rot	: [-0.00, -0.93, -0.00, 0.36],
 																																		},
 																																	}
 																																],
-																																space	: QuatSpace{
+																																space	: Space{
 																																	scale	: 1.00,
 																																	pos	: [-1.00, -2.13, -2.41],
 																																	rot	: [-0.31, 0.71, 0.50, 0.39],
@@ -878,28 +878,28 @@ pub fn load()-> Scene	{Scene{
 																																																							Bone{
 																																																								name	: ~"R_thumb_04_joint",
 																																																								children	: ~[],
-																																																								space	: QuatSpace{
+																																																								space	: Space{
 																																																									scale	: 1.00,
 																																																									pos	: [-0.00, 1.17, 0.00],
 																																																									rot	: [-0.00, 0.82, -0.00, 0.57],
 																																																								},
 																																																							}
 																																																						],
-																																																						space	: QuatSpace{
+																																																						space	: Space{
 																																																							scale	: 1.00,
 																																																							pos	: [0.00, 1.10, -0.00],
 																																																							rot	: [0.01, -0.12, -0.02, 0.99],
 																																																						},
 																																																					}
 																																																				],
-																																																				space	: QuatSpace{
+																																																				space	: Space{
 																																																					scale	: 1.00,
 																																																					pos	: [0.00, 1.91, -0.00],
 																																																					rot	: [-0.06, 0.32, 0.13, 0.94],
 																																																				},
 																																																			}
 																																																		],
-																																																		space	: QuatSpace{
+																																																		space	: Space{
 																																																			scale	: 1.00,
 																																																			pos	: [0.43, 1.21, 0.79],
 																																																			rot	: [0.38, -0.51, -0.19, 0.75],
@@ -920,28 +920,28 @@ pub fn load()-> Scene	{Scene{
 																																																									Bone{
 																																																										name	: ~"R_indexFinger_04_joint",
 																																																										children	: ~[],
-																																																										space	: QuatSpace{
+																																																										space	: Space{
 																																																											scale	: 1.00,
 																																																											pos	: [-0.00, 1.09, -0.00],
 																																																											rot	: [-0.00, -0.99, 0.00, 0.17],
 																																																										},
 																																																									}
 																																																								],
-																																																								space	: QuatSpace{
+																																																								space	: Space{
 																																																									scale	: 1.00,
 																																																									pos	: [0.00, 1.03, -0.00],
 																																																									rot	: [0.15, -0.31, 0.02, 0.94],
 																																																								},
 																																																							}
 																																																						],
-																																																						space	: QuatSpace{
+																																																						space	: Space{
 																																																							scale	: 1.00,
 																																																							pos	: [-0.00, 1.48, -0.00],
 																																																							rot	: [0.07, -0.67, 0.35, 0.65],
 																																																						},
 																																																					}
 																																																				],
-																																																				space	: QuatSpace{
+																																																				space	: Space{
 																																																					scale	: 1.00,
 																																																					pos	: [-1.60, 0.39, 0.17],
 																																																					rot	: [-0.45, 0.13, 0.60, 0.65],
@@ -959,28 +959,28 @@ pub fn load()-> Scene	{Scene{
 																																																									Bone{
 																																																										name	: ~"R_middleFinger_04_joint",
 																																																										children	: ~[],
-																																																										space	: QuatSpace{
+																																																										space	: Space{
 																																																											scale	: 1.00,
 																																																											pos	: [-0.00, 1.24, -0.00],
 																																																											rot	: [0.00, -0.24, -0.00, 0.97],
 																																																										},
 																																																									}
 																																																								],
-																																																								space	: QuatSpace{
+																																																								space	: Space{
 																																																									scale	: 1.00,
 																																																									pos	: [-0.00, 1.01, -0.00],
 																																																									rot	: [0.07, -0.19, -0.02, 0.98],
 																																																								},
 																																																							}
 																																																						],
-																																																						space	: QuatSpace{
+																																																						space	: Space{
 																																																							scale	: 1.00,
 																																																							pos	: [0.00, 1.64, 0.00],
 																																																							rot	: [0.16, -0.83, 0.31, 0.44],
 																																																						},
 																																																					}
 																																																				],
-																																																				space	: QuatSpace{
+																																																				space	: Space{
 																																																					scale	: 1.00,
 																																																					pos	: [-0.92, 0.08, -0.55],
 																																																					rot	: [-0.58, 0.15, 0.55, 0.58],
@@ -998,28 +998,28 @@ pub fn load()-> Scene	{Scene{
 																																																									Bone{
 																																																										name	: ~"R_ringFinger_04_joint",
 																																																										children	: ~[],
-																																																										space	: QuatSpace{
+																																																										space	: Space{
 																																																											scale	: 1.00,
 																																																											pos	: [0.00, 1.00, 0.00],
 																																																											rot	: [-0.00, -0.96, -0.00, 0.29],
 																																																										},
 																																																									}
 																																																								],
-																																																								space	: QuatSpace{
+																																																								space	: Space{
 																																																									scale	: 1.00,
 																																																									pos	: [-0.00, 0.95, -0.00],
 																																																									rot	: [0.12, -0.41, -0.09, 0.90],
 																																																								},
 																																																							}
 																																																						],
-																																																						space	: QuatSpace{
+																																																						space	: Space{
 																																																							scale	: 1.00,
 																																																							pos	: [-0.00, 1.63, -0.00],
 																																																							rot	: [0.23, -0.84, 0.28, 0.40],
 																																																						},
 																																																					}
 																																																				],
-																																																				space	: QuatSpace{
+																																																				space	: Space{
 																																																					scale	: 1.00,
 																																																					pos	: [-0.26, -0.29, -0.98],
 																																																					rot	: [-0.62, 0.09, 0.52, 0.57],
@@ -1037,84 +1037,84 @@ pub fn load()-> Scene	{Scene{
 																																																									Bone{
 																																																										name	: ~"R_pinkyFinger_04_joint",
 																																																										children	: ~[],
-																																																										space	: QuatSpace{
+																																																										space	: Space{
 																																																											scale	: 1.00,
 																																																											pos	: [0.00, 0.96, 0.00],
 																																																											rot	: [0.00, -0.94, 0.00, 0.35],
 																																																										},
 																																																									}
 																																																								],
-																																																								space	: QuatSpace{
+																																																								space	: Space{
 																																																									scale	: 1.00,
 																																																									pos	: [-0.00, 0.75, 0.00],
 																																																									rot	: [0.12, -0.42, -0.07, 0.90],
 																																																								},
 																																																							}
 																																																						],
-																																																						space	: QuatSpace{
+																																																						space	: Space{
 																																																							scale	: 1.00,
 																																																							pos	: [0.00, 1.18, 0.00],
 																																																							rot	: [0.21, -0.68, 0.22, 0.67],
 																																																						},
 																																																					}
 																																																				],
-																																																				space	: QuatSpace{
+																																																				space	: Space{
 																																																					scale	: 1.00,
 																																																					pos	: [0.54, -0.80, -1.23],
 																																																					rot	: [-0.57, -0.04, 0.62, 0.53],
 																																																				},
 																																																			}
 																																																		],
-																																																		space	: QuatSpace{
+																																																		space	: Space{
 																																																			scale	: 1.00,
 																																																			pos	: [0.06, 2.48, -0.37],
 																																																			rot	: [0.11, 0.29, -0.75, 0.59],
 																																																		},
 																																																	}
 																																																],
-																																																space	: QuatSpace{
+																																																space	: Space{
 																																																	scale	: 1.00,
 																																																	pos	: [0.00, 5.42, -0.00],
 																																																	rot	: [0.00, -0.02, 0.00, 1.00],
 																																																},
 																																															}
 																																														],
-																																														space	: QuatSpace{
+																																														space	: Space{
 																																															scale	: 1.00,
 																																															pos	: [0.00, 2.64, -0.00],
 																																															rot	: [-0.00, 0.02, -0.02, 1.00],
 																																														},
 																																													}
 																																												],
-																																												space	: QuatSpace{
+																																												space	: Space{
 																																													scale	: 1.00,
 																																													pos	: [0.00, 2.77, 0.00],
 																																													rot	: [-0.00, -0.01, -0.00, 1.00],
 																																												},
 																																											}
 																																										],
-																																										space	: QuatSpace{
+																																										space	: Space{
 																																											scale	: 1.00,
 																																											pos	: [0.00, 3.95, -0.00],
 																																											rot	: [0.24, -0.27, -0.02, 0.93],
 																																										},
 																																									}
 																																								],
-																																								space	: QuatSpace{
+																																								space	: Space{
 																																									scale	: 1.00,
 																																									pos	: [0.00, 3.58, -0.00],
 																																									rot	: [0.00, -0.00, -0.00, 1.00],
 																																								},
 																																							}
 																																						],
-																																						space	: QuatSpace{
+																																						space	: Space{
 																																							scale	: 1.00,
 																																							pos	: [0.00, 3.42, -0.00],
 																																							rot	: [0.00, -0.21, 0.00, 0.98],
 																																						},
 																																					}
 																																				],
-																																				space	: QuatSpace{
+																																				space	: Space{
 																																					scale	: 1.00,
 																																					pos	: [-0.31, 0.95, 0.42],
 																																					rot	: [0.11, 0.20, 0.23, 0.95],
@@ -1132,28 +1132,28 @@ pub fn load()-> Scene	{Scene{
 																																									Bone{
 																																										name	: ~"R_subSpaulder_end_joint",
 																																										children	: ~[],
-																																										space	: QuatSpace{
+																																										space	: Space{
 																																											scale	: 1.00,
 																																											pos	: [-0.00, 2.16, 0.00],
 																																											rot	: [-0.00, 0.38, 0.00, 0.93],
 																																										},
 																																									}
 																																								],
-																																								space	: QuatSpace{
+																																								space	: Space{
 																																									scale	: 1.00,
 																																									pos	: [-0.00, 1.03, -0.00],
 																																									rot	: [0.24, -0.35, 0.81, 0.40],
 																																								},
 																																							}
 																																						],
-																																						space	: QuatSpace{
+																																						space	: Space{
 																																							scale	: 1.00,
 																																							pos	: [0.00, 3.22, 0.00],
 																																							rot	: [-0.54, 0.21, -0.80, 0.14],
 																																						},
 																																					}
 																																				],
-																																				space	: QuatSpace{
+																																				space	: Space{
 																																					scale	: 1.00,
 																																					pos	: [-0.40, -0.70, 0.06],
 																																					rot	: [0.38, 0.65, -0.05, 0.65],
@@ -1168,42 +1168,42 @@ pub fn load()-> Scene	{Scene{
 																																							Bone{
 																																								name	: ~"R_armIK_03_joint",
 																																								children	: ~[],
-																																								space	: QuatSpace{
+																																								space	: Space{
 																																									scale	: 1.00,
 																																									pos	: [0.00, 10.84, 0.00],
 																																									rot	: [0.00, 0.00, 0.00, 1.00],
 																																								},
 																																							}
 																																						],
-																																						space	: QuatSpace{
+																																						space	: Space{
 																																							scale	: 1.00,
 																																							pos	: [0.00, 10.95, -0.00],
 																																							rot	: [0.24, -0.46, 0.02, 0.85],
 																																						},
 																																					}
 																																				],
-																																				space	: QuatSpace{
+																																				space	: Space{
 																																					scale	: 1.00,
 																																					pos	: [-0.31, 0.95, 0.42],
 																																					rot	: [0.11, 0.20, 0.23, 0.95],
 																																				},
 																																			}
 																																		],
-																																		space	: QuatSpace{
+																																		space	: Space{
 																																			scale	: 1.00,
 																																			pos	: [0.00, 5.59, -0.00],
 																																			rot	: [0.00, -0.72, -0.00, 0.70],
 																																		},
 																																	}
 																																],
-																																space	: QuatSpace{
+																																space	: Space{
 																																	scale	: 1.00,
 																																	pos	: [1.00, -2.13, -2.41],
 																																	rot	: [-0.32, -0.71, -0.50, 0.38],
 																																},
 																															}
 																														],
-																														space	: QuatSpace{
+																														space	: Space{
 																															scale	: 1.00,
 																															pos	: [0.00, 6.39, -0.06],
 																															rot	: [-0.00, 1.00, -0.00, -0.00],
@@ -1218,21 +1218,21 @@ pub fn load()-> Scene	{Scene{
 																																	Bone{
 																																		name	: ~"L_breast_end_joint",
 																																		children	: ~[],
-																																		space	: QuatSpace{
+																																		space	: Space{
 																																			scale	: 1.00,
 																																			pos	: [0.00, 0.00, 0.00],
 																																			rot	: [0.00, -0.71, 0.00, 0.71],
 																																		},
 																																	}
 																																],
-																																space	: QuatSpace{
+																																space	: Space{
 																																	scale	: 1.00,
 																																	pos	: [-0.00, 3.94, -0.00],
 																																	rot	: [-0.00, 0.58, -0.00, 0.81],
 																																},
 																															}
 																														],
-																														space	: QuatSpace{
+																														space	: Space{
 																															scale	: 1.00,
 																															pos	: [3.20, -0.56, 2.70],
 																															rot	: [0.84, 0.12, -0.06, 0.52],
@@ -1247,63 +1247,63 @@ pub fn load()-> Scene	{Scene{
 																																	Bone{
 																																		name	: ~"R_breast_end_joint1",
 																																		children	: ~[],
-																																		space	: QuatSpace{
+																																		space	: Space{
 																																			scale	: 1.00,
 																																			pos	: [0.00, -0.00, -0.00],
 																																			rot	: [0.00, 0.71, -0.00, 0.71],
 																																		},
 																																	}
 																																],
-																																space	: QuatSpace{
+																																space	: Space{
 																																	scale	: 1.00,
 																																	pos	: [-0.00, 3.94, -0.00],
 																																	rot	: [-0.00, -0.58, 0.00, 0.81],
 																																},
 																															}
 																														],
-																														space	: QuatSpace{
+																														space	: Space{
 																															scale	: 1.00,
 																															pos	: [-3.20, -0.56, 2.70],
 																															rot	: [0.84, -0.12, 0.06, 0.52],
 																														},
 																													}
 																												],
-																												space	: QuatSpace{
+																												space	: Space{
 																													scale	: 1.00,
 																													pos	: [0.00, 6.18, -0.00],
 																													rot	: [-0.00, 0.00, 0.00, 1.00],
 																												},
 																											}
 																										],
-																										space	: QuatSpace{
+																										space	: Space{
 																											scale	: 1.00,
 																											pos	: [-0.00, 1.50, 0.00],
 																											rot	: [-0.11, 0.00, -0.00, 0.99],
 																										},
 																									}
 																								],
-																								space	: QuatSpace{
+																								space	: Space{
 																									scale	: 1.00,
 																									pos	: [-0.00, 1.45, 0.00],
 																									rot	: [-0.02, 0.00, -0.00, 1.00],
 																								},
 																							}
 																						],
-																						space	: QuatSpace{
+																						space	: Space{
 																							scale	: 1.00,
 																							pos	: [-0.00, 1.54, 0.00],
 																							rot	: [-0.10, 0.00, -0.00, 0.99],
 																						},
 																					}
 																				],
-																				space	: QuatSpace{
+																				space	: Space{
 																					scale	: 1.00,
 																					pos	: [0.00, 1.49, 0.00],
 																					rot	: [-0.00, 0.71, 0.00, 0.71],
 																				},
 																			}
 																		],
-																		space	: QuatSpace{
+																		space	: Space{
 																			scale	: 1.00,
 																			pos	: [-0.04, 0.00, -0.00],
 																			rot	: [-0.46, -0.54, 0.46, 0.54],
@@ -1318,14 +1318,14 @@ pub fn load()-> Scene	{Scene{
 																					Bone{
 																						name	: ~"R_hip_joint",
 																						children	: ~[],
-																						space	: QuatSpace{
+																						space	: Space{
 																							scale	: 1.00,
 																							pos	: [-0.00, 4.60, -0.00],
 																							rot	: [-0.00, 0.71, 0.00, 0.71],
 																						},
 																					}
 																				],
-																				space	: QuatSpace{
+																				space	: Space{
 																					scale	: 1.00,
 																					pos	: [4.99, 0.48, 2.82],
 																					rot	: [-0.69, -0.14, -0.69, 0.14],
@@ -1343,21 +1343,21 @@ pub fn load()-> Scene	{Scene{
 																									Bone{
 																										name	: ~"R_kneePivot_01_joint",
 																										children	: ~[],
-																										space	: QuatSpace{
+																										space	: Space{
 																											scale	: 1.00,
 																											pos	: [0.00, 4.95, 0.00],
 																											rot	: [0.00, -0.00, 0.00, 1.00],
 																										},
 																									}
 																								],
-																								space	: QuatSpace{
+																								space	: Space{
 																									scale	: 1.00,
 																									pos	: [0.00, 5.50, -0.00],
 																									rot	: [-0.00, 0.00, 0.00, 1.00],
 																								},
 																							}
 																						],
-																						space	: QuatSpace{
+																						space	: Space{
 																							scale	: 1.00,
 																							pos	: [-0.19, -6.70, -0.11],
 																							rot	: [0.85, -0.02, 0.53, -0.00],
@@ -1375,35 +1375,35 @@ pub fn load()-> Scene	{Scene{
 																											Bone{
 																												name	: ~"R_toe_joint",
 																												children	: ~[],
-																												space	: QuatSpace{
+																												space	: Space{
 																													scale	: 1.00,
 																													pos	: [0.00, 2.80, -0.00],
 																													rot	: [-0.00, -0.72, 0.00, 0.70],
 																												},
 																											}
 																										],
-																										space	: QuatSpace{
+																										space	: Space{
 																											scale	: 1.00,
 																											pos	: [-0.00, 8.00, -0.00],
 																											rot	: [-0.23, 0.02, 0.01, 0.97],
 																										},
 																									}
 																								],
-																								space	: QuatSpace{
+																								space	: Space{
 																									scale	: 1.00,
 																									pos	: [-0.00, 19.52, 0.00],
 																									rot	: [-0.56, -0.19, -0.14, 0.80],
 																								},
 																							}
 																						],
-																						space	: QuatSpace{
+																						space	: Space{
 																							scale	: 1.00,
 																							pos	: [-0.53, -18.67, -0.32],
 																							rot	: [0.22, -0.06, -0.97, 0.00],
 																						},
 																					}
 																				],
-																				space	: QuatSpace{
+																				space	: Space{
 																					scale	: 1.00,
 																					pos	: [4.92, 0.46, 4.10],
 																					rot	: [0.51, -0.51, 0.49, 0.49],
@@ -1415,14 +1415,14 @@ pub fn load()-> Scene	{Scene{
 																					Bone{
 																						name	: ~"L_hip_joint",
 																						children	: ~[],
-																						space	: QuatSpace{
+																						space	: Space{
 																							scale	: 1.00,
 																							pos	: [-0.00, 4.60, 0.00],
 																							rot	: [0.00, 0.71, 0.00, 0.71],
 																						},
 																					}
 																				],
-																				space	: QuatSpace{
+																				space	: Space{
 																					scale	: 1.00,
 																					pos	: [4.99, 0.48, -2.82],
 																					rot	: [-0.69, -0.14, -0.69, 0.14],
@@ -1440,21 +1440,21 @@ pub fn load()-> Scene	{Scene{
 																									Bone{
 																										name	: ~"L_kneePivot_01_joint",
 																										children	: ~[],
-																										space	: QuatSpace{
+																										space	: Space{
 																											scale	: 1.00,
 																											pos	: [0.00, 4.95, -0.00],
 																											rot	: [-0.00, 0.00, 0.00, 1.00],
 																										},
 																									}
 																								],
-																								space	: QuatSpace{
+																								space	: Space{
 																									scale	: 1.00,
 																									pos	: [-0.00, 5.50, 0.00],
 																									rot	: [0.00, -0.00, 0.00, 1.00],
 																								},
 																							}
 																						],
-																						space	: QuatSpace{
+																						space	: Space{
 																							scale	: 1.00,
 																							pos	: [0.19, -6.70, -0.06],
 																							rot	: [0.95, 0.01, -0.30, -0.00],
@@ -1472,35 +1472,35 @@ pub fn load()-> Scene	{Scene{
 																											Bone{
 																												name	: ~"L_toe_joint",
 																												children	: ~[],
-																												space	: QuatSpace{
+																												space	: Space{
 																													scale	: 1.00,
 																													pos	: [0.00, 2.80, -0.00],
 																													rot	: [0.00, -0.69, 0.00, 0.72],
 																												},
 																											}
 																										],
-																										space	: QuatSpace{
+																										space	: Space{
 																											scale	: 1.00,
 																											pos	: [-0.00, 8.00, 0.00],
 																											rot	: [-0.23, -0.06, -0.02, 0.97],
 																										},
 																									}
 																								],
-																								space	: QuatSpace{
+																								space	: Space{
 																									scale	: 1.00,
 																									pos	: [0.00, 19.52, 0.00],
 																									rot	: [-0.55, 0.25, 0.14, 0.79],
 																								},
 																							}
 																						],
-																						space	: QuatSpace{
+																						space	: Space{
 																							scale	: 1.00,
 																							pos	: [0.53, -18.67, -0.16],
 																							rot	: [0.25, 0.05, 0.97, 0.00],
 																						},
 																					}
 																				],
-																				space	: QuatSpace{
+																				space	: Space{
 																					scale	: 1.00,
 																					pos	: [4.92, 0.46, -4.10],
 																					rot	: [0.49, -0.49, 0.51, 0.51],
@@ -1515,21 +1515,21 @@ pub fn load()-> Scene	{Scene{
 																							Bone{
 																								name	: ~"R_frontMid_skirtplate_03_joint",
 																								children	: ~[],
-																								space	: QuatSpace{
+																								space	: Space{
 																									scale	: 1.00,
 																									pos	: [-0.00, 5.95, 0.00],
 																									rot	: [0.00, -0.00, -0.00, 1.00],
 																								},
 																							}
 																						],
-																						space	: QuatSpace{
+																						space	: Space{
 																							scale	: 1.00,
 																							pos	: [0.00, 4.80, -0.00],
 																							rot	: [-0.07, 0.99, 0.04, 0.07],
 																						},
 																					}
 																				],
-																				space	: QuatSpace{
+																				space	: Space{
 																					scale	: 1.00,
 																					pos	: [1.22, 4.37, 3.97],
 																					rot	: [0.68, 0.70, -0.05, 0.19],
@@ -1544,21 +1544,21 @@ pub fn load()-> Scene	{Scene{
 																							Bone{
 																								name	: ~"R_frontInner_skirtplate_03_joint",
 																								children	: ~[],
-																								space	: QuatSpace{
+																								space	: Space{
 																									scale	: 1.00,
 																									pos	: [0.00, 5.95, -0.00],
 																									rot	: [0.00, -0.00, -0.00, 1.00],
 																								},
 																							}
 																						],
-																						space	: QuatSpace{
+																						space	: Space{
 																							scale	: 1.00,
 																							pos	: [0.00, 4.80, -0.00],
 																							rot	: [0.07, -0.93, 0.04, 0.35],
 																						},
 																					}
 																				],
-																				space	: QuatSpace{
+																				space	: Space{
 																					scale	: 1.00,
 																					pos	: [2.94, 4.48, 2.04],
 																					rot	: [-0.68, -0.73, -0.00, 0.00],
@@ -1573,21 +1573,21 @@ pub fn load()-> Scene	{Scene{
 																							Bone{
 																								name	: ~"L_frontInner_skirtplate_03_joint",
 																								children	: ~[],
-																								space	: QuatSpace{
+																								space	: Space{
 																									scale	: 1.00,
 																									pos	: [0.00, 5.95, 0.00],
 																									rot	: [0.00, -0.00, 0.00, 1.00],
 																								},
 																							}
 																						],
-																						space	: QuatSpace{
+																						space	: Space{
 																							scale	: 1.00,
 																							pos	: [0.00, 4.80, 0.00],
 																							rot	: [0.07, 0.93, -0.04, 0.35],
 																						},
 																					}
 																				],
-																				space	: QuatSpace{
+																				space	: Space{
 																					scale	: 1.00,
 																					pos	: [2.94, 4.48, -2.04],
 																					rot	: [-0.00, -0.00, -0.68, 0.73],
@@ -1602,21 +1602,21 @@ pub fn load()-> Scene	{Scene{
 																							Bone{
 																								name	: ~"L_side_skirtplate_03_joint",
 																								children	: ~[],
-																								space	: QuatSpace{
+																								space	: Space{
 																									scale	: 1.00,
 																									pos	: [-0.00, 5.95, -0.00],
 																									rot	: [-0.00, 0.00, 0.00, 1.00],
 																								},
 																							}
 																						],
-																						space	: QuatSpace{
+																						space	: Space{
 																							scale	: 1.00,
 																							pos	: [0.00, 4.80, -0.00],
 																							rot	: [-0.13, 0.98, 0.14, 0.03],
 																						},
 																					}
 																				],
-																				space	: QuatSpace{
+																				space	: Space{
 																					scale	: 1.00,
 																					pos	: [-1.03, 1.62, -5.94],
 																					rot	: [0.08, 0.39, -0.73, 0.56],
@@ -1631,21 +1631,21 @@ pub fn load()-> Scene	{Scene{
 																							Bone{
 																								name	: ~"L_rearSide_skirtplate_03_joint",
 																								children	: ~[],
-																								space	: QuatSpace{
+																								space	: Space{
 																									scale	: 1.00,
 																									pos	: [-0.00, 5.95, 0.00],
 																									rot	: [0.00, 0.00, 0.00, 1.00],
 																								},
 																							}
 																						],
-																						space	: QuatSpace{
+																						space	: Space{
 																							scale	: 1.00,
 																							pos	: [-0.00, 4.80, 0.00],
 																							rot	: [0.13, -0.96, -0.19, 0.17],
 																						},
 																					}
 																				],
-																				space	: QuatSpace{
+																				space	: Space{
 																					scale	: 1.00,
 																					pos	: [-0.29, -2.24, -3.34],
 																					rot	: [-0.34, -0.02, -0.78, 0.53],
@@ -1660,21 +1660,21 @@ pub fn load()-> Scene	{Scene{
 																							Bone{
 																								name	: ~"C_rear_skirtplate_03_joint",
 																								children	: ~[],
-																								space	: QuatSpace{
+																								space	: Space{
 																									scale	: 1.00,
 																									pos	: [-0.00, 3.88, -0.00],
 																									rot	: [0.00, 0.00, -0.00, 1.00],
 																								},
 																							}
 																						],
-																						space	: QuatSpace{
+																						space	: Space{
 																							scale	: 1.00,
 																							pos	: [-0.00, 4.80, -0.00],
 																							rot	: [0.01, 0.97, 0.25, 0.04],
 																						},
 																					}
 																				],
-																				space	: QuatSpace{
+																				space	: Space{
 																					scale	: 1.00,
 																					pos	: [1.63, -3.54, -0.00],
 																					rot	: [-0.61, -0.37, -0.60, 0.36],
@@ -1689,21 +1689,21 @@ pub fn load()-> Scene	{Scene{
 																							Bone{
 																								name	: ~"R_rearSide_skirtplate_03_joint",
 																								children	: ~[],
-																								space	: QuatSpace{
+																								space	: Space{
 																									scale	: 1.00,
 																									pos	: [-0.00, 5.95, -0.00],
 																									rot	: [0.00, -0.00, -0.00, 1.00],
 																								},
 																							}
 																						],
-																						space	: QuatSpace{
+																						space	: Space{
 																							scale	: 1.00,
 																							pos	: [0.00, 4.80, -0.00],
 																							rot	: [0.13, 0.96, 0.19, 0.17],
 																						},
 																					}
 																				],
-																				space	: QuatSpace{
+																				space	: Space{
 																					scale	: 1.00,
 																					pos	: [-0.29, -2.24, 3.34],
 																					rot	: [-0.78, -0.53, -0.34, 0.02],
@@ -1718,21 +1718,21 @@ pub fn load()-> Scene	{Scene{
 																							Bone{
 																								name	: ~"R_side_skirtplate_03_joint",
 																								children	: ~[],
-																								space	: QuatSpace{
+																								space	: Space{
 																									scale	: 1.00,
 																									pos	: [0.00, 5.95, 0.00],
 																									rot	: [-0.00, 0.00, 0.00, 1.00],
 																								},
 																							}
 																						],
-																						space	: QuatSpace{
+																						space	: Space{
 																							scale	: 1.00,
 																							pos	: [0.00, 4.80, 0.00],
 																							rot	: [-0.13, -0.98, -0.14, 0.03],
 																						},
 																					}
 																				],
-																				space	: QuatSpace{
+																				space	: Space{
 																					scale	: 1.00,
 																					pos	: [-1.03, 1.62, 5.94],
 																					rot	: [0.73, 0.56, -0.08, 0.39],
@@ -1747,35 +1747,35 @@ pub fn load()-> Scene	{Scene{
 																							Bone{
 																								name	: ~"L_frontMid_skirtplate_03_joint",
 																								children	: ~[],
-																								space	: QuatSpace{
+																								space	: Space{
 																									scale	: 1.00,
 																									pos	: [0.00, 5.95, 0.00],
 																									rot	: [0.00, 0.00, 0.00, 1.00],
 																								},
 																							}
 																						],
-																						space	: QuatSpace{
+																						space	: Space{
 																							scale	: 1.00,
 																							pos	: [0.00, 4.80, -0.00],
 																							rot	: [-0.07, -0.99, -0.04, 0.07],
 																						},
 																					}
 																				],
-																				space	: QuatSpace{
+																				space	: Space{
 																					scale	: 1.00,
 																					pos	: [1.22, 4.37, -3.97],
 																					rot	: [0.05, 0.19, -0.68, 0.70],
 																				},
 																			}
 																		],
-																		space	: QuatSpace{
+																		space	: Space{
 																			scale	: 1.00,
 																			pos	: [0.00, -0.10, 0.04],
 																			rot	: [0.00, -0.71, 0.00, 0.71],
 																		},
 																	}
 																],
-																space	: QuatSpace{
+																space	: Space{
 																	scale	: 1.00,
 																	pos	: [0.00, 47.22, 0.24],
 																	rot	: [0.71, 0.00, 0.00, 0.71],
@@ -1787,7 +1787,7 @@ pub fn load()-> Scene	{Scene{
 														],
 													})
 												],
-												space	: QuatSpace{
+												space	: Space{
 													scale	: 1.00,
 													pos	: [0.00, 0.00, 0.00],
 													rot	: [0.00, 0.00, 0.00, 1.00],
@@ -1797,7 +1797,7 @@ pub fn load()-> Scene	{Scene{
 											ChildNode(Node{
 												name	: ~"SKELETON",
 												children	: ~[],
-												space	: QuatSpace{
+												space	: Space{
 													scale	: 1.00,
 													pos	: [0.00, 0.00, 0.00],
 													rot	: [0.00, 0.00, 0.00, 1.00],
@@ -1822,7 +1822,7 @@ pub fn load()-> Scene	{Scene{
 																					ChildNode(Node{
 																						name	: ~"R_eye_ctrl",
 																						children	: ~[],
-																						space	: QuatSpace{
+																						space	: Space{
 																							scale	: 1.00,
 																							pos	: [0.00, 0.00, -0.00],
 																							rot	: [0.00, -0.00, -0.00, 1.00],
@@ -1830,7 +1830,7 @@ pub fn load()-> Scene	{Scene{
 																						actions	: ~[],
 																					})
 																				],
-																				space	: QuatSpace{
+																				space	: Space{
 																					scale	: 1.00,
 																					pos	: [-0.00, -0.00, 0.00],
 																					rot	: [0.00, 0.00, -0.00, 1.00],
@@ -1838,7 +1838,7 @@ pub fn load()-> Scene	{Scene{
 																				actions	: ~[],
 																			})
 																		],
-																		space	: QuatSpace{
+																		space	: Space{
 																			scale	: 0.72,
 																			pos	: [-0.95, -0.00, 0.00],
 																			rot	: [0.00, 0.00, -0.00, 1.00],
@@ -1854,7 +1854,7 @@ pub fn load()-> Scene	{Scene{
 																					ChildNode(Node{
 																						name	: ~"L_eye_ctrl",
 																						children	: ~[],
-																						space	: QuatSpace{
+																						space	: Space{
 																							scale	: 1.00,
 																							pos	: [0.00, 0.00, -0.00],
 																							rot	: [0.00, 0.00, -0.00, 1.00],
@@ -1862,7 +1862,7 @@ pub fn load()-> Scene	{Scene{
 																						actions	: ~[],
 																					})
 																				],
-																				space	: QuatSpace{
+																				space	: Space{
 																					scale	: 1.00,
 																					pos	: [0.00, 0.00, -0.00],
 																					rot	: [0.00, 0.00, -0.00, 1.00],
@@ -1870,7 +1870,7 @@ pub fn load()-> Scene	{Scene{
 																				actions	: ~[],
 																			})
 																		],
-																		space	: QuatSpace{
+																		space	: Space{
 																			scale	: 0.72,
 																			pos	: [0.95, 0.00, -0.00],
 																			rot	: [0.00, 0.00, -0.00, 1.00],
@@ -1878,7 +1878,7 @@ pub fn load()-> Scene	{Scene{
 																		actions	: ~[],
 																	})
 																],
-																space	: QuatSpace{
+																space	: Space{
 																	scale	: 1.00,
 																	pos	: [0.04, -71.88, -17.98],
 																	rot	: [-0.00, -0.00, 0.00, 1.00],
@@ -1888,7 +1888,7 @@ pub fn load()-> Scene	{Scene{
 																],
 															})
 														],
-														space	: QuatSpace{
+														space	: Space{
 															scale	: 1.00,
 															pos	: [-0.04, 71.88, 17.98],
 															rot	: [0.00, 0.00, 0.00, 1.00],
@@ -1896,7 +1896,7 @@ pub fn load()-> Scene	{Scene{
 														actions	: ~[],
 													})
 												],
-												space	: QuatSpace{
+												space	: Space{
 													scale	: 1.00,
 													pos	: [0.00, 0.00, 0.00],
 													rot	: [0.00, 0.00, 0.00, 1.00],
@@ -1909,7 +1909,7 @@ pub fn load()-> Scene	{Scene{
 													ChildNode(Node{
 														name	: ~"L_eye_centerLocator",
 														children	: ~[],
-														space	: QuatSpace{
+														space	: Space{
 															scale	: 1.00,
 															pos	: [1.26, 71.88, 0.51],
 															rot	: [0.00, 0.00, 0.00, 1.00],
@@ -1919,7 +1919,7 @@ pub fn load()-> Scene	{Scene{
 													ChildNode(Node{
 														name	: ~"R_eye_centerLocator",
 														children	: ~[],
-														space	: QuatSpace{
+														space	: Space{
 															scale	: 1.00,
 															pos	: [-1.26, 71.88, 0.51],
 															rot	: [0.00, 0.00, 0.00, 1.00],
@@ -1927,7 +1927,7 @@ pub fn load()-> Scene	{Scene{
 														actions	: ~[],
 													})
 												],
-												space	: QuatSpace{
+												space	: Space{
 													scale	: 1.00,
 													pos	: [0.00, 0.00, 0.00],
 													rot	: [0.00, 0.00, 0.00, 1.00],
@@ -1946,7 +1946,7 @@ pub fn load()-> Scene	{Scene{
 																	ChildNode(Node{
 																		name	: ~"L_foot_ik_ctrl",
 																		children	: ~[],
-																		space	: QuatSpace{
+																		space	: Space{
 																			scale	: 1.00,
 																			pos	: [-0.00, 0.00, 0.00],
 																			rot	: [-0.00, -0.00, 0.00, 1.00],
@@ -1954,7 +1954,7 @@ pub fn load()-> Scene	{Scene{
 																		actions	: ~[],
 																	})
 																],
-																space	: QuatSpace{
+																space	: Space{
 																	scale	: 1.00,
 																	pos	: [0.00, -0.00, 0.00],
 																	rot	: [-0.00, -0.00, -0.00, 1.00],
@@ -1962,7 +1962,7 @@ pub fn load()-> Scene	{Scene{
 																actions	: ~[],
 															})
 														],
-														space	: QuatSpace{
+														space	: Space{
 															scale	: 1.00,
 															pos	: [3.00, -0.31, -3.16],
 															rot	: [0.00, 0.00, 0.00, 1.00],
@@ -1978,7 +1978,7 @@ pub fn load()-> Scene	{Scene{
 																	ChildNode(Node{
 																		name	: ~"R_foot_ik_ctrl",
 																		children	: ~[],
-																		space	: QuatSpace{
+																		space	: Space{
 																			scale	: 1.00,
 																			pos	: [0.00, 0.00, 0.00],
 																			rot	: [-0.01, -0.00, 0.00, 1.00],
@@ -1986,7 +1986,7 @@ pub fn load()-> Scene	{Scene{
 																		actions	: ~[],
 																	})
 																],
-																space	: QuatSpace{
+																space	: Space{
 																	scale	: 1.00,
 																	pos	: [-0.00, -0.00, 0.00],
 																	rot	: [-0.00, -0.00, 0.00, 1.00],
@@ -1994,7 +1994,7 @@ pub fn load()-> Scene	{Scene{
 																actions	: ~[],
 															})
 														],
-														space	: QuatSpace{
+														space	: Space{
 															scale	: 1.00,
 															pos	: [-3.00, -0.31, -3.16],
 															rot	: [0.00, 0.00, 0.00, 1.00],
@@ -2010,7 +2010,7 @@ pub fn load()-> Scene	{Scene{
 																	ChildNode(Node{
 																		name	: ~"R_legPole_ctrl.001",
 																		children	: ~[],
-																		space	: QuatSpace{
+																		space	: Space{
 																			scale	: 1.00,
 																			pos	: [0.00, 0.00, 0.00],
 																			rot	: [-0.00, -0.00, 0.00, 1.00],
@@ -2018,7 +2018,7 @@ pub fn load()-> Scene	{Scene{
 																		actions	: ~[],
 																	})
 																],
-																space	: QuatSpace{
+																space	: Space{
 																	scale	: 1.00,
 																	pos	: [0.57, -18.67, 10.59],
 																	rot	: [0.00, -0.00, -0.00, 1.00],
@@ -2026,7 +2026,7 @@ pub fn load()-> Scene	{Scene{
 																actions	: ~[],
 															})
 														],
-														space	: QuatSpace{
+														space	: Space{
 															scale	: 1.00,
 															pos	: [-4.14, 43.04, -0.16],
 															rot	: [0.00, 0.00, 0.00, 1.00],
@@ -2045,7 +2045,7 @@ pub fn load()-> Scene	{Scene{
 																			ChildNode(Node{
 																				name	: ~"L_legPole_ctrl",
 																				children	: ~[],
-																				space	: QuatSpace{
+																				space	: Space{
 																					scale	: 1.00,
 																					pos	: [0.00, -0.00, -0.00],
 																					rot	: [-0.00, 0.00, 0.00, 1.00],
@@ -2053,7 +2053,7 @@ pub fn load()-> Scene	{Scene{
 																				actions	: ~[],
 																			})
 																		],
-																		space	: QuatSpace{
+																		space	: Space{
 																			scale	: 1.00,
 																			pos	: [-0.55, -17.93, 9.74],
 																			rot	: [0.00, 0.00, -0.00, 1.00],
@@ -2061,7 +2061,7 @@ pub fn load()-> Scene	{Scene{
 																		actions	: ~[],
 																	})
 																],
-																space	: QuatSpace{
+																space	: Space{
 																	scale	: 1.00,
 																	pos	: [0.00, 0.00, -0.00],
 																	rot	: [0.47, -0.53, 0.49, 0.51],
@@ -2069,7 +2069,7 @@ pub fn load()-> Scene	{Scene{
 																actions	: ~[],
 															})
 														],
-														space	: QuatSpace{
+														space	: Space{
 															scale	: 1.00,
 															pos	: [4.10, 42.26, 0.61],
 															rot	: [-0.47, 0.53, -0.49, 0.51],
@@ -2077,7 +2077,7 @@ pub fn load()-> Scene	{Scene{
 														actions	: ~[],
 													})
 												],
-												space	: QuatSpace{
+												space	: Space{
 													scale	: 1.00,
 													pos	: [0.00, 0.00, 0.00],
 													rot	: [0.00, 0.00, 0.00, 1.00],
@@ -2096,7 +2096,7 @@ pub fn load()-> Scene	{Scene{
 																	ChildNode(Node{
 																		name	: ~"L_armIK_handle",
 																		children	: ~[],
-																		space	: QuatSpace{
+																		space	: Space{
 																			scale	: 1.00,
 																			pos	: [-0.00, 0.00, -0.00],
 																			rot	: [0.00, 0.00, -0.00, 1.00],
@@ -2115,7 +2115,7 @@ pub fn load()-> Scene	{Scene{
 																							ChildNode(Node{
 																								name	: ~"L_thumb_ctrl",
 																								children	: ~[],
-																								space	: QuatSpace{
+																								space	: Space{
 																									scale	: 1.00,
 																									pos	: [-0.00, -0.00, -0.00],
 																									rot	: [0.00, 0.00, -0.00, 1.00],
@@ -2127,7 +2127,7 @@ pub fn load()-> Scene	{Scene{
 																							ChildNode(Node{
 																								name	: ~"L_indexF_ctrl",
 																								children	: ~[],
-																								space	: QuatSpace{
+																								space	: Space{
 																									scale	: 1.00,
 																									pos	: [-0.00, -0.00, -0.00],
 																									rot	: [0.00, 0.00, -0.00, 1.00],
@@ -2139,7 +2139,7 @@ pub fn load()-> Scene	{Scene{
 																							ChildNode(Node{
 																								name	: ~"L_middleF_ctrl",
 																								children	: ~[],
-																								space	: QuatSpace{
+																								space	: Space{
 																									scale	: 1.00,
 																									pos	: [-0.00, -0.00, -0.00],
 																									rot	: [0.00, 0.00, -0.00, 1.00],
@@ -2151,7 +2151,7 @@ pub fn load()-> Scene	{Scene{
 																							ChildNode(Node{
 																								name	: ~"L_ringF_ctrl",
 																								children	: ~[],
-																								space	: QuatSpace{
+																								space	: Space{
 																									scale	: 1.00,
 																									pos	: [-0.00, -0.00, -0.00],
 																									rot	: [0.00, 0.00, -0.00, 1.00],
@@ -2163,7 +2163,7 @@ pub fn load()-> Scene	{Scene{
 																							ChildNode(Node{
 																								name	: ~"L_pinkyF_ctrl",
 																								children	: ~[],
-																								space	: QuatSpace{
+																								space	: Space{
 																									scale	: 1.00,
 																									pos	: [-0.00, -0.00, -0.00],
 																									rot	: [0.00, 0.00, -0.00, 1.00],
@@ -2173,7 +2173,7 @@ pub fn load()-> Scene	{Scene{
 																								],
 																							})
 																						],
-																						space	: QuatSpace{
+																						space	: Space{
 																							scale	: 1.00,
 																							pos	: [0.00, -0.00, 0.00],
 																							rot	: [-0.00, 0.00, -0.00, 1.00],
@@ -2183,7 +2183,7 @@ pub fn load()-> Scene	{Scene{
 																						],
 																					})
 																				],
-																				space	: QuatSpace{
+																				space	: Space{
 																					scale	: 1.00,
 																					pos	: [-0.00, 0.00, -0.00],
 																					rot	: [0.00, -0.00, 0.00, 1.00],
@@ -2191,7 +2191,7 @@ pub fn load()-> Scene	{Scene{
 																				actions	: ~[],
 																			})
 																		],
-																		space	: QuatSpace{
+																		space	: Space{
 																			scale	: 1.00,
 																			pos	: [-0.00, 0.00, -0.00],
 																			rot	: [-0.26, -0.08, -0.07, 0.96],
@@ -2199,7 +2199,7 @@ pub fn load()-> Scene	{Scene{
 																		actions	: ~[],
 																	})
 																],
-																space	: QuatSpace{
+																space	: Space{
 																	scale	: 1.00,
 																	pos	: [-27.41, -60.54, 2.62],
 																	rot	: [0.00, -0.00, 0.00, 1.00],
@@ -2209,7 +2209,7 @@ pub fn load()-> Scene	{Scene{
 																],
 															})
 														],
-														space	: QuatSpace{
+														space	: Space{
 															scale	: 1.00,
 															pos	: [0.00, -0.00, 0.00],
 															rot	: [0.26, 0.08, 0.07, 0.96],
@@ -2217,7 +2217,7 @@ pub fn load()-> Scene	{Scene{
 														actions	: ~[],
 													})
 												],
-												space	: QuatSpace{
+												space	: Space{
 													scale	: 1.00,
 													pos	: [27.41, 60.54, -2.62],
 													rot	: [-0.26, -0.08, -0.07, 0.96],
@@ -2227,7 +2227,7 @@ pub fn load()-> Scene	{Scene{
 											ChildNode(Node{
 												name	: ~"c_hips_cntr_backup",
 												children	: ~[],
-												space	: QuatSpace{
+												space	: Space{
 													scale	: 1.00,
 													pos	: [0.00, 46.47, 1.11],
 													rot	: [0.00, 0.00, 0.00, 1.00],
@@ -2246,7 +2246,7 @@ pub fn load()-> Scene	{Scene{
 																	ChildNode(Node{
 																		name	: ~"ikHandle4",
 																		children	: ~[],
-																		space	: QuatSpace{
+																		space	: Space{
 																			scale	: 1.00,
 																			pos	: [-54.83, -0.00, 0.00],
 																			rot	: [0.00, 0.00, 0.00, 1.00],
@@ -2265,7 +2265,7 @@ pub fn load()-> Scene	{Scene{
 																							ChildNode(Node{
 																								name	: ~"R_thumb_ctrl",
 																								children	: ~[],
-																								space	: QuatSpace{
+																								space	: Space{
 																									scale	: 1.00,
 																									pos	: [-0.00, 0.00, -0.00],
 																									rot	: [-0.00, -0.00, 0.00, 1.00],
@@ -2277,7 +2277,7 @@ pub fn load()-> Scene	{Scene{
 																							ChildNode(Node{
 																								name	: ~"R_indexF_ctrl",
 																								children	: ~[],
-																								space	: QuatSpace{
+																								space	: Space{
 																									scale	: 1.00,
 																									pos	: [-0.00, 0.00, -0.00],
 																									rot	: [-0.00, -0.00, 0.00, 1.00],
@@ -2289,7 +2289,7 @@ pub fn load()-> Scene	{Scene{
 																							ChildNode(Node{
 																								name	: ~"R_middleF_ctrl",
 																								children	: ~[],
-																								space	: QuatSpace{
+																								space	: Space{
 																									scale	: 1.00,
 																									pos	: [-0.00, 0.00, -0.00],
 																									rot	: [-0.00, -0.00, 0.00, 1.00],
@@ -2301,7 +2301,7 @@ pub fn load()-> Scene	{Scene{
 																							ChildNode(Node{
 																								name	: ~"R_ringF_ctrl",
 																								children	: ~[],
-																								space	: QuatSpace{
+																								space	: Space{
 																									scale	: 1.00,
 																									pos	: [-0.00, 0.00, -0.00],
 																									rot	: [-0.00, -0.00, 0.00, 1.00],
@@ -2313,7 +2313,7 @@ pub fn load()-> Scene	{Scene{
 																							ChildNode(Node{
 																								name	: ~"R_pinkyF_ctrl",
 																								children	: ~[],
-																								space	: QuatSpace{
+																								space	: Space{
 																									scale	: 1.00,
 																									pos	: [-0.00, 0.00, -0.00],
 																									rot	: [-0.00, -0.00, 0.00, 1.00],
@@ -2323,7 +2323,7 @@ pub fn load()-> Scene	{Scene{
 																								],
 																							})
 																						],
-																						space	: QuatSpace{
+																						space	: Space{
 																							scale	: 1.00,
 																							pos	: [0.00, 0.00, -0.00],
 																							rot	: [-0.07, 0.96, -0.26, 0.08],
@@ -2333,7 +2333,7 @@ pub fn load()-> Scene	{Scene{
 																						],
 																					})
 																				],
-																				space	: QuatSpace{
+																				space	: Space{
 																					scale	: 1.00,
 																					pos	: [0.00, -0.00, 0.00],
 																					rot	: [-0.00, 0.00, 0.00, 1.00],
@@ -2341,7 +2341,7 @@ pub fn load()-> Scene	{Scene{
 																				actions	: ~[],
 																			})
 																		],
-																		space	: QuatSpace{
+																		space	: Space{
 																			scale	: 1.00,
 																			pos	: [-108.05, 6.80, 11.25],
 																			rot	: [0.07, -0.96, 0.26, 0.08],
@@ -2349,7 +2349,7 @@ pub fn load()-> Scene	{Scene{
 																		actions	: ~[],
 																	})
 																],
-																space	: QuatSpace{
+																space	: Space{
 																	scale	: 1.00,
 																	pos	: [-27.33, -60.54, 2.62],
 																	rot	: [-0.00, -0.00, 0.00, 1.00],
@@ -2359,7 +2359,7 @@ pub fn load()-> Scene	{Scene{
 																],
 															})
 														],
-														space	: QuatSpace{
+														space	: Space{
 															scale	: 1.00,
 															pos	: [0.00, 0.00, 0.00],
 															rot	: [-0.00, -0.00, 0.00, 1.00],
@@ -2367,7 +2367,7 @@ pub fn load()-> Scene	{Scene{
 														actions	: ~[],
 													})
 												],
-												space	: QuatSpace{
+												space	: Space{
 													scale	: 1.00,
 													pos	: [27.33, 60.54, -2.62],
 													rot	: [0.00, 0.00, 0.00, 1.00],
@@ -2398,7 +2398,7 @@ pub fn load()-> Scene	{Scene{
 																									ChildNode(Node{
 																										name	: ~"cluster3Handle",
 																										children	: ~[],
-																										space	: QuatSpace{
+																										space	: Space{
 																											scale	: 1.00,
 																											pos	: [-0.00, -0.00, 0.00],
 																											rot	: [0.00, 0.00, -0.00, 1.00],
@@ -2408,7 +2408,7 @@ pub fn load()-> Scene	{Scene{
 																									ChildNode(Node{
 																										name	: ~"cluster2Handle",
 																										children	: ~[],
-																										space	: QuatSpace{
+																										space	: Space{
 																											scale	: 1.00,
 																											pos	: [-0.00, -0.00, 0.00],
 																											rot	: [0.00, 0.00, -0.00, 1.00],
@@ -2418,7 +2418,7 @@ pub fn load()-> Scene	{Scene{
 																									ChildNode(Node{
 																										name	: ~"cluster1Handle",
 																										children	: ~[],
-																										space	: QuatSpace{
+																										space	: Space{
 																											scale	: 1.00,
 																											pos	: [-0.00, -0.00, 0.00],
 																											rot	: [0.00, 0.00, -0.00, 1.00],
@@ -2426,7 +2426,7 @@ pub fn load()-> Scene	{Scene{
 																										actions	: ~[],
 																									})
 																								],
-																								space	: QuatSpace{
+																								space	: Space{
 																									scale	: 1.00,
 																									pos	: [-46.65, -7.08, 0.00],
 																									rot	: [0.46, 0.54, -0.46, 0.54],
@@ -2434,7 +2434,7 @@ pub fn load()-> Scene	{Scene{
 																								actions	: ~[],
 																							})
 																						],
-																						space	: QuatSpace{
+																						space	: Space{
 																							scale	: 1.00,
 																							pos	: [0.00, -0.00, 0.00],
 																							rot	: [0.46, 0.54, -0.46, 0.54],
@@ -2444,7 +2444,7 @@ pub fn load()-> Scene	{Scene{
 																						],
 																					})
 																				],
-																				space	: QuatSpace{
+																				space	: Space{
 																					scale	: 1.00,
 																					pos	: [0.00, -0.00, -0.00],
 																					rot	: [-0.00, -0.00, -0.00, 1.00],
@@ -2452,7 +2452,7 @@ pub fn load()-> Scene	{Scene{
 																				actions	: ~[],
 																			})
 																		],
-																		space	: QuatSpace{
+																		space	: Space{
 																			scale	: 1.00,
 																			pos	: [-0.00, -0.04, -0.10],
 																			rot	: [-0.46, -0.54, 0.46, 0.54],
@@ -2483,7 +2483,7 @@ pub fn load()-> Scene	{Scene{
 																															ChildNode(Node{
 																																name	: ~"cluster4Handle",
 																																children	: ~[],
-																																space	: QuatSpace{
+																																space	: Space{
 																																	scale	: 1.00,
 																																	pos	: [0.00, 0.00, 0.00],
 																																	rot	: [0.00, 0.00, -0.00, 1.00],
@@ -2491,7 +2491,7 @@ pub fn load()-> Scene	{Scene{
 																																actions	: ~[],
 																															})
 																														],
-																														space	: QuatSpace{
+																														space	: Space{
 																															scale	: 1.00,
 																															pos	: [-50.08, 3.75, -0.04],
 																															rot	: [0.52, 0.48, -0.52, 0.48],
@@ -2513,7 +2513,7 @@ pub fn load()-> Scene	{Scene{
 																																					ChildNode(Node{
 																																						name	: ~"cluster6Handle",
 																																						children	: ~[],
-																																						space	: QuatSpace{
+																																						space	: Space{
 																																							scale	: 1.00,
 																																							pos	: [-0.00, -0.00, 0.00],
 																																							rot	: [0.00, -0.00, -0.00, 1.00],
@@ -2523,7 +2523,7 @@ pub fn load()-> Scene	{Scene{
 																																					ChildNode(Node{
 																																						name	: ~"cluster5Handle",
 																																						children	: ~[],
-																																						space	: QuatSpace{
+																																						space	: Space{
 																																							scale	: 1.00,
 																																							pos	: [-0.00, -0.00, 0.00],
 																																							rot	: [0.00, -0.00, -0.00, 1.00],
@@ -2531,7 +2531,7 @@ pub fn load()-> Scene	{Scene{
 																																						actions	: ~[],
 																																					})
 																																				],
-																																				space	: QuatSpace{
+																																				space	: Space{
 																																					scale	: 1.00,
 																																					pos	: [-50.19, 17.53, -0.04],
 																																					rot	: [0.57, 0.41, -0.57, 0.41],
@@ -2553,7 +2553,7 @@ pub fn load()-> Scene	{Scene{
 																																											ChildNode(Node{
 																																												name	: ~"cluster9Handle",
 																																												children	: ~[],
-																																												space	: QuatSpace{
+																																												space	: Space{
 																																													scale	: 1.00,
 																																													pos	: [0.00, 0.00, -0.00],
 																																													rot	: [-0.00, -0.00, -0.00, 1.00],
@@ -2563,7 +2563,7 @@ pub fn load()-> Scene	{Scene{
 																																											ChildNode(Node{
 																																												name	: ~"cluster8Handle",
 																																												children	: ~[],
-																																												space	: QuatSpace{
+																																												space	: Space{
 																																													scale	: 1.00,
 																																													pos	: [0.00, 0.00, -0.00],
 																																													rot	: [-0.00, -0.00, -0.00, 1.00],
@@ -2573,7 +2573,7 @@ pub fn load()-> Scene	{Scene{
 																																											ChildNode(Node{
 																																												name	: ~"cluster7Handle",
 																																												children	: ~[],
-																																												space	: QuatSpace{
+																																												space	: Space{
 																																													scale	: 1.00,
 																																													pos	: [0.00, 0.00, -0.00],
 																																													rot	: [-0.00, -0.00, -0.00, 1.00],
@@ -2581,7 +2581,7 @@ pub fn load()-> Scene	{Scene{
 																																												actions	: ~[],
 																																											})
 																																										],
-																																										space	: QuatSpace{
+																																										space	: Space{
 																																											scale	: 1.00,
 																																											pos	: [-56.22, 18.02, -0.04],
 																																											rot	: [0.58, 0.41, -0.58, 0.41],
@@ -2594,7 +2594,7 @@ pub fn load()-> Scene	{Scene{
 																																											ChildNode(Node{
 																																												name	: ~"null1",
 																																												children	: ~[],
-																																												space	: QuatSpace{
+																																												space	: Space{
 																																													scale	: 1.00,
 																																													pos	: [0.00, -0.00, -0.00],
 																																													rot	: [-0.00, 0.00, -0.00, 1.00],
@@ -2613,7 +2613,7 @@ pub fn load()-> Scene	{Scene{
 																																																	ChildNode(Node{
 																																																		name	: ~"ikHandle2",
 																																																		children	: ~[],
-																																																		space	: QuatSpace{
+																																																		space	: Space{
 																																																			scale	: 1.00,
 																																																			pos	: [0.00, 0.00, -0.00],
 																																																			rot	: [0.00, 0.00, 0.00, 1.00],
@@ -2629,7 +2629,7 @@ pub fn load()-> Scene	{Scene{
 																																																					ChildNode(Node{
 																																																						name	: ~"R_breastTweak_ctrl",
 																																																						children	: ~[],
-																																																						space	: QuatSpace{
+																																																						space	: Space{
 																																																							scale	: 1.00,
 																																																							pos	: [-0.00, 0.00, -0.00],
 																																																							rot	: [-0.00, 0.00, 0.00, 1.00],
@@ -2639,7 +2639,7 @@ pub fn load()-> Scene	{Scene{
 																																																						],
 																																																					})
 																																																				],
-																																																				space	: QuatSpace{
+																																																				space	: Space{
 																																																					scale	: 1.00,
 																																																					pos	: [-0.00, 0.00, -0.00],
 																																																					rot	: [0.00, 0.00, -0.00, 1.00],
@@ -2647,7 +2647,7 @@ pub fn load()-> Scene	{Scene{
 																																																				actions	: ~[],
 																																																			})
 																																																		],
-																																																		space	: QuatSpace{
+																																																		space	: Space{
 																																																			scale	: 1.00,
 																																																			pos	: [0.00, 0.00, -0.00],
 																																																			rot	: [0.03, -0.70, 0.06, 0.71],
@@ -2655,7 +2655,7 @@ pub fn load()-> Scene	{Scene{
 																																																		actions	: ~[],
 																																																	})
 																																																],
-																																																space	: QuatSpace{
+																																																space	: Space{
 																																																	scale	: 1.00,
 																																																	pos	: [0.00, 0.00, -0.00],
 																																																	rot	: [-0.00, -0.00, -0.00, 1.00],
@@ -2665,7 +2665,7 @@ pub fn load()-> Scene	{Scene{
 																																																],
 																																															})
 																																														],
-																																														space	: QuatSpace{
+																																														space	: Space{
 																																															scale	: 1.00,
 																																															pos	: [0.00, 0.00, 0.00],
 																																															rot	: [0.00, -0.00, -0.00, 1.00],
@@ -2673,7 +2673,7 @@ pub fn load()-> Scene	{Scene{
 																																														actions	: ~[],
 																																													})
 																																												],
-																																												space	: QuatSpace{
+																																												space	: Space{
 																																													scale	: 1.00,
 																																													pos	: [-2.31, -6.09, 4.23],
 																																													rot	: [-0.10, -0.08, -0.84, 0.52],
@@ -2695,7 +2695,7 @@ pub fn load()-> Scene	{Scene{
 																																																			ChildNode(Node{
 																																																				name	: ~"L_breastTweak_ctrl",
 																																																				children	: ~[],
-																																																				space	: QuatSpace{
+																																																				space	: Space{
 																																																					scale	: 1.00,
 																																																					pos	: [0.00, -0.00, -0.00],
 																																																					rot	: [-0.00, -0.00, -0.00, 1.00],
@@ -2705,7 +2705,7 @@ pub fn load()-> Scene	{Scene{
 																																																				],
 																																																			})
 																																																		],
-																																																		space	: QuatSpace{
+																																																		space	: Space{
 																																																			scale	: 1.00,
 																																																			pos	: [0.00, 0.00, 0.00],
 																																																			rot	: [0.00, 0.00, 0.00, 1.00],
@@ -2713,7 +2713,7 @@ pub fn load()-> Scene	{Scene{
 																																																		actions	: ~[],
 																																																	})
 																																																],
-																																																space	: QuatSpace{
+																																																space	: Space{
 																																																	scale	: 1.00,
 																																																	pos	: [-0.00, 0.00, -0.00],
 																																																	rot	: [-0.03, 0.70, 0.06, 0.71],
@@ -2726,7 +2726,7 @@ pub fn load()-> Scene	{Scene{
 																																																	ChildNode(Node{
 																																																		name	: ~"ikHandle3",
 																																																		children	: ~[],
-																																																		space	: QuatSpace{
+																																																		space	: Space{
 																																																			scale	: 1.00,
 																																																			pos	: [0.00, -0.00, 0.00],
 																																																			rot	: [-0.00, 0.00, -0.00, 1.00],
@@ -2734,7 +2734,7 @@ pub fn load()-> Scene	{Scene{
 																																																		actions	: ~[],
 																																																	})
 																																																],
-																																																space	: QuatSpace{
+																																																space	: Space{
 																																																	scale	: 1.00,
 																																																	pos	: [-0.00, 0.00, -0.00],
 																																																	rot	: [-0.00, 0.00, 0.00, 1.00],
@@ -2744,7 +2744,7 @@ pub fn load()-> Scene	{Scene{
 																																																],
 																																															})
 																																														],
-																																														space	: QuatSpace{
+																																														space	: Space{
 																																															scale	: 1.00,
 																																															pos	: [0.00, 0.00, 0.00],
 																																															rot	: [0.00, 0.00, 0.00, 1.00],
@@ -2752,7 +2752,7 @@ pub fn load()-> Scene	{Scene{
 																																														actions	: ~[],
 																																													})
 																																												],
-																																												space	: QuatSpace{
+																																												space	: Space{
 																																													scale	: 1.00,
 																																													pos	: [-2.31, -6.09, -4.23],
 																																													rot	: [0.10, 0.08, -0.84, 0.52],
@@ -2760,7 +2760,7 @@ pub fn load()-> Scene	{Scene{
 																																												actions	: ~[],
 																																											})
 																																										],
-																																										space	: QuatSpace{
+																																										space	: Space{
 																																											scale	: 1.00,
 																																											pos	: [0.00, 0.00, 0.00],
 																																											rot	: [-0.00, 0.00, 0.00, 1.00],
@@ -2797,7 +2797,7 @@ pub fn load()-> Scene	{Scene{
 																																																											ChildNode(Node{
 																																																												name	: ~"R_subSpaulder_ctrl",
 																																																												children	: ~[],
-																																																												space	: QuatSpace{
+																																																												space	: Space{
 																																																													scale	: 1.00,
 																																																													pos	: [0.00, 0.00, -0.00],
 																																																													rot	: [-0.00, 0.00, -0.04, 1.00],
@@ -2807,7 +2807,7 @@ pub fn load()-> Scene	{Scene{
 																																																												],
 																																																											})
 																																																										],
-																																																										space	: QuatSpace{
+																																																										space	: Space{
 																																																											scale	: 1.00,
 																																																											pos	: [-0.00, 0.00, -0.00],
 																																																											rot	: [-0.00, -0.00, 0.00, 1.00],
@@ -2815,7 +2815,7 @@ pub fn load()-> Scene	{Scene{
 																																																										actions	: ~[],
 																																																									})
 																																																								],
-																																																								space	: QuatSpace{
+																																																								space	: Space{
 																																																									scale	: 1.00,
 																																																									pos	: [2.32, 0.02, 0.51],
 																																																									rot	: [-0.00, -0.30, 0.00, 0.96],
@@ -2823,7 +2823,7 @@ pub fn load()-> Scene	{Scene{
 																																																								actions	: ~[],
 																																																							})
 																																																						],
-																																																						space	: QuatSpace{
+																																																						space	: Space{
 																																																							scale	: 1.00,
 																																																							pos	: [0.00, 0.00, -0.00],
 																																																							rot	: [0.00, 0.00, -0.03, 1.00],
@@ -2833,7 +2833,7 @@ pub fn load()-> Scene	{Scene{
 																																																						],
 																																																					})
 																																																				],
-																																																				space	: QuatSpace{
+																																																				space	: Space{
 																																																					scale	: 1.00,
 																																																					pos	: [-0.00, 0.00, 0.00],
 																																																					rot	: [-0.00, -0.00, 0.00, 1.00],
@@ -2841,7 +2841,7 @@ pub fn load()-> Scene	{Scene{
 																																																				actions	: ~[],
 																																																			})
 																																																		],
-																																																		space	: QuatSpace{
+																																																		space	: Space{
 																																																			scale	: 1.00,
 																																																			pos	: [4.89, -0.16, 0.38],
 																																																			rot	: [0.13, 0.32, -0.21, 0.91],
@@ -2849,7 +2849,7 @@ pub fn load()-> Scene	{Scene{
 																																																		actions	: ~[],
 																																																	})
 																																																],
-																																																space	: QuatSpace{
+																																																space	: Space{
 																																																	scale	: 1.00,
 																																																	pos	: [0.00, -0.00, 0.00],
 																																																	rot	: [0.00, -0.12, 0.95, 0.28],
@@ -2859,7 +2859,7 @@ pub fn load()-> Scene	{Scene{
 																																																],
 																																															})
 																																														],
-																																														space	: QuatSpace{
+																																														space	: Space{
 																																															scale	: 1.00,
 																																															pos	: [0.00, -0.00, -0.00],
 																																															rot	: [0.00, -0.00, -0.00, 1.00],
@@ -2867,7 +2867,7 @@ pub fn load()-> Scene	{Scene{
 																																														actions	: ~[],
 																																													})
 																																												],
-																																												space	: QuatSpace{
+																																												space	: Space{
 																																													scale	: 1.00,
 																																													pos	: [-1.39, -3.03, 1.00],
 																																													rot	: [-0.19, -0.65, 0.22, 0.71],
@@ -2901,7 +2901,7 @@ pub fn load()-> Scene	{Scene{
 																																																											ChildNode(Node{
 																																																												name	: ~"L_subSpaulder_ctrl",
 																																																												children	: ~[],
-																																																												space	: QuatSpace{
+																																																												space	: Space{
 																																																													scale	: 1.00,
 																																																													pos	: [0.00, 0.00, -0.00],
 																																																													rot	: [-0.00, -0.00, -0.04, 1.00],
@@ -2911,7 +2911,7 @@ pub fn load()-> Scene	{Scene{
 																																																												],
 																																																											})
 																																																										],
-																																																										space	: QuatSpace{
+																																																										space	: Space{
 																																																											scale	: 1.00,
 																																																											pos	: [-0.00, 0.00, -0.00],
 																																																											rot	: [-0.00, -0.00, -0.00, 1.00],
@@ -2919,7 +2919,7 @@ pub fn load()-> Scene	{Scene{
 																																																										actions	: ~[],
 																																																									})
 																																																								],
-																																																								space	: QuatSpace{
+																																																								space	: Space{
 																																																									scale	: 1.00,
 																																																									pos	: [2.32, 0.02, -0.51],
 																																																									rot	: [0.00, 0.30, 0.00, 0.96],
@@ -2927,7 +2927,7 @@ pub fn load()-> Scene	{Scene{
 																																																								actions	: ~[],
 																																																							})
 																																																						],
-																																																						space	: QuatSpace{
+																																																						space	: Space{
 																																																							scale	: 1.00,
 																																																							pos	: [0.00, -0.00, -0.00],
 																																																							rot	: [-0.00, -0.00, -0.03, 1.00],
@@ -2937,7 +2937,7 @@ pub fn load()-> Scene	{Scene{
 																																																						],
 																																																					})
 																																																				],
-																																																				space	: QuatSpace{
+																																																				space	: Space{
 																																																					scale	: 1.00,
 																																																					pos	: [0.00, -0.00, 0.00],
 																																																					rot	: [0.00, 0.00, 0.00, 1.00],
@@ -2945,7 +2945,7 @@ pub fn load()-> Scene	{Scene{
 																																																				actions	: ~[],
 																																																			})
 																																																		],
-																																																		space	: QuatSpace{
+																																																		space	: Space{
 																																																			scale	: 1.00,
 																																																			pos	: [4.89, -0.12, -0.39],
 																																																			rot	: [-0.09, -0.32, -0.22, 0.92],
@@ -2953,7 +2953,7 @@ pub fn load()-> Scene	{Scene{
 																																																		actions	: ~[],
 																																																	})
 																																																],
-																																																space	: QuatSpace{
+																																																space	: Space{
 																																																	scale	: 1.00,
 																																																	pos	: [0.00, 0.00, -0.00],
 																																																	rot	: [0.00, -0.01, -0.28, 0.96],
@@ -2963,7 +2963,7 @@ pub fn load()-> Scene	{Scene{
 																																																],
 																																															})
 																																														],
-																																														space	: QuatSpace{
+																																														space	: Space{
 																																															scale	: 1.00,
 																																															pos	: [0.00, 0.00, 0.00],
 																																															rot	: [-0.00, -0.00, -0.00, 1.00],
@@ -2971,7 +2971,7 @@ pub fn load()-> Scene	{Scene{
 																																														actions	: ~[],
 																																													})
 																																												],
-																																												space	: QuatSpace{
+																																												space	: Space{
 																																													scale	: 1.00,
 																																													pos	: [-1.39, -3.03, -1.00],
 																																													rot	: [0.16, 0.64, 0.24, 0.71],
@@ -3011,7 +3011,7 @@ pub fn load()-> Scene	{Scene{
 																																																															ChildNode(Node{
 																																																																name	: ~"c_jaw_ctrl",
 																																																																children	: ~[],
-																																																																space	: QuatSpace{
+																																																																space	: Space{
 																																																																	scale	: 1.00,
 																																																																	pos	: [0.00, -0.00, 0.00],
 																																																																	rot	: [-0.00, 0.00, -0.00, 1.00],
@@ -3021,7 +3021,7 @@ pub fn load()-> Scene	{Scene{
 																																																																],
 																																																															})
 																																																														],
-																																																														space	: QuatSpace{
+																																																														space	: Space{
 																																																															scale	: 1.00,
 																																																															pos	: [-0.00, 0.00, 0.00],
 																																																															rot	: [-0.00, 0.00, -0.00, 1.00],
@@ -3029,7 +3029,7 @@ pub fn load()-> Scene	{Scene{
 																																																														actions	: ~[],
 																																																													})
 																																																												],
-																																																												space	: QuatSpace{
+																																																												space	: Space{
 																																																													scale	: 1.00,
 																																																													pos	: [-0.41, -0.55, 0.00],
 																																																													rot	: [0.00, 0.00, -0.82, 0.57],
@@ -3037,7 +3037,7 @@ pub fn load()-> Scene	{Scene{
 																																																												actions	: ~[],
 																																																											})
 																																																										],
-																																																										space	: QuatSpace{
+																																																										space	: Space{
 																																																											scale	: 1.00,
 																																																											pos	: [0.00, 0.00, 0.00],
 																																																											rot	: [-0.00, -0.00, 0.05, 1.00],
@@ -3047,7 +3047,7 @@ pub fn load()-> Scene	{Scene{
 																																																										],
 																																																									})
 																																																								],
-																																																								space	: QuatSpace{
+																																																								space	: Space{
 																																																									scale	: 1.00,
 																																																									pos	: [0.00, 0.00, 0.00],
 																																																									rot	: [0.00, 0.00, 0.00, 1.00],
@@ -3055,7 +3055,7 @@ pub fn load()-> Scene	{Scene{
 																																																								actions	: ~[],
 																																																							})
 																																																						],
-																																																						space	: QuatSpace{
+																																																						space	: Space{
 																																																							scale	: 1.00,
 																																																							pos	: [2.37, 0.00, 0.00],
 																																																							rot	: [-0.00, -0.00, -0.00, 1.00],
@@ -3063,7 +3063,7 @@ pub fn load()-> Scene	{Scene{
 																																																						actions	: ~[],
 																																																					})
 																																																				],
-																																																				space	: QuatSpace{
+																																																				space	: Space{
 																																																					scale	: 1.00,
 																																																					pos	: [0.00, 0.00, -0.00],
 																																																					rot	: [-0.00, -0.00, 0.04, 1.00],
@@ -3073,7 +3073,7 @@ pub fn load()-> Scene	{Scene{
 																																																				],
 																																																			})
 																																																		],
-																																																		space	: QuatSpace{
+																																																		space	: Space{
 																																																			scale	: 1.00,
 																																																			pos	: [0.00, 0.00, -0.00],
 																																																			rot	: [-0.00, -0.00, -0.00, 1.00],
@@ -3081,7 +3081,7 @@ pub fn load()-> Scene	{Scene{
 																																																		actions	: ~[],
 																																																	})
 																																																],
-																																																space	: QuatSpace{
+																																																space	: Space{
 																																																	scale	: 1.00,
 																																																	pos	: [2.33, 0.01, -0.00],
 																																																	rot	: [0.00, 0.00, 0.02, 1.00],
@@ -3089,7 +3089,7 @@ pub fn load()-> Scene	{Scene{
 																																																actions	: ~[],
 																																															})
 																																														],
-																																														space	: QuatSpace{
+																																														space	: Space{
 																																															scale	: 1.00,
 																																															pos	: [0.00, 0.00, -0.00],
 																																															rot	: [-0.00, -0.00, 0.06, 1.00],
@@ -3099,7 +3099,7 @@ pub fn load()-> Scene	{Scene{
 																																														],
 																																													})
 																																												],
-																																												space	: QuatSpace{
+																																												space	: Space{
 																																													scale	: 1.00,
 																																													pos	: [0.00, 0.00, 0.00],
 																																													rot	: [-0.00, -0.00, -0.00, 1.00],
@@ -3107,7 +3107,7 @@ pub fn load()-> Scene	{Scene{
 																																												actions	: ~[],
 																																											})
 																																										],
-																																										space	: QuatSpace{
+																																										space	: Space{
 																																											scale	: 1.00,
 																																											pos	: [6.82, -0.29, 0.00],
 																																											rot	: [0.00, 0.00, -0.23, 0.97],
@@ -3115,7 +3115,7 @@ pub fn load()-> Scene	{Scene{
 																																										actions	: ~[],
 																																									})
 																																								],
-																																								space	: QuatSpace{
+																																								space	: Space{
 																																									scale	: 1.00,
 																																									pos	: [-0.00, 0.00, 0.00],
 																																									rot	: [-0.00, -0.00, -0.00, 1.00],
@@ -3125,7 +3125,7 @@ pub fn load()-> Scene	{Scene{
 																																								],
 																																							})
 																																						],
-																																						space	: QuatSpace{
+																																						space	: Space{
 																																							scale	: 1.00,
 																																							pos	: [0.00, 0.00, -0.00],
 																																							rot	: [-0.00, -0.00, 0.00, 1.00],
@@ -3133,7 +3133,7 @@ pub fn load()-> Scene	{Scene{
 																																						actions	: ~[],
 																																					})
 																																				],
-																																				space	: QuatSpace{
+																																				space	: Space{
 																																					scale	: 1.00,
 																																					pos	: [6.18, -0.00, -0.00],
 																																					rot	: [-0.00, -0.00, 0.00, 1.00],
@@ -3141,7 +3141,7 @@ pub fn load()-> Scene	{Scene{
 																																				actions	: ~[],
 																																			})
 																																		],
-																																		space	: QuatSpace{
+																																		space	: Space{
 																																			scale	: 1.00,
 																																			pos	: [0.00, -0.00, -0.00],
 																																			rot	: [0.57, 0.41, -0.57, 0.41],
@@ -3151,7 +3151,7 @@ pub fn load()-> Scene	{Scene{
 																																		],
 																																	})
 																																],
-																																space	: QuatSpace{
+																																space	: Space{
 																																	scale	: 1.00,
 																																	pos	: [0.00, 0.00, 0.00],
 																																	rot	: [-0.00, -0.00, -0.00, 1.00],
@@ -3159,7 +3159,7 @@ pub fn load()-> Scene	{Scene{
 																																actions	: ~[],
 																															})
 																														],
-																														space	: QuatSpace{
+																														space	: Space{
 																															scale	: 1.00,
 																															pos	: [2.95, 0.06, -0.00],
 																															rot	: [0.00, 0.00, 0.13, 0.99],
@@ -3167,7 +3167,7 @@ pub fn load()-> Scene	{Scene{
 																														actions	: ~[],
 																													})
 																												],
-																												space	: QuatSpace{
+																												space	: Space{
 																													scale	: 1.00,
 																													pos	: [-50.12, 3.07, 0.00],
 																													rot	: [-0.00, -0.00, -0.00, 1.00],
@@ -3177,7 +3177,7 @@ pub fn load()-> Scene	{Scene{
 																												],
 																											})
 																										],
-																										space	: QuatSpace{
+																										space	: Space{
 																											scale	: 1.00,
 																											pos	: [0.00, 0.00, 0.00],
 																											rot	: [-0.00, 0.00, -0.00, 1.00],
@@ -3185,7 +3185,7 @@ pub fn load()-> Scene	{Scene{
 																										actions	: ~[],
 																									})
 																								],
-																								space	: QuatSpace{
+																								space	: Space{
 																									scale	: 1.00,
 																									pos	: [3.03, 0.02, -0.00],
 																									rot	: [-0.00, 0.00, 0.11, 0.99],
@@ -3193,7 +3193,7 @@ pub fn load()-> Scene	{Scene{
 																								actions	: ~[],
 																							})
 																						],
-																						space	: QuatSpace{
+																						space	: Space{
 																							scale	: 1.00,
 																							pos	: [-0.00, 0.00, 0.00],
 																							rot	: [-0.00, -0.00, 0.08, 1.00],
@@ -3203,7 +3203,7 @@ pub fn load()-> Scene	{Scene{
 																						],
 																					})
 																				],
-																				space	: QuatSpace{
+																				space	: Space{
 																					scale	: 1.00,
 																					pos	: [0.00, -0.00, 0.00],
 																					rot	: [-0.00, -0.00, -0.00, 1.00],
@@ -3211,7 +3211,7 @@ pub fn load()-> Scene	{Scene{
 																				actions	: ~[],
 																			})
 																		],
-																		space	: QuatSpace{
+																		space	: Space{
 																			scale	: 1.00,
 																			pos	: [-0.04, -0.00, 0.00],
 																			rot	: [-0.46, -0.54, 0.46, 0.54],
@@ -3219,7 +3219,7 @@ pub fn load()-> Scene	{Scene{
 																		actions	: ~[],
 																	})
 																],
-																space	: QuatSpace{
+																space	: Space{
 																	scale	: 1.00,
 																	pos	: [-0.00, -47.22, -0.24],
 																	rot	: [-0.00, 0.00, 0.00, 1.00],
@@ -3229,7 +3229,7 @@ pub fn load()-> Scene	{Scene{
 																],
 															})
 														],
-														space	: QuatSpace{
+														space	: Space{
 															scale	: 1.00,
 															pos	: [0.00, -0.00, 0.00],
 															rot	: [-0.00, 0.00, -0.00, 1.00],
@@ -3237,7 +3237,7 @@ pub fn load()-> Scene	{Scene{
 														actions	: ~[],
 													})
 												],
-												space	: QuatSpace{
+												space	: Space{
 													scale	: 1.00,
 													pos	: [0.00, 47.22, 0.24],
 													rot	: [0.00, 0.00, 0.00, 1.00],
@@ -3245,7 +3245,7 @@ pub fn load()-> Scene	{Scene{
 												actions	: ~[],
 											})
 										],
-										space	: QuatSpace{
+										space	: Space{
 											scale	: 1.00,
 											pos	: [0.00, 0.00, 0.00],
 											rot	: [0.00, 0.00, 0.00, 1.00],
@@ -3255,7 +3255,7 @@ pub fn load()-> Scene	{Scene{
 										],
 									})
 								],
-								space	: QuatSpace{
+								space	: Space{
 									scale	: 1.00,
 									pos	: [0.00, 1.11, 0.00],
 									rot	: [0.00, 0.00, 0.00, 1.00],
@@ -3263,7 +3263,7 @@ pub fn load()-> Scene	{Scene{
 								actions	: ~[],
 							})
 						],
-						space	: QuatSpace{
+						space	: Space{
 							scale	: 1.00,
 							pos	: [-0.00, -1.11, 0.00],
 							rot	: [0.00, 0.00, 0.00, 1.00],
@@ -3286,7 +3286,7 @@ pub fn load()-> Scene	{Scene{
 												range	: [0, 528],
 											})
 										],
-										space	: QuatSpace{
+										space	: Space{
 											scale	: 1.00,
 											pos	: [0.00, 0.00, 0.00],
 											rot	: [0.00, 0.00, 0.00, 1.00],
@@ -3303,7 +3303,7 @@ pub fn load()-> Scene	{Scene{
 												range	: [0, 15252],
 											})
 										],
-										space	: QuatSpace{
+										space	: Space{
 											scale	: 1.00,
 											pos	: [0.00, 0.00, 0.00],
 											rot	: [0.00, 0.00, 0.00, 1.00],
@@ -3320,7 +3320,7 @@ pub fn load()-> Scene	{Scene{
 												range	: [0, 4656],
 											})
 										],
-										space	: QuatSpace{
+										space	: Space{
 											scale	: 1.00,
 											pos	: [0.00, 0.00, 0.00],
 											rot	: [0.00, 0.00, 0.00, 1.00],
@@ -3337,7 +3337,7 @@ pub fn load()-> Scene	{Scene{
 												range	: [0, 4248],
 											})
 										],
-										space	: QuatSpace{
+										space	: Space{
 											scale	: 1.00,
 											pos	: [0.00, 0.00, 0.00],
 											rot	: [0.00, 0.00, 0.00, 1.00],
@@ -3354,7 +3354,7 @@ pub fn load()-> Scene	{Scene{
 												range	: [0, 13716],
 											})
 										],
-										space	: QuatSpace{
+										space	: Space{
 											scale	: 1.00,
 											pos	: [0.00, 0.00, 0.00],
 											rot	: [0.00, 0.00, 0.00, 1.00],
@@ -3371,7 +3371,7 @@ pub fn load()-> Scene	{Scene{
 												range	: [0, 8964],
 											})
 										],
-										space	: QuatSpace{
+										space	: Space{
 											scale	: 1.00,
 											pos	: [0.00, 0.00, 0.00],
 											rot	: [0.00, 0.00, 0.00, 1.00],
@@ -3388,7 +3388,7 @@ pub fn load()-> Scene	{Scene{
 												range	: [0, 13716],
 											})
 										],
-										space	: QuatSpace{
+										space	: Space{
 											scale	: 1.00,
 											pos	: [0.00, 0.00, 0.00],
 											rot	: [0.00, 0.00, 0.00, 1.00],
@@ -3405,7 +3405,7 @@ pub fn load()-> Scene	{Scene{
 												range	: [0, 8964],
 											})
 										],
-										space	: QuatSpace{
+										space	: Space{
 											scale	: 1.00,
 											pos	: [0.00, 0.00, 0.00],
 											rot	: [0.00, 0.00, 0.00, 1.00],
@@ -3434,7 +3434,7 @@ pub fn load()-> Scene	{Scene{
 												range	: [3264, 5568],
 											})
 										],
-										space	: QuatSpace{
+										space	: Space{
 											scale	: 1.00,
 											pos	: [0.00, 0.00, 0.00],
 											rot	: [0.00, 0.00, 0.00, 1.00],
@@ -3463,7 +3463,7 @@ pub fn load()-> Scene	{Scene{
 												range	: [3264, 5568],
 											})
 										],
-										space	: QuatSpace{
+										space	: Space{
 											scale	: 1.00,
 											pos	: [0.00, 0.00, 0.00],
 											rot	: [0.00, 0.00, 0.00, 1.00],
@@ -3480,7 +3480,7 @@ pub fn load()-> Scene	{Scene{
 												range	: [0, 6954],
 											})
 										],
-										space	: QuatSpace{
+										space	: Space{
 											scale	: 1.00,
 											pos	: [0.00, 0.00, 0.00],
 											rot	: [0.00, 0.00, 0.00, 1.00],
@@ -3497,7 +3497,7 @@ pub fn load()-> Scene	{Scene{
 												range	: [0, 50496],
 											})
 										],
-										space	: QuatSpace{
+										space	: Space{
 											scale	: 1.00,
 											pos	: [0.00, 0.00, 0.00],
 											rot	: [0.00, 0.00, 0.00, 1.00],
@@ -3505,7 +3505,7 @@ pub fn load()-> Scene	{Scene{
 										actions	: ~[],
 									})
 								],
-								space	: QuatSpace{
+								space	: Space{
 									scale	: 1.00,
 									pos	: [0.00, 0.00, 0.00],
 									rot	: [0.00, 0.00, 0.00, 1.00],
@@ -3525,7 +3525,7 @@ pub fn load()-> Scene	{Scene{
 												range	: [0, 9042],
 											})
 										],
-										space	: QuatSpace{
+										space	: Space{
 											scale	: 1.00,
 											pos	: [0.00, 0.00, 0.00],
 											rot	: [0.00, -0.00, 0.00, 1.00],
@@ -3542,7 +3542,7 @@ pub fn load()-> Scene	{Scene{
 												range	: [0, 5550],
 											})
 										],
-										space	: QuatSpace{
+										space	: Space{
 											scale	: 1.00,
 											pos	: [0.00, 0.00, 0.00],
 											rot	: [0.00, 0.00, 0.00, 1.00],
@@ -3565,7 +3565,7 @@ pub fn load()-> Scene	{Scene{
 												range	: [10236, 12102],
 											})
 										],
-										space	: QuatSpace{
+										space	: Space{
 											scale	: 1.00,
 											pos	: [0.00, 0.00, 0.00],
 											rot	: [0.00, 0.00, 0.00, 1.00],
@@ -3582,7 +3582,7 @@ pub fn load()-> Scene	{Scene{
 												range	: [0, 8448],
 											})
 										],
-										space	: QuatSpace{
+										space	: Space{
 											scale	: 1.00,
 											pos	: [0.00, 0.00, 0.00],
 											rot	: [0.00, 0.00, 0.00, 1.00],
@@ -3599,7 +3599,7 @@ pub fn load()-> Scene	{Scene{
 												range	: [0, 2304],
 											})
 										],
-										space	: QuatSpace{
+										space	: Space{
 											scale	: 1.00,
 											pos	: [0.00, 0.00, 0.00],
 											rot	: [0.00, 0.00, 0.00, 1.00],
@@ -3616,7 +3616,7 @@ pub fn load()-> Scene	{Scene{
 												range	: [0, 6960],
 											})
 										],
-										space	: QuatSpace{
+										space	: Space{
 											scale	: 1.00,
 											pos	: [0.00, 0.00, 0.00],
 											rot	: [0.00, 0.00, 0.00, 1.00],
@@ -3624,7 +3624,7 @@ pub fn load()-> Scene	{Scene{
 										actions	: ~[],
 									})
 								],
-								space	: QuatSpace{
+								space	: Space{
 									scale	: 1.00,
 									pos	: [0.00, 0.00, 0.00],
 									rot	: [0.00, 0.00, 0.00, 1.00],
@@ -3634,7 +3634,7 @@ pub fn load()-> Scene	{Scene{
 							ChildNode(Node{
 								name	: ~"Eyes_Geo",
 								children	: ~[],
-								space	: QuatSpace{
+								space	: Space{
 									scale	: 1.00,
 									pos	: [0.00, 0.00, 0.00],
 									rot	: [0.00, 0.00, 0.00, 1.00],
@@ -3642,7 +3642,7 @@ pub fn load()-> Scene	{Scene{
 								actions	: ~[],
 							})
 						],
-						space	: QuatSpace{
+						space	: Space{
 							scale	: 1.00,
 							pos	: [0.00, 0.00, 0.00],
 							rot	: [0.00, 0.00, 0.00, 1.00],
@@ -3650,7 +3650,7 @@ pub fn load()-> Scene	{Scene{
 						actions	: ~[],
 					})
 				],
-				space	: QuatSpace{
+				space	: Space{
 					scale	: 1.00,
 					pos	: [0.00, 0.00, 0.00],
 					rot	: [0.50, 0.50, 0.50, 0.50],
@@ -3673,7 +3673,7 @@ pub fn load()-> Scene	{Scene{
 						spherical	: false,
 					})
 				],
-				space	: QuatSpace{
+				space	: Space{
 					scale	: 1.00,
 					pos	: [43.55, 25.15, 80.51],
 					rot	: [0.27, 0.31, 0.78, 0.47],

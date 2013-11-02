@@ -9,9 +9,9 @@ use std::hashmap::HashMap;
 use cgmath::{angle,projection};
 use cgmath::vector::*;
 use cgmath::matrix::*;
+use cgmath::transform::Transform;
 
-use engine::{gr_low,gr_mid};
-use engine::space::Space;
+use engine::{gr_low,gr_mid,space};
 
 
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -//
@@ -35,30 +35,37 @@ impl Camera	{
 	}
 	pub fn get_matrix( &self, aspect : f32 )-> Mat4<f32>	{
 		let proj = self.get_proj_matrix( aspect );
-		proj.mul_m( &self.node.world_space().inverted().to_matrix() )
+		let winv = self.node.world_space().invert().expect(format!(
+			"Unable to invert camera's world space: {:s}",
+			self.node.name ));
+		proj.mul_m( &winv.to_mat4() )
 	}
 	pub fn get_inverse_matrix( &self, aspect : f32 )-> Mat4<f32>	{
 		let proj = self.get_proj_matrix( aspect );
-		self.node.world_space().to_matrix().mul_m( &proj.inverted() )
+		let pinv = proj.invert().expect(format!(
+			"Unable to invert camera's projection matrix: {:s}",
+			self.node.name ));
+		self.node.world_space().to_mat4().mul_m( &pinv )
 	}
 	pub fn get_view_vector( &self )-> Vec3<f32>	{
 		let v = Vec3::new( 0f32,0f32,-1f32 );
-		self.node.world_space().orientation.mul_v( &v )
+		self.node.world_space().rot.mul_v( &v )
 	}
 	pub fn get_up_vector( &self )-> Vec3<f32>	{
 		let v = Vec3::new( 0f32,1f32,0f32 );
-		self.node.world_space().orientation.mul_v( &v )
+		self.node.world_space().rot.mul_v( &v )
 	}
 	pub fn get_side_vector( &self )-> Vec3<f32>	{
 		let v = Vec3::new( 1f32,0f32,0f32 );
-		self.node.world_space().orientation.mul_v( &v )
+		self.node.world_space().rot.mul_v( &v )
 	}
 	pub fn fill_data( &self, data : &mut gr_low::shade::DataMap, aspect : f32 )	{
 		let sw = self.node.world_space();
-		let pm = self.get_matrix(aspect);
+		let pm = self.get_matrix( aspect );
+		let (p0,p1) = space::get_params( &sw );
 		data.insert( ~"u_ViewProj",		gr_low::shade::UniMatrix(false,pm) );
-		data.insert( ~"u_CameraPos",	gr_low::shade::UniFloatVec(sw.get_pos_scale()) );
-		data.insert( ~"u_CameraRot",	gr_low::shade::UniFloatVec(sw.get_orientation()) );
+		data.insert( ~"u_CameraPos",	gr_low::shade::UniFloatVec(p0) );
+		data.insert( ~"u_CameraRot",	gr_low::shade::UniFloatVec(p1) );
 	}
 }
 
@@ -127,7 +134,7 @@ impl Light	{
 
 	pub fn fill_data( &self, data : &mut gr_low::shade::DataMap, near : f32, far : f32 )	{
 		let sw = self.node.world_space();
-		let mut pos = Vec4::new( sw.position.x, sw.position.y, sw.position.z, 1f32 );
+		let mut pos = sw.disp.extend( 1.0 );
 		let col = Vec4::new( self.color.r, self.color.g, self.color.b, self.color.a );
 		let range = Vec4::new( near, far, 0f32, 1f32/(far-near) );
 		//io::println(format!("Light near:{:f} far:{:f}",near as float,far as float));
@@ -138,7 +145,10 @@ impl Light	{
 		match self.get_proj_blend(near,far)	{
 			Some(ref pair)	=>	{
 				let &(mp,blend) = pair;
-				let ml = mp.mul_m( &self.node.world_space().inverted().to_matrix() );
+				let winv = self.node.world_space().invert().expect(format!(
+					"Unable to invert light's world space: {:s}",
+					self.node.name ));
+				let ml = mp.mul_m( &winv.to_mat4() );
 				data.insert( ~"u_LightProj",	gr_low::shade::UniMatrix(false,ml) );
 				data.insert( ~"u_LightBlend",	gr_low::shade::UniFloat(blend) );
 			},

@@ -10,7 +10,7 @@ pub fn load()-> Scene	{Scene{
 							Bone{
 								name	: ~"Bone",
 								children	: ~[],
-								space	: QuatSpace{
+								space	: Space{
 									scale	: 1.00,
 									rot	: [0.71, 0.00, 0.00, 0.71],
 									pos	: [0.00, 0.00, 0.00],
@@ -34,14 +34,14 @@ pub fn load()-> Scene	{Scene{
 								mesh	: ~"Boss@all",
 							})
 						],
-						space	: QuatSpace{
+						space	: Space{
 							scale	: 1.00,
 							rot	: [0.00, 0.00, 0.00, 1.00],
 							pos	: [0.97, -0.64, 0.12],
 						},
 					})
 				],
-				space	: QuatSpace{
+				space	: Space{
 					scale	: 1.00,
 					rot	: [0.00, 0.00, 0.00, 1.00],
 					pos	: [5.39, -1.01, 1.05],
@@ -56,7 +56,7 @@ pub fn load()-> Scene	{Scene{
 							Bone{
 								name	: ~"Bone",
 								children	: ~[],
-								space	: QuatSpace{
+								space	: Space{
 									scale	: 1.00,
 									rot	: [0.71, 0.00, 0.00, 0.71],
 									pos	: [-0.00, 0.00, -0.07],
@@ -68,14 +68,14 @@ pub fn load()-> Scene	{Scene{
 									Bone{
 										name	: ~"Bone.002",
 										children	: ~[],
-										space	: QuatSpace{
+										space	: Space{
 											scale	: 1.00,
 											rot	: [-0.05, 0.19, 0.03, 0.98],
 											pos	: [-0.00, 0.67, 0.00],
 										},
 									}
 								],
-								space	: QuatSpace{
+								space	: Space{
 									scale	: 1.00,
 									rot	: [0.02, -0.38, -0.01, 0.92],
 									pos	: [-0.00, 0.00, -0.07],
@@ -90,21 +90,21 @@ pub fn load()-> Scene	{Scene{
 											Bone{
 												name	: ~"Bone.005",
 												children	: ~[],
-												space	: QuatSpace{
+												space	: Space{
 													scale	: 1.00,
 													rot	: [-0.26, 0.70, -0.65, 0.15],
 													pos	: [0.00, 0.53, 0.00],
 												},
 											}
 										],
-										space	: QuatSpace{
+										space	: Space{
 											scale	: 1.00,
 											rot	: [-0.00, 1.00, -0.01, 0.09],
 											pos	: [-0.00, 0.58, 0.00],
 										},
 									}
 								],
-								space	: QuatSpace{
+								space	: Space{
 									scale	: 1.00,
 									rot	: [-0.00, -0.00, 1.00, 0.00],
 									pos	: [-0.00, 0.00, -0.07],
@@ -122,21 +122,21 @@ pub fn load()-> Scene	{Scene{
 													Bone{
 														name	: ~"Bone.012",
 														children	: ~[],
-														space	: QuatSpace{
+														space	: Space{
 															scale	: 1.00,
 															rot	: [0.50, -0.50, 0.50, 0.50],
 															pos	: [-0.00, 0.57, -0.00],
 														},
 													}
 												],
-												space	: QuatSpace{
+												space	: Space{
 													scale	: 1.00,
 													rot	: [-0.20, 0.03, 0.01, 0.98],
 													pos	: [0.00, 0.51, 0.00],
 												},
 											}
 										],
-										space	: QuatSpace{
+										space	: Space{
 											scale	: 1.00,
 											rot	: [0.19, 0.13, -0.04, 0.97],
 											pos	: [-0.00, 0.64, -0.00],
@@ -151,28 +151,28 @@ pub fn load()-> Scene	{Scene{
 													Bone{
 														name	: ~"Bone.011",
 														children	: ~[],
-														space	: QuatSpace{
+														space	: Space{
 															scale	: 1.00,
 															rot	: [0.51, -0.51, 0.49, 0.49],
 															pos	: [-0.00, 0.58, 0.00],
 														},
 													}
 												],
-												space	: QuatSpace{
+												space	: Space{
 													scale	: 1.00,
 													rot	: [0.00, 0.98, -0.19, -0.00],
 													pos	: [0.00, 0.52, 0.00],
 												},
 											}
 										],
-										space	: QuatSpace{
+										space	: Space{
 											scale	: 1.00,
 											rot	: [0.03, -0.96, 0.21, 0.16],
 											pos	: [-0.00, 0.64, -0.00],
 										},
 									}
 								],
-								space	: QuatSpace{
+								space	: Space{
 									scale	: 1.00,
 									rot	: [-0.11, 0.70, -0.70, 0.11],
 									pos	: [-0.00, 0.00, -0.07],
@@ -196,14 +196,14 @@ pub fn load()-> Scene	{Scene{
 								mesh	: ~"Player@all",
 							})
 						],
-						space	: QuatSpace{
+						space	: Space{
 							scale	: 1.00,
 							rot	: [0.00, 0.00, 0.00, 1.00],
 							pos	: [0.00, 0.00, -0.42],
 						},
 					})
 				],
-				space	: QuatSpace{
+				space	: Space{
 					scale	: 1.00,
 					rot	: [0.00, 0.00, 0.00, 1.00],
 					pos	: [0.00, -2.00, 1.68],
@@ -220,7 +220,7 @@ pub fn load()-> Scene	{Scene{
 						mesh	: ~"Plane@all",
 					})
 				],
-				space	: QuatSpace{
+				space	: Space{
 					scale	: 1.00,
 					rot	: [0.00, 0.00, 0.00, 1.00],
 					pos	: [0.00, 0.00, 0.00],
@@ -240,7 +240,7 @@ pub fn load()-> Scene	{Scene{
 						energy	: 1.00,
 					})
 				],
-				space	: QuatSpace{
+				space	: Space{
 					scale	: 1.00,
 					rot	: [0.17, 0.27, 0.76, 0.57],
 					pos	: [4.08, 1.01, 5.90],
@@ -256,7 +256,7 @@ pub fn load()-> Scene	{Scene{
 						name	: ~"Camera",
 					})
 				],
-				space	: QuatSpace{
+				space	: Space{
 					scale	: 1.00,
 					rot	: [0.48, 0.21, 0.33, 0.78],
 					pos	: [7.48, -6.51, 5.34],

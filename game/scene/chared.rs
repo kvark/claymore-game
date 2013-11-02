@@ -7,11 +7,11 @@ use glfw;
 use cgmath::angle;
 use cgmath::angle::ToRad;
 use cgmath::quaternion::*;
+use cgmath::transform::Transform;
 use cgmath::vector::*;
 use engine::anim;
 use engine::anim::{Act,Player};
 use engine::{gr_low,gr_mid};
-use engine::space::Space;
 
 use hud = hud::main_json;
 use input;
@@ -44,22 +44,20 @@ impl CamControl	{
 			let axis = Vec3::new( 0f32, 0f32, if state.mouse[0]>0.5 {1f32} else {-1f32} );
 			let angle = angle::deg( dt as f32 * self.speed_rot );
 			let qr = Quat::from_axis_angle( &axis, angle.to_rad() );
-			let sq = engine::space::QuatSpace{
-				position : Vec3::new(0f32,0f32,0f32),
-				orientation : qr, scale : 1f32 };
+			let sq = engine::space::make( 1.0, qr, Vec3::zero() );
 			self.node.space = sq.concat( &self.node.space );
 		}
 	}
 
 	pub fn on_scroll( &mut self, scroll : f32 )	{
-		let v_origin = self.origin.sub_v( &self.node.space.position );
+		let v_origin = self.origin.sub_v( &self.node.space.disp );
 		let dist_min = 20f32;
 		let dist_max = 200f32;
 		let dist = v_origin.length();
 		let dist_raw = dist - scroll * self.speed_zoom;
 		let dist_diff = std::num::clamp( dist_raw, dist_min, dist_max ) - dist;
-		let p = (self.node.space.position).sub_v( &v_origin.mul_s(dist_diff/dist) );
-		self.node.space.position = p;
+		let p = (self.node.space.disp).sub_v( &v_origin.mul_s(dist_diff/dist) );
+		self.node.space.disp = p;
 	}
 }
 

@@ -1,10 +1,10 @@
 use std::hashmap::HashMap;
 
 use cgmath::{quaternion,vector};
-use cgmath::{angle,projection};
+use cgmath::{angle,projection,transform};
+use cgmath::transform::Transform;
 use engine;
 use engine::{gr_low,gr_mid,space};
-use engine::space::Space;	//for invert()
 
 use scene::common;
 use gen = gen_scene::common;
@@ -106,19 +106,17 @@ fn parse_materials( materials : &[gen::Material], prefix : &str, ctx : &mut comm
 	}
 }
 
-fn parse_space( s : &gen::QuatSpace )-> space::QuatSpace	{
-	space::QuatSpace	{
-		position	: vector::Vec3::new( s.pos[0], s.pos[1], s.pos[2] ),
-		orientation	: quaternion::Quat::new( s.rot[3], s.rot[0], s.rot[1], s.rot[2] ),
-		scale		: s.scale,
-	}
+fn parse_space( s : &gen::Space )-> space::Space	{
+	space::make( s.scale,
+		quaternion::Quat::new( s.rot[3], s.rot[0], s.rot[1], s.rot[2] ),
+		vector::Vec3::new( s.pos[0], s.pos[1], s.pos[2] ))
 }
 
 fn parse_bones( bin : &[gen::Bone], par_id : Option<uint>, par_node : @mut engine::space::Node,
 		bot : &mut ~[engine::space::Bone] )	{
 	for ibone in bin.iter()	{
 		let space = parse_space( &ibone.space );
-		let bind_inv = space.inverted();
+		let bind_inv = space.invert().expect("Failed to invert bone space");
 		let bind_pose_inv = match par_id	{
 			Some(pid)	=> bind_inv.concat( &bot[pid].bind_pose_inv ),
 			None		=> bind_inv,
@@ -134,7 +132,7 @@ fn parse_bones( bin : &[gen::Bone], par_id : Option<uint>, par_node : @mut engin
 			node			: node,
 			bind_space		: space,
 			bind_pose_inv	: bind_pose_inv,
-			transform		: space::QuatSpace::identity(),
+			transform		: transform::Transform::identity(),
 			parent_id		: par_id,
 		});
 		parse_bones( ibone.children, cid, node, bot );

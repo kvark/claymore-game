@@ -2,112 +2,35 @@ extern mod cgmath;
 
 use std;
 use std::managed;
-use std::to_str::ToStr;
 
 use cgmath::angle;
 use cgmath::matrix::*;
 use cgmath::quaternion::*;
 use cgmath::transform::*;
 use cgmath::vector::*;
-
 use gr_low::shade;
 use gr_mid::draw;
+
 use anim;
+
+
+//- - - - - - - - - - - - - - - - - - - - - - - - - - - //
+//		Quaternion Space								//
 
 pub type Matrix = Mat4<f32>;
 pub type Vector = Vec3<f32>;
 pub type Scale = f32;
 pub type Quaternion = Quat<f32>;
 pub type Euler = Vec3<angle::Rad<f32>>;
-pub type Space2 = Transform3D<f32>;
+pub type Space = Decomposed<Scale,Vector,Quaternion>;
 
 
-//- - - - - - - - - - - - - - - - - - - - - - - - - - - //
-//		Quaternion Space								//
-
-
-pub trait Space	{
-	fn transform( &self, point : &Vector )-> Vector;
-	fn concat( &self, other : &Self )-> Self;
-	fn rotate( &self, vector : &Vector )-> Vector;
-	fn inverted( &self )-> Self;
-	fn to_matrix( &self )-> Matrix;
+pub fn make(scale: Scale, rot: Quaternion, disp: Vector)-> Space	{
+	Decomposed{ scale: scale, rot: rot, disp: disp }
 }
-
-
-impl Space for Matrix	{
-	fn transform( &self, point : &Vector )-> Vector	{
-		let v4 = Vec4::new( point.x, point.y, point.z, 1f32 );
-		let vt = self.mul_v(&v4);
-		Vec3::new( vt.x/vt.w, vt.y/vt.w, vt.z/vt.w )
-	}
-	fn concat( &self, other : &Matrix )-> Matrix	{
-		self.mul_m(other)
-	}
-	fn rotate( &self, vector : &Vector )-> Vector	{
-		let v4 = Vec4::new( vector.x, vector.y, vector.z, 0f32 );
-		let vt = self.mul_v(&v4);
-		Vec3::new( vt.x, vt.y, vt.z ).normalize()
-	}
-	fn inverted( &self )-> Matrix	{
-		self.invert().expect("Unable to invert matrix")
-	}
-	fn to_matrix( &self )-> Matrix	{*self}
-}
-
-
-pub struct QuatSpace	{
-	position	: Vector,
-	orientation	: Quaternion,
-	scale		: Scale,
-}
-
-impl Space for QuatSpace	{
-	fn transform( &self, point : &Vector )-> Vector	{
-		self.orientation.mul_v( point ).mul_s( self.scale ).add_v( &self.position )
-	}
-	fn concat( &self, other : &QuatSpace )-> QuatSpace	{
-		QuatSpace{
-			position	: self.transform( &other.position ),
-			orientation	: self.orientation.mul_q( &other.orientation ),
-			scale		: self.scale * other.scale
-		}
-	}
-	fn rotate( &self, vector : &Vector )-> Vector	{
-		self.orientation.mul_v( vector )
-	}
-	fn inverted( &self )-> QuatSpace	{
-		let q = self.orientation.conjugate();
-		let s = 1f32 / self.scale;
-		let p = q.mul_v(&self.position).mul_s(-s);
-		QuatSpace{ position:p, orientation:q, scale:s }
-	}
-	fn to_matrix( &self )-> Matrix	{
-		let m3 = self.orientation.to_mat3();
-		let mut m4 = m3.mul_s(self.scale).to_mat4();
-		m4.w.x = self.position.x;
-		m4.w.y = self.position.y;
-		m4.w.z = self.position.z;
-		m4
-	}
-}
-
-impl QuatSpace	{
-	pub fn identity()-> QuatSpace	{
-		QuatSpace{
-			position	: Vec3::new(0f32,0f32,0f32),
-			orientation	: Quat::identity(),
-			scale		: 1f32,
-		}
-	}
-	pub fn get_pos_scale( &self )-> Vec4<f32>	{
-		Vec4::new( self.position.x, self.position.y, self.position.z, self.scale )
-	}
-	pub fn get_orientation( &self )-> Vec4<f32>	{
-		Vec4::new(
-			self.orientation.v.x, self.orientation.v.y,
-			self.orientation.v.z, self.orientation.s )	
-	}
+pub fn get_params(sp: &Space)-> (Vec4<f32>,Vec4<f32>)	{
+	(sp.disp.extend( sp.scale ),
+	sp.rot.v.extend( sp.rot.s ))
 }
 
 
@@ -137,24 +60,13 @@ impl Interpolate for Scale	{
 	}
 }
 
-impl Interpolate for QuatSpace	{
-	fn interpolate( &self, other : &QuatSpace, t : f32 )-> QuatSpace	{
-		QuatSpace{
-			position	: self.position.interpolate( &other.position, t ),
-			orientation	: self.orientation.interpolate( &other.orientation, t ),
-			scale		: self.scale.interpolate( &other.scale, t ),
+impl Interpolate for Space	{
+	fn interpolate( &self, other : &Space, t : f32 )-> Space	{
+		Decomposed{
+			scale	: self.scale.interpolate( &other.scale, t ),
+			rot		: self.rot.interpolate( &other.rot, t ),
+			disp	: self.disp.interpolate( &other.disp, t ),
 		}
-	}
-}
-
-
-impl ToStr for QuatSpace	{
-	fn to_str( &self )-> ~str	{
-		format!( "(pos:{},rot:{},scale:{:f})",
-			"","",
-			//self.position,
-			//self.orientation,
-			self.scale )
 	}
 }
 
@@ -173,7 +85,7 @@ type NodeRecord = anim::Record<NodeCurve>;
 
 pub struct Node	{
 	name	: ~str,
-	space	: QuatSpace,	//FIXME: arbitrary space
+	space	: Space,	//FIXME: arbitrary space
 	parent	: Option<@mut Node>,
 	actions	: ~[@NodeRecord],
 }
@@ -182,12 +94,12 @@ impl Node	{
 	pub fn new( name : ~str )-> Node	{
 		Node	{
 			name	: name,
-			space	: QuatSpace::identity(),
+			space	: Transform::identity(),
 			parent	: None,
 			actions	: ~[],
 		}
 	}
-	pub fn world_space( &self ) -> QuatSpace	{
+	pub fn world_space( &self ) -> Space	{
 		match self.parent	{
 			Some(p)	=> p.world_space().concat( &self.space ),
 			None	=> self.space
@@ -211,10 +123,9 @@ impl anim::Player<NodeCurve> for Node	{
 	fn set_record( &mut self, a : &NodeRecord, time : anim::float )	{
 		for chan in a.curves.iter()	{
 			match chan	{
-				&NCuPos(ref c)		=> self.space.position		= c.sample(time),
-				&NCuRotQuat(ref c)	=> self.space.orientation	= c.sample(time),
-//				&NCuRotEuler(ref c)	=> self.space.orientation	= c.sample(time).to_quat(),
-				&NCuScale(ref c)	=> self.space.scale			= c.sample(time),
+				&NCuPos(ref c)		=> self.space.disp	= c.sample(time),
+				&NCuRotQuat(ref c)	=> self.space.rot	= c.sample(time),
+				&NCuScale(ref c)	=> self.space.scale	= c.sample(time),
 			}
 		}
 	}
@@ -225,23 +136,22 @@ impl anim::Player<NodeCurve> for Node	{
 
 pub struct Bone	{
 	node			: @mut Node,
-	bind_space		: QuatSpace,
-	bind_pose_inv	: QuatSpace,
-	transform		: QuatSpace,
+	bind_space		: Space,
+	bind_pose_inv	: Space,
+	transform		: Space,
 	parent_id		: Option<uint>,
 }
 
 impl Bone	{
 	pub fn reset( &mut self )	{
 		self.node.space = self.bind_space;
-		self.transform = QuatSpace::identity();
+		self.transform = Transform::identity();
 	}
 }
 
 pub enum ArmatureCurve	{
 	ACuPos(		uint, ~anim::Curve<Vector>		),
 	ACuRotQuat(	uint, ~anim::Curve<Quaternion>	),
-//	ACuRotEuler(uint, ~anim::Curve<Euler>		),
 	ACuScale(	uint, ~anim::Curve<Scale>		),
 }
 
@@ -275,17 +185,19 @@ impl draw::Mod for Armature	{
 	//TODO: use float arrays
 	fn fill_data( &self, data : &mut shade::DataMap )	{
 		assert!( self.bones.len() < self.max_bones );
-		let id = QuatSpace::identity();
+		let id = Transform::identity();
 		let mut pos : ~[Vec4<f32>] = std::vec::with_capacity( self.max_bones );
 		let mut rot : ~[Vec4<f32>] = std::vec::with_capacity( self.max_bones );
-		let parent_inv = self.root.world_space().inverted();
+		let parent_inv = self.root.world_space().invert().expect(format!(
+			"Uninvertable armature {:s} root space detected", self.root.name ));
 		while pos.len() < self.max_bones	{
 			let space = if pos.len()>0u && pos.len()<self.bones.len()	{
 					let b = &self.bones[pos.len()-1u];
 					parent_inv.concat( &b.node.world_space() ).concat( &b.bind_pose_inv )
 				}else {id};
-			pos.push( space.get_pos_scale() );
-			rot.push( space.get_orientation() );
+			let (p0,p1) = get_params( &space );
+			pos.push( p0 );
+			rot.push( p1 );
 		}
 		data.insert( ~"bone_pos[0]", shade::UniFloatVecArray(pos) );
 		data.insert( ~"bone_rot[0]", shade::UniFloatVecArray(rot) );
@@ -312,16 +224,16 @@ impl anim::Player<ArmatureCurve> for Armature	{
 		for chan in a.curves.iter()	{
 			match chan	{
 				&ACuPos(bi,ref c)		=> {
-					let b = &self.bones[bi];	let p = c.sample(time);
-					b.node.space.position	= b.bind_space.transform( &p );
+					let b = &self.bones[bi];	let v = c.sample(time);
+					b.node.space.disp	= b.bind_space.transform_as_point( &v );
 				},
 				&ACuRotQuat(bi,ref c)	=> {
 					let b = &self.bones[bi];	let q = c.sample(time);
-					b.node.space.orientation= b.bind_space.orientation.mul_q( &q );
+					b.node.space.rot	= b.bind_space.rot.mul_q( &q );
 				},
 				&ACuScale(bi,ref c)		=> {
 					let b = &self.bones[bi];	let s = c.sample(time);
-					b.node.space.scale		= b.bind_space.scale * s;
+					b.node.space.scale	= b.bind_space.scale * s;
 				},
 			}
 		}
