@@ -124,7 +124,7 @@ fn init( wid : uint, het : uint ) -> Sample	{
 	}
 	// done
 	ct.check(~"init");
-	io::println( fmt!("init: mesh %s, texture %u",
+	io::println( format!("init: mesh %s, texture %u",
 		e1.mesh.name, *t_diffuse.handle as uint)
 	);
 	Sample { context:ct, data:params, entities:~[e1,e2,e3], technique:tech, texture:t_diffuse, frames:0 }
@@ -181,7 +181,7 @@ fn failGLFW( where: &static/str )	{
 	let code = glfw3::get_error();
 	io::println(~"GLFW error: " + glfw3::error_string(code));
 	glfw3::terminate();
-	fail( fmt!("glfw%s() failed\n",where) );
+	fail( format!("glfw%s() failed\n",where) );
 }
 
 

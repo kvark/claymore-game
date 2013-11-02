@@ -19,7 +19,7 @@ pub struct LightVolume	{
 impl LightVolume	{
 	pub fn create( gc : &mut gr_low::context::Context, lg : &engine::journal::Log )->LightVolume	{
 		LightVolume{
-			mesh_point	: @engine::load::load_mesh( ~"data/mesh/cube.k3mesh", gc, lg ),
+			mesh_point	: @engine::load::load_mesh( "data/mesh/cube.k3mesh", gc, lg ),
 			mat_point	: @gr_mid::draw::load_material( "data/code/mat/light/point" ),
 		}
 	}

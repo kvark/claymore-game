@@ -90,7 +90,7 @@ impl Primitive	{
 			gl::FILL	=> 3u,
 			gl::LINE	=> 2u,
 			gl::POINT	=> 1u,
-			_	=> fail!( "Unknown poly mode: %d", self.poly_mode as int )
+			_	=> fail!( "Unknown poly mode: {:i}", self.poly_mode as int )
 		}
 	}
 }
@@ -100,7 +100,7 @@ pub fn map_poly_mode( dim : uint )-> gl::types::GLenum	{
 		1	=> gl::POINT,
 		2	=> gl::LINE,
 		3	=> gl::FILL,
-		_	=> fail!( "Unknown poly dim: %u", dim )
+		_	=> fail!( "Unknown poly dim: {:u}", dim )
 	}
 }
 
@@ -156,8 +156,8 @@ pub struct Offset	{
 	on_fill	: bool,
 	on_line : bool,
 	on_point: bool,
-	factor	: float,
-	units	: float,
+	factor	: f32,
+	units	: f32,
 }
 
 impl Stage for Offset	{
@@ -195,7 +195,7 @@ impl Stage for Offset	{
 			self.on_fill	== ask_state( gl::POLYGON_OFFSET_FILL ) &&
 			self.on_line	== ask_state( gl::POLYGON_OFFSET_LINE ) &&
 			self.on_point	== ask_state( gl::POLYGON_OFFSET_POINT ) &&
-			self.factor	== f as float && self.units == u as float );
+			self.factor	== f as f32 && self.units == u as f32 );
 	}
 }
 
@@ -611,7 +611,7 @@ pub fn map_comparison( s : &str )-> gl::types::GLenum	{
 		"<="	=> gl::LEQUAL,
 		">"		=> gl::GREATER,
 		">="	=> gl::GEQUAL,
-		_		=> fail!("Unknown comparison %s", s)
+		_		=> fail!("Unknown comparison {:s}", s)
 	}
 }
 
@@ -625,7 +625,7 @@ pub fn map_operation( c : char )-> gl::types::GLenum	{
 		'-' => gl::DECR,
 		'^' => gl::INCR_WRAP,
 		'v' => gl::DECR_WRAP,
-		_	=> fail!("Unknown stencil operation '%c'", c)
+		_	=> fail!("Unknown stencil operation '{:c}'", c)
 	}
 }
 
@@ -636,7 +636,7 @@ pub fn map_equation( s : &str )-> gl::types::GLenum	{
 		"d-s"	=> gl::FUNC_REVERSE_SUBTRACT,
 		"max"	=> gl::MAX,
 		"min"	=> gl::MIN,
-		_		=> fail!("Unknown blend equation %s", s)
+		_		=> fail!("Unknown blend equation {:s}", s)
 	}
 }
 
@@ -657,13 +657,13 @@ pub fn map_factor( s : &str )-> gl::types::GLenum	{
 		"Ca"	=> gl::CONSTANT_ALPHA,
 		"1-Ca"	=> gl::ONE_MINUS_CONSTANT_ALPHA,
 		"Sa^"	=> gl::SRC_ALPHA_SATURATE,
-		_		=> fail!("Unknown blend factor %s", s)
+		_		=> fail!("Unknown blend factor {:s}", s)
 	}
 }
 
 
 impl State	{
-	pub fn set_offset( &mut self, value : float )	{
+	pub fn set_offset( &mut self, value : f32 )	{
 		self.offset.on_fill	= true;
 		self.offset.on_line	= true;
 		self.offset.on_point= true;
@@ -705,7 +705,7 @@ pub fn make_default( wid : uint, het : uint )-> State	{
 			cull_mode:gl::BACK, line_width:1f32
 		},
 		offset : Offset{
-			on_fill:false, on_line:false, on_point:false, factor:0f, units:0f
+			on_fill:false, on_line:false, on_point:false, factor:0.0, units:0.0
 		},
 		scissor : Scissor{
 			test:false, area:frame::Rect::new(wid,het)

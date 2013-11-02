@@ -79,7 +79,7 @@ impl ToStr for Rect	{
 	fn to_str( &self )-> ~str	{
 		let (bx,by) = self.base;
 		let (sx,sy) = self.size;
-		fmt!( "[%d:%d)x[%d:%d)", bx, bx+sx, by, by+sy )
+		format!( "[{:i}:{:i})x[{:i}:{:i})", bx, bx+sx, by, by+sy )
 	}
 }
 
@@ -214,7 +214,7 @@ impl Frame	{
 			};
 			{
 				let child = &mut self.children[i];
-				lg.add(fmt!( "\tFrame1 '%s' rel (%d,%d) := (%d,%d)", child.name,
+				lg.add(format!( "\tFrame1 '{:s}' rel ({:i},{:i}) := ({:i},{:i})", child.name,
 					src_x,src_y, dst_x,dst_y ));
 				child.area.base = ( dst_x-src_x, dst_y-src_y );
 				let (x1,y1) = child.area.get_point( ALeftBot, &no_margin );
@@ -222,12 +222,12 @@ impl Frame	{
 				assert!( x1<=x2 && y1<=y2 );
 				x_min = std::int::min(x_min,x1); y_min = std::int::min(y_min,y1);
 				x_max = std::int::max(x_max,x2); y_max = std::int::max(y_max,y2);
-				lg.add(fmt!( "\tUpdated1 '%s' to: %s, (%d,%d),(%d,%d)",
+				lg.add(format!( "\tUpdated1 '{:s}' to: {:s}, ({:i},{:i}),({:i},{:i})",
 					child.name, child.area.to_str(), x1,y1, x2,y2 ));
 			}
 		}
 		let content = ( std::int::max(ex,x_max-x_min), std::int::max(ey,y_max-y_min) ); 
-		lg.add(fmt!( "\tFrame3 '%s' bounding box is [%d-%d]x[%d-%d]", self.name, x_min, x_max, y_min, y_max ));
+		lg.add(format!( "\tFrame3 '{:s}' bounding box is [{:i}-{:i}]x[{:i}-{:i}]", self.name, x_min, x_max, y_min, y_max ));
 		self.area.size = self.get_size(content);
 		self.area.size
 	}
@@ -247,11 +247,11 @@ impl Frame	{
 			};
 			{
 				let child = &mut self.children[i];
-				lg.add(fmt!( "\tFrame2 '%s' rel (%d,%d) := (%d,%d)", child.name,
+				lg.add(format!( "\tFrame2 '{:s}' rel ({:i},{:i}) := ({:i},{:i})", child.name,
 					src_x,src_y, dst_x,dst_y ));
 				child.area.base = ( dst_x-src_x, dst_y-src_y );
 				child.update_base(lg);
-				lg.add(fmt!( "\tUpdated2 '%s' to: %s", child.name, child.area.to_str() ));
+				lg.add(format!( "\tUpdated2 '{:s}' to: {:s}", child.name, child.area.to_str() ));
 			}
 		}
 	}
@@ -455,7 +455,7 @@ pub fn load_screen( path : &str, ct : &mut gr_low::context::Context,
 		children	: convert_frames( iscreen.frames ),
 	};
 	let mut map_texture	: HashMap<~str,@gr_low::texture::Texture> = HashMap::new();
-	lg.add(fmt!( "\tParsing %u images", iscreen.images.len() ));
+	lg.add(format!( "\tParsing {:u} images", iscreen.images.len() ));
 	let mut map_image : HashMap<~str,@Image> = HashMap::new();
 	let prog_image = engine::load::load_program( ct, "data/code/hud/image", lg );
 	for iimage in iscreen.images.iter()	{
@@ -478,7 +478,7 @@ pub fn load_screen( path : &str, ct : &mut gr_low::context::Context,
 			fail!( ~"\tImage frame not found: " + iimage.frame )
 		}
 	}
-	lg.add(fmt!( "\tParsing %u labels", iscreen.labels.len() ));
+	lg.add(format!( "\tParsing {:u} labels", iscreen.labels.len() ));
 	let mut map_font	: HashMap<FontInfo,@font::Font>	= HashMap::new();
 	let mut map_label	: HashMap<~str,@mut Label>				= HashMap::new();
 	let prog_label = engine::load::load_program( ct, "data/code/hud/text", lg );
@@ -582,8 +582,8 @@ impl EditLabel	{
 }
 
 impl engine::anim::Act for EditLabel	{
-	fn update( &mut self, time : float )-> bool	{
-		let time_ms = (time * 1000f) as uint;
+	fn update( &mut self, time : engine::anim::float )-> bool	{
+		let time_ms = (time * 1000.0) as uint;
 		self.cursor.visible = self.active && (time_ms % 1000u < 500u);
 		true
 	}

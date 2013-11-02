@@ -19,7 +19,7 @@ trait FontError	{
 impl FontError for freetype::FT_Error	{
 	fn check( &self, s : &str )	{
 		if (*self as int)!=0	{
-			fail!("Freetype %s failed with code %d", s, *self as int)
+			fail!("Freetype {:s} failed with code {:i}", s, *self as int)
 		}
 	}
 }
@@ -110,10 +110,10 @@ impl Font	{
 	}*/
 
 	#[fixed_stack_segment]
-	fn set_char_size( &self, xs : float, ys : float, xdpi : uint, ydpi : uint )	{
+	fn set_char_size( &self, xs : f32, ys : f32, xdpi : uint, ydpi : uint )	{
 		unsafe{
 			freetype::FT_Set_Char_Size( *self.face,
-				(64f*xs) as freetype::FT_F26Dot6, (64f*ys) as freetype::FT_F26Dot6,
+				(64.0*xs) as freetype::FT_F26Dot6, (64.0*ys) as freetype::FT_F26Dot6,
 				xdpi as freetype::FT_UInt, ydpi as freetype::FT_UInt )
 		}.check( "Set_Char_Size" );
 	}
@@ -139,7 +139,7 @@ impl Font	{
 
 	#[fixed_stack_segment]
 	pub fn bake( &self, gr : &mut context::Context, s : &str, max_size : (uint,uint), lg : &journal::Log )-> @texture::Texture	{
-		lg.add(fmt!( "Font baking text: %s", s ));
+		lg.add(format!( "Font baking text: {:s}", s ));
 		if s.is_empty()	{
 			let tex = gr.create_texture( "2D", 1u, 1u, 1u, 0u );
 			let image = vec::from_elem( 1u, 0u8 );
@@ -153,7 +153,7 @@ impl Font	{
 		let line_gap = (self.line_offset as int) + (face.height as int);
 		let mut position = 0;	// in font units
 		let mut baseline = face.ascender as int;
-		lg.add(fmt!( "\tFace height=%d, up=%d, down=%d", face.height as int,
+		lg.add(format!( "\tFace height={:i}, up={:i}, down={:i}", face.height as int,
 			face.ascender as int, face.descender as int ));
 		let mut prev_index = 0 as freetype::FT_UInt;	// font char index
 		let BIG		= 999999;
@@ -186,7 +186,7 @@ impl Font	{
 					freetype::FT_Get_Kerning( *self.face, prev_index, index,
 						freetype::FT_KERNING_DEFAULT, ptr::to_unsafe_ptr(&delta) ).
 						check( "Get_Kerning" );
-					//lg.add(fmt!( "\tKerning %d-%d is %d",
+					//lg.add(format!( "\tKerning {:i}-{:i} is {:i}",
 					//	prev_index as int, index as int, delta.x as int ));
 					delta.x as int + self.kern_offset
 				};
@@ -202,12 +202,12 @@ impl Font	{
 				let mut ey = cy + glyph.metrics.height	as int;
 				let e_border = (ex - min_x + (2*BORDER<<SHIFT)) | (((ALIGN+1)<<SHIFT)-1);
 				if e_border >= width_capacity	{
-					lg.add(fmt!( "\tMoving the word: %u-%u", start_word, pos_array.len() ));
+					lg.add(format!( "\tMoving the word: {:u}-{:u}", start_word, pos_array.len() ));
 					let word_offset = pos_array[start_word].x - min_x;
 					if e_border - word_offset >= width_capacity	{
-						fail!("Text exceeds horisontal bound: %s", s)
+						fail!("Text exceeds horisontal bound: {:s}", s)
 					}
-					lg.add(fmt!( "\tHor:%d Ver:%d", -word_offset, line_gap ));
+					lg.add(format!( "\tHor:{:i} Ver:{:i}", -word_offset, line_gap ));
 					prev_index = 0 as freetype::FT_UInt;
 					for i in range( start_word, pos_array.len() )	{
 						pos_array[i].x -= word_offset;
@@ -220,8 +220,8 @@ impl Font	{
 				}
 				max_x = std::int::max( max_x, ex );
 				max_y = std::int::max( max_y, ey );
-				//lg.add(fmt!( "\tsymbol:%c cx:%d cy:%d", c, cx, cy ));
-				/*lg.add(fmt!( "\tSymbol '%c' (id=%u) at (%u,%u): size=(%d,%d) bearing=(%d,%d)",
+				//lg.add(format!( "\tsymbol:%c cx:{:i} cy:{:i}", c, cx, cy ));
+				/*lg.add(format!( "\tSymbol '%c' (id={:u}) at ({:u},{:u}): size=({:i},{:i}) bearing=({:i},{:i})",
 					c, self.get_char_index(c), position, baseline,
 					glyph.metrics.width as int, glyph.metrics.height as int,
 					glyph.metrics.horiBearingX as int, glyph.metrics.horiBearingY as int ));*/
@@ -232,7 +232,7 @@ impl Font	{
 		let width = ((((SHIFT+max_x-min_x)>>SHIFT)+ALIGN+2*BORDER) & !ALIGN) as uint;
 		let height= ((((SHIFT+max_y-min_y)>>SHIFT)+ALIGN+2*BORDER) & !ALIGN) as uint;
 		min_x -= BORDER<<SHIFT; min_y -= BORDER<<SHIFT; 
-		lg.add(fmt!( "\tBox at (%d,%d) of size %ux%u", min_x, min_y, width, height ));
+		lg.add(format!( "\tBox at ({:i},{:i}) of size {:u}x{:u}", min_x, min_y, width, height ));
 		assert!( width<=limit_x && height<=limit_y );
 		let mut image = vec::from_elem( width*height, 0u8 );
 		for slice in pos_array.iter()	{
@@ -252,7 +252,7 @@ impl Font	{
 			assert!( bh == glyph.metrics.height	as uint >> SHIFT );
 			let x = ((slice.x - min_x) >>SHIFT) as uint;
 			let y = ((slice.y - min_y) >>SHIFT) as uint;
-			//lg.add(fmt!( "\tx:%u bw:%u, width:%u, y:%u bh:%u height:%u", x,bw,width, y,bh,height ));
+			//lg.add(format!( "\tx:{:u} bw:{:u}, width:{:u}, y:{:u} bh:{:u} height:{:u}", x,bw,width, y,bh,height ));
 			assert!( x + bw <= width && y + bh <= height );
 			self.draw( bmp, image, y*width + x, width );
 		}
@@ -269,7 +269,7 @@ impl Context	{
 	pub fn load( &self, path : &str, index : uint, size : [uint,..2], kern : [int,..2],
 			lg : &journal::Log )-> Font	{
 		let mut face : freetype::FT_Face = ptr::null();
-		lg.add(fmt!( "Loading font: %s with size %ux%u", path, size[0], size[1] ));
+		lg.add(format!( "Loading font: {:s} with size {:u}x{:u}", path, size[0], size[1] ));
 		path.with_c_str( |text|	{
 			unsafe{
 				freetype::FT_New_Face( self.lib, text, 

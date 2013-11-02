@@ -1,9 +1,11 @@
-use std::{io,path};
+use std::path::Path;
+use std::rt::io;
+
 
 pub struct Log	{
 	name		: ~str,
 	enable		: bool,
-	priv wr		: @io::Writer,
+	priv wr		: @mut io::Writer,	//FIXME: no managed
 }
 
 pub trait LoggedUnused	{
@@ -12,10 +14,10 @@ pub trait LoggedUnused	{
 
 
 impl Log	{
-	pub fn create( path : ~str )-> Log	{
-		match io::file_writer( &path::Path(path), &[io::Create,io::Truncate] )	{
-			Ok(wr)	=> Log{ name:~"", enable:true, wr:wr },
-			Err(e)	=> fail!( e.to_str() ),
+	pub fn create( path : &str )-> Log	{
+		match io::file::open( &Path::new(path), io::Create, io::ReadWrite )	{
+			Some(wr)	=> Log{ name:~"", enable:true, wr:@mut wr as @mut io::Writer },
+			None		=> fail!("Unable to create log: {:s}", path),
 		}
 	}
 
@@ -25,7 +27,8 @@ impl Log	{
 
 	pub fn add( &self, message : &str )	{
 		if self.enable	{
-			self.wr.write_line(message);
+			let msg = format!( "{:s}\n", message );
+			self.wr.write( msg.as_bytes() );
 		}
 	}
 

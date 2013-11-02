@@ -72,13 +72,13 @@ impl PlaneMap	{
 
 	pub fn log( &self, lg : &journal::Log )	{
 		if self.stencil != frame::TarEmpty	{
-			lg.add(fmt!( "\t\tstencil\t= %s", self.stencil.to_str() ));
+			lg.add(format!( "\t\tstencil\t= {:s}", self.stencil.to_str() ));
 		}
 		if self.depth != frame::TarEmpty	{
-			lg.add(fmt!( "\t\tdepth\t= %s", self.depth.to_str() ));	
+			lg.add(format!( "\t\tdepth\t= {:s}", self.depth.to_str() ));	
 		}
 		for (name,val) in self.colors.iter()	{
-			lg.add(fmt!( "\t\t%s\t= %s", *name, val.to_str() ));
+			lg.add(format!( "\t\t{:s}\t= {:s}", *name, val.to_str() ));
 		}
 	}
 }
@@ -87,8 +87,8 @@ impl PlaneMap	{
 #[deriving(Clone)]
 pub struct ClearData	{
 	color	: Option<rast::Color>,
-	depth	: Option<float>,
-	stencil	: Option<uint>,
+	depth	: Option<f32>,
+	stencil	: Option<u32>,
 }
 
 #[deriving(Clone)]
@@ -107,7 +107,7 @@ impl Input	{
 		}
 	}
 	pub fn log( &self, lg : &journal::Log )	{
-		lg.add(fmt!( "\tMesh '%s' at VAO=%i with range [%u:%u]",
+		lg.add(format!( "\tMesh '{:s}' at VAO={:i} with range [{:u}:{:u}]",
 			self.mesh.name, *self.va.handle as int,
 			self.range.start, self.range.start+self.range.num ));
 	}
@@ -137,7 +137,7 @@ impl Output	{
 		}
 	}
 	pub fn log( &self, kind : &str, lg : &journal::Log )	{
-		lg.add(fmt!( "\t%s FBO=%i with area %s", kind, *self.fb.handle as int, self.area.to_str() ));
+		lg.add(format!( "\t{:s} FBO={:i} with area {:s}", kind, *self.fb.handle as int, self.area.to_str() ));
 		self.pmap.log( lg );
 	}
 }
@@ -158,18 +158,18 @@ impl Call	{
 			&CallEmpty	=> lg.add("Call empty"),
 			&CallClear(ref cd, ref out, ref _mask)	=>	{
 				lg.add("Call clear");
-				lg.add(fmt!( "\tValue %s %s %s",
+				lg.add(format!( "\tValue {:s} {:s} {:s}",
 					match cd.color	{
-						Some(v)	=> fmt!("color(%f,%f,%f,%f)",
-							v.r as float, v.g as float, v.b as float, v.a as float),
+						Some(v)	=> format!("color({:f},{:f},{:f},{:f})",
+							v.r, v.g, v.b, v.a),
 						None	=> ~"",
 					},
 					match cd.depth	{
-						Some(v)	=> fmt!("depth(%f)", v),
+						Some(v)	=> format!("depth({:f})", v),
 						None	=> ~"",
 					},
 					match cd.stencil	{
-						Some(v)	=> fmt!("stencil(%u)", v),
+						Some(v)	=> format!("stencil({:u})", v),
 						None	=> ~"",
 					}) );
 				out.log( "Output", lg );
@@ -183,7 +183,7 @@ impl Call	{
 				lg.add("Call draw");
 				inp.log( lg );
 				out.log( "Output", lg );
-				lg.add(fmt!( "\tProgram=%i", *prog.handle as int ));
+				lg.add(format!( "\tProgram={:i}", *prog.handle as int ));
 				data.log( lg );
 			},
 			&CallTransfrom()	=>	{

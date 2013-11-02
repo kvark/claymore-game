@@ -4,7 +4,7 @@ use std;
 use std::managed;
 use std::to_str::ToStr;
 
-use cgmath::{angle,rotation};
+use cgmath::angle;
 use cgmath::matrix::*;
 use cgmath::quaternion::*;
 use cgmath::vector::*;
@@ -16,7 +16,8 @@ use anim;
 pub type Matrix = Mat4<f32>;
 pub type Vector = Vec3<f32>;
 pub type Quaternion = Quat<f32>;
-pub type Euler = rotation::Euler<angle::Rad<f32>>;
+//pub type Euler = rotation::Euler<angle::Rad<f32>>;
+pub type Euler = Vec3<angle::Rad<f32>>;
 pub type Scale = f32;
 
 
@@ -112,36 +113,30 @@ impl QuatSpace	{
 //		Interpolation									//
 
 pub trait Interpolate	{
-	fn interpolate( &self, other : &Self, t : float )-> Self;
+	fn interpolate( &self, other : &Self, t : f32 )-> Self;
 }
 
 impl Interpolate for Vector	{
-	fn interpolate( &self, other : &Vector, t : float )-> Vector	{
-		let t1  = (1f-t) as f32;
-		let t2 = t as f32;
-		self.mul_s(t1).add_v( &other.mul_s(t2) )
+	fn interpolate( &self, other : &Vector, t : f32 )-> Vector	{
+		self.mul_s(1.0-t).add_v( &other.mul_s(t) )
 	}
 }
 
 impl Interpolate for Quaternion	{
 	//FIXME: use slerp
-	fn interpolate( &self, other : &Quaternion, t : float )-> Quaternion	{
-		let t1  = (1f-t) as f32;
-		let t2 = t as f32;
-		self.mul_s(t1).add_q( &other.mul_s(t2) )
+	fn interpolate( &self, other : &Quaternion, t : f32 )-> Quaternion	{
+		self.mul_s(1.0-t).add_q( &other.mul_s(t) )
 	}
 }
 
 impl Interpolate for Scale	{
-	fn interpolate( &self, other : &Scale, t : float )-> Scale	{
-		let t1  = (1f-t) as f32;
-		let t2 = t as f32;
-		self*t1 + (*other)*t2
+	fn interpolate( &self, other : &Scale, t : f32 )-> Scale	{
+		self*(1.0-t) + (*other)*t
 	}
 }
 
 impl Interpolate for QuatSpace	{
-	fn interpolate( &self, other : &QuatSpace, t : float )-> QuatSpace	{
+	fn interpolate( &self, other : &QuatSpace, t : f32 )-> QuatSpace	{
 		QuatSpace{
 			position	: self.position.interpolate( &other.position, t ),
 			orientation	: self.orientation.interpolate( &other.orientation, t ),
@@ -153,11 +148,11 @@ impl Interpolate for QuatSpace	{
 
 impl ToStr for QuatSpace	{
 	fn to_str( &self )-> ~str	{
-		fmt!( "{pos:%s,rot:%s,scale:%f}",
+		format!( "(pos:{},rot:{},scale:{:f})",
 			"","",
-			//self.position.to_str(),
-			//self.orientation.to_str(),
-			self.scale as float )
+			//self.position,
+			//self.orientation,
+			self.scale )
 	}
 }
 
@@ -211,7 +206,7 @@ impl anim::Player<NodeCurve> for Node	{
 			None		=> None,
 		}
 	}
-	fn set_record( &mut self, a : &NodeRecord, time : float )	{
+	fn set_record( &mut self, a : &NodeRecord, time : anim::float )	{
 		for chan in a.curves.iter()	{
 			match chan	{
 				&NCuPos(ref c)		=> self.space.position		= c.sample(time),
@@ -311,7 +306,7 @@ impl anim::Player<ArmatureCurve> for Armature	{
 			None		=> None,
 		}
 	}
-	fn set_record( &mut self, a : &ArmatureRecord, time : float )	{
+	fn set_record( &mut self, a : &ArmatureRecord, time : anim::float )	{
 		for chan in a.curves.iter()	{
 			match chan	{
 				&ACuPos(bi,ref c)		=> {

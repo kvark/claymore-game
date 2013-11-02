@@ -41,7 +41,7 @@ impl gr_low::context::ProxyState for Binding	{
 			if *self.target == gl::ELEMENT_ARRAY_BUFFER	{
 				gl::ELEMENT_ARRAY_BUFFER_BINDING
 			}else	{
-				fail!( fmt!("Unknown binding to query: %d",*self.target as int) );
+				fail!( format!("Unknown binding to query: {:i}",*self.target as int) );
 			};
 		let mut hid = 0 as gl::types::GLint;
 		unsafe{ gl::GetIntegerv( query, ptr::to_mut_unsafe_ptr(&mut hid) ); }
@@ -107,7 +107,7 @@ impl Attribute	{
 			'i'	=> (4u,gl::INT),
 			'I'	=> (4u,gl::UNSIGNED_INT),
 			'f'	=> (4u,gl::FLOAT),
-			_	=> fail!("Unknown attribute format: %s", format)
+			_	=> fail!("Unknown attribute format: {:s}", format)
 		};
 		(Attribute{
 			kind			: el_type,
@@ -125,7 +125,7 @@ impl Attribute	{
 	}
 
 	pub fn compatible( &self, at : &gr_low::shade::Attribute )-> bool	{
-		//io::println(fmt!( "Checking compatibility: kind=0x%x, count=%u, storage=0x%x",
+		//io::println(format!( "Checking compatibility: kind=0x%x, count={:u}, storage=0x%x",
 		//	self.kind as uint, self.count, at.storage as uint ));
 		let (count,unit) = at.decompose();
 		count == self.count && if at.is_integer()	{
@@ -260,7 +260,7 @@ impl gr_low::context::Context	{
 	pub fn load_buffer<T>( &mut self, obj : @Object, data : &[T], dynamic : bool )	{
 		self.bind_buffer( obj );
 		let usage = if dynamic {gl::DYNAMIC_DRAW} else {gl::STATIC_DRAW};
-		let size = (data.len() * std::sys::size_of::<T>()) as gl::types::GLsizeiptr;
+		let size = (data.len() * std::mem::size_of::<T>()) as gl::types::GLsizeiptr;
 		unsafe{
 			let raw = std::vec::raw::to_ptr(data) as *gl::types::GLvoid;
 			gl::BufferData( *self.array_buffer.target, size, raw, usage );
@@ -286,7 +286,7 @@ impl gr_low::context::Context	{
 			normalized: norm,
 			interpolated: true,
 			buffer: self.create_buffer_loaded( vdata ),
-			stride: count * std::sys::size_of::<T>(),
+			stride: count * std::mem::size_of::<T>(),
 			offset: 0u
 		}
 	}

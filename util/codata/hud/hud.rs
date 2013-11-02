@@ -8,6 +8,9 @@
 #[license = "MIT"];
 #[crate_type = "lib"];
 
+#[feature(globs)];
+
+
 pub mod common;
 pub mod battle;
 pub mod chared;

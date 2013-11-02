@@ -3,7 +3,7 @@ extern mod cgmath;
 extern mod engine;
 extern mod std;
 
-use engine::{gr_low,gr_mid};
+use engine::{anim,gr_low,gr_mid};
 use engine::gr_low::context::ProxyState;
 
 use hud;
@@ -20,7 +20,7 @@ struct Journal	{
 }
 
 struct Time	{
-	moment	: float,
+	moment	: anim::float,
 	render	: engine::anim::Timer,
 	animate	: engine::anim::Timer,
 }
@@ -85,7 +85,7 @@ impl Game	{
 		let mut hcon = hud::main::Context::create( &mut gcon, &journal.load );
 		// logic
 		let mut logic = Logic::create( el, &mut gcon, &fcon, &mut hcon, &journal.load );
-		logic.reset( 0f );
+		logic.reset( 0.0 );
 		// debug menu
 		let menu : hud::debug::Menu<Logic> = logic.create_debug_menu();
 		menu.preload( &mut gcon, &fcon, &mut hcon, &journal.load );
@@ -117,8 +117,8 @@ impl Game	{
 			time_game	: self.time.animate.time,
 			time_view	: self.time.render.time,
 			focus	: win.is_visible(),
-			aspect	: (sw as float) / (sh as float),
-			mouse	: [px / (sw as float), py / (sh as float)],
+			aspect	: (sw as f32) / (sh as f32),
+			mouse	: [(px / (sw as f64)) as f32, (py / (sh as f64)) as f32],
 			log		: self.journal.main.fork( ~"update" ),
 		};
 		self.logic.on_input( &event, &state, &mut self.debug_menu );
@@ -162,7 +162,7 @@ struct Config	{
 #[main]
 pub fn main()	{
 	glfw::set_error_callback( |_error,description|	{
-		fail!("GLFW Error: %s", description)
+		fail!("GLFW Error: {:s}", description)
 	});
 	do glfw::start {
 		let config = load_json::load_config::<Config>( "data/config.json" );
@@ -190,7 +190,7 @@ pub fn main()	{
 		let cw = &config.window;
 		let monitor = match glfw::Monitor::get_primary()	{
 			Ok(m)	=> m,
-			Err(e)	=> fail!( "Monitoor::get_primary failed: %s", e.to_str() )
+			Err(e)	=> fail!( "Monitoor::get_primary failed: {:s}", e.to_str() )
 		};
 		let mode = if cw.fullscreen {
 			glfw::FullScreen( monitor )
@@ -199,8 +199,8 @@ pub fn main()	{
 		};
 		assert_eq!( cw.samples, 0 );
 		let window = match glfw::Window::create( cw.width, cw.height, cw.title, mode )	{
-			Ok(w)	=> w,
-			Err(e)	=> fail!( "Window::create failed: %s", e.to_str() ),
+			Some(w)	=> w,
+			None	=> fail!( "Window::create failed" )
 		};
 
 		//window.set_input_mode( glfw::CURSOR_MODE, glfw::CURSOR_CAPTURED as int );
@@ -222,13 +222,13 @@ pub fn main()	{
 			Game::get().on_input( win, input::EvKeyboard( key, action == glfw::Press ));
 		});
 		window.set_cursor_pos_callback( |win,posx,posy|	{
-			Game::get().on_input( win, input::EvMouseMove( posx, posy ));
+			Game::get().on_input( win, input::EvMouseMove( posx as f32, posy as f32 ));
 		});
 		window.set_mouse_button_callback( |win,button,action,_mods|	{
 			Game::get().on_input( win, input::EvMouseClick( button as uint, action == glfw::Press ));
 		});
 		window.set_scroll_callback( |win,floatx,floaty|	{
-			Game::get().on_input( win, input::EvScroll( floatx, floaty ));
+			Game::get().on_input( win, input::EvScroll( floatx as f32, floaty as f32 ));
 		});
 		
 		loop	{

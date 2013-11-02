@@ -5,13 +5,13 @@ extern mod gen_scene;
 
 use std;
 use glfw;
-use cgmath::{angle,projection,rotation};
+use cgmath::{angle,projection};
 use cgmath::angle::ToRad;
 use cgmath::point::*;
 use cgmath::quaternion::*;
 use cgmath::vector::*;
+use engine::{anim,gr_low,gr_mid};
 use engine::anim::Player;
-use engine::{gr_low,gr_mid};
 use engine::gr_mid::draw::Mod;
 use engine::space::{Interpolate,Space};
 
@@ -26,7 +26,7 @@ use battle::grid::{DrawableGrid,TopologyGrid,GeometryGrid};
 
 struct Motion	{
 	destination	: engine::space::QuatSpace,
-	last_update	: float,
+	last_update	: anim::float,
 }
 
 pub struct Character	{
@@ -39,7 +39,7 @@ pub struct Character	{
 	entity		: engine::object::Entity,
 	skeleton	: @mut engine::space::Armature,
 	record		: @engine::space::ArmatureRecord,
-	priv start_time	: float,
+	priv start_time	: anim::float,
 	// state
 	priv location	: grid::Location,
 	priv orientation: field::Orientation,
@@ -48,12 +48,12 @@ pub struct Character	{
 }
 
 impl Character	{
-	pub fn update_view( &mut self, time : float )	{
+	pub fn update_view( &mut self, time : anim::float )	{
 		let mut moment  = time - self.start_time;
 		if moment>self.record.duration	{
 			//self.record = self.skeleton.find_record(~"ArmatureAction").expect(~"character Idle not found");
 			self.start_time = time;
-			moment = 0f;
+			moment = 0.0;
 		}
 		self.skeleton.set_record( self.record, moment );
 		self.skeleton.fill_data( &mut self.entity.data );
@@ -63,7 +63,7 @@ impl Character	{
 		grid.compute_space( self.location, self.orientation, self.elevation )
 	}
 
-	pub fn update_logic( @mut self, time : float, field : &mut field::Field, grid : &grid::Grid )	{
+	pub fn update_logic( @mut self, time : anim::float, field : &mut field::Field, grid : &grid::Grid )	{
 		let (ref mut dest_opt, ref mut done) = match self.motion	{
 			Some(ref mut mo)	=>	{
 				let pos = self.skeleton.root.space.position;
@@ -81,7 +81,7 @@ impl Character	{
 			&Some(ref mut dest_pos)	=>	{
 				let dest_loc = grid.point_cast( dest_pos );
 				if dest_loc != self.location	{
-					//print(fmt!( "Location %s -> %s\n", self.location.to_str(), dest_loc.to_str() ));
+					//print(format!( "Location {:s} -> {:s}\n", self.location.to_str(), dest_loc.to_str() ));
 					match field.get_by_location( dest_loc, grid as &TopologyGrid )	{
 						(Some(_),field::CellEmpty)	=>	{
 							field.remove_member( self.get_name() );
@@ -91,7 +91,7 @@ impl Character	{
 							*dest_pos = self.recompute_space( grid ).position;
 							*done = true;
 						},
-						_	=> fail!("Unexpected path cell: %s", dest_loc.to_str())
+						_	=> fail!("Unexpected path cell: {:s}", dest_loc.to_str())
 					}
 				}
 				self.skeleton.root.space.position = *dest_pos;
@@ -109,7 +109,7 @@ impl Character	{
 		self.skeleton.root.space = self.recompute_space( grid );
 	}
 
-	pub fn move( @mut self, d : grid::Location, time : float, field : &mut field::Field, grid : &grid::Grid )	{
+	pub fn move( @mut self, d : grid::Location, time : anim::float, field : &mut field::Field, grid : &grid::Grid )	{
 		if false	{	//instant?
 			field.remove_member( self.get_name() );
 			self.spawn( d, field, grid );
@@ -144,16 +144,16 @@ impl field::Member for Character	{
 
 pub struct View	{
 	cam				: scene::common::Camera,
-	trans_duration	: float,
+	trans_duration	: anim::float,
 	points			: ~[engine::space::QuatSpace],
 	source			: Option<engine::space::QuatSpace>,
 	destination		: uint,
-	start_time		: float,
+	start_time		: anim::float,
 }
 
 impl View	{
-	pub fn move( &mut self, dir : int, time : float )-> bool	{
-		if dir!=0 && time > self.start_time + 0.5f	{
+	pub fn move( &mut self, dir : int, time : anim::float )-> bool	{
+		if dir!=0 && time > self.start_time + 0.5	{
 			let l = self.points.len() as int;
 			self.destination = (((self.destination as int) + dir + l) % l) as uint;
 			self.source = Some( self.cam.node.space );
@@ -162,16 +162,16 @@ impl View	{
 		}else	{false}
 	}
 
-	pub fn update( &mut self, time : float )	{
+	pub fn update( &mut self, time : anim::float )	{
 		match self.source	{
 			Some(source)	=>	{
 				let moment = (time - self.start_time) / self.trans_duration;
 				let dst = self.points[ self.destination ];
-				self.cam.node.space = if moment >= 1f	{
+				self.cam.node.space = if moment >= 1.0	{
 						self.source = None;
 						dst
 					}else	{
-						source.interpolate( &dst, moment )
+						source.interpolate( &dst, moment as f32 )
 					};
 			},
 			None	=> ()
@@ -194,7 +194,7 @@ pub struct Scene	{
 }
 
 impl Scene	{
-	pub fn reset( &mut self, time : float )	{
+	pub fn reset( &mut self, time : anim::float )	{
 		// common
 		self.grid.clear();
 		self.field.clear();
@@ -274,7 +274,7 @@ impl Scene	{
 			self.field.fill_grid( self.grid.mut_cells() );
 			match self.field.get_by_location( self.loc_selected, &self.grid as &TopologyGrid )	{
 				(Some(index),field::CellEmpty)	=>	{
-					//print(fmt!( "loc(%i,%i) index = %u\n", active[0], active[1], index ));
+					//print(format!( "loc({:i},{:i}) index = {:u}\n", active[0], active[1], index ));
 					self.grid.mut_cells()[index] = grid::CELL_ACTIVE
 				},
 				(Some(_),_)	=> (),	//attack animation
@@ -286,8 +286,8 @@ impl Scene	{
 		// clear screen
 		let cd = gr_mid::call::ClearData{
 			color	:Some( gr_low::rast::Color::new(0x8080FFFF) ),
-			depth	:Some( 1f ),
-			stencil	:Some( 0u ),
+			depth	:Some( 1.0 ),
+			stencil	:Some( 0u32 ),
 		};
 		let c0 = gr_mid::call::CallClear( cd, output.clone(), gc.default_rast.mask );
 		lg.add("=== Battle scene ===");
@@ -314,7 +314,7 @@ impl Scene	{
 			action	: debug::ActionList(~[
 				debug::MenuItem	{
 					name	: ~"battle-reset",
-					action	: debug::ActionFun(|s:&mut Scene| {s.reset(0f)}),
+					action	: debug::ActionFun(|s:&mut Scene| {s.reset(0.0)}),
 				},
 				debug::MenuItem	{
 					name	: ~"battle-test",
@@ -350,13 +350,13 @@ pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon 
 					near	: 1f32,
 					far		: 25f32,
 				},
-				ear		: engine::audio::Listener{ volume:0f },
+				ear		: engine::audio::Listener{ volume:0.0 },
 			}
 		};
 		let points = std::vec::from_fn(4, |i|	{
 			let axis = Vec3::new( 0f32, 0f32, 1f32 );
 			let angle = angle::deg( (i as f32) * 180f32 / 4f32 );
-			let q = rotation::AxisAngle::new( axis, angle ).to_quat();
+			let q = Quat::from_axis_angle( &axis, angle.to_rad() );
 			let cs = cam.node.space;
 			engine::space::QuatSpace{
 				position	: q.mul_v( &cs.position ),
@@ -366,11 +366,11 @@ pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon 
 		});
 		View{
 			cam	: cam,
-			trans_duration	: 2f,
+			trans_duration	: 2.0,
 			points			: points,
 			source			: None,
 			destination		: 0,
-			start_time		: 0f,
+			start_time		: 0.0,
 		}
 	};
 	// load battle landscape
@@ -391,7 +391,7 @@ pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon 
 			entity		: ent,
 			skeleton	: skel,
 			record		: skel.find_record("ArmatureBossAction").expect("Hero has to have Idle"),
-			start_time	: 0f,
+			start_time	: 0.0,
 			location	: Point2::new(0i,0i),
 			orientation	: 0,
 			elevation	: 1.5,
@@ -411,7 +411,7 @@ pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon 
 			entity		: ent,
 			skeleton	: skel,
 			record		: skel.find_record("ArmatureBossAction").expect("Boss has to have Idle"),
-			start_time	: 0f,
+			start_time	: 0.0,
 			location	: Point2::new(0i,0i),
 			orientation	: 0,
 			elevation	: 1.5,

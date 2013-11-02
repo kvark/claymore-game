@@ -9,6 +9,9 @@
 #[license = "MIT"];
 #[crate_type = "bin"];
 
+#[feature(managed_boxes)];
+#[feature(globs)];
+
 
 extern mod gen_hud;
 extern mod gen_scene;

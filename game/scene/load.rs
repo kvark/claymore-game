@@ -24,7 +24,7 @@ fn parse_shader_data( imat : &gen::Material, tex_cache : &HashMap<~str,@gr_low::
 	for &(ref name, ref di) in imat.data.iter()	{
 		let uni = match di	{
 			&gen::DataInt(v)	=> ( gr_low::shade::UniInt(v) ),
-			&gen::DataScalar(v)	=> ( gr_low::shade::UniFloat(v as float) ),
+			&gen::DataScalar(v)	=> ( gr_low::shade::UniFloat(v) ),
 			&gen::DataVector(v)	=> ( gr_low::shade::UniFloatVec(vector::Vec4::new(v[0],v[1],v[2],v[3])) ),
 			&gen::DataColor(v)	=> ( gr_low::shade::UniFloatVec(color2vec(v)) ),
 		};
@@ -32,17 +32,17 @@ fn parse_shader_data( imat : &gen::Material, tex_cache : &HashMap<~str,@gr_low::
 	}
 	let phong_texture = ~"Main";
 	for (i,ti) in imat.textures.iter().enumerate()	{
-		//print(fmt!( "\tLooking for texture %s\n", ti.path ));
+		//print(format!( "\tLooking for texture {:s}\n", ti.path ));
 		let tex = *tex_cache.get( &ti.path );
 		let s_opt = Some(gr_low::texture::Sampler::new( ti.filter, ti.wrap ));
 		let mut name = ti.name.clone();
 		if name != phong_texture && i==0 && imat.shader == ~"phong"	{
 			name = phong_texture.clone(); //that's what the shader expects
-			lg.add(fmt!( "\t\t(w) forcing texture '%s' name to %s", ti.name, phong_texture ));
+			lg.add(format!( "\t\t(w) forcing texture '{:s}' name to {:s}", ti.name, phong_texture ));
 		}
 		out.insert( ~"t_" + name, gr_low::shade::UniTexture(0,tex,s_opt) );
 		let u_transform = vector::Vec4::new( ti.scale[0], ti.scale[1], ti.offset[0], ti.offset[1] );
-		out.insert( fmt!("u_Tex%uTransform",i), gr_low::shade::UniFloatVec(u_transform) );
+		out.insert( format!("u_Tex{:u}Transform",i), gr_low::shade::UniFloatVec(u_transform) );
 	}
 	out
 }
@@ -56,13 +56,13 @@ fn parse_materials( materials : &[gen::Material], prefix : &str, ctx : &mut comm
 	for imat in materials.iter()	{
 		let mut source = imat.shader.clone();
 		if ctx.materials.contains_key( &imat.name )	{
-			lg.add(fmt!( "\tMaterial skipped: %s (%s)", imat.name, source ));
-			loop;
+			lg.add(format!( "\tMaterial skipped: {:s} ({:s})", imat.name, source ));
+			continue;
 		}
-		lg.add(fmt!( "\tMaterial added: %s (%s)", imat.name, source ));
+		lg.add(format!( "\tMaterial added: {:s} ({:s})", imat.name, source ));
 		if source == ~"phong" && imat.textures.is_empty()	{
 			source = flat_mat.clone();
-			lg.add(fmt!( "\t\t(w) forcing shader to '%s' due to no textures", flat_mat ));
+			lg.add(format!( "\t\t(w) forcing shader to '{:s}' due to no textures", flat_mat ));
 		}
 		let mat = @gr_mid::draw::load_material( prefix + source );
 		ctx.materials.insert( imat.name.clone(), mat );
@@ -94,7 +94,7 @@ fn parse_materials( materials : &[gen::Material], prefix : &str, ctx : &mut comm
 	if async	{
 		for (name,ft) in future_textures.mut_iter()	{
 			let tex = ft.get( gc );
-			//print(fmt!( "\tDeferred texture: %s\n", *name ));
+			//print(format!( "\tDeferred texture: {:s}\n", *name ));
 			ctx.textures.insert( name.clone(), tex );
 		}
 	}
@@ -204,7 +204,7 @@ fn parse_child( child : &gen::NodeChild, parent : @mut space::Node, scene : &mut
 					near	: icam.range[0],
 					far		: icam.range[1],
 				},
-				ear		: engine::audio::Listener{ volume:0f },
+				ear		: engine::audio::Listener{ volume:0.0 },
 			});
 		},
 		&gen::ChildLight(ref ilit)	=>	{
@@ -217,7 +217,7 @@ fn parse_child( child : &gen::NodeChild, parent : @mut space::Node, scene : &mut
 				kind	: match ilit.kind	{
 					gen::KindOmni(_)	=> common::LiPoint,
 					gen::KindSpot(spot)	=> common::LiSpot(
-						angle::rad(spot.size), spot.blend as float ),
+						angle::rad(spot.size), spot.blend ),
 				},
 			});
 		},
@@ -239,7 +239,7 @@ pub fn parse( path : &str, iscene : &gen::Scene, custom : &[gen::Material], gc :
 	parse_materials( custom, "data/code-game/",			&mut scene.context, gc, lg );
 	parse_materials( iscene.materials, "data/code/mat/",&mut scene.context, gc, lg );
 	let c1 = engine::load::get_time();
-	lg.add(fmt!( "\t[p] Materials: %f sec", c1-c0 ));
+	lg.add(format!( "\t[p] Materials: {:f} sec", c1-c0 ));
 	// nodes and stuff
 	let get_input = |mesh_name : ~str|	{
 		let vao = match opt_vao	{
@@ -254,7 +254,7 @@ pub fn parse( path : &str, iscene : &gen::Scene, custom : &[gen::Material], gc :
 		parse_child( child, root, &mut scene, |s| get_input(s), lg );
 	}
 	let c2 = engine::load::get_time();
-	lg.add(fmt!( "\t[p] Objects: %f sec", c2-c1 ));
+	lg.add(format!( "\t[p] Objects: {:f} sec", c2-c1 ));
 	// armatures-1
 	for (_,arm) in scene.context.armatures.iter()	{
 		let name = &arm.root.name;
@@ -263,7 +263,7 @@ pub fn parse( path : &str, iscene : &gen::Scene, custom : &[gen::Material], gc :
 		arm.change_root( root );
 	}
 	let c3 = engine::load::get_time();
-	lg.add(fmt!( "\t[p] Total: %f sec", c3-c0 ));
+	lg.add(format!( "\t[p] Total: {:f} sec", c3-c0 ));
 	// done
 	scene
 }

@@ -33,7 +33,7 @@ impl Mesh	{
 			gl::TRIANGLES		|
 			gl::TRIANGLE_STRIP	|
 			gl::TRIANGLE_FAN		=> 3u,
-			_	=> fail!("Unknown poly type: %d", self.poly_type as int)
+			_	=> fail!("Unknown poly type: {:i}", self.poly_type as int)
 		}
 	}
 
@@ -65,7 +65,7 @@ impl gr_low::context::Context	{
 			"3"	=> gl::TRIANGLES,
 			"3s"=> gl::TRIANGLE_STRIP,
 			"3f"=> gl::TRIANGLE_FAN,
-			_	=> fail!("Unknown poly type: %s", poly)
+			_	=> fail!("Unknown poly type: {:s}", poly)
 		};
 		let ats = HashMap::new();
 		Mesh{ name:name, attribs:ats, index:None, poly_type:ptype, num_vert:nv, num_ind:ni, black_list:@mut ~[] }

@@ -2,8 +2,9 @@ extern mod cgmath;
 extern mod engine;
 
 use std;
-use cgmath::{angle,rotation,vector};
-use cgmath::quaternion::ToQuat;
+use cgmath::{angle,vector};
+use cgmath::angle::ToRad;
+use cgmath::quaternion::Quat;
 use cgmath::point::*;
 use cgmath::vector::*;
 use engine::{gr_low,gr_mid};
@@ -124,7 +125,7 @@ pub trait TopologyGrid	{
 
 impl TopologyGrid for Grid	{
 	fn get_location( &self, index : uint )-> Location	{
-		Point2::new( (index%self.nseg) as int, (index/self.nseg) as int )
+		Point2::new( (index % self.nseg) as int, (index / self.nseg) as int )
 	}
 	fn get_index( &self, d : Location )-> Option<uint>	{
 		let ns = self.nseg as int;
@@ -178,10 +179,10 @@ impl GeometryGrid for Grid	{
 		let mut center = self.get_cell_center( pos );
 		center.z = elevation;
 		let angle = angle::deg( (orient as f32) * 90f32 );
-		let rot = rotation::AxisAngle::new( vector::Vec3::unit_z(), angle );
+		let rot = Quat::from_axis_angle( &vector::Vec3::unit_z(), angle.to_rad() );
 		QuatSpace	{
 			position 	: center,
-			orientation	: rot.to_quat(),
+			orientation	: rot,
 			scale		: 1.0,
 		}
 	}

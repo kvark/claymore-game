@@ -32,7 +32,7 @@ impl context::ProxyState for Surface	{
 
 impl ToStr for Surface	{
 	fn to_str( &self )-> ~str	{
-		fmt!( "Surface(h=%d, %ux%u, samples=%u)", *self.handle as int,
+		format!( "Surface(h={:i}, {:u}x{:u}, samples={:u})", *self.handle as int,
 			self.width, self.height, self.samples )
 	}
 }
@@ -63,8 +63,8 @@ impl ToStr for Target	{
 		match self	{
 			&TarEmpty	=> ~"Empty",
 			&TarSurface(s)	=> s.to_str(),
-			&TarTexture(t,l)	=> fmt!( "%s.lod[%u]", t.to_str(), l ),
-			&TarTextureLayer(t,r,l)	=> fmt!("%s.layer[%u].lod[%u]", t.to_str(), r, l ),
+			&TarTexture(t,l)	=> format!( "{:s}.lod[{:u}]", t.to_str(), l ),
+			&TarTextureLayer(t,r,l)	=> format!("{:s}.layer[{:u}].lod[{:u}]", t.to_str(), r, l ),
 		}
 	}
 }
@@ -170,7 +170,7 @@ impl Rect	{
 
 impl ToStr for Rect	{
 	fn to_str( &self )-> ~str	{
-		fmt!( "[%u.%u : %u.%u]", self.x, self.y, self.w, self.h )
+		format!( "[{:u}.{:u} : {:u}.{:u}]", self.x, self.y, self.w, self.h )
 	}
 }
 
@@ -283,7 +283,7 @@ impl Binding	{
 			if code == gl::FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT	{~"missing"}	else
 			if code == gl::FRAMEBUFFER_UNSUPPORTED					{~"hardware"}	else
 			{~"unknown"};
-		fail!("FBO %d is incomplete: %s", *self.active.handle as int, message)
+		fail!("FBO {:i} is incomplete: {:s}", *self.active.handle as int, message)
 	}
 }
 

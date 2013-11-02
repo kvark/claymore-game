@@ -78,7 +78,7 @@ fn init( wid : uint, het : uint ) -> Sample	{
 	};
 	let tex0 = @font_anabel.bake( &ct, ~"Hello, world!\nClaymore text demo is here!", max_size );
 	let b0 = bman.spawn( &ct, (-0.9f32,-0.8f32), tex0, 0x2020FFFF );
-	let tex1 = @font_vera.bake( &ct, fmt!(
+	let tex1 = @font_vera.bake( &ct, format!(
 		"There is a single bubble texture in this demo, and the size is just %ux%u.\n%s",
 		bman.t_bubble.width, bman.t_bubble.height,
 		"It is drawn together with the text using a very smart bubble shader."),
@@ -127,7 +127,7 @@ fn failGLFW( where: &static/str )	{
 	let code = glfw3::get_error();
 	io::println(~"GLFW error: " + glfw3::error_string(code));
 	glfw3::terminate();
-	fail( fmt!("glfw%s() failed\n",where) );
+	fail( format!("glfw%s() failed\n",where) );
 }
 
 

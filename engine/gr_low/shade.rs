@@ -45,8 +45,8 @@ impl Binding	{
 #[deriving(Clone)]
 pub enum Uniform	{
 	Uninitialized,
-	UniFloat(float),
-	UniInt(int),
+	UniFloat(f32),
+	UniInt(i32),
 	UniFloatVec(Vec4<f32>),
 	UniIntVec(Vec4<i32>),
 	UniFloatVecArray(~[Vec4<f32>]),
@@ -114,12 +114,12 @@ impl Parameter	{
 			gl::FLOAT	=> {
 				let mut v = 0f32;
 				unsafe{ gl::GetUniformfv( **h, loc, ptr::to_mut_unsafe_ptr(&mut v) ); }
-				UniFloat(v as float)
+				UniFloat(v)
 			},
 			gl::INT	=>	{
 				let mut v = 0i32;
 				unsafe{ gl::GetUniformiv( **h, loc, ptr::to_mut_unsafe_ptr(&mut v) ); }
-				UniInt(v as int)
+				UniInt(v)
 			},
 			gl::FLOAT_VEC4	=>	{
 				let mut v = Vec4::zero();
@@ -144,7 +144,7 @@ impl Parameter	{
 	fn write( &self )	{
 		let loc = *self.loc;
 		match &*self.value	{
-			&Uninitialized	=> fail!("Uninitialized parameter at location %d", loc as int),
+			&Uninitialized	=> fail!("Uninitialized parameter at location {:i}", loc as int),
 			&UniFloat(v)	=> gl::Uniform1f( loc, v as gl::types::GLfloat ),
 			&UniInt(v)		=> gl::Uniform1i( loc, v as gl::types::GLint ),
 			&UniFloatVec(ref v)		=> unsafe{ gl::Uniform4fv( loc, 1, ptr::to_unsafe_ptr(&v.x) )},
@@ -173,23 +173,23 @@ impl DataMap	{
 		for (name,val) in self.iter()	{
 			let sv = match val	{
 				&Uninitialized		=> ~"uninitialized",
-				&UniFloat(v)		=> fmt!("float(%f)",v),
-				&UniInt(v)			=> fmt!("int(%i)",v),
-				&UniFloatVec(ref v)	=> fmt!("float4(%f,%f,%f,%f)",
-					v.x as float, v.y as float, v.z as float, v.w as float),
-				&UniIntVec(ref v)	=> fmt!("int4(%i,%i,%i,%i)",
-					v.x as int, v.y as int, v.z as int, v.w as int),
+				&UniFloat(v)		=> format!("float({:f})",v),
+				&UniInt(v)			=> format!("int({:i})",v),
+				&UniFloatVec(ref v)	=> format!("float4({:f},{:f},{:f},{:f})",
+					v.x, v.y, v.z, v.w),
+				&UniIntVec(ref v)	=> format!("int4({:i},{:i},{:i},{:i})",
+					v.x, v.y, v.z, v.w),
 				&UniFloatVecArray(ref _v)		=> ~"float4[]",
-				&UniMatrix(b, ref _v)			=> fmt!("mat4(), transpose=%b", b),
+				&UniMatrix(b, ref _v)			=> format!("mat4(), transpose={:b}", b),
 				&UniTexture(u, ref t, ref os)	=>	{
 					let smp = match os	{
 						&Some(ref s) => ~"\n\t\t\t" + s.to_str(),
 						&None => ~""
 					};
-					fmt!("slot[%u]: %s%s", u, t.to_str(), smp)
+					format!("slot[{:u}]: {:s}{:s}", u, t.to_str(), smp)
 				},
 			};
-			lg.add(fmt!( "\t\t%s\t= %s", *name, sv ));
+			lg.add(format!( "\t\t{:s}\t= {:s}", *name, sv ));
 		}
 	}
 }
@@ -279,7 +279,7 @@ fn query_attributes( h : &ProgramHandle, lg : &journal::Log )-> AttriMap	{
 	}
 	let mut info_bytes	= vec::from_elem( max_len as uint, 0 as gl::types::GLchar );
 	let raw_bytes		= vec::raw::to_mut_ptr(info_bytes);
-	lg.add(fmt!( "\tQuerying %d attributes:", num as int ));
+	lg.add(format!( "\tQuerying {:i} attributes:", num as int ));
 	let mut rez	: HashMap<~str,Attribute>	= HashMap::with_capacity::( num as uint );
 	for i in range(0u,num as uint)	{
 		let mut length	= 0 as gl::types::GLint;
@@ -295,7 +295,7 @@ fn query_attributes( h : &ProgramHandle, lg : &journal::Log )-> AttriMap	{
 			let loc = gl::GetAttribLocation( **h, raw_str );
 			(name,loc)
 		};
-		lg.add(fmt!( "\t\t[%d] = '%s',\tformat %d", loc as int, name, storage as int ));
+		lg.add(format!( "\t\t[{:i}] = '{:s}',\tformat {:i}", loc as int, name, storage as int ));
 		rez.insert( name, Attribute{ loc:loc as uint, storage:storage, size:size as uint } );
 	}
 	rez
@@ -312,7 +312,7 @@ fn query_parameters( h : &ProgramHandle, lg : &journal::Log )-> ParaMap	{
 	}
 	let mut info_bytes	= vec::from_elem( max_len as uint, 0 as gl::types::GLchar );
 	let raw_bytes		= vec::raw::to_mut_ptr(info_bytes);
-	lg.add(fmt!( "\tQuerying %d parameters:", num as int ));
+	lg.add(format!( "\tQuerying {:i} parameters:", num as int ));
 	let mut rez	: HashMap<~str,Parameter>	= HashMap::with_capacity( num as uint );
 	for i in range(0u,num as uint)	{
 		let mut length	= 0 as gl::types::GLint;
@@ -328,7 +328,7 @@ fn query_parameters( h : &ProgramHandle, lg : &journal::Log )-> ParaMap	{
 			let loc = gl::GetUniformLocation( **h, raw_str );
 			(name,loc)
 		};
-		lg.add(fmt!( "\t\t[%d-%d]\t= '%s',\tformat %d", loc as int, ((loc + size) as int) -1, name, storage as int ));
+		lg.add(format!( "\t\t[{:i}-{:i}]\t= '{:s}',\tformat {:i}", loc as int, ((loc + size) as int) -1, name, storage as int ));
 		let p = Parameter{ loc:Location(loc), storage:storage, size:size as uint, value:@mut Uninitialized };
 		//p.read( h );	// no need to read them here
 		rez.insert( name, p );
@@ -345,7 +345,7 @@ pub fn check_sampler( target : gl::types::GLenum, storage : gl::types::GLenum )	
 		gl::SAMPLER_2D_RECT		=> gl::TEXTURE_RECTANGLE,
 		gl::SAMPLER_2D_ARRAY		=> gl::TEXTURE_2D_ARRAY,
 		gl::SAMPLER_3D			=> gl::TEXTURE_3D,
-		_	=> fail!("Unknown sampler: %x", storage as uint)
+		_	=> fail!("Unknown sampler: 0x{:x}", storage as uint)
 	};
 	assert!( target == expected_target );
 }
@@ -355,14 +355,14 @@ pub fn map_shader_type( t : char )-> gl::types::GLenum	{
 		'v'	=> gl::VERTEX_SHADER,
 		'g' => gl::GEOMETRY_SHADER,
 		'f'	=> gl::FRAGMENT_SHADER,
-		_	=> fail!("Unknown shader type: %c", t)
+		_	=> fail!("Unknown shader type: {:c}", t)
 	}
 }
 
 
 impl context::Context	{
 	pub fn create_shader( &self, t : char, code : &str )-> @Object	{
-		assert_eq!( std::sys::size_of::<gl::types::GLchar>(), 1 );
+		assert_eq!( std::mem::size_of::<gl::types::GLchar>(), 1 );
 		let target = map_shader_type(t);
 		let h = ObjectHandle( gl::CreateShader(target) );
 		let mut length = code.len() as gl::types::GLint;
@@ -399,7 +399,7 @@ impl context::Context	{
 			gl::AttachShader( *h, *s.handle );
 		}
 		gl::LinkProgram( *h );
-		lg.add(fmt!( "Linked program %d", *h as int ));
+		lg.add(format!( "Linked program {:i}", *h as int ));
 		// get info message
 		let mut status = 0 as gl::types::GLint;
 		let mut length = 0 as gl::types::GLint;
@@ -459,7 +459,7 @@ impl context::Context	{
 				},
 				Some(value)	=>	{
 					if *par.value != *value	{
-						//io::println(fmt!( "Uploading value '%s'", *name ));
+						//io::println(format!( "Uploading value '{:s}'", *name ));
 						*par.value = (*value).clone();
 						par.write();
 					}
@@ -469,7 +469,7 @@ impl context::Context	{
 						@Uninitialized	=> ~"not inialized",
 						_				=> ~"missing",
 					};
-					fail!("Program %d parameter is %s: name=%s, loc=%d",
+					fail!("Program {:i} parameter is {:s}: name={:s}, loc={:i}",
 						*p.handle as int, msg, *name, *par.loc as int)
 				}
 			}

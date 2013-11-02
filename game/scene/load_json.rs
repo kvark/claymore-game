@@ -1,5 +1,6 @@
-use std::{io,path};
+use std::path;
 use std::hashmap::HashMap;
+use std::rt::io;
 use extra::json;
 use extra::serialize::{Decoder,Decodable};
 
@@ -13,11 +14,12 @@ use scene::common;
 
 
 pub fn load_config<T:Decodable<json::Decoder>>( path : &str )-> T	{
-	let rd = match io::file_reader(&path::Path(path))	{
-		Ok(reader)	=> reader,
-		Err(e)		=> fail!( e.to_str() ),
+	let p = path::Path::new( path );
+	let mut rd = match io::file::open( &p, io::Open, io::Read )	{
+		Some(reader)	=> reader,
+		None	=> fail!( "Unable to read {:s}", path ),
 	};
-	match json::from_reader(rd)	{
+	match json::from_reader(&mut rd as &mut io::Reader)	{
 		Ok(js)	=> Decodable::decode( &mut json::Decoder(js) ),
 		Err(e)	=> fail!( e.to_str() ),
 	}
@@ -118,11 +120,11 @@ impl<D:Decoder> Decodable<D> for ShaderParam	{
 			let kind : ~str		= d.read_struct_field("type",	1u, Decodable::decode );
 			let value = match kind	{
 				~"scalar"	=> {
-					let v : float	= d.read_struct_field("value",	2u, Decodable::decode );
+					let v : f32	= d.read_struct_field("value",	2u, Decodable::decode );
 					gr_low::shade::UniFloat(v)
 				},
 				~"color"	=> {
-					let c : uint	= d.read_struct_field("value",	2u, Decodable::decode );
+					let c : uint= d.read_struct_field("value",	2u, Decodable::decode );
 					let v = color_to_vec( &gr_low::rast::Color::new(c) );
 					gr_low::shade::UniFloatVec(v)
 				},
@@ -166,7 +168,7 @@ impl MaterialInfo	{
 			let (sx,sy,_) = tinfo.scale;
 			let (ox,oy,_) = tinfo.offset;
 			let u_transform = Vec4::new(sx,sy,ox,oy);
-			data.insert( fmt!("u_Tex%uTransform",i), gr_low::shade::UniFloatVec(u_transform) );
+			data.insert( format!("u_Tex{:u}Transform",i), gr_low::shade::UniFloatVec(u_transform) );
 		}
 	}
 }
@@ -176,8 +178,8 @@ impl MaterialInfo	{
 
 #[deriving(Decodable)]
 pub struct ProjectorInfo	{
-	fov		: float,
-	range	: (float,float),
+	fov		: f32,
+	range	: (f32,f32),
 }
 
 impl ProjectorInfo	{
@@ -210,11 +212,11 @@ pub struct LightInfo	{
 	node	: ~str,
 	kind	: ~str,
 	color	: (f32,f32,f32),
-	distance: float,
-	energy	: float,
-	attenu	: (float,float),
+	distance: f32,
+	energy	: f32,
+	attenu	: (f32,f32),
 	sphere	: bool,
-	params	: ~[float],
+	params	: ~[f32],
 }
 
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -//
@@ -286,7 +288,7 @@ pub fn load_scene( path : &str, gc : &mut gr_low::context::Context,
 	let scene = load_config::<SceneInfo>( path + ".json" );
 	let mat_config = load_config::<~[MaterialInfo]>( path + ".mat.json" );
 	let c1 = engine::load::get_time();
-	lg.add(fmt!( "\t[p] Parse config: %f", c1-c0 ));
+	lg.add(format!( "\t[p] Parse config: {:f}", c1-c0 ));
 	// materials
 	let mut tex_cache		: HashMap<~str,@gr_low::texture::Texture>	= HashMap::new();
 	let mut map_material	: HashMap<~str,@gr_mid::draw::Material>	= HashMap::new();
@@ -326,12 +328,12 @@ pub fn load_scene( path : &str, gc : &mut gr_low::context::Context,
 		map_data.insert( imat.name.clone(), data );
 	}
 	let c2 = engine::load::get_time();
-	lg.add(fmt!( "\t[p] Materials: %f", c2-c1 ));	
+	lg.add(format!( "\t[p] Materials: {:f}", c2-c1 ));	
 	// nodes
 	let mut map_node : HashMap<~str,@mut engine::space::Node> = HashMap::new();
 	make_nodes( &scene.nodes, None, &mut map_node );
 	let c3 = engine::load::get_time();
-	lg.add(fmt!( "\t[p] Nodes: %f", c3-c2 ));
+	lg.add(format!( "\t[p] Nodes: {:f}", c3-c2 ));
 	// context
 	let mut context = common::SceneContext{
 		prefix		: path.to_owned(),
@@ -346,7 +348,7 @@ pub fn load_scene( path : &str, gc : &mut gr_low::context::Context,
 	// armatures
 	context.read_armatures( path, lg );
 	let c4 = engine::load::get_time();
-	lg.add(fmt!( "\t[p] Armatures: %f", c4-c3 ));
+	lg.add(format!( "\t[p] Armatures: {:f}", c4-c3 ));
 	// entities
 	let entity_group = parse_group( &mut context, scene.entities, gc, opt_vao, lg );
 	// cameras
@@ -356,7 +358,7 @@ pub fn load_scene( path : &str, gc : &mut gr_low::context::Context,
 		map_camera.insert( root.name.clone(),
 			@common::Camera{ node:root,
 				proj:icam.proj.spawn(),
-				ear:engine::audio::Listener{ volume:0f },
+				ear:engine::audio::Listener{ volume:0.0 },
 			}
 		);
 	}
@@ -387,8 +389,8 @@ pub fn load_scene( path : &str, gc : &mut gr_low::context::Context,
 		});
 	}
 	let c5 = engine::load::get_time();
-	lg.add(fmt!( "\t[p] Objects: %f", c5-c4 ));
-	lg.add(fmt!( "\t[p] Total: %f", c5-c0 ));
+	lg.add(format!( "\t[p] Objects: {:f}", c5-c4 ));
+	lg.add(format!( "\t[p] Total: {:f}", c5-c0 ));
 	// done
 	common::Scene{
 		context		: context,

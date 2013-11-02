@@ -76,7 +76,7 @@ impl ToStr for Sampler	{
 			gl::CLAMP_TO_EDGE	=> ~"clamp",
 			_							=> ~"unknown"
 		};
-		fmt!( "Sampler(filter=%s, wrap=%s, compare=%b)", sf, sw, !self.compare.is_none() )
+		format!( "Sampler(filter={:s}, wrap={:s}, compare={:b})", sf, sw, !self.compare.is_none() )
 	}
 }
 
@@ -108,7 +108,7 @@ impl context::ProxyState for Texture	{
 
 impl ToStr for Texture	{
 	fn to_str( &self )-> ~str	{
-		fmt!( "Texture(h=%d, %ux%ux%u, samples=%u)", *self.handle as int,
+		format!( "Texture(h={:i}, {:u}x{:u}x{:u}, samples={:u})", *self.handle as int,
 			self.width, self.height, self.depth, self.samples )
 	}
 }
@@ -147,7 +147,7 @@ pub fn map_int_format( s : &str )-> gl::types::GLint	{
 		"r8"		=> gl::R8,
 		"rgba8"		=> gl::RGBA8,
 		"rgba16f"	=> gl::RGBA16F,
-		_	=> fail!("Can not recognize texture internal format %s", s)
+		_	=> fail!("Can not recognize texture internal format {:s}", s)
 	}) as gl::types::GLint
 }
 
@@ -161,7 +161,7 @@ pub fn map_pix_format( s : &str )-> gl::types::GLenum	{
 		"bgra"	=> gl::BGRA,
 		"depth"	=> gl::DEPTH_COMPONENT,
 		"ds"	=> gl::DEPTH_STENCIL,
-		_	=> fail!("Can not recognize texture pixel format %s", s)
+		_	=> fail!("Can not recognize texture pixel format {:s}", s)
 	}
 }
 
@@ -193,7 +193,7 @@ impl context::ProxyState for Binding	{
 			let t = *slot.target;
 			let query =	if t == gl::TEXTURE_2D	{gl::TEXTURE_BINDING_2D}
 			else	{
-				fail!( "Unkown binding %d", *slot.target as int )
+				fail!( "Unkown binding {:i}", *slot.target as int )
 			};
 			self.switch( slot.unit );
 			unsafe{ gl::GetIntegerv( query, ptr::to_mut_unsafe_ptr(&mut id) )};
@@ -431,7 +431,7 @@ pub fn map_target( s : &str )-> Target	{
 		&"2DArray"	=> gl::TEXTURE_2D_ARRAY,
 		//&"2DMS"		=> gl::TEXTURE_2D_MULTISAMPLE,	//TEMP!
 		&"3D"		=> gl::TEXTURE_3D,
-		_	=> fail!( "Unable to map texture target %s", s )
+		_	=> fail!( "Unable to map texture target {:s}", s )
 	})
 }
 

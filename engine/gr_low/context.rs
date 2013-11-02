@@ -53,8 +53,8 @@ impl GLType for f32	{
 
 pub struct ClearData	{
 	color	: rast::Color,
-	depth	: float,
-	stencil	: uint,
+	depth	: f32,
+	stencil	: u32,
 }
 
 impl ProxyState for ClearData	{
@@ -71,8 +71,8 @@ impl ProxyState for ClearData	{
 		self.color.g==color[1] as f32 &&
 		self.color.b==color[2] as f32 &&
 		self.color.a==color[3] as f32 &&
-		self.depth==depth as float &&
-		self.stencil==stencil as uint
+		self.depth==depth as f32 &&
+		self.stencil==stencil as u32
 	}
 }
 
@@ -106,14 +106,14 @@ pub fn create( loader : &fn(symbol: &str) -> Option<extern "C" fn()>,
 		max_color_attachments : read_cap( gl::MAX_COLOR_ATTACHMENTS ),
 	};
 	let rast	= rast::make_default( wid, het );
-	let color	= rast::Color{r:0f32,g:0f32,b:0f32,a:0f32};
+	let color	= rast::Color{ r:0.0, g:0.0, b:0.0, a:0.0 };
 	let rbind = frame::RenBinding::new( wid, het ,ns );
 	let def_fb	= frame::Buffer::new_default( rbind.default );
 	// fill up the context
 	Context{
 		caps				: caps,
 		rast				: rast,
-		clear_data			: ClearData{ color:color, depth:1f, stencil:0u },
+		clear_data			: ClearData{ color:color, depth:1.0, stencil:0 },
 		call_count			: 0,
 		shader				: shade::Binding::new(),
 		vertex_array		: buf::VaBinding::new(),
@@ -160,7 +160,7 @@ impl Context	{
 			gl::INVALID_FRAMEBUFFER_OPERATION	=> ~"framebuffer",
 			_	=> ~"unknown"
 		};
-		fail!("%s: GL error 0x%x (%s)", where, code as uint, message)
+		fail!("{:s}: GL error 0x{:x} ({:s})", where, code as uint, message)
 	}
 	pub fn set_clear_color( &mut self, c : &rast::Color )	{
 		if self.clear_data.color != *c	{
@@ -170,13 +170,13 @@ impl Context	{
 				c.b as gl::types::GLfloat, c.a as gl::types::GLfloat );
 		}
 	}
-	pub fn set_clear_depth( &mut self, d : float )	{
+	pub fn set_clear_depth( &mut self, d : f32 )	{
 		if self.clear_data.depth != d	{
 			self.clear_data.depth = d;
 			gl::ClearDepth( d as gl::types::GLdouble );
 		}
 	}
-	pub fn set_clear_stencil( &mut self, s : uint )	{
+	pub fn set_clear_stencil( &mut self, s : u32 )	{
 		if self.clear_data.stencil != s	{
 			self.clear_data.stencil = s;
 			gl::ClearStencil( s as gl::types::GLint );

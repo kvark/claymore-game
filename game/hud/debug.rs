@@ -57,7 +57,7 @@ impl<'self,T> Iterator<ListIterUnit<'self,T>> for MenuListIter<'self,T>	{
 						self.item = &'self list[head];
 						Some(( name, list.as_slice() ))
 					},
-					_	=> fail!("Unexpected end of debug menu on item %s", self.item.name),
+					_	=> fail!("Unexpected end of debug menu on item {:s}", self.item.name),
 				}
 			},
 			[]	=> None,
@@ -138,7 +138,7 @@ impl<T> Menu<T>	{
 			let ground = if (i as u8)==selected	{
 				gen::GroundSolid(0x80808080u)
 			} else {
-				gen::GroundFrame(0x80808080u, 2f)
+				gen::GroundFrame(0x80808080u, 2.0)
 			};
 			gen::Child( item.name.clone(), gen::ElBox(
 				gen::SizeRel( 1.0 ), gen::SizeAbs( 30 ),
@@ -164,7 +164,7 @@ impl<T> Menu<T>	{
 		self.selection.iter().map( |&sel_id|	{
 			let list = match item.action	{
 				ActionList(ref l) if l.len()>(sel_id as uint)	=> l.as_slice(),
-				_	=> fail!("Unexpected tail of debug menu: %s", item.name),
+				_	=> fail!("Unexpected tail of debug menu: {:s}", item.name),
 			};
 			item = &list[sel_id];
 			gen::Child( ~"group", gen::ElBox(
@@ -178,7 +178,7 @@ impl<T> Menu<T>	{
 		}).to_owned_vec()
 	}
 	
-	pub fn build( &self, alpha : float )-> gen::Screen	{
+	pub fn build( &self, alpha : f32 )-> gen::Screen	{
 		let offset = [100u,100u];
 		gen::Screen	{
 			alpha	: alpha,

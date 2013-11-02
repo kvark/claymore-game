@@ -26,10 +26,10 @@ pub fn create_data( ct : &mut gr_low::context::Context, light : @scene::Light, s
 	rast.view = gr_low::rast::Viewport( gr_low::frame::Rect::new(size,size) );
 	rast.set_depth( "<", true );
 	rast.prime.cull = true;
-	rast.set_offset(2f);
+	rast.set_offset(2.0);
 	let cdata = gr_mid::call::ClearData{
 		color	: None,
-		depth	: Some(1f),
+		depth	: Some(1.0),
 		stencil	: None,
 	};
 	let t_solid = gr_mid::draw::load_technique( "data/code/tech/shadow/spot" );

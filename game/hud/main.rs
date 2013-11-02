@@ -26,14 +26,14 @@ fn get<T>( children : &[gen::Child], path : &str, fun : &fn(&str,&gen::Element)-
 					let rest = path.slice_from( p+1 );
 					match elem	{
 						&gen::ElBox(_, _, ref box)	=> get( box.children, rest, fun ),
-						_	=> fail!("Hud child is not a frame: %s", name)
+						_	=> fail!("Hud child is not a frame: {:s}", name)
 					}
 				},
 				None	=> fun(name,elem),
 			}
 		}
 	}
-	fail!("Hud child not found: %s", name)
+	fail!("Hud child not found: {:s}", name)
 }
 
 fn modify( children : &mut ~[gen::Child], path : &str, fun : &fn(&str,&mut gen::Element) )	{
@@ -51,14 +51,14 @@ fn modify( children : &mut ~[gen::Child], path : &str, fun : &fn(&str,&mut gen::
 						&gen::ElBox(_, _, ref mut box)	=>	{
 							modify( &mut box.children, rest, fun );
 						},
-						_	=> fail!("Hud child is not a frame: %s", name)
+						_	=> fail!("Hud child is not a frame: {:s}", name)
 					}
 				},
 				None	=> fun(name,elem),
 			}
 		}
 	}
-	fail!("Hud child not found: %s", name)
+	fail!("Hud child not found: {:s}", name)
 }
 
 
@@ -192,7 +192,7 @@ impl Context	{
 			let size = match element	{
 				&gen::ElImage(ref path)	=>	{
 					let t = *self.cache_images.find( path ).
-						expect(fmt!( "Image '%s' is not loaded", *path ));
+						expect(format!( "Image '{:s}' is not loaded", *path ));
 					let mut data = shade::DataMap::new();
 					data.insert( ~"t_Image",		shade::UniTexture(
 						0, t, Some(self.sampler_image) ));
@@ -205,9 +205,9 @@ impl Context	{
 				},
 				&gen::ElText(ref text)	=>	{
 					let fc = self.cache_fonts.find( &text.font ).
-						expect(fmt!( "Font '%s' is not loaded", text.font.path ));
+						expect(format!( "Font '{:s}' is not loaded", text.font.path ));
 					let t = *fc.cache.find( &text.value ).
-						expect(fmt!( "Text '%s' is not loaded", text.value ));
+						expect(format!( "Text '{:s}' is not loaded", text.value ));
 					let mut data = shade::DataMap::new();
 					data.insert( ~"t_Text",	shade::UniTexture(
 						0, t, Some(self.sampler_text) ));

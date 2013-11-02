@@ -8,6 +8,9 @@
 #[license = "MIT"];
 #[crate_type = "lib"];
 
+#[feature(managed_boxes)];
+#[feature(globs)];
+
 
 extern mod extra;
 extern mod freetype;

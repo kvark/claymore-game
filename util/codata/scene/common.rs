@@ -14,7 +14,7 @@ pub struct Global	{
 }
 
 pub enum MaterialData	{
-	DataInt(int),
+	DataInt(i32),
 	DataScalar(Scalar),
 	DataVector(Vector4),
 	DataColor(Color),

@@ -4,9 +4,11 @@ extern mod gen_scene;
 
 use std;
 use glfw;
-use cgmath::{angle,rotation};
+use cgmath::angle;
+use cgmath::angle::ToRad;
 use cgmath::quaternion::*;
 use cgmath::vector::*;
+use engine::anim;
 use engine::anim::{Act,Player};
 use engine::{gr_low,gr_mid};
 use engine::space::Space;
@@ -30,7 +32,7 @@ struct CamControl	{
 	origin		: Vec3<f32>,
 	speed_rot	: f32,
 	speed_zoom	: f32,
-	last_scroll	: Option<float>,
+	last_scroll	: Option<f32>,
 	in_rotation	: bool,
 }
 
@@ -39,9 +41,9 @@ impl CamControl	{
 		// calculate rotation
 		if self.in_rotation	{
 			let dt = 1f32/30f32;	//FIXME
-			let axis = Vec3::new( 0f32, 0f32, if state.mouse[0]>0.5f {1f32} else {-1f32} );
+			let axis = Vec3::new( 0f32, 0f32, if state.mouse[0]>0.5 {1f32} else {-1f32} );
 			let angle = angle::deg( dt as f32 * self.speed_rot );
-			let qr = rotation::AxisAngle::new( axis, angle ).to_quat();
+			let qr = Quat::from_axis_angle( &axis, angle.to_rad() );
 			let sq = engine::space::QuatSpace{
 				position : Vec3::new(0f32,0f32,0f32),
 				orientation : qr, scale : 1f32 };
@@ -49,12 +51,12 @@ impl CamControl	{
 		}
 	}
 
-	pub fn on_scroll( &mut self, scroll : float )	{
+	pub fn on_scroll( &mut self, scroll : f32 )	{
 		let v_origin = self.origin.sub_v( &self.node.space.position );
 		let dist_min = 20f32;
 		let dist_max = 200f32;
 		let dist = v_origin.length();
-		let dist_raw = dist - (scroll as f32) * self.speed_zoom;
+		let dist_raw = dist - scroll * self.speed_zoom;
 		let dist_diff = std::num::clamp( dist_raw, dist_min, dist_max ) - dist;
 		let p = (self.node.space.position).sub_v( &v_origin.mul_s(dist_diff/dist) );
 		self.node.space.position = p;
@@ -87,7 +89,7 @@ pub struct Scene	{
 	lbuf	: Option<render::lbuf::Context>,
 	lvolume	: render::lbuf::LightVolume,
 	shadow	: render::shadow::Data,
-	start	: float,
+	start	: anim::float,
 	hud_screen	: hud::Screen,
 	hud_context	: hud::Context,
 	hud_debug	: @gr_low::shade::Program,
@@ -99,7 +101,7 @@ pub struct Scene	{
 
 
 impl Scene	{
-	pub fn reset( &mut self, time : float )	{
+	pub fn reset( &mut self, time : anim::float )	{
 		self.start = time;
 	}
 
@@ -145,8 +147,8 @@ impl Scene	{
 			&input::EvRender(_)	=>	{
 				if true	{
 					let (mx,my) = self.hud_screen.root.min_size;
-					let x = ((0f+state.mouse[0]) * (mx as float)) as int;
-					let y = ((1f-state.mouse[1]) * (my as float)) as int;
+					let x = ((0.0+state.mouse[0]) * (mx as f32)) as int;
+					let y = ((1.0-state.mouse[1]) * (my as f32)) as int;
 					self.mouse_point = (x,y);
 					//let name = root.trace( x, y, lg );
 					//io::println( ~"Click: " + name );
@@ -158,14 +160,14 @@ impl Scene	{
 		}
 	}
 
-	pub fn render( &mut self, el : &main::Elements, time : float,
+	pub fn render( &mut self, el : &main::Elements, time : anim::float,
 			output : &gr_mid::call::Output, gc : &mut gr_low::context::Context,
 			lg : &engine::journal::Log  )	{
 		// clear screen
 		let cdata = gr_mid::call::ClearData{
 			color	:Some( gr_low::rast::Color::new(0x8080FFFF) ),
-			depth	:Some( 1f ),
-			stencil	:Some( 0u ),
+			depth	:Some( 1.0 ),
+			stencil	:Some( 0u32 ),
 		};
 		let c0 = gr_mid::call::CallClear( cdata, output.clone(), self.rast_solid.mask );
 		let aspect = output.area.aspect();
@@ -187,7 +189,7 @@ impl Scene	{
 			let t = time - self.start;
 			let r = self.skel.actions[0];
 			let nloops = (t / r.duration) as uint;
-			let t2 = t - r.duration * (nloops as float);
+			let t2 = t - r.duration * (nloops as anim::float);
 			self.skel.set_record( r, t2 );
 			//self.skel.fill_data( self.girl.mut_data() );
 		}
@@ -341,7 +343,7 @@ pub fn create( el : &main::Elements, gc : &mut gr_low::context::Context, fcon : 
 	group.swap_entity( &"boots", &mut details );
 	let cape = group.divide( &"polySurface172" );
 	let hair = group.divide( &"Hair_Geo2" );
-	lg.add(fmt!( "Group size: %u", group.len() ));
+	lg.add(format!( "Group size: {:u}", group.len() ));
 	let envir = {
 		let mesh = @gr_mid::mesh::create_quad( gc );
 		let mut data = gr_low::shade::DataMap::new();
@@ -394,10 +396,10 @@ pub fn create( el : &main::Elements, gc : &mut gr_low::context::Context, fcon : 
 	let cam = *scene.cameras.get(&~"Camera");
 	//cam.proj = shadow.light.proj;
 	//cam.node = shadow.light.node;
-	lg.add(fmt!( "Camera fov:%s, range:%f-%f",
+	lg.add(format!( "Camera fov:{:s}, range:{:f}-{:f}",
 		cam.proj.fovy.to_str(),
-		cam.proj.near as float,
-		cam.proj.far as float ));
+		cam.proj.near,
+		cam.proj.far ));
 	lg.add( ~"\tWorld :" + cam.node.world_space().to_str() );
 	let control = CamControl{
 		node	: cam.node,
@@ -431,7 +433,7 @@ pub fn create( el : &main::Elements, gc : &mut gr_low::context::Context, fcon : 
 		lbuf		: lbuf,
 		lvolume		: lvolume,
 		shadow	: shadow,
-		start	: 0f,
+		start	: 0.0,
 		hud_screen	: hud_screen,
 		hud_context : hc,
 		hud_debug	: hdebug,

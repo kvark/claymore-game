@@ -10,7 +10,7 @@ use load;
 
 //- - - - - -
 // TYPES	//
-
+pub type float = f32;
 pub struct BufferHandle( al::types::ALuint );
 pub struct SourceHandle( al::types::ALuint );
 
@@ -83,7 +83,7 @@ impl Source	{
 
 
 pub struct Listener	{
-	volume	: float,
+	volume	: f32,
 }
 
 
@@ -96,14 +96,16 @@ pub fn find_format( channels : uint, bits : uint )-> al::types::ALenum	{
 		(1,16)	=> al::ffi::FORMAT_MONO16,
 		(2,8)	=> al::ffi::FORMAT_STEREO8,
 		(2,16)	=> al::ffi::FORMAT_STEREO16,
-		_	=> fail!( "Unknown format: %u channels, %u bits", channels, bits )
+		_	=> fail!( "Unknown format: {:u} channels, {:u} bits", channels, bits )
 	}
 }
 
 impl Context	{
 	pub fn create( dev_name : &str )-> Context	{
-		let dev = alc::Device::open( dev_name );
-		let ctx = dev.create_context( &[] );
+		let dev = alc::Device::open( dev_name ).
+			expect(format!( "Audio device {:s} is not found", dev_name ));
+		let ctx = dev.create_context( &[] ).
+			expect("Unable to create audio context");
 		ctx.make_current();
 		Context	{
 			device	: dev,
@@ -115,7 +117,7 @@ impl Context	{
 	pub fn check( &self )	{
 		let err = unsafe{ al::ffi::alGetError() };
 		if err != al::ffi::NO_ERROR	{
-			fail!( "AL error %d", err as int )
+			fail!( "AL error {:i}", err as int )
 		}
 	}
 	
@@ -132,7 +134,7 @@ impl Context	{
 	pub fn create_buffer<T>( &self, channels : uint, bits : uint, byte_rate : uint, 
 		sample_rate : uint, data : ~[T] )-> Buffer	{
 		let mut hid : al::types::ALuint = 0;
-		let size = data.len() * std::sys::size_of::<T>();
+		let size = data.len() * std::mem::size_of::<T>();
 		unsafe{
 			al::ffi::alGenBuffers( 1, ptr::to_mut_unsafe_ptr(&mut hid) );
 			al::ffi::alBufferData( hid, find_format(channels,bits),
@@ -159,14 +161,14 @@ impl Context	{
 }
 
 
-pub fn read_wave_chunk( rd : &load::Reader )-> load::Chunk	{
+pub fn read_wave_chunk( rd : &mut load::Reader )-> load::Chunk	{
 	let name = std::str::from_utf8( rd.get_bytes(4) );
 	let size = rd.get_uint(4);
 	//lg.add( ~"\tEntering " + name );
 	load::Chunk{
 		name	: name,
 		size	: size,
-		finish	: rd.position()+size,
+		finish	: rd.position() + size,
 	}
 }
 
@@ -188,7 +190,7 @@ pub fn load_wav( at : &Context, path : &str, lg : &journal::Log )-> Buffer	{
 	let byte_rate		= rd.get_uint(4);
 	let _byte_align		= rd.get_uint(2);
 	let bits_per_sample	= rd.get_uint(2);
-	lg.add(fmt!( "\tformat:%u, channels:%u, sample_rate:%u, byte_rate:%u",
+	lg.add(format!( "\tformat:{:u}, channels:{:u}, sample_rate:{:u}, byte_rate:{:u}",
 		audio_format, channels, sample_rate, byte_rate ));
 	let is_PCM = audio_format == 1u;
 	if !is_PCM	{

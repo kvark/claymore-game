@@ -69,9 +69,9 @@ impl Technique	{
 	pub fn get_header<'a>( &'a self )-> &'a str	{glsl_header_150}
 	
 	pub fn make_vertex( &self, material : &Material, modifier : @Mod )-> ~str	{
-		let smod = fmt!( "//--- Modifier: %s ---//", modifier.get_name() );
-		let smat = fmt!( "//--- Material: %s ---//", material.name );
-		let stek = fmt!( "//--- Technique: %s ---//", self.name );
+		let smod = format!( "//--- Modifier: {:s} ---//", modifier.get_name() );
+		let smat = format!( "//--- Material: {:s} ---//", material.name );
+		let stek = format!( "//--- Technique: {:s} ---//", self.name );
 		[	self.get_header(),
 			smod				.as_slice(),
 			modifier.get_code(),
@@ -83,8 +83,8 @@ impl Technique	{
 	}
 	
 	pub fn make_fragment( &self, mat : &Material )-> ~str	{
-		let smat = fmt!( "//--- Material: %s ---//", mat.name );
-		let stek = fmt!( "//--- Technique: %s ---//", self.name );
+		let smat = format!( "//--- Material: {:s} ---//", mat.name );
+		let stek = format!( "//--- Technique: {:s} ---//", self.name );
 		[	self.get_header(),
 			smat				.as_slice(),
 			mat.code_fragment	.as_slice(),
@@ -96,10 +96,10 @@ impl Technique	{
 	pub fn link( &self, mat : &Material, modifier : @Mod, ct : &context::Context, lg : &journal::Log )-> Option<@shade::Program>	{
 		if !self.meta_vertex.iter().all(|m|	{ mat.meta_vertex.contains(m) 	})
 		|| !self.meta_fragment.iter().all(|m|	{ mat.meta_fragment.contains(m)	})	{
-			lg.add(fmt!( "Material '%s' rejected by '%s'", mat.name, self.name ));
+			lg.add(format!( "Material '{:s}' rejected by '{:s}'", mat.name, self.name ));
 			return None;
 		}
-		lg.add(fmt!( "Linking material '%s' with technique '%s'", mat.name, self.name ));
+		lg.add(format!( "Linking material '{:s}' with technique '{:s}'", mat.name, self.name ));
 		let s_vert = self.make_vertex( mat, modifier );
 		let s_frag = self.make_fragment( mat );
 		let shaders = if false	{

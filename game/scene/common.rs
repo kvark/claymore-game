@@ -69,8 +69,8 @@ pub enum LightKind	{
 	LiPoint,
 	LiHemi,
 	LiSun,
-	LiSpot(angle::Rad<f32>,float),
-	LiArea(Vec2<f32>,float),
+	LiSpot(angle::Rad<f32>,f32),
+	LiArea(Vec2<f32>,f32),
 }
 
 pub struct Light	{
@@ -111,7 +111,7 @@ impl Light	{
 		}
 	}
 
-	pub fn get_proj_blend( &self, near:f32, far:f32 )-> Option<(Mat4<f32>,float)>	{
+	pub fn get_proj_blend( &self, near:f32, far:f32 )-> Option<(Mat4<f32>,f32)>	{
 		match self.kind	{
 			LiSpot(angle,blend)	=>	{
 				let m = projection::perspective( angle, 1f32, near, far );
@@ -130,7 +130,7 @@ impl Light	{
 		let mut pos = Vec4::new( sw.position.x, sw.position.y, sw.position.z, 1f32 );
 		let col = Vec4::new( self.color.r, self.color.g, self.color.b, self.color.a );
 		let range = Vec4::new( near, far, 0f32, 1f32/(far-near) );
-		//io::println(fmt!("Light near:%f far:%f",near as float,far as float));
+		//io::println(format!("Light near:{:f} far:{:f}",near as float,far as float));
 		match self.kind	{
 			LiSun	=>	{ pos.w = 0f32; },
 			_	=> ()
@@ -178,19 +178,19 @@ impl EntityGroup	{
 	pub fn change_detail( &mut self, detail : engine::object::Entity )-> Option<engine::object::Entity>	{
 		let opt_pos = self.iter().position(|ent|	{managed::mut_ptr_eq(ent.node,detail.node)});
 		self.push( detail );
-		opt_pos.map_move(|pos| { self.swap_remove(pos) })
+		opt_pos.map(|pos| { self.swap_remove(pos) })
 	}
 
 	pub fn swap_entity( &mut self, name : &str, other : &mut EntityGroup )	{
 		let opt_pos = other.iter().position(|ent|	{ std::str::eq_slice(ent.node.name,name) });
-		let e1 = other.swap_remove( opt_pos.expect(fmt!( "Remote entity not found: %s", name )) );
-		let e2 = self.change_detail( e1 ).expect(fmt!( "Local entity not found: %s", name ));
+		let e1 = other.swap_remove( opt_pos.expect(format!( "Remote entity not found: {:s}", name )) );
+		let e2 = self.change_detail( e1 ).expect(format!( "Local entity not found: {:s}", name ));
 		other.push(e2);
 	}
 
 	pub fn exclude( &mut self, name : &str )-> Option<engine::object::Entity>	{
 		self.iter().position(|ent|	{ std::str::eq_slice(ent.node.name,name) }).
-			map_move(|pos| { self.swap_remove(pos) })
+			map(|pos| { self.swap_remove(pos) })
 	}
 }
 
@@ -228,21 +228,21 @@ impl SceneContext	{
 			None	=> (),
 		};
 		let split = mesh_name.split_iter('@').map(|w| w.to_owned()).to_owned_vec();
-		let path = fmt!( "%s/%s.k3mesh", self.prefix, split[split.len()-1u] );
+		let path = format!( "{:s}/{:s}.k3mesh", self.prefix, split[split.len()-1u] );
 		let mut rd = engine::load::Reader::create_std( path );
 		let mut q_mesh = None::<@gr_mid::mesh::Mesh>;
 		if split.len() > 1	{
 			assert!( rd.enter() == ~"*mesh" );
 			while rd.has_more()!=0u	{
 				let mesh = @engine::load::read_mesh( &mut rd, gc, lg );
-				let full_name = fmt!( "%s@%s", mesh.name, split[1] );
+				let full_name = format!( "{:s}@{:s}", mesh.name, split[1] );
 				if full_name == *mesh_name	{
 					q_mesh = Some(mesh);
 				}
 				self.meshes.insert( full_name, mesh );
 			}
 			rd.leave();
-			q_mesh.expect(fmt!( "Mesh '%s' not found in the collection", *mesh_name ))
+			q_mesh.expect(format!( "Mesh '{:s}' not found in the collection", *mesh_name ))
 		}else	{
 			let mesh = @engine::load::read_mesh( &mut rd, gc, lg );
 			self.meshes.insert( mesh_name.clone(), mesh );
@@ -256,21 +256,21 @@ impl SceneContext	{
 			None	=> (),
 		};
 		let split = act_name.split_iter('@').map(|w| w.to_owned()).to_owned_vec();
-		let path = fmt!( "%s/%s.k3act", self.prefix, split[split.len()-1u] );
+		let path = format!( "{:s}/{:s}.k3act", self.prefix, split[split.len()-1u] );
 		let mut rd = engine::load::Reader::create_std( path );
 		let mut q_act = None::<@engine::space::ArmatureRecord>;
 		if split.len() > 1	{
 			assert!( rd.enter() == ~"*action" );
 			while rd.has_more()!=0u	{
 				let act = @engine::load::read_action( &mut rd, *bones, lg );
-				let full_name = fmt!( "%s@%s", act.name, split[1] );
+				let full_name = format!( "{:s}@{:s}", act.name, split[1] );
 				if full_name == *act_name	{
 					q_act = Some(act);
 				}
 				self.actions.insert( full_name, act );
 			}
 			rd.leave();
-			q_act.expect(fmt!( "Action '%s' not found in the collection", *act_name ))
+			q_act.expect(format!( "Action '{:s}' not found in the collection", *act_name ))
 		}else	{
 			let act = @engine::load::read_action( &mut rd, *bones, lg );
 			self.actions.insert( act_name.clone(), act );

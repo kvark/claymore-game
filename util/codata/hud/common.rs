@@ -8,7 +8,7 @@ pub type Color = uint;
 
 pub enum Size	{
 	SizeAbs(uint),
-	SizeRel(float),
+	SizeRel(f32),
 }
 
 pub enum Element	{
@@ -21,7 +21,7 @@ pub enum Element	{
 pub struct Child( ~str, Element );
 
 pub struct Screen	{
-	alpha	: float,
+	alpha	: f32,
 	root	: Box,
 }
 
@@ -33,8 +33,8 @@ pub enum Align	{
 pub enum Ground	{
 	GroundNone,
 	GroundSolid( Color ),
-	GroundFrame( Color, float ),
-	GroundImage( Path, [float, ..2] ),
+	GroundFrame( Color, f32 ),
+	GroundImage( Path, [f32, ..2] ),
 }
 
 pub struct Box	{
@@ -64,7 +64,7 @@ impl Size	{
 	pub fn apply( &self, size : uint )-> uint	{
 		match self	{
 			&SizeAbs(abs)	=> abs,
-			&SizeRel(rel)	=> (rel * (size as float)) as uint,
+			&SizeRel(rel)	=> (rel * (size as f32)) as uint,
 		}
 	}
 }

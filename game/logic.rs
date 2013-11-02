@@ -2,7 +2,7 @@ extern mod glfw;
 extern mod engine;
 extern mod gen_hud;
 
-use engine::{gr_low,gr_mid,journal};
+use engine::{anim,gr_low,gr_mid,journal};
 
 use hud;
 use hud::debug;
@@ -54,7 +54,7 @@ impl Logic	{
 		}
 	}
 
-	pub fn reset( &mut self, time : float )	{
+	pub fn reset( &mut self, time : anim::float )	{
 		match self.screen	{
 			ScreenBattle	=> self.s_battle.reset( time ),
 			//ScreenChar	=> self.s_editor.reset( time ),

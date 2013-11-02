@@ -22,7 +22,7 @@ impl Data	{
 		rast.set_depth( "<=", true );
 		let out = gr_mid::call::Output::new( gc.create_frame_buffer(), pmap );
 		let cdata = gr_mid::call::ClearData{
-			color:None, depth:Some(1f), stencil:None
+			color:None, depth:Some(1.0), stencil:None
 		};
 		let clear = gr_mid::call::CallClear( cdata, out.clone(), rast.mask );
 		Data{
