@@ -145,6 +145,7 @@ impl Scene	{
 			},
 			&input::EvScroll(_,scroll)	=> self.control.on_scroll(scroll),
 			&input::EvRender(_)	=>	{
+				let tv = state.time_view;
 				if true	{
 					let (mx,my) = self.hud_screen.root.min_size;
 					let x = ((0.0+state.mouse[0]) * (mx as f32)) as int;
@@ -153,6 +154,14 @@ impl Scene	{
 					//let name = root.trace( x, y, lg );
 					//io::println( ~"Click: " + name );
 				}
+				if true	{	// update animation
+					let t = tv - self.start;
+					let r = self.skel.actions[0];
+					let nloops = (t / r.duration) as uint;
+					let t2 = t - r.duration * (nloops as anim::float);
+					self.skel.set_record( r, t2 );
+					//self.skel.fill_data( self.girl.mut_data() );
+				}
 				self.edit_label.update( state.time_view );
 				self.control.update( state );
 			},
@@ -160,9 +169,8 @@ impl Scene	{
 		}
 	}
 
-	pub fn render( &mut self, el : &main::Elements, time : anim::float,
-			output : &gr_mid::call::Output, gc : &mut gr_low::context::Context,
-			lg : &engine::journal::Log  )	{
+	pub fn render( &mut self, el : &main::Elements, output : &gr_mid::call::Output,
+			gc : &mut gr_low::context::Context, lg : &engine::journal::Log  )	{
 		// clear screen
 		let cdata = gr_mid::call::ClearData{
 			color	:Some( gr_low::rast::Color::new(0x8080FFFF) ),
@@ -185,14 +193,6 @@ impl Scene	{
 			gr_mid::call::CallEmpty
 		};
 		let mut queue = ~[c0,c1];
-		if true	{	// update animation
-			let t = time - self.start;
-			let r = self.skel.actions[0];
-			let nloops = (t / r.duration) as uint;
-			let t2 = t - r.duration * (nloops as anim::float);
-			self.skel.set_record( r, t2 );
-			//self.skel.fill_data( self.girl.mut_data() );
-		}
 		if el.character	{
 			let area = &output.area;
 			let target_size = Vec4::new( area.w as f32, area.h as f32,

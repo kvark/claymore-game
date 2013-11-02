@@ -37,7 +37,7 @@ impl debug::AccessMut<battle::Scene> for Logic	{
 }
 
 impl Logic	{
-	pub fn create( _el : &main::Elements, gcon : &mut gr_low::context::Context, fcon : &gr_mid::font::Context,
+	pub fn create( el : &main::Elements, gcon : &mut gr_low::context::Context, fcon : &gr_mid::font::Context,
 			hcon : &mut hud::main::Context, log : &journal::Log )-> Logic	{
 		// output
 		let pmap = gr_mid::call::PlaneMap::new_main( gcon, ~"o_Color" );
@@ -135,11 +135,11 @@ impl Logic	{
 		}
 	}
 
-	pub fn render( &mut self, _el : &main::Elements, gcon : &mut gr_low::context::Context,
+	pub fn render( &mut self, el : &main::Elements, gcon : &mut gr_low::context::Context,
 			hcon : &hud::main::Context, debug : &debug::Menu<Logic>, log : &journal::Log )	{
 		match self.screen	{
-			ScreenIntro	=> (),
-			//ScreenChar	=> self.s_editor.render( el, &self.output, gcon, log ),
+			ScreenIntro		=> (),
+			//ScreenChar		=> self.s_editor.render( el, &self.output, gcon, log ),
 			ScreenBattle	=> self.s_battle.render( &self.output, &self.technique, gcon, hcon, log ),
 			_ => ()
 		}

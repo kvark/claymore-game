@@ -7,6 +7,7 @@ use std::to_str::ToStr;
 use cgmath::angle;
 use cgmath::matrix::*;
 use cgmath::quaternion::*;
+use cgmath::transform::*;
 use cgmath::vector::*;
 
 use gr_low::shade;
@@ -15,14 +16,15 @@ use anim;
 
 pub type Matrix = Mat4<f32>;
 pub type Vector = Vec3<f32>;
-pub type Quaternion = Quat<f32>;
-//pub type Euler = rotation::Euler<angle::Rad<f32>>;
-pub type Euler = Vec3<angle::Rad<f32>>;
 pub type Scale = f32;
+pub type Quaternion = Quat<f32>;
+pub type Euler = Vec3<angle::Rad<f32>>;
+pub type Space2 = Transform3D<f32>;
 
 
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - //
 //		Quaternion Space								//
+
 
 pub trait Space	{
 	fn transform( &self, point : &Vector )-> Vector;
