@@ -14,7 +14,7 @@ use battle = battle::main;
 
 enum Screen	{
 	ScreenIntro,
-	ScreenChar,
+//	ScreenChar,
 	ScreenBattle,
 	ScreenWorld,
 	ScreenDeath,

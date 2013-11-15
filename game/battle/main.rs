@@ -20,7 +20,7 @@ use input;
 use hud = hud::main;
 use debug = hud::debug;
 use scene;
-use battle::{field,grid};
+use battle::{field,grid,think};
 use battle::field::Member;
 use battle::grid::{DrawableGrid,TopologyGrid,GeometryGrid};
 
@@ -31,8 +31,11 @@ struct Motion	{
 }
 
 pub struct Character	{
+	brain		: ~think::Brain<think::PlayerCommand,Character>,	//FIXME
+	// info
 	name		: ~str,
-	parts		: ~[field::Offset],
+	parts		: ~[grid::Offset],
+	team		: field::Team,
 	// stats
 	health		: field::Health,
 	move_speed	: f32,
@@ -43,7 +46,7 @@ pub struct Character	{
 	priv start_time	: anim::float,
 	// state
 	priv location	: grid::Location,
-	priv orientation: field::Orientation,
+	priv orientation: grid::Orientation,
 	priv elevation	: f32,
 	priv motion		: Option<Motion>,
 }
@@ -129,6 +132,7 @@ impl field::Member for Character	{
 	fn get_name<'a>( &'a self )-> &'a str	{self.name.as_slice()}
 	fn get_health( &self )-> field::Health	{self.health}
 	fn get_parts<'a>( &'a self )-> &'a [grid::Offset]	{self.parts.as_slice()}
+	fn get_team( &self )-> field::Team	{self.team}
 	fn is_busy( &self )-> bool	{ self.motion.is_some() }
 	fn receive_damage( &mut self, damage : field::Health, part : Option<field::PartId> )-> field::DamageResult	{
 		assert!( part.is_none() );
@@ -257,10 +261,12 @@ impl Scene	{
 				self.hero.update_logic( tg, &mut self.field, &self.grid );
 				self.boss.update_logic( tg, &mut self.field, &self.grid );
 				self.update_matrices( state.aspect as f32 );
-				let active = self.ray_cast( state );
-				if active != self.loc_selected	{
-					self.loc_selected = active;
-					self.field_revision = 0;
+				if hero_command	{
+					let active = self.ray_cast( state );
+					if active != self.loc_selected	{
+						self.loc_selected = active;
+						self.field_revision = 0;
+					}
 				}
 			},
 			_	=> (),
@@ -273,13 +279,15 @@ impl Scene	{
 		if self.field_revision != self.field.get_revision()	{
 			self.grid.clear();
 			self.field.fill_grid( self.grid.mut_cells() );
-			match self.field.get_by_location( self.loc_selected, &self.grid as &TopologyGrid )	{
-				(Some(index),field::CellEmpty)	=>	{
-					//print(format!( "loc({:i},{:i}) index = {:u}\n", active[0], active[1], index ));
-					self.grid.mut_cells()[index] = grid::CELL_ACTIVE
-				},
-				(Some(_),_)	=> (),	//attack animation
-				_		=> ()
+			if !self.hero.is_busy()	{
+				match self.field.get_by_location( self.loc_selected, &self.grid as &TopologyGrid )	{
+					(Some(index),field::CellEmpty)	=>	{
+						//print(format!( "loc({:i},{:i}) index = {:u}\n", active[0], active[1], index ));
+						self.grid.mut_cells()[index] = grid::CELL_ACTIVE
+					},
+					(Some(_),_)	=> (),	//attack animation
+					_		=> ()
+				}
 			}
 			self.grid.upload( &mut gc.texture );
 			self.field_revision = self.field.get_revision();
@@ -378,12 +386,15 @@ pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon 
 	let battle_land = scene.entities.exclude( &"Plane" ).expect("No ground found");
 	// load protagonist
 	let hero =	@mut {
+		let brain : ~think::Player<Character> = ~think::Player::new();
 		let ent = scene.entities.exclude( &"Player" ).expect("No player found");
 		let skel = *scene.context.armatures.get( &~"Armature" );
 		// done
 		Character{
+			brain	: brain as ~think::Brain<think::PlayerCommand,Character>,
 			name	: ~"Clare",
 			parts	: ~[Vec2::new(0i,0i)],
+			team	: 0,
 			health		: 100,
 			move_speed	: 5.0,
 			entity		: ent,
@@ -398,12 +409,15 @@ pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon 
 	};
 	// load boss
 	let boss =	@mut {
+		let brain : ~think::Player<Character> = ~think::Player::new();
 		let ent = scene.entities.exclude( &"Boss" ).expect("No player found");
 		let skel = *scene.context.armatures.get( &~"ArmatureBoss" );
 		// done
 		Character{
+			brain	: brain as ~think::Brain<think::PlayerCommand,Character>,	//FIXME
 			name	: ~"Boss",
 			parts	: ~[Vec2::new(0i,0i)],
+			team	: 1,
 			health		: 300,
 			move_speed	: 1.0,
 			entity		: ent,

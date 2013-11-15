@@ -29,6 +29,7 @@ pub mod battle	{
 	pub mod field;
 	pub mod grid;
 	pub mod main;
+	pub mod think;
 }
 
 pub mod hud	{

@@ -3,9 +3,9 @@ extern mod engine;
 use std;
 use battle::grid;
 
-pub use battle::grid::{Location,Offset,Orientation};
 pub type PartId		= u8;
 pub type Health		= uint;
+pub type Team		= int;
 
 
 pub enum DamageResult	{
@@ -18,7 +18,8 @@ pub enum DamageResult	{
 pub trait Member	{
 	fn get_name<'a>( &'a self )-> &'a str;
 	fn get_health( &self )-> Health;
-	fn get_parts<'a>( &'a self )-> &'a [Offset];
+	fn get_parts<'a>( &'a self )-> &'a [grid::Offset];
+	fn get_team( &self )-> Team;
 	fn receive_damage( &mut self, damage : Health, part : Option<PartId> )-> DamageResult;
 	fn is_busy( &self )-> bool;
 }
@@ -31,7 +32,7 @@ fn is_same_member(a : @mut Member, b : @mut Member)-> bool	{
 pub enum Cell<T>	{
 	CellEmpty,
 	CellObstacle,
-	CellCore(T,Orientation),
+	CellCore(T,grid::Orientation),
 	CellPart(T,PartId),
 }
 
@@ -61,14 +62,14 @@ impl Field	{
 		}
 	}
 
-	pub fn get_by_location( &self, loc : Location, grid : &grid::TopologyGrid )-> (Option<uint>,Cell<~str>)	{
+	pub fn get_by_location( &self, loc : grid::Location, grid : &grid::TopologyGrid )-> (Option<uint>,Cell<~str>)	{
 		match grid.get_index(loc)	{
 			Some(index)	=> (Some(index), self.get(index)),
 			None	=> (None, CellEmpty),
 		}
 	}
 
-	pub fn with_member<T>( &self, name : &str, fun : &fn(&Member,Orientation)->T )->Option<T>	{
+	pub fn with_member<T>( &self, name : &str, fun : &fn(&Member,grid::Orientation)->T )->Option<T>	{
 		for cell in self.cells.iter()	{
 			match cell	{
 				&CellCore(m,o) if std::str::eq_slice(name,m.get_name())	=> return Some(fun(m,o)),
@@ -88,7 +89,7 @@ impl Field	{
 		}
 	}
 
-	pub fn add_member( &mut self, member : @mut Member, d : Location, o : Orientation, grid : &grid::TopologyGrid )	{
+	pub fn add_member( &mut self, member : @mut Member, d : grid::Location, o : grid::Orientation, grid : &grid::TopologyGrid )	{
 		assert!( !self.has_member(member) );
 		let core_index = grid.get_index(d).expect("Member core position should exist");
 		self.cells[ core_index ] = CellCore( member, o );
