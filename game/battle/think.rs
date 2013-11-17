@@ -9,6 +9,11 @@ pub trait Brain<C, M : field::Member>	{
 }
 
 
+pub trait Motion	{
+	fn update( )-> bool;
+}
+
+
 pub enum PlayerCommand	{
 	PcomNone,
 	PcomWait,

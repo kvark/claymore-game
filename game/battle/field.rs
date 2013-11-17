@@ -20,7 +20,7 @@ pub trait Member	{
 	fn get_health( &self )-> Health;
 	fn get_parts<'a>( &'a self )-> &'a [grid::Offset];
 	fn get_team( &self )-> Team;
-	fn receive_damage( &mut self, damage : Health, part : Option<PartId> )-> DamageResult;
+	fn receive_damage( &mut self, Health, Option<PartId> )-> DamageResult;
 	fn is_busy( &self )-> bool;
 }
 

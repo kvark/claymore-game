@@ -34,7 +34,6 @@ pub struct Character	{
 	brain		: ~think::Brain<think::PlayerCommand,Character>,	//FIXME
 	// info
 	name		: ~str,
-	parts		: ~[grid::Offset],
 	team		: field::Team,
 	// stats
 	health		: field::Health,
@@ -49,6 +48,24 @@ pub struct Character	{
 	priv orientation: grid::Orientation,
 	priv elevation	: f32,
 	priv motion		: Option<Motion>,
+}
+
+impl field::Member for Character	{
+	fn get_name<'a>( &'a self )-> &'a str	{self.name.as_slice()}
+	fn get_health( &self )-> field::Health	{self.health}
+	fn get_parts<'a>( &'a self )-> &'a [grid::Offset]	{&[Vec2::new(0,0)]}
+	fn get_team( &self )-> field::Team	{self.team}
+	fn is_busy( &self )-> bool	{ self.motion.is_some() }
+	fn receive_damage( &mut self, damage : field::Health, part : Option<field::PartId> )-> field::DamageResult	{
+		assert!( part.is_none() );
+		if self.health > damage	{
+			self.health -= damage;
+			field::DamageSome
+		}else	{
+			self.health = 0;
+			field::DamageKill
+		}
+	}
 }
 
 impl Character	{
@@ -128,7 +145,29 @@ impl Character	{
 	}
 }
 
-impl field::Member for Character	{
+
+struct Boss	{
+	// info
+	name		: ~str,
+	parts		: ~[grid::Offset],
+	team		: field::Team,
+	// stats
+	health		: field::Health,
+	move_speed	: f32,
+	turn_speed	: f32,
+	// view
+	entity		: engine::object::Entity,
+	skeleton	: @mut engine::space::Armature,
+	record		: @engine::space::ArmatureRecord,
+	priv start_time	: anim::float,
+	// state
+	priv location	: grid::Location,
+	priv orientation: grid::Orientation,
+	priv elevation	: f32,
+	priv motion		: Option<Motion>,
+}
+
+impl field::Member for Boss	{
 	fn get_name<'a>( &'a self )-> &'a str	{self.name.as_slice()}
 	fn get_health( &self )-> field::Health	{self.health}
 	fn get_parts<'a>( &'a self )-> &'a [grid::Offset]	{self.parts.as_slice()}
@@ -143,6 +182,33 @@ impl field::Member for Character	{
 			self.health = 0;
 			field::DamageKill
 		}
+	}
+}
+
+impl Boss	{
+	pub fn update_view( &mut self, time : anim::float )	{
+		let mut moment  = time - self.start_time;
+		if moment>self.record.duration	{
+			//self.record = self.skeleton.find_record(~"ArmatureAction").expect(~"character Idle not found");
+			self.start_time = time;
+			moment = 0.0;
+		}
+		self.skeleton.set_record( self.record, moment );
+		self.skeleton.fill_data( &mut self.entity.data );
+	}
+
+	fn recompute_space( &self, grid : &grid::Grid )-> engine::space::Space	{
+		grid.compute_space( self.location, self.orientation, self.elevation )
+	}
+
+	pub fn update_logic( @mut self, _time : anim::float, _field : &mut field::Field, _grid : &grid::Grid )	{
+		//empty
+	}
+
+	pub fn spawn( @mut self, d : grid::Location, field : &mut field::Field, grid : &grid::Grid )	{
+		field.add_member( self as @mut field::Member, d, 0, grid as &TopologyGrid );
+		self.location = d;
+		self.skeleton.root.space = self.recompute_space( grid );
 	}
 }
 
@@ -191,7 +257,7 @@ pub struct Scene	{
 	grid	: grid::Grid,
 	field	: field::Field,
 	hero	: @mut Character,
-	boss	: @mut Character,
+	boss	: @mut Boss,
 	cache	: gr_mid::draw::Cache,
 	hud		: gen_hud::common::Screen,
 	field_revision	: uint,
@@ -393,7 +459,6 @@ pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon 
 		Character{
 			brain	: brain as ~think::Brain<think::PlayerCommand,Character>,
 			name	: ~"Clare",
-			parts	: ~[Vec2::new(0i,0i)],
 			team	: 0,
 			health		: 100,
 			move_speed	: 5.0,
@@ -409,17 +474,16 @@ pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon 
 	};
 	// load boss
 	let boss =	@mut {
-		let brain : ~think::Player<Character> = ~think::Player::new();
 		let ent = scene.entities.exclude( &"Boss" ).expect("No player found");
 		let skel = *scene.context.armatures.get( &~"ArmatureBoss" );
 		// done
-		Character{
-			brain	: brain as ~think::Brain<think::PlayerCommand,Character>,	//FIXME
+		Boss{
 			name	: ~"Boss",
-			parts	: ~[Vec2::new(0i,0i)],
 			team	: 1,
+			parts	: ~[Vec2::new(0,0)],
 			health		: 300,
 			move_speed	: 1.0,
+			turn_speed	: 1.0,
 			entity		: ent,
 			skeleton	: skel,
 			record		: skel.find_record("ArmatureBossAction").expect("Boss has to have Idle"),

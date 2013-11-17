@@ -35,7 +35,7 @@ impl Timer	{
 //		Curves											//
 
 pub trait Curve<T>	{
-	fn sample( &self, time : float )-> T;
+	fn sample( &self, float )-> T;
 }
 
 pub struct KeySimple<T>	{
@@ -103,12 +103,12 @@ pub struct Record<C>	{
 
 pub trait Player<C>	{
 	//fn record_iter( self )-> std::vec::VecIterator< @Record<C> >;
-	fn find_record( &self, name : &str )-> Option< @Record<C> >;
-	fn set_record( &mut self, rec : &Record<C>, time : float );
+	fn find_record( &self, &str )-> Option< @Record<C> >;
+	fn set_record( &mut self, &Record<C>, float );
 }
 
 pub trait Act	{
-	fn update( &mut self, time : float )-> bool;
+	fn update( &mut self, float )-> bool;
 }
 
 pub struct Wait	{

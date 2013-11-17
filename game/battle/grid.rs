@@ -119,10 +119,10 @@ impl DrawableGrid for Grid	{
 
 
 pub trait TopologyGrid	{
-	fn get_location( &self, index : uint )-> Location;
-	fn get_index( &self, d : Location )-> Option<uint>;
-	fn offset_position( &self, d : Location, o : Orientation, f : Offset )-> Location;
-	fn get_neighbors( &self, index : uint )-> ~[uint];
+	fn get_location( &self, uint )-> Location;
+	fn get_index( &self, Location )-> Option<uint>;
+	fn offset_position( &self, Location, Orientation, Offset )-> Location;
+	fn get_neighbors( &self, uint )-> ~[uint];
 }
 
 impl TopologyGrid for Grid	{
@@ -156,10 +156,10 @@ impl TopologyGrid for Grid	{
 
 pub trait GeometryGrid : TopologyGrid	{
 	fn get_cell_size( &self )-> vector::Vec2<f32>;
-	fn get_cell_center( &self, pos : Location )-> point::Point3<f32>;
-	fn compute_space( &self, pos : Location, orient : Orientation, elevation : f32 )-> space::Space;
-	fn point_cast( &self, point : &point::Point3<f32> )-> Location;
-	fn ray_cast( &self, cam : &scene::Camera, aspect : f32, np : &[f32,..2] )-> Location;
+	fn get_cell_center( &self, Location )-> point::Point3<f32>;
+	fn compute_space( &self, Location, Orientation, f32 )-> space::Space;
+	fn point_cast( &self, &point::Point3<f32> )-> Location;
+	fn ray_cast( &self, &scene::Camera, f32, &[f32,..2] )-> Location;
 }
 
 impl GeometryGrid for Grid	{

@@ -13,7 +13,7 @@ use journal;
 static SHIFT : int = 6;
 
 trait FontError	{
-	fn check( &self, s : &str );
+	fn check( &self, &str );
 }
 
 impl FontError for freetype::FT_Error	{

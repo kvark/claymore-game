@@ -38,7 +38,7 @@ pub fn get_params(sp: &Space)-> (Vec4<f32>,Vec4<f32>)	{
 //		Interpolation									//
 
 pub trait Interpolate	{
-	fn interpolate( &self, other : &Self, t : f32 )-> Self;
+	fn interpolate( &self, &Self, f32 )-> Self;
 }
 
 impl Interpolate for Vector	{

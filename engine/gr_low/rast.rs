@@ -33,7 +33,7 @@ impl Color	{
 
 
 pub trait Stage	{
-	fn activate( &mut self, new : &Self, poly : uint );
+	fn activate( &mut self, &Self, uint );
 	fn verify( &self );
 }
 
