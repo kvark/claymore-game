@@ -34,9 +34,10 @@ pub struct Character	{
 	brain		: ~think::Brain<think::PlayerCommand,Character>,	//FIXME
 	// info
 	name		: ~str,
+	key			: field::MemberKey,
 	team		: field::Team,
+	body		: field::Limb,
 	// stats
-	health		: field::Health,
 	move_speed	: f32,
 	// view
 	entity		: engine::object::Entity,
@@ -52,17 +53,15 @@ pub struct Character	{
 
 impl field::Member for Character	{
 	fn get_name<'a>( &'a self )-> &'a str	{self.name.as_slice()}
-	fn get_health( &self )-> field::Health	{self.health}
-	fn get_parts<'a>( &'a self )-> &'a [grid::Offset]	{&[Vec2::new(0,0)]}
+	fn get_limbs<'a>( &'a self )-> &'a [(grid::Location,field::Limb)]	{&[ (self.location,self.body.clone()) ]}
 	fn get_team( &self )-> field::Team	{self.team}
 	fn is_busy( &self )-> bool	{ self.motion.is_some() }
-	fn receive_damage( &mut self, damage : field::Health, part : Option<field::PartId> )-> field::DamageResult	{
-		assert!( part.is_none() );
-		if self.health > damage	{
-			self.health -= damage;
+	fn receive_damage( &mut self, damage : field::Health, _limb_key : field::LimbKey )-> field::DamageResult	{
+		if self.body.health > damage	{
+			self.body.health -= damage;
 			field::DamageSome
 		}else	{
-			self.health = 0;
+			self.body.health = 0;
 			field::DamageKill
 		}
 	}
@@ -104,11 +103,11 @@ impl Character	{
 				if dest_loc != self.location	{
 					//print(format!( "Location {:s} -> {:s}\n", self.location.to_str(), dest_loc.to_str() ));
 					match field.get_by_location( dest_loc, grid as &TopologyGrid )	{
-						(Some(_),field::CellEmpty)	=>	{
-							field.remove_member( self.get_name() );
+						&field::CellEmpty	=>	{
+							field.remove_member( self.key );
 							self.spawn( dest_loc, field, grid );
 						},
-						(Some(_),_)	=>	{	//collide
+						&field::CellPart(_,_)	=>	{	//collide
 							*dest_pos = self.recompute_space( grid ).disp;
 							*done = true;
 						},
@@ -125,14 +124,14 @@ impl Character	{
 	}
 
 	pub fn spawn( @mut self, d : grid::Location, field : &mut field::Field, grid : &grid::Grid )	{
-		field.add_member( self as @mut field::Member, d, 0, grid as &TopologyGrid );
 		self.location = d;
+		self.key = field.add_member( self as @mut field::Member, grid as &TopologyGrid );
 		self.skeleton.root.space = self.recompute_space( grid );
 	}
 
 	pub fn move( @mut self, d : grid::Location, time : anim::float, field : &mut field::Field, grid : &grid::Grid )	{
 		if false	{	//instant?
-			field.remove_member( self.get_name() );
+			field.remove_member( self.key );
 			self.spawn( d, field, grid );
 		}else	{
 			assert!( !self.is_busy() );
@@ -149,10 +148,10 @@ impl Character	{
 struct Boss	{
 	// info
 	name		: ~str,
-	parts		: ~[grid::Offset],
+	key			: field::MemberKey,
 	team		: field::Team,
+	body		: field::Limb,
 	// stats
-	health		: field::Health,
 	move_speed	: f32,
 	turn_speed	: f32,
 	// view
@@ -169,17 +168,15 @@ struct Boss	{
 
 impl field::Member for Boss	{
 	fn get_name<'a>( &'a self )-> &'a str	{self.name.as_slice()}
-	fn get_health( &self )-> field::Health	{self.health}
-	fn get_parts<'a>( &'a self )-> &'a [grid::Offset]	{self.parts.as_slice()}
+	fn get_limbs<'a>( &'a self )-> &'a [(grid::Location,field::Limb)]	{&[ (self.location,self.body.clone()) ]}
 	fn get_team( &self )-> field::Team	{self.team}
 	fn is_busy( &self )-> bool	{ self.motion.is_some() }
-	fn receive_damage( &mut self, damage : field::Health, part : Option<field::PartId> )-> field::DamageResult	{
-		assert!( part.is_none() );
-		if self.health > damage	{
-			self.health -= damage;
+	fn receive_damage( &mut self, damage : field::Health, _limb_key : field::LimbKey )-> field::DamageResult	{
+		if self.body.health > damage	{
+			self.body.health -= damage;
 			field::DamageSome
 		}else	{
-			self.health = 0;
+			self.body.health = 0;
 			field::DamageKill
 		}
 	}
@@ -206,8 +203,8 @@ impl Boss	{
 	}
 
 	pub fn spawn( @mut self, d : grid::Location, field : &mut field::Field, grid : &grid::Grid )	{
-		field.add_member( self as @mut field::Member, d, 0, grid as &TopologyGrid );
 		self.location = d;
+		self.key = field.add_member( self as @mut field::Member, grid as &TopologyGrid );
 		self.skeleton.root.space = self.recompute_space( grid );
 	}
 }
@@ -308,12 +305,12 @@ impl Scene	{
 			&input::EvMouseClick(key,press) if hero_command && key==0 && press	=> {
 				let pos = self.ray_cast( state );
 				match self.field.get_by_location( pos, &self.grid as &TopologyGrid )	{
-					(Some(_),field::CellEmpty)	=>	{
+					&field::CellEmpty	=>	{
 						if !self.hero.is_busy()	{
 							self.hero.move( pos, state.time_game, &mut self.field, &self.grid );
 						}
 					},
-					(Some(_),_)	=> (),	//attack
+					&field::CellPart(_mk,_)	=> (),	//attack
 					_	=> (),	//ignore
 				}
 			},
@@ -346,14 +343,14 @@ impl Scene	{
 			self.grid.clear();
 			self.field.fill_grid( self.grid.mut_cells() );
 			if !self.hero.is_busy()	{
-				match self.field.get_by_location( self.loc_selected, &self.grid as &TopologyGrid )	{
-					(Some(index),field::CellEmpty)	=>	{
-						//print(format!( "loc({:i},{:i}) index = {:u}\n", active[0], active[1], index ));
-						self.grid.mut_cells()[index] = grid::CELL_ACTIVE
-					},
-					(Some(_),_)	=> (),	//attack animation
-					_		=> ()
-				}
+				self.grid.get_index(self.loc_selected).map(|index|	{
+					match self.field.get_cell(index)	{
+						&field::CellEmpty	=>	{
+							self.grid.mut_cells()[index] = grid::CELL_ACTIVE;
+						},
+						_	=> ()	//attack
+					}
+				});
 			}
 			self.grid.upload( &mut gc.texture );
 			self.field_revision = self.field.get_revision();
@@ -459,8 +456,9 @@ pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon 
 		Character{
 			brain	: brain as ~think::Brain<think::PlayerCommand,Character>,
 			name	: ~"Clare",
+			key		: 0,
 			team	: 0,
-			health		: 100,
+			body	: field::Limb{ key: (field::LimbBody,0), health: 100, node: ent.node },
 			move_speed	: 5.0,
 			entity		: ent,
 			skeleton	: skel,
@@ -479,9 +477,9 @@ pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon 
 		// done
 		Boss{
 			name	: ~"Boss",
+			key		: 0,
 			team	: 1,
-			parts	: ~[Vec2::new(0,0)],
-			health		: 300,
+			body	: field::Limb{ key: (field::LimbBody,0), health: 300, node: ent.node },
 			move_speed	: 1.0,
 			turn_speed	: 1.0,
 			entity		: ent,

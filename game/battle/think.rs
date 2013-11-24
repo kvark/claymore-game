@@ -46,14 +46,12 @@ impl<M : field::Member> Brain<PlayerCommand,M> for Player<M>	{
 		self.do_cancel = false;
 		if self.do_click	{
 			self.do_click = false;
-			let (_,cell) = field.get_by_location( self.target, grid as &grid::TopologyGrid );
-			let name = match cell	{
-				field::CellEmpty	=> return PcomMove( self.target ),
-				field::CellCore(name,_)	=> name,
-				field::CellPart(name,_)	=> name,
+			let mk = match field.get_by_location( self.target, grid as &grid::TopologyGrid )	{
+				&field::CellEmpty	=> return PcomMove( self.target ),
+				&field::CellPart(key,_)	=> key,
 				_	=> return PcomNone,
 			};
-			match field.with_member( name, |m,_| m.get_team() )	{
+			match field.with_member( mk, |m| m.get_team() )	{
 				Some(team) if team != member.get_team()	=>	{
 					return PcomAttack( self.target )
 				}
