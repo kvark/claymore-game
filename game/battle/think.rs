@@ -75,7 +75,7 @@ impl<M> Player<M>	{
 	}
 }
 
-impl<M : field::Member> Brain<M> for Player<M>	{
+impl<M: field::Member> Brain<M> for Player<M>	{
 	fn check( &mut self, _loc : grid::Location, _grid : &grid::Grid, _field : &field::Field )-> bool	{
 		self.do_cancel
 	}
@@ -99,3 +99,25 @@ impl<M : field::Member> Brain<M> for Player<M>	{
 		~motion::Idle as ~Motion
 	}
 }
+
+pub struct Monster<M>	{
+	dummy	: bool,	//TODO
+}
+
+impl<M> Monster<M>	{
+	pub fn new()-> Monster<M>	{
+		Monster{
+			dummy	: true,
+		}
+	}
+}
+
+impl<M: field::Member> Brain<M> for Monster<M>	{
+	fn check( &mut self, _loc : grid::Location, _grid : &grid::Grid, _field : &field::Field )-> bool	{
+		false
+	}
+	fn decide( &mut self, _member : &M, _grid : &grid::Grid, _field : &field::Field )-> ~Motion	{
+		~motion::Idle as ~Motion
+	}
+}
+

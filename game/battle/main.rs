@@ -25,13 +25,18 @@ use battle::field::Member;
 use battle::grid::{DrawableGrid,TopologyGrid,GeometryGrid};
 
 
+pub struct CharBundle<M>	{
+	brain	: ~think::Brain<M>,
+	member	: @mut M,
+	motion	: ~think::Motion,
+}
+
 struct Motion	{
 	destination	: engine::space::Space,
 	last_update	: anim::float,
 }
 
 pub struct Character	{
-	brain		: ~think::Brain<Character>,	//FIXME
 	// info
 	name		: ~str,
 	key			: field::MemberKey,
@@ -253,8 +258,8 @@ pub struct Scene	{
 	land	: engine::object::Entity,
 	grid	: grid::Grid,
 	field	: field::Field,
-	hero	: @mut Character,
-	boss	: @mut Boss,
+	hero	: CharBundle<Character>,
+	boss	: CharBundle<Boss>,
 	cache	: gr_mid::draw::Cache,
 	hud		: gen_hud::common::Screen,
 	field_revision	: uint,
@@ -267,16 +272,16 @@ impl Scene	{
 		self.grid.clear();
 		self.field.clear();
 		// hero
-		self.hero.spawn( Point2::new(7,2), &mut self.field, &self.grid );
-		self.hero.start_time = time;
+		self.hero.member.spawn( Point2::new(7,2), &mut self.field, &self.grid );
+		self.hero.member.start_time = time;
 		// boss
-		self.boss.spawn( Point2::new(5,5), &mut self.field, &self.grid );
-		self.boss.start_time = time;
+		self.boss.member.spawn( Point2::new(5,5), &mut self.field, &self.grid );
+		self.boss.member.start_time = time;
 	}
 
 	fn update_matrices( &mut self, aspect : f32 )	{
 		let light_pos	= Vec4::new( 4f32, 1f32, 6f32, 1f32 );
-		let all_ents = ~[&mut self.land, &mut self.hero.entity, &mut self.boss.entity];
+		let all_ents = ~[&mut self.land, &mut self.hero.member.entity, &mut self.boss.member.entity];
 		for ent in all_ents.move_iter()	{
 			let d = &mut ent.data;
 			self.view.cam.fill_data( d, aspect );
@@ -292,7 +297,7 @@ impl Scene	{
 	}
 
 	pub fn on_input( &mut self, event : &input::Event, state : &input::State )	{
-		let hero_command = !self.hero.is_busy();
+		let hero_command = !self.hero.member.is_busy();
 		match event	{
 			&input::EvKeyboard(key,press) if press	=> {
 				// camera rotation
@@ -306,8 +311,8 @@ impl Scene	{
 				let pos = self.ray_cast( state );
 				match self.field.get_by_location( pos, &self.grid as &TopologyGrid )	{
 					&field::CellEmpty	=>	{
-						if !self.hero.is_busy()	{
-							self.hero.move( pos, state.time_game, &mut self.field, &self.grid );
+						if !self.hero.member.is_busy()	{
+							self.hero.member.move( pos, state.time_game, &mut self.field, &self.grid );
 						}
 					},
 					&field::CellPart(_mk,_)	=> (),	//attack
@@ -317,12 +322,12 @@ impl Scene	{
 			&input::EvRender(_)	=>	{
 				let tv = state.time_view;
 				self.grid.update( &self.view.cam, state.aspect as f32 );
-				self.hero.update_view( tv );
-				self.boss.update_view( tv );
+				self.hero.member.update_view( tv );
+				self.boss.member.update_view( tv );
 				self.view.update( tv );
 				let tg = state.time_game;
-				self.hero.update_logic( tg, &mut self.field, &self.grid );
-				self.boss.update_logic( tg, &mut self.field, &self.grid );
+				self.hero.member.update_logic( tg, &mut self.field, &self.grid );
+				self.boss.member.update_logic( tg, &mut self.field, &self.grid );
 				self.update_matrices( state.aspect as f32 );
 				if hero_command	{
 					let active = self.ray_cast( state );
@@ -342,7 +347,7 @@ impl Scene	{
 		if self.field_revision != self.field.get_revision()	{
 			self.grid.clear();
 			self.field.fill_grid( self.grid.mut_cells() );
-			if !self.hero.is_busy()	{
+			if !self.hero.member.is_busy()	{
 				self.grid.get_index(self.loc_selected).map(|index|	{
 					match self.field.get_cell(index)	{
 						&field::CellEmpty	=>	{
@@ -366,9 +371,9 @@ impl Scene	{
 		let mut rast = gc.default_rast;
 		rast.set_depth( "<=", true );
 		rast.prime.cull = true;
-		let c_land = tech.process( &self.land,			output.clone(), rast, &mut self.cache, gc, lg );
-		let c_hero = tech.process( &self.hero.entity,	output.clone(), rast, &mut self.cache, gc, lg );
-		let c_boss = tech.process( &self.boss.entity,	output.clone(), rast, &mut self.cache, gc, lg );
+		let c_land = tech.process( &self.land,				output.clone(), rast, &mut self.cache, gc, lg );
+		let c_hero = tech.process( &self.hero.member.entity,output.clone(), rast, &mut self.cache, gc, lg );
+		let c_boss = tech.process( &self.boss.member.entity,output.clone(), rast, &mut self.cache, gc, lg );
 		let c_grid = self.grid.draw( output.clone(), self.land.input.va );
 		gc.flush( [c0,c_land,c_hero,c_boss,c_grid], lg );
 		lg.add("=== HUD ===");
@@ -448,13 +453,10 @@ pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon 
 	let mut scene = scene::load::parse( "data/scene/battle-test", &iscene, [], gc, Some(vao), lg );
 	let battle_land = scene.entities.exclude( &"Plane" ).expect("No ground found");
 	// load protagonist
-	let hero =	@mut {
-		let brain : ~think::Player<Character> = ~think::Player::new();
+	let hero = {
 		let ent = scene.entities.exclude( &"Player" ).expect("No player found");
 		let skel = *scene.context.armatures.get( &~"Armature" );
-		// done
-		Character{
-			brain	: brain as ~think::Brain<Character>,
+		let mem = Character{
 			name	: ~"Clare",
 			key		: 0,
 			team	: 0,
@@ -468,14 +470,19 @@ pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon 
 			orientation	: 0,
 			elevation	: 1.5,
 			motion		: None,
+		};
+		let brain : ~think::Player<Character> = ~think::Player::new();
+		CharBundle	{
+			brain	: brain as ~think::Brain<Character>,
+			member	: @mut mem,
+			motion	: ~think::motion::Idle as ~think::Motion,
 		}
 	};
 	// load boss
-	let boss =	@mut {
+	let boss = {
 		let ent = scene.entities.exclude( &"Boss" ).expect("No player found");
 		let skel = *scene.context.armatures.get( &~"ArmatureBoss" );
-		// done
-		Boss{
+		let mem = Boss{
 			name	: ~"Boss",
 			key		: 0,
 			team	: 1,
@@ -490,6 +497,12 @@ pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon 
 			orientation	: 0,
 			elevation	: 1.5,
 			motion		: None,
+		};
+		let brain : ~think::Monster<Boss> = ~think::Monster::new();
+		CharBundle	{
+			brain	: brain as ~think::Brain<Boss>,
+			member	: @mut mem,
+			motion	: ~think::motion::Idle as ~think::Motion,
 		}
 	};
 	// create grid

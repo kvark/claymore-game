@@ -85,7 +85,7 @@ type NodeRecord = anim::Record<NodeCurve>;
 
 pub struct Node	{
 	name	: ~str,
-	space	: Space,	//FIXME: arbitrary space
+	space	: Space,
 	parent	: Option<@mut Node>,
 	actions	: ~[@NodeRecord],
 }

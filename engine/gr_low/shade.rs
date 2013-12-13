@@ -107,6 +107,13 @@ enum ElementType	{
 	ElemUnsigned,
 }
 
+struct TextureDescriptor	{
+	dim			: TextureType,
+	is_array	: bool,
+	is_shadow	: bool,
+	is_multi	: bool,
+}
+
 enum TextureType	{
 	Tex1D,
 	Tex2D,
@@ -119,7 +126,7 @@ enum Container	{
 	ConVector(u8),
 	ConMatrix(u8,u8),
 	ConBuffer,
-	ConTexture(TextureType,bool,bool,bool),	//shadow,array,multisample
+	ConTexture(TextureDescriptor),
 }
 
 struct ParamDescriptor	{
@@ -200,7 +207,7 @@ impl Parameter	{
 					vec::raw::to_ptr(*v) as *gl::types::GLfloat )},
 			&UniMatrix(b, ref v)			=> unsafe{
 				gl::UniformMatrix4fv( loc, 1, b as gl::types::GLboolean, ptr::to_unsafe_ptr(&v.x.x) )},
-			&UniTexture(u,tex,sm)		=>	{
+			&UniTexture(u,_tex,_sm)		=>	{
 				//TODO: check 'tex' against the ParamDescriptor
 				gl::Uniform1i( loc, u as gl::types::GLint )},
 		}
