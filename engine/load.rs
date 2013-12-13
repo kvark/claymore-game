@@ -176,7 +176,7 @@ fn create_texture_2D<T>( ct : &mut context::Context, image : &stb_image::image::
 		3u	=> gl::RGB,
 		_	=> fail!("Unknown image depth: {:u}", image.depth)
 	};
-	let t = ct.create_texture( "2D", image.width, image.height, 1, 0 );
+	let t = ct.create_texture( "2D", image.width, image.height, 0, 0 );
 	ct.texture.bind( t );
 	ct.texture.load_2D( t, 0, int_format as gl::types::GLint,	format, pix_type, image.data );
 	if mipmap	{

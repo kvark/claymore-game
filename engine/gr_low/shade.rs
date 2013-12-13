@@ -99,10 +99,56 @@ impl Attribute	{
 }
 
 
+enum ElementType	{
+	ElemFloat,
+	ElemDouble,
+	ElemBool,
+	ElemInt,
+	ElemUnsigned,
+}
+
+enum TextureType	{
+	Tex1D,
+	Tex2D,
+	Tex2D_Rect,
+	TexCube,
+	Tex3D,
+}
+
+enum Container	{
+	ConVector(u8),
+	ConMatrix(u8,u8),
+	ConBuffer,
+	ConTexture(TextureType,bool,bool,bool),	//shadow,array,multisample
+}
+
+struct ParamDescriptor	{
+	raw			: gl::types::GLenum,
+	el_type		: ElementType,
+	container	: Container,
+}
+
+struct TexDescriptor	{
+	is_array	: bool,
+	is_shadow	: bool,
+	is_multi	: bool,
+}
+
+impl ParamDescriptor	{
+	fn new( storage : gl::types::GLenum )-> ParamDescriptor	{
+		//TODO
+		ParamDescriptor{
+			raw			: storage,
+			el_type		: ElemFloat,
+			container	: ConBuffer,
+		}
+	}
+}
+
 struct Parameter	{
 	loc		: Location,
-	storage	: gl::types::GLenum,
 	size	: uint,
+	desc	: ParamDescriptor,
 	value	: @mut Uniform,
 }
 
@@ -110,7 +156,7 @@ impl Parameter	{
 	fn read( &self, h : &ProgramHandle )-> bool	{
 		let loc = *self.loc;
 		assert!( loc>=0 && self.size==1u );
-		*self.value = match self.storage	{
+		*self.value = match self.desc.raw	{
 			gl::FLOAT	=> {
 				let mut v = 0f32;
 				unsafe{ gl::GetUniformfv( **h, loc, ptr::to_mut_unsafe_ptr(&mut v) ); }
@@ -154,7 +200,9 @@ impl Parameter	{
 					vec::raw::to_ptr(*v) as *gl::types::GLfloat )},
 			&UniMatrix(b, ref v)			=> unsafe{
 				gl::UniformMatrix4fv( loc, 1, b as gl::types::GLboolean, ptr::to_unsafe_ptr(&v.x.x) )},
-			&UniTexture(u,_,_)		=> gl::Uniform1i( loc, u as gl::types::GLint ),
+			&UniTexture(u,tex,sm)		=>	{
+				//TODO: check 'tex' against the ParamDescriptor
+				gl::Uniform1i( loc, u as gl::types::GLint )},
 		}
 	}
 }
@@ -329,8 +377,9 @@ fn query_parameters( h : &ProgramHandle, lg : &journal::Log )-> ParaMap	{
 			(name,loc)
 		};
 		lg.add(format!( "\t\t[{:i}-{:i}]\t= '{:s}',\tformat {:i}", loc as int, ((loc + size) as int) -1, name, storage as int ));
-		let p = Parameter{ loc:Location(loc), storage:storage, size:size as uint, value:@mut Uninitialized };
-		//p.read( h );	// no need to read them here
+		let p = Parameter{ loc: Location(loc), size: size as uint,
+			desc: ParamDescriptor::new(storage), value: @mut Uninitialized };
+		//p.read( h );	// no need to read them here, takes too long
 		rez.insert( name, p );
 	}
 	rez
@@ -343,7 +392,7 @@ pub fn check_sampler( target : gl::types::GLenum, storage : gl::types::GLenum )	
 		gl::SAMPLER_2D			|
 		gl::SAMPLER_2D_SHADOW	=> gl::TEXTURE_2D,
 		gl::SAMPLER_2D_RECT		=> gl::TEXTURE_RECTANGLE,
-		gl::SAMPLER_2D_ARRAY		=> gl::TEXTURE_2D_ARRAY,
+		gl::SAMPLER_2D_ARRAY	=> gl::TEXTURE_2D_ARRAY,
 		gl::SAMPLER_3D			=> gl::TEXTURE_3D,
 		_	=> fail!("Unknown sampler: 0x{:x}", storage as uint)
 	};
@@ -440,7 +489,7 @@ impl context::Context	{
 		for (name,par) in p.params.iter()	{
 			match data.find(name)	{
 				Some(&UniTexture(_,t,s_opt))	=> {
-					check_sampler( *t.target, par.storage );
+					check_sampler( *t.target, par.desc.raw );
 					self.texture.bind_to( tex_unit, t );
 					match s_opt	{
 						Some(ref s) => self.texture.bind_sampler( t, s ),

@@ -131,13 +131,13 @@ impl Texture	{
 		}
 		i
 	}
-	pub fn is_filtering_mapmap( &self )-> bool	{
+	pub fn is_filtering_mipmap( &self )-> bool	{
 		[gl::LINEAR_MIPMAP_LINEAR,gl::NEAREST_MIPMAP_NEAREST,
 		gl::LINEAR_MIPMAP_NEAREST,gl::NEAREST_MIPMAP_LINEAR].
 		contains(&(self.sampler.filter[1] as gl::types::GLenum))
 	}
 	pub fn can_sample( &self )-> bool	{
-		self.samples==0u && (!self.is_filtering_mapmap() || self.levels.total==1u)
+		self.samples==0u && (!self.is_filtering_mipmap() || self.levels.total==1u)
 	}
 }
 

@@ -31,7 +31,7 @@ struct Motion	{
 }
 
 pub struct Character	{
-	brain		: ~think::Brain<think::PlayerCommand,Character>,	//FIXME
+	brain		: ~think::Brain<Character>,	//FIXME
 	// info
 	name		: ~str,
 	key			: field::MemberKey,
@@ -55,7 +55,6 @@ impl field::Member for Character	{
 	fn get_name<'a>( &'a self )-> &'a str	{self.name.as_slice()}
 	fn get_limbs<'a>( &'a self )-> &'a [(grid::Location,field::Limb)]	{&[ (self.location,self.body.clone()) ]}
 	fn get_team( &self )-> field::Team	{self.team}
-	fn is_busy( &self )-> bool	{ self.motion.is_some() }
 	fn receive_damage( &mut self, damage : field::Health, _limb_key : field::LimbKey )-> field::DamageResult	{
 		if self.body.health > damage	{
 			self.body.health -= damage;
@@ -82,6 +81,8 @@ impl Character	{
 	fn recompute_space( &self, grid : &grid::Grid )-> engine::space::Space	{
 		grid.compute_space( self.location, self.orientation, self.elevation )
 	}
+
+	pub fn is_busy( &self )-> bool	{ self.motion.is_some() }
 
 	pub fn update_logic( @mut self, time : anim::float, field : &mut field::Field, grid : &grid::Grid )	{
 		let (ref mut dest_opt, ref mut done) = match self.motion	{
@@ -170,7 +171,6 @@ impl field::Member for Boss	{
 	fn get_name<'a>( &'a self )-> &'a str	{self.name.as_slice()}
 	fn get_limbs<'a>( &'a self )-> &'a [(grid::Location,field::Limb)]	{&[ (self.location,self.body.clone()) ]}
 	fn get_team( &self )-> field::Team	{self.team}
-	fn is_busy( &self )-> bool	{ self.motion.is_some() }
 	fn receive_damage( &mut self, damage : field::Health, _limb_key : field::LimbKey )-> field::DamageResult	{
 		if self.body.health > damage	{
 			self.body.health -= damage;
@@ -454,7 +454,7 @@ pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon 
 		let skel = *scene.context.armatures.get( &~"Armature" );
 		// done
 		Character{
-			brain	: brain as ~think::Brain<think::PlayerCommand,Character>,
+			brain	: brain as ~think::Brain<Character>,
 			name	: ~"Clare",
 			key		: 0,
 			team	: 0,
