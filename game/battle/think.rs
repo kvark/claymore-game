@@ -4,34 +4,44 @@ extern mod engine;
 use engine::anim;
 use battle::{grid,field};
 
+pub enum MotionStatus	{
+	StatusDone,
+	StatusCanInterrupt,
+	StatusBusy,
+}
 
 pub trait Motion	{
-	fn update( &mut self, @mut field::Member, anim::float, &mut field::Field, &grid::Grid )-> bool;
+	fn get_name<'a>( &'a self )-> &'a str;	//TODO: ToStr
+	fn update( &mut self, @mut field::Member, anim::float, &mut field::Field, &grid::Grid )-> MotionStatus;
 	fn interrupt( &mut self );
 }
 
 pub trait Brain<M : field::Member>	{
-	fn check( &mut self, grid::Location, &grid::Grid, &field::Field )-> bool;
-	fn decide( &mut self, &M, &grid::Grid, &field::Field )-> ~Motion;
+	fn check( &mut self, &M, &field::Field, &grid::Grid )-> bool;
+	fn decide( &mut self, &M, &field::Field, &grid::Grid )-> ~Motion;
 }
 
 pub mod motion	{
 	use engine::anim;
 	use battle::{grid,field};
-	use battle::think::Motion;
+	use battle::think;
 
 	pub struct Idle();
-	impl Motion for Idle	{
-		fn update( &mut self, _m : @mut field::Member, _time : anim::float, _field: &mut field::Field, _grid : &grid::Grid )-> bool	{true}
+	impl think::Motion for Idle	{
+		fn get_name<'a>( &'a self )-> &'a str	{ "Idle" }
+		fn update( &mut self, _m : @mut field::Member, _time : anim::float, _field: &mut field::Field, _grid : &grid::Grid )-> think::MotionStatus	{
+			think::StatusCanInterrupt
+		}
 		fn interrupt( &mut self )	{}
 	}
 
 	pub struct Move	{
 		destination	: grid::Location,
 	}
-	impl Motion for Move	{
-		fn update( &mut self, _m : @mut field::Member, _time : anim::float, _field: &mut field::Field, _grid : &grid::Grid )-> bool	{
-			true//TODO
+	impl think::Motion for Move	{
+		fn get_name<'a>( &'a self )-> &'a str	{ "Move" }
+		fn update( &mut self, _m : @mut field::Member, _time : anim::float, _field: &mut field::Field, _grid : &grid::Grid )-> think::MotionStatus	{
+			think::StatusDone//TODO
 		}
 		fn interrupt( &mut self )	{
 			//TODO
@@ -41,9 +51,10 @@ pub mod motion	{
 	pub struct Attack	{
 		destination	: grid::Location,
 	}
-	impl Motion for Attack	{
-		fn update( &mut self, _m : @mut field::Member, _time : anim::float, _field: &mut field::Field, _grid : &grid::Grid )-> bool	{
-			true//TODO
+	impl think::Motion for Attack	{
+		fn get_name<'a>( &'a self )-> &'a str	{ "Attack" }
+		fn update( &mut self, _m : @mut field::Member, _time : anim::float, _field: &mut field::Field, _grid : &grid::Grid )-> think::MotionStatus	{
+			think::StatusDone//TODO
 		}
 		fn interrupt( &mut self )	{
 			//TODO
@@ -76,11 +87,11 @@ impl<M> Player<M>	{
 }
 
 impl<M: field::Member> Brain<M> for Player<M>	{
-	fn check( &mut self, _loc : grid::Location, _grid : &grid::Grid, _field : &field::Field )-> bool	{
+	fn check( &mut self, _member : &M, _field : &field::Field, _grid : &grid::Grid)-> bool	{
 		self.do_cancel
 	}
 	
-	fn decide( &mut self, member : &M, grid : &grid::Grid, field : &field::Field )-> ~Motion	{
+	fn decide( &mut self, member : &M, field : &field::Field, grid : &grid::Grid )-> ~Motion	{
 		self.do_cancel = false;
 		if self.do_click	{
 			self.do_click = false;
@@ -113,10 +124,10 @@ impl<M> Monster<M>	{
 }
 
 impl<M: field::Member> Brain<M> for Monster<M>	{
-	fn check( &mut self, _loc : grid::Location, _grid : &grid::Grid, _field : &field::Field )-> bool	{
+	fn check( &mut self, _member : &M, _field : &field::Field, _grid : &grid::Grid )-> bool	{
 		false
 	}
-	fn decide( &mut self, _member : &M, _grid : &grid::Grid, _field : &field::Field )-> ~Motion	{
+	fn decide( &mut self, _member : &M, _field : &field::Field, _grid : &grid::Grid )-> ~Motion	{
 		~motion::Idle as ~Motion
 	}
 }

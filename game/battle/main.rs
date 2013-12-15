@@ -31,6 +31,26 @@ pub struct CharBundle<M>	{
 	motion	: ~think::Motion,
 }
 
+impl<M: field::Member + Send> CharBundle<M>	{
+	pub fn update(&mut self, time : anim::float, field : &mut field::Field, grid : &grid::Grid, lg : &engine::journal::Log)	{
+		let new = match self.motion.update( self.member as @mut field::Member, time, field, grid )	{
+			think::StatusDone	=> true,
+			think::StatusCanInterrupt	=>
+				if self.brain.check( self.member, field, grid )	{
+					self.motion.interrupt();
+					lg.add(format!( "{:s}: interrupts", self.member.get_name() ));
+					true
+				}else {false},
+			think::StatusBusy	=> false,
+		};
+		if new	{
+			self.motion = self.brain.decide( self.member, field, grid );
+			lg.add(format!( "{:s}: new motion {:s}", self.member.get_name(), self.motion.get_name() ));
+		}
+	}
+}
+
+
 struct Motion	{
 	destination	: engine::space::Space,
 	last_update	: anim::float,
