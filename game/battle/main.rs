@@ -31,9 +31,12 @@ pub struct CharBundle<M>	{
 	motion	: ~think::Motion,
 }
 
-impl<M: field::Member + Send> CharBundle<M>	{
+impl<M: field::Member> CharBundle<M>	{
 	pub fn update(&mut self, time : anim::float, field : &mut field::Field, grid : &grid::Grid, lg : &engine::journal::Log)	{
-		let new = match self.motion.update( self.member as @mut field::Member, time, field, grid )	{
+		let new = match	{
+				let mem : &mut M = self.member;
+				self.motion.update( mem as &mut field::Member, time, field, grid )
+			}{
 			think::StatusDone	=> true,
 			think::StatusCanInterrupt	=>
 				if self.brain.check( self.member, field, grid )	{
@@ -68,7 +71,6 @@ pub struct Character	{
 	entity		: engine::object::Entity,
 	skeleton	: @mut engine::space::Armature,
 	record		: @engine::space::ArmatureRecord,
-	priv start_time	: anim::float,
 	// state
 	priv location	: grid::Location,
 	priv orientation: grid::Orientation,
@@ -92,7 +94,8 @@ impl field::Member for Character	{
 }
 
 impl Character	{
-	pub fn update_view( &mut self, time : anim::float )	{
+	pub fn update_view( &mut self, _time : anim::float )	{
+		/*	FIXME
 		let mut moment  = time - self.start_time;
 		if moment>self.record.duration	{
 			//self.record = self.skeleton.find_record(~"ArmatureAction").expect(~"character Idle not found");
@@ -100,6 +103,7 @@ impl Character	{
 			moment = 0.0;
 		}
 		self.skeleton.set_record( self.record, moment );
+		*/
 		self.skeleton.fill_data( &mut self.entity.data );
 	}
 
@@ -184,7 +188,6 @@ struct Boss	{
 	entity		: engine::object::Entity,
 	skeleton	: @mut engine::space::Armature,
 	record		: @engine::space::ArmatureRecord,
-	priv start_time	: anim::float,
 	// state
 	priv location	: grid::Location,
 	priv orientation: grid::Orientation,
@@ -208,7 +211,8 @@ impl field::Member for Boss	{
 }
 
 impl Boss	{
-	pub fn update_view( &mut self, time : anim::float )	{
+	pub fn update_view( &mut self, _time : anim::float )	{
+		/*	FIXME
 		let mut moment  = time - self.start_time;
 		if moment>self.record.duration	{
 			//self.record = self.skeleton.find_record(~"ArmatureAction").expect(~"character Idle not found");
@@ -216,6 +220,7 @@ impl Boss	{
 			moment = 0.0;
 		}
 		self.skeleton.set_record( self.record, moment );
+		*/
 		self.skeleton.fill_data( &mut self.entity.data );
 	}
 
@@ -293,10 +298,8 @@ impl Scene	{
 		self.field.clear();
 		// hero
 		self.hero.member.spawn( Point2::new(7,2), &mut self.field, &self.grid );
-		self.hero.member.start_time = time;
 		// boss
 		self.boss.member.spawn( Point2::new(5,5), &mut self.field, &self.grid );
-		self.boss.member.start_time = time;
 	}
 
 	fn update_matrices( &mut self, aspect : f32 )	{
@@ -359,6 +362,11 @@ impl Scene	{
 			},
 			_	=> (),
 		}
+	}
+	
+	pub fn update( &mut self, time : anim::float, lg : &engine::journal::Log )	{
+		self.hero.update( time, &mut self.field, &self.grid, lg );
+		self.boss.update( time, &mut self.field, &self.grid, lg );
 	}
 
 	pub fn render( &mut self, output : &gr_mid::call::Output, tech : &gr_mid::draw::Technique,
@@ -485,7 +493,6 @@ pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon 
 			entity		: ent,
 			skeleton	: skel,
 			record		: skel.find_record("ArmatureBossAction").expect("Hero has to have Idle"),
-			start_time	: 0.0,
 			location	: Point2::new(0i,0i),
 			orientation	: 0,
 			elevation	: 1.5,
@@ -512,7 +519,6 @@ pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon 
 			entity		: ent,
 			skeleton	: skel,
 			record		: skel.find_record("ArmatureBossAction").expect("Boss has to have Idle"),
-			start_time	: 0.0,
 			location	: Point2::new(0i,0i),
 			orientation	: 0,
 			elevation	: 1.5,

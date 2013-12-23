@@ -12,7 +12,7 @@ pub enum MotionStatus	{
 
 pub trait Motion	{
 	fn get_name<'a>( &'a self )-> &'a str;	//TODO: ToStr
-	fn update( &mut self, @mut field::Member, anim::float, &mut field::Field, &grid::Grid )-> MotionStatus;
+	fn update( &mut self, &mut field::Member, anim::float, &mut field::Field, &grid::Grid )-> MotionStatus;
 	fn interrupt( &mut self );
 }
 
@@ -29,7 +29,7 @@ pub mod motion	{
 	pub struct Idle();
 	impl think::Motion for Idle	{
 		fn get_name<'a>( &'a self )-> &'a str	{ "Idle" }
-		fn update( &mut self, _m : @mut field::Member, _time : anim::float, _field: &mut field::Field, _grid : &grid::Grid )-> think::MotionStatus	{
+		fn update( &mut self, _m : &mut field::Member, _time : anim::float, _field: &mut field::Field, _grid : &grid::Grid )-> think::MotionStatus	{
 			think::StatusCanInterrupt
 		}
 		fn interrupt( &mut self )	{}
@@ -40,7 +40,7 @@ pub mod motion	{
 	}
 	impl think::Motion for Move	{
 		fn get_name<'a>( &'a self )-> &'a str	{ "Move" }
-		fn update( &mut self, _m : @mut field::Member, _time : anim::float, _field: &mut field::Field, _grid : &grid::Grid )-> think::MotionStatus	{
+		fn update( &mut self, _m : &mut field::Member, _time : anim::float, _field: &mut field::Field, _grid : &grid::Grid )-> think::MotionStatus	{
 			think::StatusDone//TODO
 		}
 		fn interrupt( &mut self )	{
@@ -53,7 +53,7 @@ pub mod motion	{
 	}
 	impl think::Motion for Attack	{
 		fn get_name<'a>( &'a self )-> &'a str	{ "Attack" }
-		fn update( &mut self, _m : @mut field::Member, _time : anim::float, _field: &mut field::Field, _grid : &grid::Grid )-> think::MotionStatus	{
+		fn update( &mut self, _m : &mut field::Member, _time : anim::float, _field: &mut field::Field, _grid : &grid::Grid )-> think::MotionStatus	{
 			think::StatusDone//TODO
 		}
 		fn interrupt( &mut self )	{

@@ -134,20 +134,28 @@ impl Logic	{
 			_	=> ()
 		}
 	}
+	
+	pub fn update( &mut self, time : anim::float, lg : &journal::Log )	{
+		match self.screen	{
+			//ScreenChar	=> self.s_editor.update( time, lg ),
+			ScreenBattle	=> self.s_battle.update( time, lg ),
+			_	=> ()
+		}
+	}
 
 	pub fn render( &mut self, el : &main::Elements, gcon : &mut gr_low::context::Context,
-			hcon : &hud::main::Context, debug : &debug::Menu<Logic>, log : &journal::Log )	{
+			hcon : &hud::main::Context, debug : &debug::Menu<Logic>, lg : &journal::Log )	{
 		match self.screen	{
 			ScreenIntro		=> (),
-			//ScreenChar		=> self.s_editor.render( el, &self.output, gcon, log ),
-			ScreenBattle	=> self.s_battle.render( &self.output, &self.technique, gcon, hcon, log ),
+			//ScreenChar		=> self.s_editor.render( el, &self.output, gcon, lg ),
+			ScreenBattle	=> self.s_battle.render( &self.output, &self.technique, gcon, hcon, lg ),
 			_ => ()
 		}
 		// debug menu
-		log.add("=== Debug Menu ===");
+		lg.add("=== Debug Menu ===");
 		let debug_hud = debug.build( 0.5 );
 		let debug_calls = hcon.draw_all( &debug_hud, &self.output );
-		gcon.flush( debug_calls, log );
+		gcon.flush( debug_calls, lg );
 	}
 	
 	pub fn debug_move( &mut self, rot : bool, x : int, y : int )	{

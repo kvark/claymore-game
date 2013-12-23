@@ -17,6 +17,7 @@ struct Journal	{
 	load	: engine::journal::Log,
 	render	: engine::journal::Log,
 	input	: engine::journal::Log,
+	logic	: engine::journal::Log,
 }
 
 struct Time	{
@@ -123,6 +124,10 @@ impl Game	{
 		};
 		self.logic.on_input( &event, &state, &mut self.debug_menu );
 	}
+	
+	pub fn update( &mut self )	{
+		self.logic.update( self.time.animate.time, &self.journal.logic );
+	}
 
 	pub fn render( &mut self, el : &Elements )-> bool	{
 		// scene
@@ -149,7 +154,7 @@ struct ConfigGL	{
 }
 #[deriving(Decodable)]
 struct ConfigLog	{
-	path:~str, load:bool, render:bool, input:bool,
+	path:~str, load:bool, render:bool, input:bool, logic:bool,
 }
 #[deriving(Decodable)]
 struct Config	{
@@ -172,11 +177,13 @@ pub fn main()	{
 			load	: lg.fork( ~"Load" ),
 			render	: lg.fork( ~"Render" ),
 			input	: lg.fork( ~"Input" ),
+			logic	: lg.fork( ~"Logic" ),
 			main	: lg,
 		};
 		journal.load.enable		= config.journal.load;
 		journal.render.enable	= config.journal.render;
 		journal.input.enable	= config.journal.input;
+		journal.logic.enable	= config.journal.logic;
 
 		glfw::window_hint::resizable( false );
 		glfw::window_hint::opengl_debug_context( config.GL.debug );
@@ -239,6 +246,7 @@ pub fn main()	{
 			}
 			//TODO: update on a higher frequency than render
 			game.on_input( &window, input::EvRender( game.frames ));
+			game.update();
 			// render
 			if !game.render( &config.elements )	{
 				break;

@@ -16,7 +16,8 @@
 		"path"	: "build/run.log",
 		"load"	: true,
 		"render": false,
-		"input"	: false
+		"input"	: false,
+		"logic"	: true
 	},
 	"elements":	{
 		"character"		: true,
