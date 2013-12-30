@@ -55,6 +55,7 @@ pub trait Member	{
 	fn get_name<'a>( &'a self )-> &'a str;
 	fn get_limbs<'a>( &'a self )-> &'a [(grid::Location,Limb)];
 	fn get_team( &self )-> Team;
+	fn move( &mut self, grid::Location, grid::Orientation );
 	fn receive_damage( &mut self, Health, LimbKey )-> DamageResult;
 }
 

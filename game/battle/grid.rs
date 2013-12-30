@@ -122,20 +122,21 @@ pub trait TopologyGrid	{
 	fn get_location( &self, uint )-> Location;
 	fn get_index( &self, Location )-> Option<uint>;
 	fn offset_position( &self, Location, Orientation, Offset )-> Location;
+	fn approximate_orientation( &self, Location, Location )-> Orientation;
 	fn get_neighbors( &self, uint )-> ~[uint];
 }
 
 impl TopologyGrid for Grid	{
-	fn get_location( &self, index : uint )-> Location	{
+	fn get_location( &self, index: uint )-> Location	{
 		point::Point2::new( (index % self.nseg) as int, (index / self.nseg) as int )
 	}
-	fn get_index( &self, d : Location )-> Option<uint>	{
+	fn get_index( &self, d: Location )-> Option<uint>	{
 		let ns = self.nseg as int;
 		if d.x>=0 && d.y<ns && d.y>=0 && d.y<ns	{
 			Some((d.x + d.y*ns) as uint)
 		}else	{None}
 	}
-	fn offset_position( &self, d : Location, o : Orientation, f : Offset )-> Location	{
+	fn offset_position( &self, d: Location, o: Orientation, f: Offset )-> Location	{
 		let offsets = [
 			vector::Vec2::new( 1i, 0i),	vector::Vec2::new( 0i,-1i),
 			vector::Vec2::new(-1i, 0i),	vector::Vec2::new( 0i, 1i),
@@ -144,7 +145,10 @@ impl TopologyGrid for Grid	{
 		let off = offsets[o].mul_s(f.x).add_v( &offsets[o+2].mul_s(f.y) );
 		d.add_v( &off )
 	}
-	fn get_neighbors( &self, index : uint )-> ~[uint]	{
+	fn approximate_orientation( &self, src: Location, dst: Location )-> Orientation	{
+		0	//TODO
+	}
+	fn get_neighbors( &self, index: uint )-> ~[uint]	{
 		let d = self.get_location( index );
 		range(0,4).filter_map( |o| {
 			let dof = self.offset_position( d, o, vector::Vec2::new(1i,0i) );

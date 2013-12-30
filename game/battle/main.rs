@@ -25,22 +25,31 @@ use battle::field::Member;
 use battle::grid::{DrawableGrid,TopologyGrid,GeometryGrid};
 
 
+pub trait Prop	{
+	fn with_space<T>(&mut self, fun: &fn(&mut engine::space::Space)->T)-> T;
+}
+
+pub trait Member : field::Member + Prop	{}
+
 pub struct CharBundle<M>	{
 	brain	: ~think::Brain<M>,
 	member	: @mut M,
 	motion	: ~think::Motion,
+	last_update	: anim::float,
 }
 
 impl<M: field::Member> CharBundle<M>	{
-	pub fn update(&mut self, time : anim::float, field : &mut field::Field, grid : &grid::Grid, lg : &engine::journal::Log)	{
+	pub fn update( &mut self, time: anim::float, field: &mut field::Field, grid: &grid::Grid, lg: &engine::journal::Log )	{
+		let delta = time - self.last_update;
+		self.last_update = time;
 		let new = match	{
 				let mem : &mut M = self.member;
-				self.motion.update( mem as &mut field::Member, time, field, grid )
+				self.motion.update( mem as &mut field::Member, delta, field, grid )
 			}{
 			think::StatusDone	=> true,
 			think::StatusCanInterrupt	=>
 				if self.brain.check( self.member, field, grid )	{
-					self.motion.interrupt();
+					self.motion.stop();
 					lg.add(format!( "{:s}: interrupts", self.member.get_name() ));
 					true
 				}else {false},
@@ -51,13 +60,12 @@ impl<M: field::Member> CharBundle<M>	{
 			lg.add(format!( "{:s}: new motion {:s}", self.member.get_name(), self.motion.get_name() ));
 		}
 	}
+	
+	pub fn is_waiting( &self )-> bool	{
+		false	//TODO
+	}
 }
 
-
-struct Motion	{
-	destination	: engine::space::Space,
-	last_update	: anim::float,
-}
 
 pub struct Character	{
 	// info
@@ -72,16 +80,25 @@ pub struct Character	{
 	skeleton	: @mut engine::space::Armature,
 	record		: @engine::space::ArmatureRecord,
 	// state
-	priv location	: grid::Location,
-	priv orientation: grid::Orientation,
-	priv elevation	: f32,
-	priv motion		: Option<Motion>,
+	location	: grid::Location,
+	orientation	: grid::Orientation,
+	elevation	: f32,
+}
+
+impl Prop for Character	{
+	fn with_space<T>(&mut self, fun: &fn(&mut engine::space::Space)->T)-> T	{
+		fun(&mut self.skeleton.root.space)
+	}
 }
 
 impl field::Member for Character	{
 	fn get_name<'a>( &'a self )-> &'a str	{self.name.as_slice()}
 	fn get_limbs<'a>( &'a self )-> &'a [(grid::Location,field::Limb)]	{&[ (self.location,self.body.clone()) ]}
 	fn get_team( &self )-> field::Team	{self.team}
+	fn move( &mut self, d: grid::Location, r: grid::Orientation )	{
+		self.location = d;
+		self.orientation = r;
+	}
 	fn receive_damage( &mut self, damage : field::Health, _limb_key : field::LimbKey )-> field::DamageResult	{
 		if self.body.health > damage	{
 			self.body.health -= damage;
@@ -111,66 +128,10 @@ impl Character	{
 		grid.compute_space( self.location, self.orientation, self.elevation )
 	}
 
-	pub fn is_busy( &self )-> bool	{ self.motion.is_some() }
-
-	pub fn update_logic( @mut self, time : anim::float, field : &mut field::Field, grid : &grid::Grid )	{
-		let (ref mut dest_opt, ref mut done) = match self.motion	{
-			Some(ref mut mo)	=>	{
-				let pos	= &self.skeleton.root.space.disp;
-				let dest_vector = mo.destination.disp.sub_v( pos );
-				let dest_len = dest_vector.length();
-				let delta = (time - mo.last_update) as f32;
-				let travel_dist = std::num::min( dest_len, delta * self.move_speed );
-				let move_vector = dest_vector.mul_s( travel_dist/dest_len );
-				mo.last_update = time;
-				(Some(pos.add_v( &move_vector )), travel_dist == dest_len)
-			},
-			None	=> (None,false)
-		};
-		match dest_opt	{
-			&Some(ref mut dest_pos)	=>	{
-				let dest_loc = grid.point_cast( &Point::from_vec(dest_pos) );
-				if dest_loc != self.location	{
-					//print(format!( "Location {:s} -> {:s}\n", self.location.to_str(), dest_loc.to_str() ));
-					match field.get_by_location( dest_loc, grid as &TopologyGrid )	{
-						&field::CellEmpty	=>	{
-							field.remove_member( self.key );
-							self.spawn( dest_loc, field, grid );
-						},
-						&field::CellPart(_,_)	=>	{	//collide
-							*dest_pos = self.recompute_space( grid ).disp;
-							*done = true;
-						},
-						_	=> fail!("Unexpected path cell: {:s}", dest_loc.to_str())
-					}
-				}
-				self.skeleton.root.space.disp = *dest_pos;
-			}
-			_	=> ()
-		}
-		if *done	{
-			self.motion = None;
-		}
-	}
-
 	pub fn spawn( @mut self, d : grid::Location, field : &mut field::Field, grid : &grid::Grid )	{
-		self.location = d;
+		self.move(d,0);
 		self.key = field.add_member( self as @mut field::Member, grid as &TopologyGrid );
 		self.skeleton.root.space = self.recompute_space( grid );
-	}
-
-	pub fn move( @mut self, d : grid::Location, time : anim::float, field : &mut field::Field, grid : &grid::Grid )	{
-		if false	{	//instant?
-			field.remove_member( self.key );
-			self.spawn( d, field, grid );
-		}else	{
-			assert!( !self.is_busy() );
-			let space = grid.compute_space( d, self.orientation, self.elevation );
-			self.motion = Some(Motion{
-				destination	: space,
-				last_update	: time,
-			});
-		}
 	}
 }
 
@@ -189,16 +150,19 @@ struct Boss	{
 	skeleton	: @mut engine::space::Armature,
 	record		: @engine::space::ArmatureRecord,
 	// state
-	priv location	: grid::Location,
-	priv orientation: grid::Orientation,
-	priv elevation	: f32,
-	priv motion		: Option<Motion>,
+	location	: grid::Location,
+	orientation: grid::Orientation,
+	elevation	: f32,
 }
 
 impl field::Member for Boss	{
 	fn get_name<'a>( &'a self )-> &'a str	{self.name.as_slice()}
 	fn get_limbs<'a>( &'a self )-> &'a [(grid::Location,field::Limb)]	{&[ (self.location,self.body.clone()) ]}
 	fn get_team( &self )-> field::Team	{self.team}
+	fn move( &mut self, d: grid::Location, r: grid::Orientation )	{
+		self.location = d;
+		self.orientation = r;
+	}
 	fn receive_damage( &mut self, damage : field::Health, _limb_key : field::LimbKey )-> field::DamageResult	{
 		if self.body.health > damage	{
 			self.body.health -= damage;
@@ -233,7 +197,7 @@ impl Boss	{
 	}
 
 	pub fn spawn( @mut self, d : grid::Location, field : &mut field::Field, grid : &grid::Grid )	{
-		self.location = d;
+		self.move(d,0);
 		self.key = field.add_member( self as @mut field::Member, grid as &TopologyGrid );
 		self.skeleton.root.space = self.recompute_space( grid );
 	}
@@ -320,7 +284,7 @@ impl Scene	{
 	}
 
 	pub fn on_input( &mut self, event : &input::Event, state : &input::State )	{
-		let hero_command = !self.hero.member.is_busy();
+		let hero_command = self.hero.is_waiting();
 		match event	{
 			&input::EvKeyboard(key,press) if press	=> {
 				// camera rotation
@@ -334,9 +298,8 @@ impl Scene	{
 				let pos = self.ray_cast( state );
 				match self.field.get_by_location( pos, &self.grid as &TopologyGrid )	{
 					&field::CellEmpty	=>	{
-						if !self.hero.member.is_busy()	{
-							self.hero.member.move( pos, state.time_game, &mut self.field, &self.grid );
-						}
+						//self.hero.member.move( pos, state.time_game, &mut self.field, &self.grid );
+						//TODO
 					},
 					&field::CellPart(_mk,_)	=> (),	//attack
 					_	=> (),	//ignore
@@ -348,9 +311,9 @@ impl Scene	{
 				self.hero.member.update_view( tv );
 				self.boss.member.update_view( tv );
 				self.view.update( tv );
-				let tg = state.time_game;
-				self.hero.member.update_logic( tg, &mut self.field, &self.grid );
-				self.boss.member.update_logic( tg, &mut self.field, &self.grid );
+				//let tg = state.time_game;
+				//self.hero.member.update_logic( tg, &mut self.field, &self.grid );
+				//self.boss.member.update_logic( tg, &mut self.field, &self.grid );
 				self.update_matrices( state.aspect as f32 );
 				if hero_command	{
 					let active = self.ray_cast( state );
@@ -375,7 +338,7 @@ impl Scene	{
 		if self.field_revision != self.field.get_revision()	{
 			self.grid.clear();
 			self.field.fill_grid( self.grid.mut_cells() );
-			if !self.hero.member.is_busy()	{
+			if self.hero.is_waiting()	{
 				self.grid.get_index(self.loc_selected).map(|index|	{
 					match self.field.get_cell(index)	{
 						&field::CellEmpty	=>	{
@@ -496,13 +459,13 @@ pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon 
 			location	: Point2::new(0i,0i),
 			orientation	: 0,
 			elevation	: 1.5,
-			motion		: None,
 		};
 		let brain : ~think::Player<Character> = ~think::Player::new();
 		CharBundle	{
 			brain	: brain as ~think::Brain<Character>,
 			member	: @mut mem,
 			motion	: ~think::motion::Idle as ~think::Motion,
+			last_update	: 0.0,
 		}
 	};
 	// load boss
@@ -522,13 +485,13 @@ pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon 
 			location	: Point2::new(0i,0i),
 			orientation	: 0,
 			elevation	: 1.5,
-			motion		: None,
 		};
 		let brain : ~think::Monster<Boss> = ~think::Monster::new();
 		CharBundle	{
 			brain	: brain as ~think::Brain<Boss>,
 			member	: @mut mem,
 			motion	: ~think::motion::Idle as ~think::Motion,
+			last_update	: 0.0,
 		}
 	};
 	// create grid
