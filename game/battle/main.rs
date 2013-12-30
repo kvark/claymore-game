@@ -26,7 +26,7 @@ use battle::grid::{DrawableGrid,TopologyGrid,GeometryGrid};
 
 
 pub trait Prop	{
-	fn with_space<T>(&mut self, fun: &fn(&mut engine::space::Space)->T)-> T;
+	fn get_root( &self )-> @mut engine::space::Node;
 }
 
 pub trait Member : field::Member + Prop	{}
@@ -38,13 +38,13 @@ pub struct CharBundle<M>	{
 	last_update	: anim::float,
 }
 
-impl<M: field::Member> CharBundle<M>	{
+impl<M: Member> CharBundle<M>	{
 	pub fn update( &mut self, time: anim::float, field: &mut field::Field, grid: &grid::Grid, lg: &engine::journal::Log )	{
 		let delta = time - self.last_update;
 		self.last_update = time;
 		let new = match	{
 				let mem : &mut M = self.member;
-				self.motion.update( mem as &mut field::Member, delta, field, grid )
+				self.motion.update( mem as &mut Member, delta, field, grid )
 			}{
 			think::StatusDone	=> true,
 			think::StatusCanInterrupt	=>
@@ -86,10 +86,12 @@ pub struct Character	{
 }
 
 impl Prop for Character	{
-	fn with_space<T>(&mut self, fun: &fn(&mut engine::space::Space)->T)-> T	{
-		fun(&mut self.skeleton.root.space)
+	fn get_root( &self )-> @mut engine::space::Node	{
+		self.skeleton.root
 	}
 }
+
+impl Member for Character	{}
 
 impl field::Member for Character	{
 	fn get_name<'a>( &'a self )-> &'a str	{self.name.as_slice()}
@@ -154,6 +156,14 @@ struct Boss	{
 	orientation: grid::Orientation,
 	elevation	: f32,
 }
+
+impl Prop for Boss	{
+	fn get_root( &self )-> @mut engine::space::Node	{
+		self.skeleton.root
+	}
+}
+
+impl Member for Boss	{}
 
 impl field::Member for Boss	{
 	fn get_name<'a>( &'a self )-> &'a str	{self.name.as_slice()}

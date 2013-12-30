@@ -13,7 +13,7 @@ pub enum MotionStatus	{
 pub trait Motion	{
 	fn get_name<'a>( &'a self )-> &'a str;	//TODO: ToStr
 	//fn start()	//custom interface
-	fn update( &mut self, &mut field::Member, anim::float, &mut field::Field, &grid::Grid )-> MotionStatus;
+	fn update( &mut self, &mut main::Member, anim::float, &mut field::Field, &grid::Grid )-> MotionStatus;
 	fn stop( &mut self );
 }
 
@@ -23,14 +23,16 @@ pub trait Brain<M : field::Member>	{
 }
 
 pub mod motion	{
-	use engine::{anim,space};
-	use battle::{grid,field};
+	use cgmath::point::*;
+	use cgmath::vector::*;
+	use engine::anim;
+	use battle::{grid,field,main};
 	use battle::think;
 
 	pub struct Idle();
 	impl think::Motion for Idle	{
 		fn get_name<'a>( &'a self )-> &'a str	{ "Idle" }
-		fn update( &mut self, _m : &mut field::Member, _delta : anim::float, _field: &mut field::Field, _grid : &grid::Grid )-> think::MotionStatus	{
+		fn update( &mut self, _m : &mut main::Member, _delta : anim::float, _field: &mut field::Field, _grid : &grid::Grid )-> think::MotionStatus	{
 			think::StatusCanInterrupt
 		}
 		fn stop( &mut self )	{}
@@ -38,50 +40,58 @@ pub mod motion	{
 
 	pub struct Move	{
 		destinations: ~[grid::Location],
+		location	: grid::Location,
 		orientation	: grid::Orientation,
+		elevation	: f32,
 		speed		: f32,
 	}
 	impl think::Motion for Move	{
 		fn get_name<'a>( &'a self )-> &'a str	{ "Move" }
-		fn update( &mut self, _m : &mut field::Member, full_delta : anim::float, _field: &mut field::Field, _grid : &grid::Grid )-> think::MotionStatus	{
+		fn update( &mut self, m : &mut main::Member, full_delta : anim::float, field: &mut field::Field, grid : &grid::Grid )-> think::MotionStatus	{
 			let mut delta = full_delta as f32;
+			let mut pos = Point::from_vec( &m.get_root().space.disp );
 			while delta > 0.0	{
-				let _dest_loc = self.destinations[0];
+				let dest_pos = (grid as &grid::GeometryGrid).get_cell_center( self.destinations[0] );
+				let dest_vector = dest_pos.sub_p( &pos );
+				let dest_len = dest_vector.length();
+				let time_left = dest_len / self.speed;
+				pos = if delta >= time_left	{
+					delta -= time_left;
+					self.destinations.shift();
+					dest_pos
+				}else	{
+					let move_vector = dest_vector.mul_s( delta * self.speed / dest_len );
+					delta = 0.0;
+					pos.add_v( &move_vector )
+				};
 			}
-			/*let pos	= &self.root.space.disp;
-			let dest_vector = self.destination.disp.sub_v( pos );
-			let dest_len = dest_vector.length();
-			let delta = (time - mo.last_update) as f32;
-			let travel_dist = std::num::min( dest_len, delta * self.speed );
-			let move_vector = dest_vector.mul_s( travel_dist/dest_len );
-			mo.last_update = time;
-			(Some(pos.add_v( &move_vector )), travel_dist == dest_len)
-		
-			match dest_opt	{
-				&Some(ref mut dest_pos)	=>	{
-					let dest_loc = grid.point_cast( &Point::from_vec(dest_pos) );
-					if dest_loc != self.location	{
-						//print(format!( "Location {:s} -> {:s}\n", self.location.to_str(), dest_loc.to_str() ));
-						match field.get_by_location( dest_loc, grid as &TopologyGrid )	{
-							&field::CellEmpty	=>	{
-								field.remove_member( self.key );
-								self.spawn( dest_loc, field, grid );
-							},
-							&field::CellPart(_,_)	=>	{	//collide
-								*dest_pos = self.recompute_space( grid ).disp;
-								*done = true;
-							},
-							_	=> fail!("Unexpected path cell: {:s}", dest_loc.to_str())
-						}
-					}
-					self.skeleton.root.space.disp = *dest_pos;
+			let dest_loc = (grid as &grid::GeometryGrid).point_cast( &pos );
+			let done : bool = if dest_loc != self.location	{
+				//print(format!( "Location {:s} -> {:s}\n", self.location.to_str(), dest_loc.to_str() ));
+				match field.get_by_location( dest_loc, grid as &grid::TopologyGrid )	{
+					&field::CellEmpty	=>	{
+						//TODO: field update?
+						//field.remove_member( m.key );
+						//self.spawn( dest_loc, field, grid );
+						m.move( dest_loc, self.orientation);
+						false
+					},
+					&field::CellPart(_,_)	=>	{	//collide
+						pos = Point::from_vec( &(grid as &grid::GeometryGrid).compute_space(
+							dest_loc, self.orientation, self.elevation ).disp);
+						true
+					},
+					_	=> fail!("Unexpected path cell: {:s}", dest_loc.to_str())
 				}
-				_	=> ()
+			}else {false};
+			
+			m.get_root().space.disp = pos.to_vec();
+			
+			if done || self.destinations.is_empty()	{
+				think::StatusDone
+			}else	{
+				think::StatusCanInterrupt
 			}
-			if *done	{
-				self.motion = None;
-			}*/
-			think::StatusDone//TODO
 		}
 		fn stop( &mut self )	{
 			//TODO
@@ -93,7 +103,7 @@ pub mod motion	{
 	}
 	impl think::Motion for Attack	{
 		fn get_name<'a>( &'a self )-> &'a str	{ "Attack" }
-		fn update( &mut self, _m : &mut field::Member, _delta : anim::float, _field: &mut field::Field, _grid : &grid::Grid )-> think::MotionStatus	{
+		fn update( &mut self, _m : &mut main::Member, _delta : anim::float, _field: &mut field::Field, _grid : &grid::Grid )-> think::MotionStatus	{
 			think::StatusDone//TODO
 		}
 		fn stop( &mut self )	{
@@ -139,7 +149,9 @@ impl Brain<main::Character> for Player<main::Character>	{
 			let mk = match field.get_by_location( self.target, topo )	{
 				&field::CellEmpty	=> return ~motion::Move{
 						destinations: ~[self.target],
+						location	: member.location,
 						orientation	: topo.approximate_orientation( member.location, self.target ),
+						elevation	: member.elevation,
 						speed		: member.move_speed,
 					} as ~Motion,
 				&field::CellPart(key,_)	=> key,
