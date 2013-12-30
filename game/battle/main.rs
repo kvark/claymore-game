@@ -31,14 +31,14 @@ pub trait Prop	{
 
 pub trait Member : field::Member + Prop	{}
 
-pub struct CharBundle<M>	{
-	brain	: ~think::Brain<M>,
+pub struct CharBundle<M,B>	{
+	brain	: ~B,
 	member	: @mut M,
 	motion	: ~think::Motion,
 	last_update	: anim::float,
 }
 
-impl<M: Member> CharBundle<M>	{
+impl<M: Member, B: think::Brain<M>> CharBundle<M,B>	{
 	pub fn update( &mut self, time: anim::float, field: &mut field::Field, grid: &grid::Grid, lg: &engine::journal::Log )	{
 		let delta = time - self.last_update;
 		self.last_update = time;
@@ -62,7 +62,7 @@ impl<M: Member> CharBundle<M>	{
 	}
 	
 	pub fn is_waiting( &self )-> bool	{
-		false	//TODO
+		std::str::eq_slice( self.motion.get_name(), &"Idle" )
 	}
 }
 
@@ -257,8 +257,8 @@ pub struct Scene	{
 	land	: engine::object::Entity,
 	grid	: grid::Grid,
 	field	: field::Field,
-	hero	: CharBundle<Character>,
-	boss	: CharBundle<Boss>,
+	hero	: CharBundle<Character,think::Player<Character>>,
+	boss	: CharBundle<Boss,think::Monster<Boss>>,
 	cache	: gr_mid::draw::Cache,
 	hud		: gen_hud::common::Screen,
 	field_revision	: uint,
@@ -308,8 +308,7 @@ impl Scene	{
 				let pos = self.ray_cast( state );
 				match self.field.get_by_location( pos, &self.grid as &TopologyGrid )	{
 					&field::CellEmpty	=>	{
-						//self.hero.member.move( pos, state.time_game, &mut self.field, &self.grid );
-						//TODO
+						self.hero.brain.move( pos );
 					},
 					&field::CellPart(_mk,_)	=> (),	//attack
 					_	=> (),	//ignore
@@ -472,7 +471,7 @@ pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon 
 		};
 		let brain : ~think::Player<Character> = ~think::Player::new();
 		CharBundle	{
-			brain	: brain as ~think::Brain<Character>,
+			brain	: brain,
 			member	: @mut mem,
 			motion	: ~think::motion::Idle as ~think::Motion,
 			last_update	: 0.0,
@@ -498,7 +497,7 @@ pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon 
 		};
 		let brain : ~think::Monster<Boss> = ~think::Monster::new();
 		CharBundle	{
-			brain	: brain as ~think::Brain<Boss>,
+			brain	: brain,
 			member	: @mut mem,
 			motion	: ~think::motion::Idle as ~think::Motion,
 			last_update	: 0.0,

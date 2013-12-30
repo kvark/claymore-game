@@ -50,8 +50,9 @@ pub mod motion	{
 		fn update( &mut self, m : &mut main::Member, full_delta : anim::float, field: &mut field::Field, grid : &grid::Grid )-> think::MotionStatus	{
 			let mut delta = full_delta as f32;
 			let mut pos = Point::from_vec( &m.get_root().space.disp );
-			while delta > 0.0	{
-				let dest_pos = (grid as &grid::GeometryGrid).get_cell_center( self.destinations[0] );
+			while delta > 0.0 && !self.destinations.is_empty()	{
+				let mut dest_pos = (grid as &grid::GeometryGrid).get_cell_center( self.destinations[0] );
+				dest_pos.z = self.elevation;
 				let dest_vector = dest_pos.sub_p( &pos );
 				let dest_len = dest_vector.length();
 				let time_left = dest_len / self.speed;
@@ -133,6 +134,14 @@ impl<M> Player<M>	{
 			do_click	: false,
 			target		: cgmath::point::Point2::new(0,0),
 		}
+	}
+}
+
+impl<M> Player<M>	{
+	pub fn move( &mut self, target: grid::Location )	{
+		self.do_cancel = true;
+		self.do_click = true;
+		self.target = target;
 	}
 }
 
