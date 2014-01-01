@@ -36,6 +36,7 @@ pub struct Limb	{
 }
 
 pub type MemberKey	= int;
+pub type MemberLimb	= (grid::Location,Limb);
 
 pub enum Cell	{
 	CellEmpty,
@@ -53,19 +54,17 @@ pub enum DamageResult	{
 
 pub trait Member	{
 	fn get_name<'a>( &'a self )-> &'a str;
-	fn get_limbs<'a>( &'a self )-> &'a [(grid::Location,Limb)];
+	fn get_limbs<'a>( &'a self )-> &'a [MemberLimb];
 	fn get_team( &self )-> Team;
 	fn move( &mut self, grid::Location, grid::Orientation );
 	fn receive_damage( &mut self, Health, LimbKey )-> DamageResult;
+	fn is_same(a : @mut Member, b : @mut Member)-> bool	{
+		//std::managed::mut_ptr_eq(a,b)
+		std::str::eq_slice( a.get_name(), b.get_name() )
+	}
 }
 
-fn is_same_member(a : @mut Member, b : @mut Member)-> bool	{
-	//std::managed::mut_ptr_eq(a,b)
-	std::str::eq_slice( a.get_name(), b.get_name() )
-}
-
-
-struct Field	{
+pub struct Field	{
 	priv cells		: ~[Cell],
 	priv members	: std::hashmap::HashMap<MemberKey,@mut Member>,
 	priv revision	: uint,
@@ -97,7 +96,7 @@ impl Field	{
 		}
 	}
 
-	pub fn with_member<T>( &self, key : MemberKey, fun : &fn(&Member)->T )->Option<T>	{
+	pub fn with_member<T>( &self, key : MemberKey, fun : |&Member|->T )->Option<T>	{
 		self.members.find(&key).map(|m| fun(*m))
 	}
 
@@ -107,20 +106,24 @@ impl Field	{
 			*cell = CellEmpty;
 		}
 	}
+	
+	fn add_member_cells( &mut self, m_key: MemberKey, m_limbs: &[MemberLimb], grid: &grid::TopologyGrid )	{
+		for &(pos,limb) in m_limbs.iter()	{
+			grid.get_index(pos).map(|index|	{
+				match self.cells[index]	{
+					CellEmpty	=> self.cells[index] = CellPart( m_key,~[limb] ),
+					CellPart(mkey,ref mut limbs) if mkey==m_key	=> limbs.push(limb),
+					_	=> assert!({let (ref kind,_) = limb.key; !kind.is_vital() }),
+				};
+			});
+		}
+	}
 
 	pub fn add_member( &mut self, member : @mut Member, grid : &grid::TopologyGrid )-> MemberKey	{
 		let mk = self.next_key;
 		self.next_key += 1;
 		self.members.insert( mk, member );
-		for &(pos,limb) in member.get_limbs().iter()	{
-			grid.get_index(pos).map(|index|	{
-				match self.cells[index]	{
-					CellEmpty	=> self.cells[index] = CellPart(mk,~[limb]),
-					CellPart(mkey,ref mut limbs) if mkey==mk	=> limbs.push(limb),
-					_	=> {let (ref kind,_) = limb.key; assert!( !kind.is_vital() );},
-				};
-			});
-		}
+		self.add_member_cells( mk, member.get_limbs(), grid );
 		self.revision += 1;
 		mk
 	}
@@ -133,16 +136,30 @@ impl Field	{
 			}
 		}
 	}
-
-	pub fn remove_member( &mut self, key : MemberKey )	{
+	
+	fn remove_member_cells( &mut self, key: MemberKey )	{
 		self.cells.retain(|cell|	{
 			match cell	{
 				&CellPart(mk,_) if mk==key	=> false,
 				_	=> true,
 			}
 		});
+	}
+
+	pub fn remove_member( &mut self, key: MemberKey )	{
+		self.remove_member_cells( key );
 		self.members.remove( &key );
 		self.revision += 1;
+	}
+	
+	pub fn update_member( &mut self, mk: MemberKey, grid : &grid::TopologyGrid )-> bool	{
+		let m = match self.members.find( &mk )	{
+			Some(mem)	=> *mem,
+			None		=> return false,
+		};
+		self.remove_member_cells( mk );
+		self.add_member_cells( mk, m.get_limbs(), grid );
+		true
 	}
 
 	pub fn deal_damage( &mut self, index : uint, limb_key : LimbKey, damage : Health )-> DamageResult	{

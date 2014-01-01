@@ -32,7 +32,6 @@ pub struct Buffer	{
 }
 
 impl Drop for BufferHandle	{
-	#[fixed_stack_segment]
 	fn drop( &mut self )	{
 		unsafe{
 			al::ffi::alDeleteBuffers( 1, ptr::to_unsafe_ptr(&**self) );
@@ -47,7 +46,6 @@ pub struct Source	{
 }
 
 impl Drop for SourceHandle	{
-	#[fixed_stack_segment]
 	fn drop( &mut self )	{
 		unsafe{
 			al::ffi::alDeleteSources( 1, ptr::to_unsafe_ptr(&**self) );
@@ -56,7 +54,6 @@ impl Drop for SourceHandle	{
 }
 
 impl Source	{
-	#[fixed_stack_segment]
 	pub fn bind( &mut self, buf : @Buffer )	{
 		self.buffer = Some(buf);
 		unsafe{
@@ -64,7 +61,6 @@ impl Source	{
 		}
 	}
 
-	#[fixed_stack_segment]
 	pub fn unbind( &mut self )	{
 		self.buffer = None;
 		unsafe{
@@ -72,7 +68,6 @@ impl Source	{
 		}
 	}
 
-	#[fixed_stack_segment]
 	pub fn play( &self )	{
 		assert!( self.buffer.is_some() );
 		unsafe{
@@ -113,7 +108,6 @@ impl Context	{
 		}
 	}
 	
-	#[fixed_stack_segment]
 	pub fn check( &self )	{
 		let err = unsafe{ al::ffi::alGetError() };
 		if err != al::ffi::NO_ERROR	{
@@ -121,7 +115,6 @@ impl Context	{
 		}
 	}
 	
-	#[fixed_stack_segment]
 	pub fn check_extension( &self, name : &str )-> bool	{
 		let mut yes = false;
 		name.with_c_str( |text|	{
@@ -130,7 +123,6 @@ impl Context	{
 		yes
 	}
 
-	#[fixed_stack_segment]
 	pub fn create_buffer<T>( &self, channels : uint, bits : uint, byte_rate : uint, 
 		sample_rate : uint, data : ~[T] )-> Buffer	{
 		let mut hid : al::types::ALuint = 0;
@@ -138,7 +130,7 @@ impl Context	{
 		unsafe{
 			al::ffi::alGenBuffers( 1, ptr::to_mut_unsafe_ptr(&mut hid) );
 			al::ffi::alBufferData( hid, find_format(channels,bits),
-				std::vec::raw::to_ptr(data) as *al::types::ALvoid,
+				data.as_ptr() as *al::types::ALvoid,
 				size as al::types::ALsizei, sample_rate as al::types::ALsizei );
 		}		
 		Buffer{
@@ -147,7 +139,6 @@ impl Context	{
 		}
 	}
 
-	#[fixed_stack_segment]
 	pub fn create_source( &self )-> Source	{
 		let mut hid : al::types::ALuint = 0;
 		unsafe{
@@ -162,7 +153,7 @@ impl Context	{
 
 
 pub fn read_wave_chunk( rd : &mut load::Reader )-> load::Chunk	{
-	let name = std::str::from_utf8( rd.get_bytes(4) );
+	let name = std::str::from_utf8_owned( rd.get_bytes(4) );
 	let size = rd.get_uint(4);
 	//lg.add( ~"\tEntering " + name );
 	load::Chunk{
@@ -173,15 +164,10 @@ pub fn read_wave_chunk( rd : &mut load::Reader )-> load::Chunk	{
 }
 
 pub fn load_wav( at : &Context, path : &str, lg : &journal::Log )-> Buffer	{
-	struct Chunk	{
-		id		: ~str,
-		start	: uint,
-		size	: uint,
-	};
 	lg.add( "Loading " + path );
 	let mut rd = load::Reader::create_ext( path, read_wave_chunk );
 	assert!( rd.enter() == ~"RIFF" );
-	let s_format = std::str::from_utf8( rd.get_bytes(4) );
+	let s_format = std::str::from_utf8_owned( rd.get_bytes(4) );
 	assert!( s_format == ~"WAVE" );
 	assert!( rd.enter() == ~"fmt " );
 	let audio_format	= rd.get_uint(2);

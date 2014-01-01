@@ -82,7 +82,7 @@ lib/glfw.dummy: ../glfw-rs/src/glfw/*.rs
 	(cd ../glfw-rs && rustpkg build glfw && cp -Ru build/*/glfw/lib* ../${DIR}/lib/)
 	touch $@
 
-lib/gl.dummy: ../gl-rs/src/generator/*.r? ../gl-rs/src/gl/*.r?
+lib/gl.dummy: ../gl-rs/src/gen/*.r? ../gl-rs/src/gl/*.r?
 	(cd ../gl-rs && rustpkg build gl && cp -Ru build/*/gl/lib* ../${DIR}/lib)
 	touch $@
 

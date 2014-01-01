@@ -45,9 +45,11 @@ pub mod motion	{
 		elevation	: f32,
 		speed		: f32,
 	}
+	
 	impl think::Motion for Move	{
 		fn get_name<'a>( &'a self )-> &'a str	{ "Move" }
-		fn update( &mut self, m : &mut main::Member, full_delta : anim::float, field: &mut field::Field, grid : &grid::Grid )-> think::MotionStatus	{
+		
+		fn update( &mut self, m: &mut main::Member, full_delta : anim::float, field: &mut field::Field, grid : &grid::Grid )-> think::MotionStatus	{
 			let mut delta = full_delta as f32;
 			let mut pos = Point::from_vec( &m.get_root().space.disp );
 			while delta > 0.0 && !self.destinations.is_empty()	{
@@ -71,10 +73,8 @@ pub mod motion	{
 				//print(format!( "Location {:s} -> {:s}\n", self.location.to_str(), dest_loc.to_str() ));
 				match field.get_by_location( dest_loc, grid as &grid::TopologyGrid )	{
 					&field::CellEmpty	=>	{
-						//TODO: field update?
-						//field.remove_member( m.key );
-						//self.spawn( dest_loc, field, grid );
-						m.move( dest_loc, self.orientation);
+						m.move( dest_loc, self.orientation );
+						field.update_member( m.get_key(), grid as &grid::TopologyGrid ); 
 						false
 					},
 					&field::CellPart(_,_)	=>	{	//collide
@@ -94,6 +94,7 @@ pub mod motion	{
 				think::StatusCanInterrupt
 			}
 		}
+		
 		fn stop( &mut self )	{
 			//TODO
 		}

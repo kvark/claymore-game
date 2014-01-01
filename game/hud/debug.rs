@@ -4,7 +4,7 @@ use hud = hud::main;
 
 
 pub enum MenuAction<T>	{
-	ActionFun( ~fn(&mut T) ),
+	ActionFun( proc(&mut T) ),
 	ActionList( ~[MenuItem<T>] ),
 }
 
@@ -24,9 +24,7 @@ impl<T> MenuItem<T>	{
 		MenuItem	{
 			name	: name,
 			action	: match action	{
-				ActionFun(f)		=> ActionFun(
-					|u:&mut U| f(u.access_mut())
-				),
+				ActionFun(f)		=> do ActionFun	|u:&mut U| {f(u.access_mut())},
 				ActionList(list)	=> ActionList(
 					list.move_iter().map(
 						|item| {item.convert()}
@@ -38,15 +36,15 @@ impl<T> MenuItem<T>	{
 }
 
 
-pub struct MenuListIter<'self,T>	{
-	priv item		: &'self MenuItem<T>,
-	priv selection	: &'self [u8],
+pub struct MenuListIter<'a,T>	{
+	priv item		: &'a MenuItem<T>,
+	priv selection	: &'a [u8],
 }
 
-type ListIterUnit<'self,T> = (&'self str, &'self [MenuItem<T>]);
+type ListIterUnit<'a,T> = (&'a str, &'a [MenuItem<T>]);
 
-impl<'self,T> Iterator<ListIterUnit<'self,T>> for MenuListIter<'self,T>	{
-	fn next( &mut self )-> Option<ListIterUnit<'self,T>>	{
+impl<'a,T> Iterator<ListIterUnit<'a,T>> for MenuListIter<'a,T>	{
+	fn next( &mut self )-> Option<ListIterUnit<'a,T>>	{
 		match self.selection	{
 			[head,..tail]	=>	{
 				match self.item.action	{
@@ -54,7 +52,7 @@ impl<'self,T> Iterator<ListIterUnit<'self,T>> for MenuListIter<'self,T>	{
 						assert!( (head as uint) < list.len() );
 						let name = self.item.name.as_slice();
 						self.selection = tail;
-						self.item = &'self list[head];
+						self.item = &'a list[head];
 						Some(( name, list.as_slice() ))
 					},
 					_	=> fail!("Unexpected end of debug menu on item {:s}", self.item.name),
@@ -66,19 +64,19 @@ impl<'self,T> Iterator<ListIterUnit<'self,T>> for MenuListIter<'self,T>	{
 }
 
 
-pub struct MenuAllIter<'self,T>	{
-	priv stack	: ~[&'self [MenuItem<T>]],
-	priv item	: &'self MenuItem<T>,
+pub struct MenuAllIter<'a,T>	{
+	priv stack	: ~[&'a [MenuItem<T>]],
+	priv item	: &'a MenuItem<T>,
 }
 
-impl<'self,T> Iterator<&'self MenuItem<T>> for MenuAllIter<'self,T>	{
-	fn next( &mut self )-> Option<&'self MenuItem<T>>	{
+impl<'a,T> Iterator<&'a MenuItem<T>> for MenuAllIter<'a,T>	{
+	fn next( &mut self )-> Option<&'a MenuItem<T>>	{
 		let list = match self.item.action	{
 			ActionList(ref list) if !list.is_empty()=> list.as_slice(),
 			_	if !self.stack.is_empty()			=> self.stack.pop(),
 			_	=> return None,
 		};
-		self.item = &'self list[0];
+		self.item = &'a list[0];
 		if list.len() > 1	{
 			self.stack.push( list.slice_from(1) );
 		}

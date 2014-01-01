@@ -29,7 +29,9 @@ pub trait Prop	{
 	fn get_root( &self )-> @mut engine::space::Node;
 }
 
-pub trait Member : field::Member + Prop	{}
+pub trait Member : field::Member + Prop	{
+	fn get_key( &self )-> field::MemberKey;
+}
 
 pub struct CharBundle<M,B>	{
 	brain	: ~B,
@@ -91,11 +93,13 @@ impl Prop for Character	{
 	}
 }
 
-impl Member for Character	{}
+impl Member for Character	{
+	fn get_key( &self )-> field::MemberKey	{ self.key }
+}
 
 impl field::Member for Character	{
 	fn get_name<'a>( &'a self )-> &'a str	{self.name.as_slice()}
-	fn get_limbs<'a>( &'a self )-> &'a [(grid::Location,field::Limb)]	{&[ (self.location,self.body.clone()) ]}
+	fn get_limbs<'a>( &'a self )-> &'a [field::MemberLimb]	{&[ (self.location,self.body.clone()) ]}
 	fn get_team( &self )-> field::Team	{self.team}
 	fn move( &mut self, d: grid::Location, r: grid::Orientation )	{
 		self.location = d;
@@ -163,11 +167,13 @@ impl Prop for Boss	{
 	}
 }
 
-impl Member for Boss	{}
+impl Member for Boss	{
+	fn get_key( &self )-> field::MemberKey	{ self.key }
+}
 
 impl field::Member for Boss	{
 	fn get_name<'a>( &'a self )-> &'a str	{self.name.as_slice()}
-	fn get_limbs<'a>( &'a self )-> &'a [(grid::Location,field::Limb)]	{&[ (self.location,self.body.clone()) ]}
+	fn get_limbs<'a>( &'a self )-> &'a [field::MemberLimb]	{&[ (self.location,self.body.clone()) ]}
 	fn get_team( &self )-> field::Team	{self.team}
 	fn move( &mut self, d: grid::Location, r: grid::Orientation )	{
 		self.location = d;
@@ -200,10 +206,6 @@ impl Boss	{
 
 	fn recompute_space( &self, grid : &grid::Grid )-> engine::space::Space	{
 		grid.compute_space( self.location, self.orientation, self.elevation )
-	}
-
-	pub fn update_logic( @mut self, _time : anim::float, _field : &mut field::Field, _grid : &grid::Grid )	{
-		//empty
 	}
 
 	pub fn spawn( @mut self, d : grid::Location, field : &mut field::Field, grid : &grid::Grid )	{
@@ -266,7 +268,7 @@ pub struct Scene	{
 }
 
 impl Scene	{
-	pub fn reset( &mut self, time : anim::float )	{
+	pub fn reset( &mut self, _time : anim::float )	{
 		// common
 		self.grid.clear();
 		self.field.clear();
@@ -310,7 +312,11 @@ impl Scene	{
 					&field::CellEmpty	=>	{
 						self.hero.brain.move( pos );
 					},
-					&field::CellPart(_mk,_)	=> (),	//attack
+					&field::CellPart(mk,_) =>	{
+						if pos!=self.hero.member.location && mk == self.hero.member.key	{
+							self.hero.brain.move( pos );
+						}else	{}	//attack
+					},
 					_	=> (),	//ignore
 				}
 			},
@@ -391,11 +397,11 @@ impl Scene	{
 			action	: debug::ActionList(~[
 				debug::MenuItem	{
 					name	: ~"battle-reset",
-					action	: debug::ActionFun(|s:&mut Scene| {s.reset(0.0)}),
+					action	: do debug::ActionFun |s:&mut Scene| {s.reset(0.0)},
 				},
 				debug::MenuItem	{
 					name	: ~"battle-test",
-					action	: debug::ActionFun(|_| {}),
+					action	: do debug::ActionFun |_| {},
 				},
 			]),
 		}

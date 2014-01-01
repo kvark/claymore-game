@@ -63,7 +63,7 @@ impl ProxyState for ClearData	{
 		let mut depth = 0 as gl::types::GLdouble;
 		let mut stencil = 0 as gl::types::GLint;
 		unsafe	{
-			gl::GetFloatv(	gl::COLOR_CLEAR_VALUE,	std::vec::raw::to_mut_ptr(color)	);
+			gl::GetFloatv(	gl::COLOR_CLEAR_VALUE,	color.as_mut_ptr()	);
 			gl::GetDoublev(	gl::DEPTH_CLEAR_VALUE,	ptr::to_mut_unsafe_ptr(&mut depth)		);
 			gl::GetIntegerv(gl::STENCIL_CLEAR_VALUE,ptr::to_mut_unsafe_ptr(&mut stencil)	);
 		}
@@ -97,8 +97,8 @@ pub struct Context	{
 }
 
 
-pub fn create( loader : &fn(symbol: &str) -> Option<extern "C" fn()>,
-		wid : uint, het : uint, ns : uint )-> Context	{
+pub fn create( loader: |&str|->Option<extern "system" fn()>,
+		wid: uint, het: uint, ns: uint )-> Context	{
 	// init GL
 	gl::load_with( loader );
 	// read caps

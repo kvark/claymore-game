@@ -145,7 +145,7 @@ impl TopologyGrid for Grid	{
 		let off = offsets[o].mul_s(f.x).add_v( &offsets[o+2].mul_s(f.y) );
 		d.add_v( &off )
 	}
-	fn approximate_orientation( &self, src: Location, dst: Location )-> Orientation	{
+	fn approximate_orientation( &self, _src: Location, _dst: Location )-> Orientation	{
 		0	//TODO
 	}
 	fn get_neighbors( &self, index: uint )-> ~[uint]	{

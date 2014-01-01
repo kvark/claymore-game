@@ -58,7 +58,7 @@ fn parse_relation( s : &str )-> Relation	{
 }
 
 fn parse_alignment( expression : &str )-> Alignment	{
-	let s = expression.split_iter( |c:char| {c=='=' || c=='.'} ).map( |w| w.to_owned() ).to_owned_vec();
+	let s = expression.split( |c:char| {c=='=' || c=='.'} ).map( |w| w.to_owned() ).to_owned_vec();
 	assert!( s.len() == 3u );
 	Alignment(parse_anchor(s[0]), parse_relation(s[1]), parse_anchor(s[2]))
 }
@@ -169,7 +169,7 @@ impl Frame	{
 		let m = &self.margin;
 		let (sx,sy) = self.min_size;
 		let (ex,ey) = content;
-		( std::int::max(sx,m.side+ex+m.side), std::int::max(sy,m.bot+ey+m.top) )
+		( std::num::max(sx,m.side+ex+m.side), std::num::max(sy,m.bot+ey+m.top) )
 	}
 
 	pub fn get_draw_rect( &self )-> Rect	{
@@ -220,13 +220,13 @@ impl Frame	{
 				let (x1,y1) = child.area.get_point( ALeftBot, &no_margin );
 				let (x2,y2) = child.area.get_point( ARightTop,&no_margin );
 				assert!( x1<=x2 && y1<=y2 );
-				x_min = std::int::min(x_min,x1); y_min = std::int::min(y_min,y1);
-				x_max = std::int::max(x_max,x2); y_max = std::int::max(y_max,y2);
+				x_min = std::num::min(x_min,x1); y_min = std::num::min(y_min,y1);
+				x_max = std::num::max(x_max,x2); y_max = std::num::max(y_max,y2);
 				lg.add(format!( "\tUpdated1 '{:s}' to: {:s}, ({:i},{:i}),({:i},{:i})",
 					child.name, child.area.to_str(), x1,y1, x2,y2 ));
 			}
 		}
-		let content = ( std::int::max(ex,x_max-x_min), std::int::max(ey,y_max-y_min) ); 
+		let content = ( std::num::max(ex,x_max-x_min), std::num::max(ey,y_max-y_min) ); 
 		lg.add(format!( "\tFrame3 '{:s}' bounding box is [{:i}-{:i}]x[{:i}-{:i}]", self.name, x_min, x_max, y_min, y_max ));
 		self.area.size = self.get_size(content);
 		self.area.size
@@ -263,7 +263,7 @@ impl Frame	{
 		self.update_base( lg );
 	}
 
-	pub fn trace( &self, x : int, y : int, fun : &fn(&Frame,uint) )-> uint	{
+	pub fn trace( &self, x : int, y : int, fun : |&Frame,uint| )-> uint	{
 		for child in self.children.iter()	{
 			let (bx,by) = child.area.base;
 			let (sx,sy) = child.area.size;
@@ -277,7 +277,7 @@ impl Frame	{
 		0u
 	}
 
-	pub fn with_frame_mut<T>( &mut self, name :&~str, fun : &fn(&mut Frame)->T )-> Option<T>	{
+	pub fn with_frame_mut<T>( &mut self, name :&~str, fun : |&mut Frame|->T )-> Option<T>	{
 		if self.name == *name	{
 			return Some( fun(self) )
 		}
@@ -291,7 +291,7 @@ impl Frame	{
 	}
 
 	pub fn populate( &mut self, name : &~str, elem : @Element )-> bool	{
-		let res = do self.with_frame_mut(name) |fr|	{fr.element=elem;};
+		let res = self.with_frame_mut( name, |fr| fr.element=elem );
 		res.is_some()
 	}
 
@@ -553,10 +553,10 @@ impl EditLabel	{
 			element	: *screen.images.get(&cursor_name),
 			visible	: false,
 		};
-		let (sx,sy) = do screen.root.with_frame_mut( &cursor_name ) |fr|	{
+		let (sx,sy) = screen.root.with_frame_mut( &cursor_name, |fr| {
 			fr.element = blink as @Element;
 			fr.area.size
-		}.expect( ~"Frame not found: " + base_name );
+		}).expect( ~"Frame not found: " + base_name );
 		EditLabel{
 			text	: *screen.labels.get(&base_name),
 			size	: (sx as uint, sy as uint),
@@ -567,7 +567,7 @@ impl EditLabel	{
 
 	pub fn change( &self, input : &str, ct : &mut gr_low::context::Context, lg : &engine::journal::Log )	{
 		let mut text = self.text.content.clone();
-		for key in input.iter()	{
+		for key in input.chars()	{
 			if key == 'b'{//(259 as char)	{//FIXME
 				if !text.is_empty()	{
 					text.pop_char();

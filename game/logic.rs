@@ -21,7 +21,7 @@ enum Screen	{
 }
 
 
-struct Logic	{
+pub struct Logic	{
 	screen		: Screen,
 	s_intro		: intro::Scene,
 	//s_editor	: chared::Scene,
@@ -109,7 +109,7 @@ impl Logic	{
 			},
 			glfw::KeyEnter	=> {
 				let extend = match debug.get_selected_item().action	{
-					debug::ActionFun(ref fun)	=> { (*fun)(self); false }
+					//debug::ActionFun(ref fun)	=> { fun.execute(self); false }	//FIXME
 					debug::ActionList(ref list) if !list.is_empty()	=> true,
 					_	=> false,	//beep
 				};
@@ -170,7 +170,7 @@ impl Logic	{
 					self.s_battle.make_debug_menu_item().convert(),
 					debug::MenuItem	{
 						name	: ~"logic-test",
-						action	: debug::ActionFun(|_| {}),
+						action	: do debug::ActionFun |_| {},
 					},
 				]),
 			},

@@ -237,7 +237,7 @@ impl SceneContext	{
 			Some(m)	=> return *m,
 			None	=> (),
 		};
-		let split = mesh_name.split_iter('@').map(|w| w.to_owned()).to_owned_vec();
+		let split = mesh_name.split('@').map(|w| w.to_owned()).to_owned_vec();
 		let path = format!( "{:s}/{:s}.k3mesh", self.prefix, split[split.len()-1u] );
 		let mut rd = engine::load::Reader::create_std( path );
 		let mut q_mesh = None::<@gr_mid::mesh::Mesh>;
@@ -265,7 +265,7 @@ impl SceneContext	{
 			Some(a)	=> return *a,
 			None	=> (),
 		};
-		let split = act_name.split_iter('@').map(|w| w.to_owned()).to_owned_vec();
+		let split = act_name.split('@').map(|w| w.to_owned()).to_owned_vec();
 		let path = format!( "{:s}/{:s}.k3act", self.prefix, split[split.len()-1u] );
 		let mut rd = engine::load::Reader::create_std( path );
 		let mut q_act = None::<@engine::space::ArmatureRecord>;

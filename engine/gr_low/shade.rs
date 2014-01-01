@@ -129,13 +129,13 @@ enum Container	{
 	ConTexture(TextureDescriptor),
 }
 
-struct ParamDescriptor	{
+pub struct ParamDescriptor	{
 	raw			: gl::types::GLenum,
 	el_type		: ElementType,
 	container	: Container,
 }
 
-struct TexDescriptor	{
+pub struct TexDescriptor	{
 	is_array	: bool,
 	is_shadow	: bool,
 	is_multi	: bool,
@@ -204,7 +204,7 @@ impl Parameter	{
 			&UniIntVec(ref v)		=> unsafe{ gl::Uniform4iv( loc, 1, ptr::to_unsafe_ptr(&v.x) )},
 			&UniFloatVecArray(ref v)		=> unsafe{
 				gl::Uniform4fv( loc, self.size as gl::types::GLint,
-					vec::raw::to_ptr(*v) as *gl::types::GLfloat )},
+					v.as_ptr() as *gl::types::GLfloat )},
 			&UniMatrix(b, ref v)			=> unsafe{
 				gl::UniformMatrix4fv( loc, 1, b as gl::types::GLboolean, ptr::to_unsafe_ptr(&v.x.x) )},
 			&UniTexture(u,_tex,_sm)		=>	{
@@ -333,9 +333,9 @@ fn query_attributes( h : &ProgramHandle, lg : &journal::Log )-> AttriMap	{
 		gl::GetProgramiv( **h, gl::ACTIVE_ATTRIBUTE_MAX_LENGTH,	ptr::to_mut_unsafe_ptr(&mut max_len) );
 	}
 	let mut info_bytes	= vec::from_elem( max_len as uint, 0 as gl::types::GLchar );
-	let raw_bytes		= vec::raw::to_mut_ptr(info_bytes);
+	let raw_bytes		= info_bytes.as_mut_ptr();
 	lg.add(format!( "\tQuerying {:i} attributes:", num as int ));
-	let mut rez	: HashMap<~str,Attribute>	= HashMap::with_capacity::( num as uint );
+	let mut rez	: HashMap<~str,Attribute>	= HashMap::with_capacity( num as uint );
 	for i in range(0u,num as uint)	{
 		let mut length	= 0 as gl::types::GLint;
 		let mut size	= 0 as gl::types::GLint;
@@ -366,7 +366,7 @@ fn query_parameters( h : &ProgramHandle, lg : &journal::Log )-> ParaMap	{
 		gl::GetProgramiv( **h, gl::ACTIVE_UNIFORM_MAX_LENGTH,	ptr::to_mut_unsafe_ptr(&mut max_len) );
 	}
 	let mut info_bytes	= vec::from_elem( max_len as uint, 0 as gl::types::GLchar );
-	let raw_bytes		= vec::raw::to_mut_ptr(info_bytes);
+	let raw_bytes		= info_bytes.as_mut_ptr();
 	lg.add(format!( "\tQuerying {:i} parameters:", num as int ));
 	let mut rez	: HashMap<~str,Parameter>	= HashMap::with_capacity( num as uint );
 	for i in range(0u,num as uint)	{
@@ -436,7 +436,7 @@ impl context::Context	{
 			gl::GetShaderiv( *h, gl::COMPILE_STATUS,	ptr::to_mut_unsafe_ptr(&mut status) );
 			gl::GetShaderiv( *h, gl::INFO_LOG_LENGTH,	ptr::to_mut_unsafe_ptr(&mut length) );
 			let mut info_bytes	= vec::from_elem( length as uint, 0 as gl::types::GLchar );
-			let raw_bytes		= vec::raw::to_mut_ptr( info_bytes );
+			let raw_bytes		= info_bytes.as_mut_ptr();
 			gl::GetShaderInfoLog( *h, length, ptr::to_mut_unsafe_ptr(&mut length), raw_bytes );
 			std::str::raw::from_buf_len( raw_bytes as *u8, length as uint )
 		};
@@ -463,7 +463,7 @@ impl context::Context	{
 			gl::GetProgramiv( *h, gl::LINK_STATUS,		ptr::to_mut_unsafe_ptr(&mut status) );
 			gl::GetProgramiv( *h, gl::INFO_LOG_LENGTH,	ptr::to_mut_unsafe_ptr(&mut length) );
 			let mut info_bytes	= vec::from_elem( length as uint, 0 as gl::types::GLchar );
-			let raw_bytes		= vec::raw::to_mut_ptr( info_bytes );
+			let raw_bytes		= info_bytes.as_mut_ptr();
 			gl::GetProgramInfoLog( *h, length, ptr::to_mut_unsafe_ptr(&mut length), raw_bytes );
 			std::str::raw::from_buf_len( raw_bytes as *u8, length as uint )
 		};

@@ -1,12 +1,7 @@
-#[link(
-	name = "gen_scene", 
-	vers = "0.1", 
-	author = "Dzmitry Malyshau"
-)];
-
+#[crate_id = "gen_scene#0.1"];
+#[crate_type = "lib"];
 #[comment = "Generated Claymore scenes"];
 #[license = "MIT"];
-#[crate_type = "lib"];
 
 #[feature(globs)];
 

@@ -1,6 +1,6 @@
 use std::path;
 use std::hashmap::HashMap;
-use std::rt::io;
+use std::io;
 use extra::json;
 use extra::serialize::{Decoder,Decodable};
 
@@ -15,12 +15,12 @@ use scene::common;
 
 pub fn load_config<T:Decodable<json::Decoder>>( path : &str )-> T	{
 	let p = path::Path::new( path );
-	let mut rd = match io::file::open( &p, io::Open, io::Read )	{
+	let mut rd = match io::File::open( &p )	{
 		Some(reader)	=> reader,
 		None	=> fail!( "Unable to read {:s}", path ),
 	};
 	match json::from_reader(&mut rd as &mut io::Reader)	{
-		Ok(js)	=> Decodable::decode( &mut json::Decoder(js) ),
+		Ok(js)	=> Decodable::decode( &mut json::Decoder::new(js) ),
 		Err(e)	=> fail!( e.to_str() ),
 	}
 }
@@ -107,7 +107,7 @@ pub struct ShaderParam	{
 
 impl<D:Decoder> Decodable<D> for ShaderParam	{
 	fn decode( dec : &mut D )-> ShaderParam	{
-		do dec.read_struct("param",0)	|d| {//TODO: check this
+		dec.read_struct("param",0, |d| {//TODO: check this
 			let name : ~str		= d.read_struct_field("name",	0u, Decodable::decode );
 			let kind : ~str		= d.read_struct_field("type",	1u, Decodable::decode );
 			let value = match kind	{
@@ -134,7 +134,7 @@ impl<D:Decoder> Decodable<D> for ShaderParam	{
 				name	: name,
 				value	: value,
 			}
-		}
+		})
 	}
 }
 

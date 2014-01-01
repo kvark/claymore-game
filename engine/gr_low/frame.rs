@@ -193,7 +193,7 @@ impl Drop for BufferHandle	{
 }
 
 impl Buffer	{
-	pub fn each_target( &self, fun : &fn(&Target) )	{
+	pub fn each_target( &self, fun: |&Target| )	{
 		let ds = &[self.stencil,self.depth];
 		for &target in ds.iter().chain( self.colors.iter() )	{
 			if target != TarEmpty	{
@@ -217,14 +217,14 @@ impl Buffer	{
 	pub fn check_size( &self )-> [uint,..4]	{
 		let mut actual = [0u,0u,0u,0u];
 		
-		do self.each_target() |&target|	{
+		self.each_target(|&target|	{
 			let current = target.get_size();
 			if current[0]==0u	{
 				actual = current;
 			}else	{
 				assert_eq!( current, actual );
 			}
-		}
+		});
 		actual
 	}
 }
@@ -373,7 +373,7 @@ impl context::Context	{
 				0u	=> gl::DrawBuffer( gl::NONE ),
 				1u	=> gl::DrawBuffer( list[0] ),
 				_	=> unsafe{ gl::DrawBuffers(
-					list.len() as gl::types::GLsizei, std::vec::raw::to_ptr(list)
+					list.len() as gl::types::GLsizei, list.as_ptr()
 					)},
 			}
 		}else if !draw	{

@@ -119,7 +119,7 @@ impl Texture	{
 	}
 	pub fn get_level_size( &self, lev : uint )-> (uint,uint)	{
 		assert!( self.width>0u && self.height>0u );
-		(std::uint::max(1u,self.width>>lev), std::uint::max(1u,self.height>>lev))
+		(std::num::max(1u,self.width>>lev), std::num::max(1u,self.height>>lev))
 	}
 	pub fn get_level_limits( &self )-> (uint,uint)	{
 		(self.levels.min, self.levels.max)
@@ -376,7 +376,7 @@ impl Binding	{
 		if t.levels.total==level	{ t.levels.total += 1; }
 		let (w,h) = t.get_level_size( level );
 		unsafe{
-			let raw = std::vec::raw::to_ptr(data) as *gl::types::GLvoid;
+			let raw = data.as_ptr() as *gl::types::GLvoid;
 			gl::TexImage2D( *t.target, level as gl::types::GLint, int_format,
 				w as gl::types::GLint, h as gl::types::GLint, 0 as gl::types::GLint,
 				pix_format, pix_type, raw );
@@ -392,7 +392,7 @@ impl Binding	{
 		let (w,h) = t.get_level_size( level );
 		assert!( frame::Rect::new(w,h).contains_rect( r ) );
 		unsafe{
-			let raw = std::vec::raw::to_ptr(data) as *gl::types::GLvoid;
+			let raw = data.as_ptr() as *gl::types::GLvoid;
 			gl::TexSubImage2D( *t.target, level as gl::types::GLint,
 				r.x as gl::types::GLint, r.y as gl::types::GLint,
 				r.w as gl::types::GLsizei, r.h as gl::types::GLsizei,

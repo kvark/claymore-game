@@ -140,7 +140,7 @@ fn parse_bones( bin : &[gen::Bone], par_id : Option<uint>, par_node : @mut engin
 }
 
 fn parse_child( child : &gen::NodeChild, parent : @mut space::Node, scene : &mut common::Scene,
-		get_input : &fn(~str)->gr_mid::call::Input, lg : &engine::journal::Log )	{
+		get_input : |~str|->gr_mid::call::Input, lg : &engine::journal::Log )	{
 	match child	{
 		&gen::ChildNode(ref inode)	=>	{
 			let n = @mut space::Node	{

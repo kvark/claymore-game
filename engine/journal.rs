@@ -1,5 +1,5 @@
 use std::path::Path;
-use std::rt::io;
+use std::io;
 
 
 pub struct Log	{
@@ -15,7 +15,7 @@ pub trait LoggedUnused	{
 
 impl Log	{
 	pub fn create( path : &str )-> Log	{
-		match io::file::open( &Path::new(path), io::Create, io::ReadWrite )	{
+		match io::File::create( &Path::new(path) )	{
 			Some(wr)	=> Log{ name:~"", enable:true, wr:@mut wr as @mut io::Writer },
 			None		=> fail!("Unable to create log: {:s}", path),
 		}

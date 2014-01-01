@@ -4,8 +4,8 @@ extern mod stb_image;
 
 use std;
 use std::str;
-use std::rt::io;
-use std::rt::io::{Reader,Seek};
+use std::io;
+use std::io::{Reader,Seek};
 use extra;
 
 use cgmath::angle;
@@ -30,11 +30,15 @@ pub struct Chunk	{
 	finish	: uint,
 }
 
+pub trait Walker	{
+	fn enter(&mut self) -> Chunk;
+	fn leave(&mut self, c: Chunk);
+}
 
 pub struct Reader	{
 	path			: ~str,
-	priv bin		: io::file::FileStream,
-	priv walk_fun	: ~'static fn (&mut Reader)->Chunk,
+	priv bin		: io::File,
+	priv fun		: 'static |&mut Reader| -> Chunk,
 	priv chunks		: ~[Chunk],
 }
 
@@ -47,7 +51,7 @@ pub fn enter_chunk( rd : &mut Reader )-> Chunk	{
 	name_bin.retain( |&b| {b != 0u8} );
 	let size = rd.get_uint(4u);
 	Chunk	{
-		name	: str::from_utf8( name_bin ),
+		name	: str::from_utf8( name_bin ).to_owned(),
 		size	: size,
 		finish	: rd.position() + size,
 	}
@@ -55,13 +59,13 @@ pub fn enter_chunk( rd : &mut Reader )-> Chunk	{
 
 
 impl Reader	{
-	pub fn create_ext( path : &str, fun : ~'static fn(&mut Reader)->Chunk )-> Reader	{
+	pub fn create_ext( path : &str, fun : 'static |&mut Reader|->Chunk )-> Reader	{
 		let p = std::path::Path::new( path );
-		match io::file::open( &p, io::Open, io::Read )	{
+		match io::File::open( &p )	{
 			Some(bin)	=> Reader{
 				path	: path.to_owned(),
 				bin		: bin,
-				walk_fun: fun,
+				fun		: fun,
 				chunks	: ~[]
 			},
 			None	=> fail!("Unable to read {:s}", path)
@@ -90,14 +94,14 @@ impl Reader	{
 
 	pub fn get_string( &mut self )-> ~str	{
 		let size = self.bin.read_u8() as uint;
-		str::from_utf8( self.bin.read_bytes(size) )
+		str::from_utf8_owned( self.bin.read_bytes(size) )
 	}
 
 	pub fn get_floats( &mut self, num : uint )-> ~[f32]	{
 		let data = self.bin.read_bytes( num * 4u );
 		let mut vals : ~[f32];
 		unsafe	{
-			vals = std::vec::raw::from_buf_raw( std::vec::raw::to_ptr(data) as *f32, num );
+			vals = std::vec::raw::from_buf_raw( data.as_ptr() as *f32, num );
 		}
 		vals
 	}
@@ -110,7 +114,7 @@ impl Reader	{
 	}
 
 	pub fn enter( &mut self )-> ~str	{
-		let c = (self.walk_fun)( self );
+		let c = (self.fun)( self );
 		self.chunks.push( c.clone() );
 		c.name
 	}
@@ -146,8 +150,8 @@ pub fn get_time()-> f64 {
 
 pub fn load_text( path : &str )-> ~str	{
 	let p = std::path::Path::new( path );
-	match io::file::open( &p, io::Open, io::Read )	{
-		Some(ref mut rd)	=> std::str::from_utf8( rd.read_to_end() ),
+	match io::File::open( &p )	{
+		Some(ref mut rd)	=> std::str::from_utf8_owned( rd.read_to_end() ),
 		None 	=> fail!("Unable to read {:s}", path)
 	}
 }
@@ -191,8 +195,8 @@ pub fn load_texture_2D_image( ct : &mut context::Context, result : &stb_image::i
 			create_texture_2D( ct, img, mipmap, gl::RGBA, gl::UNSIGNED_BYTE ),
 		&stb_image::image::ImageF32(ref img)	=>
 			create_texture_2D( ct, img, mipmap, gl::RGB16F, gl::FLOAT ),
-		&stb_image::image::Error			=>
-			fail!("Unable to load image: {:s}", name)
+		&stb_image::image::Error(ref err)		=>
+			fail!("Unable to load image ({:s}): {:s}", name, *err)
 	}
 }
 
@@ -211,7 +215,7 @@ impl TextureFuture	{
 	pub fn new_2D( path : ~str, mipmap : bool )-> TextureFuture	{
 		TextureFuture	{
 			name	: path.clone(),
-			image	: extra::future::Future::from_fn(|| {stb_image::image::load(path.clone())} ),
+			image	: do extra::future::Future::spawn{ stb_image::image::load(path.clone()) },
 			mipmap	: mipmap,
 		}
 	}
@@ -298,7 +302,7 @@ pub fn read_key_scale3( br : &mut Reader )-> f32	{
 	(v[0]+v[1]+v[2]) * (1f32/3f32)
 }
 
-pub fn read_curve<T : Clone + Send + space::Interpolate>( br : &mut Reader, fkey : &fn(&mut Reader)->T )-> ~anim::Curve<T>	{
+pub fn read_curve<T : Clone + Send + space::Interpolate>( br : &mut Reader, fkey : |&mut Reader|->T )-> ~anim::Curve<T>	{
 	let num = br.get_uint(2u);
 	let _extrapolate = br.get_uint(1u)!=0u;
 	let bezier = br.get_uint(1u)!=0u;
@@ -333,7 +337,7 @@ pub fn read_action( br : &mut Reader, bones : &[space::Bone], lg : &journal::Log
 		let curve_name = br.get_string();
 		let dimension = br.get_uint(1u);
 		lg.add(format!( "\t\tCurve: {:s}", curve_name ));
-		let split = curve_name.split_iter('"').map(|w| {w.to_owned()}).to_owned_vec();
+		let split = curve_name.split('"').map(|w| {w.to_owned()}).to_owned_vec();
 		if split.len() == 3u	{
 			assert!( split[0] == ~"pose.bones[" );
 			let mut bid = 0u;	//FIXME: vec::position, when Rust allows

@@ -187,9 +187,9 @@ pub struct VaBinding	{
 
 impl VaBinding	{
 	fn make_data()-> ~[VertexData]	{
-		do std::vec::from_fn(MAX_VERTEX_ATTRIBS) |_i|	{
+		std::vec::from_fn(MAX_VERTEX_ATTRIBS, |_i|	{
 			VertexData{ enabled: false, attrib: None }
-		}
+		})
 
 	}
 
@@ -262,7 +262,7 @@ impl gr_low::context::Context	{
 		let usage = if dynamic {gl::DYNAMIC_DRAW} else {gl::STATIC_DRAW};
 		let size = (data.len() * std::mem::size_of::<T>()) as gl::types::GLsizeiptr;
 		unsafe{
-			let raw = std::vec::raw::to_ptr(data) as *gl::types::GLvoid;
+			let raw = data.as_ptr() as *gl::types::GLvoid;
 			gl::BufferData( *self.array_buffer.target, size, raw, usage );
 		}
 	}

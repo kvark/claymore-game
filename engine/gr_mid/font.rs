@@ -30,7 +30,6 @@ pub struct Context	{
 }
 
 impl Drop for Context	{
-	#[fixed_stack_segment]
 	fn drop( &mut self )	{
 		assert!( self.lib.is_not_null() );
 		unsafe{
@@ -40,7 +39,6 @@ impl Drop for Context	{
 }
 
 impl Context	{
-	#[fixed_stack_segment]
 	pub fn create()-> Context	{
 		let lib : freetype::FT_Library = ptr::null();
 		unsafe{
@@ -72,7 +70,6 @@ pub struct Font	{
 }
 
 impl Drop for FaceHandle	{
-	#[fixed_stack_segment]
 	fn drop( &mut self )	{
 		unsafe{
 			freetype::FT_Done_Face( **self )
@@ -109,8 +106,7 @@ impl Font	{
 		}
 	}*/
 
-	#[fixed_stack_segment]
-	fn set_char_size( &self, xs : f32, ys : f32, xdpi : uint, ydpi : uint )	{
+	pub fn set_char_size( &self, xs : f32, ys : f32, xdpi : uint, ydpi : uint )	{
 		unsafe{
 			freetype::FT_Set_Char_Size( *self.face,
 				(64.0*xs) as freetype::FT_F26Dot6, (64.0*ys) as freetype::FT_F26Dot6,
@@ -118,8 +114,7 @@ impl Font	{
 		}.check( "Set_Char_Size" );
 	}
 
-	#[fixed_stack_segment]
-	fn set_pixel_size( &self, xpix : uint, ypix : uint )	{
+	pub fn set_pixel_size( &self, xpix : uint, ypix : uint )	{
 		unsafe{
 			freetype::FT_Set_Pixel_Sizes( *self.face,
 				xpix as freetype::FT_UInt, ypix as freetype::FT_UInt )
@@ -131,13 +126,12 @@ impl Font	{
 		for y in range(0u,height)	{
 			unsafe	{
 				let src = ptr::offset( bm.buffer, (y*(bm.pitch as uint)) as int );
-				let dst = ptr::mut_offset( vec::raw::to_mut_ptr(target), (y*pitch+offset) as int );
+				let dst = ptr::mut_offset( target.as_mut_ptr(), (y*pitch+offset) as int );
 				ptr::copy_memory( dst, src, bm.width as uint );
 			};
 		}
 	}
 
-	#[fixed_stack_segment]
 	pub fn bake( &self, gr : &mut context::Context, s : &str, max_size : (uint,uint), lg : &journal::Log )-> @texture::Texture	{
 		lg.add(format!( "Font baking text: {:s}", s ));
 		if s.is_empty()	{
@@ -166,7 +160,7 @@ impl Font	{
 		let mut start_word = 0u;
 		let width_capacity = limit_x as int << SHIFT;
 		let mut pos_array = vec::with_capacity::<Target>( s.len() );
-		for c in s.iter()	{
+		for c in s.chars()	{
 			if c == '\n'	{
 				baseline += line_gap;
 				position = 0;
@@ -196,8 +190,8 @@ impl Font	{
 				let cx = position + glyph.metrics.horiBearingX as int;
 				let cy = baseline - glyph.metrics.horiBearingY as int;
 				pos_array.push( Target{ c:c, x:cx, y:cy });
-				min_x = std::int::min( min_x, cx );
-				min_y = std::int::min( min_y, cy );
+				min_x = std::num::min( min_x, cx );
+				min_y = std::num::min( min_y, cy );
 				let mut ex = cx + glyph.metrics.width	as int;
 				let mut ey = cy + glyph.metrics.height	as int;
 				let e_border = (ex - min_x + (2*BORDER<<SHIFT)) | (((ALIGN+1)<<SHIFT)-1);
@@ -218,8 +212,8 @@ impl Font	{
 					ex -= word_offset;
 					ey += line_gap;
 				}
-				max_x = std::int::max( max_x, ex );
-				max_y = std::int::max( max_y, ey );
+				max_x = std::num::max( max_x, ex );
+				max_y = std::num::max( max_y, ey );
 				//lg.add(format!( "\tsymbol:%c cx:{:i} cy:{:i}", c, cx, cy ));
 				/*lg.add(format!( "\tSymbol '%c' (id={:u}) at ({:u},{:u}): size=({:i},{:i}) bearing=({:i},{:i})",
 					c, self.get_char_index(c), position, baseline,
@@ -265,7 +259,6 @@ impl Font	{
 
 
 impl Context	{
-	#[fixed_stack_segment]
 	pub fn load( &self, path : &str, index : uint, size : [uint,..2], kern : [int,..2],
 			lg : &journal::Log )-> Font	{
 		let mut face : freetype::FT_Face = ptr::null();

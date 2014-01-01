@@ -137,7 +137,7 @@ pub struct Action<C>	{
 }
 
 impl<C> Action<C>	{
-	fn new( p : @mut Player<C>, name : ~str, time : float )-> Option<Action<C>>	{
+	pub fn new( p : @mut Player<C>, name : ~str, time : float )-> Option<Action<C>>	{
 		match p.find_record(name)	{
 			Some(r)	=> Some(Action	{
 				player	: p,

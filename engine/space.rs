@@ -205,7 +205,7 @@ impl draw::Mod for Armature	{
 }
 
 
-fn is_same_node( a: Option<@Node>, b : Option<@Node> )-> bool	{
+pub fn is_same_node( a: Option<@Node>, b : Option<@Node> )-> bool	{
 	match (a,b)	{
 		(Some(na),Some(nb))	=> managed::ptr_eq(na,nb),
 		(None,None)	=> true,

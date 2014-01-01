@@ -64,7 +64,7 @@ impl Stage for Viewport	{
 	fn verify( &self )	{
 		let mut v = vec::from_elem( 4, 0 as gl::types::GLint );
 		unsafe	{
-			gl::GetIntegerv( gl::VIEWPORT, vec::raw::to_mut_ptr(v) );
+			gl::GetIntegerv( gl::VIEWPORT, v.as_mut_ptr() );
 		}
 		assert!(
 			self.x == v[0] as uint &&
@@ -222,7 +222,7 @@ impl Stage for Scissor	{
 	fn verify( &self )	{
 		let mut v = vec::from_elem( 4, 0 as gl::types::GLint );
 		unsafe	{
-			gl::GetIntegerv( gl::SCISSOR_BOX, vec::raw::to_mut_ptr(v) );
+			gl::GetIntegerv( gl::SCISSOR_BOX, v.as_mut_ptr() );
 		}
 		let r = frame::Rect{ x:v[0] as uint, y:v[1] as uint, w:v[2] as uint, h:v[3] as uint };
 		assert!( self.test == ask_state( gl::SCISSOR_TEST ) &&
@@ -399,7 +399,7 @@ impl Stage for Depth	{
 		let mut r = vec::from_elem( 2, 0 as gl::types::GLfloat );
 		unsafe	{
 			gl::GetIntegerv(	gl::DEPTH_FUNC, ptr::to_mut_unsafe_ptr(&mut val) );
-			gl::GetFloatv(	gl::DEPTH_RANGE, vec::raw::to_mut_ptr(r) );
+			gl::GetFloatv(		gl::DEPTH_RANGE, r.as_mut_ptr() );
 		}
 		assert!( self.test == ask_state( gl::DEPTH_TEST ) &&
 			self.fun == val as gl::types::GLenum &&
@@ -480,11 +480,11 @@ impl Stage for Blend	{
 
 	fn verify( &self )	{
 		assert!( self.on == ask_state( gl::BLEND ));
-		self.color.verify( gl::BLEND_EQUATION_RGB,	gl::BLEND_SRC_RGB,	gl::BLEND_DST_RGB	);
+		self.color.verify( gl::BLEND_EQUATION_RGB,		gl::BLEND_SRC_RGB,		gl::BLEND_DST_RGB	);
 		self.alpha.verify( gl::BLEND_EQUATION_ALPHA,	gl::BLEND_SRC_ALPHA,	gl::BLEND_DST_ALPHA	);
 		let mut cv = vec::from_elem( 4, 0 as gl::types::GLfloat );
 		unsafe	{
-			gl::GetFloatv( gl::BLEND_COLOR, vec::raw::to_mut_ptr(cv) );
+			gl::GetFloatv( gl::BLEND_COLOR, cv.as_mut_ptr() );
 		}
 		assert!(
 			cv[0] == self.value.r as f32 &&
@@ -535,7 +535,7 @@ impl Stage for Mask	{
 		let mut sf		= 0 as gl::types::GLint;
 		let mut sb		= 0 as gl::types::GLint;
 		unsafe	{
-			gl::GetBooleanv( gl::COLOR_WRITEMASK,		vec::raw::to_mut_ptr(bools) );
+			gl::GetBooleanv( gl::COLOR_WRITEMASK,		bools.as_mut_ptr() );
 			gl::GetBooleanv( gl::DEPTH_WRITEMASK,		ptr::to_mut_unsafe_ptr(&mut bools[4]) );
 			gl::GetIntegerv( gl::STENCIL_WRITEMASK,		ptr::to_mut_unsafe_ptr(&mut sf) );
 			gl::GetIntegerv( gl::STENCIL_BACK_WRITEMASK,ptr::to_mut_unsafe_ptr(&mut sb) );

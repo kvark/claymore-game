@@ -1,13 +1,7 @@
-#[link(
-	name = "claymore", 
-	vers = "0.1", 
-	author = "Dzmitry Malyshau",
-	url = "http://code.google.com/p/claymore-game/"
-)];
-
+#[crate_id = "claymore-game.googlecode.com#claymore:0.1"];
+#[crate_type = "bin"];
 #[comment = "Claymore game"];
 #[license = "MIT"];
-#[crate_type = "bin"];
 
 #[feature(managed_boxes)];
 #[feature(globs)];

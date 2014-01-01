@@ -13,7 +13,7 @@ use gen = gen_hud::common;
 
 
 
-fn get<T>( children : &[gen::Child], path : &str, fun : &fn(&str,&gen::Element)->T )-> T	{
+fn get<T>( children : &[gen::Child], path : &str, fun : |&str,&gen::Element|->T )-> T	{
 	let slash = path.find('/');
 	let name = match slash	{
 		Some(p)	=> path.slice_to(p),
@@ -25,7 +25,7 @@ fn get<T>( children : &[gen::Child], path : &str, fun : &fn(&str,&gen::Element)-
 				Some(p)	=>	{
 					let rest = path.slice_from( p+1 );
 					match elem	{
-						&gen::ElBox(_, _, ref box)	=> get( box.children, rest, fun ),
+						&gen::ElBox(_, _, ref bx)	=> get( bx.children, rest, fun ),
 						_	=> fail!("Hud child is not a frame: {:s}", name)
 					}
 				},
@@ -36,7 +36,7 @@ fn get<T>( children : &[gen::Child], path : &str, fun : &fn(&str,&gen::Element)-
 	fail!("Hud child not found: {:s}", name)
 }
 
-fn modify( children : &mut ~[gen::Child], path : &str, fun : &fn(&str,&mut gen::Element) )	{
+fn modify( children : &mut ~[gen::Child], path : &str, fun : |&str,&mut gen::Element| )	{
 	let slash = path.find('/');
 	let name = match slash	{
 		Some(p)	=> path.slice_to(p),
@@ -48,8 +48,8 @@ fn modify( children : &mut ~[gen::Child], path : &str, fun : &fn(&str,&mut gen::
 				Some(p)	=>	{
 					let rest = path.slice_from( p+1 );
 					match elem	{
-						&gen::ElBox(_, _, ref mut box)	=>	{
-							modify( &mut box.children, rest, fun );
+						&gen::ElBox(_, _, ref mut bx)	=>	{
+							modify( &mut bx.children, rest, fun );
 						},
 						_	=> fail!("Hud child is not a frame: {:s}", name)
 					}
@@ -113,7 +113,7 @@ impl Context	{
 			fcon : &font::Context, lg : &engine::journal::Log )	{
 		for &gen::Child(_,ref elem) in children.iter()	{
 			match elem	{
-				&gen::ElBox(_, _, ref box)	=> self.preload( box.children, gcon, fcon, lg ),
+				&gen::ElBox(_, _, ref bx)	=> self.preload( bx.children, gcon, fcon, lg ),
 				&gen::ElImage(ref name)	=>	{
 					self.cache_images.find_or_insert_with( name.clone(), |s|	{
 						let path = ~"data/texture/hud/" + *s;
@@ -184,11 +184,11 @@ impl Context	{
 			))
 	}
 
-	pub fn draw( &self, box : &gen::Box, area : Rect, out : &call::Output,
+	pub fn draw( &self, bx : &gen::Box, area : Rect, out : &call::Output,
 			screen_size : &gen::Vector )-> ~[call::Call]	{
 		let mut off : gen::Vector = [area.x,area.y];
 		let mut calls : ~[call::Call] = ~[];
-		for &gen::Child(_,ref element) in box.children.iter()	{
+		for &gen::Child(_,ref element) in bx.children.iter()	{
 			let size = match element	{
 				&gen::ElImage(ref path)	=>	{
 					let t = *self.cache_images.find( path ).
@@ -227,7 +227,7 @@ impl Context	{
 					size
 				},
 			};
-			match box.align	{
+			match bx.align	{
 				gen::AlignHor	=> {off[0] += size[0]},
 				gen::AlignVer	=> {off[1] += size[1]},
 			}
@@ -235,13 +235,13 @@ impl Context	{
 		}
 		// draw box
 		let mut abox = area.clone();
-		match box.align	{
+		match bx.align	{
 			gen::AlignHor	=> {abox.w = off[0] - area.x},
 			gen::AlignVer	=> {abox.h = off[1] - area.y},
 		}
 		let mut data = shade::DataMap::new();
 		data.insert( ~"u_Transform",self.transform(&abox,screen_size) );
-		let c0 = match box.ground	{
+		let c0 = match bx.ground	{
 			gen::GroundNone	=> call::CallEmpty,
 			gen::GroundSolid( color )	=> {
 				data.insert( ~"u_Color", 	Context::get_color_param(color) );

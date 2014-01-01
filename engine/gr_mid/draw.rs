@@ -138,7 +138,7 @@ pub fn extract_metas( code : &str )-> ~[~str]	{
 	let meta_size	= code.slice_from(meta_start).find_str("\n")
 		.expect("Unable to find meta end marker");	
 	let slice = code.slice(meta_start,meta_start+meta_size);
-	slice.word_iter().skip(1).map(|w| w.to_owned()).collect()
+	slice.words().skip(1).map(|w| w.to_owned()).collect()
 }
 
 pub fn load_material( path : &str )-> Material	{

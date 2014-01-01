@@ -124,14 +124,14 @@ impl Scene	{
 					let (x,y) = self.mouse_point;
 					let mut found_name = false;
 					let mut found_any = false;
-					do self.hud_screen.root.trace(x,y)	|frame,depth|	{
+					self.hud_screen.root.trace(x,y,	|frame,depth|	{
 						if depth>0u	{
 							found_any = true;
 						}
 						if depth==0u && frame.name == ~"id.name.text"	{
 							found_name = true;
 						}
-					};
+					});
 					self.control.in_rotation = !found_any;
 					if found_name	{
 						self.edit_label.active = true;
@@ -288,13 +288,13 @@ impl Scene	{
 			let mut data = gr_low::shade::DataMap::new();
 			let vc = Vec4::new(1f32,0f32,0f32,1f32);
 			data.insert( ~"u_Color", gr_low::shade::UniFloatVec(vc) );
-			do self.hud_screen.root.trace(x,y)	|frame,depth| {
+			self.hud_screen.root.trace(x,y,	|frame,depth| {
 				if depth==0u && frame.element.get_size()!=(0,0)	{
 					let call = frame.draw_debug( &self.hud_context,
 							self.hud_debug, &mut data, &rast );
 					queue.push(call);
 				}
-			};
+			});
 		}
 		if el.hud_debug	{
 			queue.push_all_move({
@@ -407,10 +407,7 @@ pub fn create( el : &main::Elements, gc : &mut gr_low::context::Context, fcon : 
 		last_scroll	: None,
 		in_rotation	: false,
 	};
-	let mut lights : ~[@scene::common::Light] = ~[];
-	do scene.lights.each_value() |&val|	{
-		lights.push( val ); true
-	};
+	let lights = scene.lights.values().map(|&l| l).to_owned_vec();
 	Scene	{
 		gr_main	: group,
 		gr_cape	: cape,

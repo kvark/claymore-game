@@ -150,7 +150,7 @@ struct ConfigWindow	{
 }
 #[deriving(Decodable)]
 struct ConfigGL	{
-	major:uint, minor:uint, core:bool, debug:bool,
+	major:u32, minor:u32, core:bool, debug:bool,
 }
 #[deriving(Decodable)]
 struct ConfigLog	{
@@ -164,11 +164,67 @@ struct Config	{
 	elements: Elements,
 }
 
+// callbacks
+struct ErrorCb;
+impl glfw::ErrorCallback for ErrorCb	{
+	fn call(&self, _error: glfw::Error, description: ~str)	{
+		fail!("GLFW Error: {:s}", description)
+	}
+}
+
+struct WinIconifyCb;
+impl glfw::WindowIconifyCallback for WinIconifyCb {
+    fn call(&self, win: &glfw::Window, iconified: bool) {
+        Game::get().on_input( win, input::EvFocus(!iconified) );
+    }
+}
+
+struct WinFocusCb;
+impl glfw::WindowFocusCallback for WinFocusCb {
+    fn call(&self, win: &glfw::Window, activated: bool) {
+        Game::get().on_input( win, input::EvFocus(activated) );
+    }
+}
+
+struct CharCb;
+impl glfw::CharCallback for CharCb {
+    fn call(&self, win: &glfw::Window, character: char) {
+        Game::get().on_input( win, input::EvCharacter( character ));
+    }
+}
+
+struct KeyCb;
+impl glfw::KeyCallback for KeyCb {
+    fn call(&self, win: &glfw::Window, key: glfw::Key, _scancode: std::libc::c_int, action: glfw::Action, _mods: glfw::Modifiers) {
+   	 Game::get().on_input( win, input::EvKeyboard( key, action == glfw::Press ));
+    }
+}
+
+struct CursorPosCb;
+impl glfw::CursorPosCallback for CursorPosCb {
+    fn call(&self, win: &glfw::Window, xpos: f64, ypos: f64) {
+        Game::get().on_input( win, input::EvMouseMove( xpos as f32, ypos as f32 ));
+    }
+}
+
+struct MouseButtonCb;
+impl glfw::MouseButtonCallback for MouseButtonCb {
+    fn call(&self, win: &glfw::Window, button: glfw::MouseButton, action: glfw::Action, _mods: glfw::Modifiers) {
+        Game::get().on_input( win, input::EvMouseClick( button as uint, action == glfw::Press ));
+    }
+}
+
+struct ScrollCb;
+impl glfw::ScrollCallback for ScrollCb {
+    fn call(&self, win: &glfw::Window, x: f64, y: f64) {
+        Game::get().on_input( win, input::EvScroll( x as f32, y as f32 ));
+    }
+}
+
+
 #[main]
 pub fn main()	{
-	glfw::set_error_callback( |_error,description|	{
-		fail!("GLFW Error: {:s}", description)
-	});
+	glfw::set_error_callback( ~ErrorCb );
 	do glfw::start {
 		let config = load_json::load_config::<Config>( "data/config.json" );
 		let lg = engine::journal::Log::create( config.journal.path.clone() );
@@ -205,7 +261,7 @@ pub fn main()	{
 			glfw::Windowed
 		};
 		assert_eq!( cw.samples, 0 );
-		let window = match glfw::Window::create( cw.width, cw.height, cw.title, mode )	{
+		let window = match glfw::Window::create( cw.width as u32, cw.height as u32, cw.title, mode )	{
 			Some(w)	=> w,
 			None	=> fail!( "Window::create failed" )
 		};
@@ -216,27 +272,13 @@ pub fn main()	{
 		std::local_data::set( game_singleton, game );
 
 		// init callbacks
-		window.set_iconify_callback( |win,done|	{
-			Game::get().on_input( win, input::EvFocus(!done) );
-		});
-		window.set_focus_callback( |win,done|	{
-			Game::get().on_input( win, input::EvFocus(done) );
-		});
-		window.set_char_callback( |win,key|	{
-			Game::get().on_input( win, input::EvCharacter( key ));
-		});
-		window.set_key_callback( |win,key,_scan,action,_mods|	{
-			Game::get().on_input( win, input::EvKeyboard( key, action == glfw::Press ));
-		});
-		window.set_cursor_pos_callback( |win,posx,posy|	{
-			Game::get().on_input( win, input::EvMouseMove( posx as f32, posy as f32 ));
-		});
-		window.set_mouse_button_callback( |win,button,action,_mods|	{
-			Game::get().on_input( win, input::EvMouseClick( button as uint, action == glfw::Press ));
-		});
-		window.set_scroll_callback( |win,floatx,floaty|	{
-			Game::get().on_input( win, input::EvScroll( floatx as f32, floaty as f32 ));
-		});
+		window.set_iconify_callback( ~WinIconifyCb );
+		window.set_focus_callback( ~WinFocusCb );
+		window.set_char_callback( ~CharCb );
+		window.set_key_callback( ~KeyCb );
+		window.set_cursor_pos_callback( ~CursorPosCb );
+		window.set_mouse_button_callback( ~MouseButtonCb );
+		window.set_scroll_callback( ~ScrollCb );
 		
 		loop	{
 			glfw::poll_events();

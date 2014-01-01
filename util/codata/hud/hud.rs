@@ -1,12 +1,7 @@
-#[link(
-	name = "gen_hud", 
-	vers = "0.1", 
-	author = "Dzmitry Malyshau"
-)];
-
+#[crate_id = "gen_hud#0.1"];
+#[crate_type = "lib"];
 #[comment = "Generated Claymore HUD documents"];
 #[license = "MIT"];
-#[crate_type = "lib"];
 
 #[feature(globs)];
 

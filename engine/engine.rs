@@ -1,12 +1,7 @@
-#[link(
-	name = "engine", 
-	vers = "0.1", 
-	author = "Dzmitry Malyshau"
-)];
-
+#[crate_id = "claymore-game.googlecode.com#engine:0.1"];
+#[crate_type = "lib"];
 #[comment = "Graphics engine for Claymore game"];
 #[license = "MIT"];
-#[crate_type = "lib"];
 
 #[feature(managed_boxes)];
 #[feature(globs)];
