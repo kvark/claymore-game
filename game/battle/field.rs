@@ -100,6 +100,12 @@ impl Field	{
 	pub fn with_member<T>( &self, key : MemberKey, fun : |&Member|->T )->Option<T>	{
 		self.members.find(&key).map(|m| fun(*m))
 	}
+	
+	pub fn each_member( &self, fun : |MemberKey,&Member| )	{
+		for (key,m) in self.members.iter()	{
+			fun( *key, *m );
+		}
+	}
 
 	pub fn clear( &mut self )	{
 		self.members.clear();
@@ -112,7 +118,7 @@ impl Field	{
 		for &(pos,_) in m_limbs.iter()	{
 			let limb = Limb	{	//FIXME
 				key		: (LimbArm,0),
-				health	: 0,
+				health	: 1,
 				node	: @mut engine::space::Node::new(~"dummy"),
 			};
 			grid.get_index(pos).map(|index|	{
@@ -127,6 +133,7 @@ impl Field	{
 
 	pub fn add_member( &mut self, member : @mut Member, grid : &grid::TopologyGrid )-> MemberKey	{
 		let mk = self.next_key;
+		print!( "Field: added member '{:s}' with key {:i}\n", member.get_name(), mk );
 		self.next_key += 1;
 		self.members.insert( mk, member );
 		self.add_member_cells( mk, member.get_limbs(), grid );
@@ -164,15 +171,21 @@ impl Field	{
 		true
 	}
 
-	pub fn deal_damage( &mut self, index : uint, limb_key : LimbKey, damage : Health )-> DamageResult	{
-		let mk = match self.cells[index]	{
+	pub fn deal_damage( &mut self, index: uint, limb_key_opt: Option<LimbKey>, damage: Health )-> DamageResult	{
+		let (mk,lk) = match self.cells[index]	{
 			CellPart(mk,ref limbs) 	=>	{
-				assert!( limbs.iter().find(|l| l.key==limb_key).is_some() );
-				mk
+				let limb_key = match limb_key_opt	{
+					Some(lk)	=> {
+						assert!( limbs.iter().find(|l| l.key==lk).is_some() );
+						lk
+						},
+					None		=> limbs[0].key,
+				};
+				(mk,limb_key)
 			},
 			_	=> return DamageNone
 		};
 		self.revision += 1;
-		self.members.get(&mk).receive_damage( damage, limb_key )
+		self.members.get(&mk).receive_damage( damage, lk )
 	}
 }

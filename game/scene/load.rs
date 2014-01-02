@@ -13,14 +13,14 @@ use gen = gen_scene::common;
 fn parse_shader_data( imat : &gen::Material, tex_cache : &HashMap<~str,@gr_low::texture::Texture>,
 		lg : &engine::journal::Log )-> gr_low::shade::DataMap	{
 	let mut out = gr_low::shade::DataMap::new();
-	fn color2vec(v : [f32, ..3])-> vector::Vec4<f32>	{
+	let color2vec = |v : [f32, ..3]| -> vector::Vec4<f32>	{
 		let kf = 1f32 / 255f32;
 		vector::Vec4::new( v[0] as f32 * kf, v[1] as f32 * kf, v[2] as f32 * kf, 1f32 )
-	}
-	fn color2vecU(c : uint)-> vector::Vec4<f32>	{
+	};
+	let _color2vecU = |c : uint| -> vector::Vec4<f32>	{
 		let kf = 1f32 / 255f32;
 		vector::Vec4::new( (c>>24) as f32 * kf, ((c>>16)&0xFF) as f32 * kf, ((c>>8)&0xFF) as f32 * kf, (c&0xFF) as f32 * kf )
-	}
+	};
 	for &(ref name, ref di) in imat.data.iter()	{
 		let uni = match di	{
 			&gen::DataInt(v)	=> ( gr_low::shade::UniInt(v) ),

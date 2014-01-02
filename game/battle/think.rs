@@ -3,6 +3,8 @@ extern mod engine;
 
 use engine::anim;
 use battle::{grid,field,main};
+use cgmath::point::Point;
+use cgmath::vector::*;
 
 pub enum MotionStatus	{
 	StatusDone,
@@ -102,11 +104,14 @@ pub mod motion	{
 
 	pub struct Attack	{
 		destination	: grid::Location,
+		damage		: field::Health,
 	}
 	impl think::Motion for Attack	{
 		fn get_name<'a>( &'a self )-> &'a str	{ "Attack" }
-		fn update( &mut self, _m : &mut main::Member, _delta : anim::float, _field: &mut field::Field, _grid : &grid::Grid )-> think::MotionStatus	{
-			think::StatusDone//TODO
+		fn update( &mut self, _m : &mut main::Member, _delta : anim::float, field: &mut field::Field, grid : &grid::Grid )-> think::MotionStatus	{
+			let id = (grid as &grid::TopologyGrid).get_index( self.destination ).expect("Invalid attack target");
+			field.deal_damage( id, None, self.damage );
+			think::StatusDone
 		}
 		fn stop( &mut self )	{
 			//TODO
@@ -169,7 +174,11 @@ impl Brain<main::Character> for Player<main::Character>	{
 			};
 			match field.with_member( mk, |m| m.get_team() )	{
 				Some(team) if team != (member as &field::Member).get_team()	=>	{
-					return ~motion::Attack{ destination: self.target } as ~Motion
+					let my_damage = 1u;
+					return ~motion::Attack{
+						destination	: self.target,
+						damage		: my_damage,
+						} as ~Motion
 				}
 				_	=> ()
 			}
@@ -179,23 +188,84 @@ impl Brain<main::Character> for Player<main::Character>	{
 }
 
 pub struct Monster<M>	{
-	dummy	: bool,	//TODO
+	target_key	: field::MemberKey,
 }
 
 impl<M> Monster<M>	{
 	pub fn new()-> Monster<M>	{
 		Monster{
-			dummy	: true,
+			target_key	: 0,
 		}
 	}
 }
 
-impl<M: field::Member> Brain<M> for Monster<M>	{
+impl<M: main::Member> Brain<M> for Monster<M>	{
 	fn check( &mut self, _member : &M, _field : &field::Field, _grid : &grid::Grid )-> bool	{
-		false
+		self.target_key == 0
 	}
-	fn decide( &mut self, _member : &M, _field : &field::Field, _grid : &grid::Grid )-> ~Motion	{
-		~motion::Idle as ~Motion
+	fn decide( &mut self, member : &M, field : &field::Field, grid : &grid::Grid )-> ~Motion	{
+		let is_valid = field.with_member( self.target_key, |m|	{m.get_team()!=member.get_team()} ) == Some(true);
+		if !is_valid	{
+			self.target_key = 0;
+			field.each_member(|key,_|	{
+				//if self.target_key==0 && m.get_team() != member.get_team()	{
+				//	self.target_key = key;
+				//}
+				if self.target_key==0 && key!=member.get_key()	{
+					self.target_key = key;
+				}
+			});
+			print!("Chosen target key: {:?}\n", self.target_key);
+		}
+		if self.target_key == 0	{
+			return ~motion::Idle as ~Motion
+		}
+		/*let target_pos = field.with_member( self.target_key, |m|	{
+			let (pos, _) = m.get_limbs()[0];
+			pos
+		}).expect(format!( "Invalid target key: {:?}", self.target_key ));
+		*/
+		let (self_pos,_) = member.get_limbs()[0];
+		let target_pos = self_pos;
+		let neighbors = [
+			target_pos.add_v( &Vec2::new(1,0) ),
+			target_pos.add_v( &Vec2::new(0,1) ),
+			target_pos.add_v( &Vec2::new(-1,0) ),
+			target_pos.add_v( &Vec2::new(0,-1) ),
+			];
+		let mut min_dist = grid.get_index_size() as int;
+		let mut best_pos = target_pos;
+		let topo = grid as &grid::TopologyGrid;
+		for &new_pos in neighbors.iter()	{
+			let access = match field.get_by_location( new_pos, topo )	{
+				&field::CellEmpty		=> true,
+				&field::CellPart(key,_)	=> key==member.get_key(),
+				_						=> false,
+			};
+			let diff = new_pos.sub_p( &self_pos );
+			let dist = diff.x*diff.x + diff.y*diff.y;
+			if access && dist < min_dist	{
+				best_pos = new_pos;
+				min_dist = dist;
+			}
+		}
+		let my_elevation = 1.0f32;
+		let my_speed = 1.0f32;
+		let my_damage = 1u;
+		if best_pos != target_pos	{
+			~motion::Move{
+				destinations: ~[best_pos],
+				location	: self_pos,
+				orientation	: topo.approximate_orientation( self_pos, best_pos ),
+				elevation	: my_elevation,
+				speed		: my_speed,
+			} as ~Motion
+		}else	{
+			~motion::Attack{
+				destination	: target_pos,
+				damage		: my_damage,
+			} as ~Motion
+		}
 	}
 }
 

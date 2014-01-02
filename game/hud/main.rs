@@ -13,7 +13,7 @@ use gen = gen_hud::common;
 
 
 
-fn get<T>( children : &[gen::Child], path : &str, fun : |&str,&gen::Element|->T )-> T	{
+pub fn get<T>( children : &[gen::Child], path : &str, fun : |&str,&gen::Element|->T )-> T	{
 	let slash = path.find('/');
 	let name = match slash	{
 		Some(p)	=> path.slice_to(p),
@@ -36,7 +36,7 @@ fn get<T>( children : &[gen::Child], path : &str, fun : |&str,&gen::Element|->T 
 	fail!("Hud child not found: {:s}", name)
 }
 
-fn modify( children : &mut ~[gen::Child], path : &str, fun : |&str,&mut gen::Element| )	{
+pub fn modify( children : &mut ~[gen::Child], path : &str, fun : |&str,&mut gen::Element| )	{
 	let slash = path.find('/');
 	let name = match slash	{
 		Some(p)	=> path.slice_to(p),
