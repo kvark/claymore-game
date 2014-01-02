@@ -26,6 +26,7 @@ impl LimbType	{
 }
 
 pub type LimbId		= u8;
+#[deriving(Clone,Eq)]
 pub type LimbKey	= (LimbType,LimbId);
 
 #[deriving(Clone)]
@@ -108,7 +109,12 @@ impl Field	{
 	}
 	
 	fn add_member_cells( &mut self, m_key: MemberKey, m_limbs: &[MemberLimb], grid: &grid::TopologyGrid )	{
-		for &(pos,limb) in m_limbs.iter()	{
+		for &(pos,_) in m_limbs.iter()	{
+			let limb = Limb	{	//FIXME
+				key		: (LimbArm,0),
+				health	: 0,
+				node	: @mut engine::space::Node::new(~"dummy"),
+			};
 			grid.get_index(pos).map(|index|	{
 				match self.cells[index]	{
 					CellEmpty	=> self.cells[index] = CellPart( m_key,~[limb] ),
@@ -152,13 +158,9 @@ impl Field	{
 		self.revision += 1;
 	}
 	
-	pub fn update_member( &mut self, mk: MemberKey, grid : &grid::TopologyGrid )-> bool	{
-		let m = match self.members.find( &mk )	{
-			Some(mem)	=> *mem,
-			None		=> return false,
-		};
+	pub fn update_member( &mut self, mk: MemberKey, limbs: &[MemberLimb], grid : &grid::TopologyGrid )-> bool	{
 		self.remove_member_cells( mk );
-		self.add_member_cells( mk, m.get_limbs(), grid );
+		self.add_member_cells( mk, limbs, grid );
 		true
 	}
 

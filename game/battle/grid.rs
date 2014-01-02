@@ -132,7 +132,7 @@ impl TopologyGrid for Grid	{
 	}
 	fn get_index( &self, d: Location )-> Option<uint>	{
 		let ns = self.nseg as int;
-		if d.x>=0 && d.y<ns && d.y>=0 && d.y<ns	{
+		if d.x>=0 && d.x<ns && d.y>=0 && d.y<ns	{
 			Some((d.x + d.y*ns) as uint)
 		}else	{None}
 	}

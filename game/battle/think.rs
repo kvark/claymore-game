@@ -74,7 +74,7 @@ pub mod motion	{
 				match field.get_by_location( dest_loc, grid as &grid::TopologyGrid )	{
 					&field::CellEmpty	=>	{
 						m.move( dest_loc, self.orientation );
-						field.update_member( m.get_key(), grid as &grid::TopologyGrid ); 
+						field.update_member( m.get_key(), m.get_limbs(), grid as &grid::TopologyGrid ); 
 						false
 					},
 					&field::CellPart(_,_)	=>	{	//collide
