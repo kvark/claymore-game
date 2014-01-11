@@ -1,6 +1,7 @@
 extern mod engine;
 
 use std;
+use std::cell::RefCell;
 use std::hashmap::HashMap;
 use std::to_str::ToStr;
 use extra::serialize::Decoder;
@@ -306,7 +307,7 @@ impl Frame	{
 
 	pub fn draw_debug( &self, hc : &Context, prog : @gr_low::shade::Program,
 		data : &mut gr_low::shade::DataMap, rast : &gr_low::rast::State )-> call::Call	{
-		data.insert( ~"u_Transform", hc.transform(&self.area) );
+		data.set( ~"u_Transform", hc.transform(&self.area) );
 		hc.call( prog, data.clone(), Some(rast) )
 	}
 
@@ -356,29 +357,31 @@ struct ImageInfo	{
 }
 
 pub struct Image	{
-	texture	: @gr_low::texture::Texture,
+	texture	: RefCell<@gr_low::texture::Texture>,
 	sampler	: gr_low::texture::Sampler,
 	program	: @gr_low::shade::Program,
 	center	: (f32,f32),
 }
 
+pub type ImagePtr = @Image;
+
 impl Element for Image	{
 	fn get_size( &self )-> Point	{
-		(self.texture.width as int, self.texture.height as int)
+		self.texture.with(|t| (t.width as int, t.height as int))
 	}
 	fn draw( &self, hc : &Context, rect : &Rect )-> call::Call	{
 		// fill shader data
 		let mut data = gr_low::shade::DataMap::new();
-		data.insert( ~"t_Image",	gr_low::shade::UniTexture(
-			0, self.texture, Some(self.sampler) ));
+		data.set( ~"t_Image",	gr_low::shade::UniTexture(
+			0, self.texture.get(), Some(self.sampler) ));
 		let (cx,cy) = self.center;
 		let (sx,sy) = rect.size;
-		let vc = Vec4::new( cx, cy,
-			(sx as f32)/(self.texture.width as f32),
-			(sy as f32)/(self.texture.height as f32)
-			);
-		data.insert( ~"u_Center",	gr_low::shade::UniFloatVec(vc) );
-		data.insert( ~"u_Transform", hc.transform(rect) );
+		let vc = self.texture.with(|t| Vec4::new( cx, cy,
+			(sx as f32)/(t.width as f32),
+			(sy as f32)/(t.height as f32)
+			));
+		data.set( ~"u_Center",		gr_low::shade::UniFloatVec(vc) );
+		data.set( ~"u_Transform",	hc.transform(rect) );
 		// return
 		hc.call( self.program, data, None )
 	}
@@ -397,26 +400,28 @@ struct LabelInfo	{
 }
 
 pub struct Label	{
-	texture	: @gr_low::texture::Texture,
-	content	: ~str,
+	texture	: RefCell<@gr_low::texture::Texture>,
+	content	: RefCell<~str>,
 	program	: @gr_low::shade::Program,
 	color	: gr_low::rast::Color,
 	font	: @font::Font,
 }
 
+pub type LabelPtr = @Label;
+
 impl Element for Label	{
 	fn get_size( &self )-> Point	{
-		(self.texture.width as int, self.texture.height as int)
+		self.texture.with(|t| (t.width as int, t.height as int))
 	}
 	fn draw( &self, hc : &Context, rect : &Rect )-> call::Call	{
 		// fill shader data
 		let mut data = gr_low::shade::DataMap::new();
 		let sm = gr_low::texture::Sampler::new(1u,0);
-		data.insert( ~"t_Text",	gr_low::shade::UniTexture(0,self.texture,Some(sm)) );
+		data.set( ~"t_Text",	gr_low::shade::UniTexture(0,self.texture.get(),Some(sm)) );
 		let vc = Vec4::new( self.color.r, self.color.g, self.color.b, self.color.a );
-		data.insert( ~"u_Color",	gr_low::shade::UniFloatVec(vc) );
+		data.set( ~"u_Color",	gr_low::shade::UniFloatVec(vc) );
 		let dr = Rect{ base:rect.base, size:self.get_size() };
-		data.insert( ~"u_Transform", hc.transform(&dr) );
+		data.set( ~"u_Transform", hc.transform(&dr) );
 		// return
 		hc.call( self.program, data, None )
 	}
@@ -432,8 +437,8 @@ struct ScreenInfo	{
 
 pub struct Screen    {
 	root	: Frame,
-	images	: HashMap<~str,@Image>,
-	labels	: HashMap<~str,@mut Label>,
+	images	: HashMap<~str,ImagePtr>,
+	labels	: HashMap<~str,LabelPtr>,
 	textures: HashMap<~str,@gr_low::texture::Texture>,
 	fonts	: HashMap<FontInfo,@font::Font>,
 }
@@ -456,7 +461,7 @@ pub fn load_screen( path : &str, ct : &mut gr_low::context::Context,
 	};
 	let mut map_texture	: HashMap<~str,@gr_low::texture::Texture> = HashMap::new();
 	lg.add(format!( "\tParsing {:u} images", iscreen.images.len() ));
-	let mut map_image : HashMap<~str,@Image> = HashMap::new();
+	let mut map_image : HashMap<~str,ImagePtr> = HashMap::new();
 	let prog_image = engine::load::load_program( ct, "data/code/hud/image", lg );
 	for iimage in iscreen.images.iter()	{
 		let path = ~"data/texture/hud/" + iimage.path;
@@ -468,7 +473,7 @@ pub fn load_screen( path : &str, ct : &mut gr_low::context::Context,
 			map_texture.insert(path,texture);
 		}
 		let image = @Image	{
-			texture	: texture,
+			texture	: RefCell::new(texture),
 			sampler	: gr_low::texture::Sampler::new(1u,0),
 			program	: prog_image,
 			center	: iimage.center,
@@ -480,7 +485,7 @@ pub fn load_screen( path : &str, ct : &mut gr_low::context::Context,
 	}
 	lg.add(format!( "\tParsing {:u} labels", iscreen.labels.len() ));
 	let mut map_font	: HashMap<FontInfo,@font::Font>	= HashMap::new();
-	let mut map_label	: HashMap<~str,@mut Label>				= HashMap::new();
+	let mut map_label	: HashMap<~str,LabelPtr>		= HashMap::new();
 	let prog_label = engine::load::load_program( ct, "data/code/hud/text", lg );
 	for ilabel in iscreen.labels.iter()	{
 		let (font,new) = match map_font.find(&ilabel.font)	{
@@ -495,9 +500,10 @@ pub fn load_screen( path : &str, ct : &mut gr_low::context::Context,
 		if new	{
 			map_font.insert( ilabel.font.clone(), font );
 		}
-		let label = @mut Label{
-			texture	: font.bake( ct, ilabel.text, ilabel.bound, lg ),
-			content	: ilabel.text.clone(),
+		let texture = font.bake( ct, ilabel.text, ilabel.bound, lg );
+		let label = @Label{
+			texture	: RefCell::new( texture ),
+			content	: RefCell::new( ilabel.text.clone() ),
 			program	: prog_label,
 			color	: gr_low::rast::Color::new( ilabel.color ),
 			font	: font,
@@ -520,15 +526,17 @@ pub fn load_screen( path : &str, ct : &mut gr_low::context::Context,
 
 pub struct Blink<T>	{
 	element	: @T,
-	visible	: bool,
+	visible	: RefCell<bool>,
 }
+
+pub type BlinkPtr<T> = @Blink<T>;
 
 impl<T:Element> Element for Blink<T>	{
 	fn get_size( &self )-> Point	{
 		self.element.get_size()
 	}
 	fn draw( &self, ct : &Context, r : &Rect )-> call::Call	{
-		if self.visible	{
+		if self.visible.get()	{
 			self.element.draw(ct,r)
 		}else	{
 			call::CallEmpty
@@ -538,35 +546,37 @@ impl<T:Element> Element for Blink<T>	{
 
 
 pub struct EditLabel	{
-	text	: @mut Label,
+	text	: LabelPtr,
 	size	: (uint,uint),
-	cursor	: @mut Blink<Image>,
+	cursor	: BlinkPtr<Image>,
 	active	: bool,
 }
 
+pub type EditLabelPtr = std::rc::Rc<RefCell<EditLabel>>;
 pub type KeyInput = ();
 
 impl EditLabel	{
-	pub fn obtain( screen : &mut Screen, base_name : ~str )-> EditLabel	{
+	pub fn obtain( screen: &mut Screen, base_name: ~str )-> EditLabelPtr	{
 		let cursor_name = base_name + ".cursor";
-		let blink = @mut Blink	{
-			element	: *screen.images.get(&cursor_name),
-			visible	: false,
+		let blink = @Blink	{
+			element	: *screen.images.get( &cursor_name ),
+			visible	: RefCell::new( false ),
 		};
 		let (sx,sy) = screen.root.with_frame_mut( &cursor_name, |fr| {
 			fr.element = blink as @Element;
 			fr.area.size
 		}).expect( ~"Frame not found: " + base_name );
-		EditLabel{
+		std::rc::Rc::new(RefCell::new( EditLabel{
 			text	: *screen.labels.get(&base_name),
 			size	: (sx as uint, sy as uint),
 			cursor	: blink,
 			active	: false,
-		}
+		}))
 	}
 
-	pub fn change( &self, input : &str, ct : &mut gr_low::context::Context, lg : &engine::journal::Log )	{
-		let mut text = self.text.content.clone();
+	pub fn change( &self, input : &str, ct: &mut gr_low::context::Context, lg: &engine::journal::Log )	{
+		let st = &self.text;
+		let mut text = st.content.get();
 		for key in input.chars()	{
 			if key == 'b'{//(259 as char)	{//FIXME
 				if !text.is_empty()	{
@@ -576,15 +586,16 @@ impl EditLabel	{
 				text.push_char(key);
 			}
 		}
-		self.text.texture = self.text.font.bake( ct, text, (1000,100), lg );	//self.size
-		self.text.content = text;
+		let newtex = st.font.bake( ct, text, (1000,100), lg );
+		st.texture.set( newtex );	//self.size
+		st.content.set( text );
 	}
 }
 
 impl engine::anim::Act for EditLabel	{
 	fn update( &mut self, time : engine::anim::float )-> bool	{
 		let time_ms = (time * 1000.0) as uint;
-		self.cursor.visible = self.active && (time_ms % 1000u < 500u);
+		self.cursor.visible.set( self.active && (time_ms % 1000u < 500u) );
 		true
 	}
 }

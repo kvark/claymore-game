@@ -1,7 +1,8 @@
 extern mod gl;
 
-use std::hashmap::HashMap;
 use std::managed;
+use std::cell::RefCell;
+use std::hashmap::HashMap;
 
 use gr_low;
 use gr_mid;
@@ -21,7 +22,7 @@ pub struct Mesh	{
 	poly_type	: gl::types::GLuint,
 	num_vert	: uint,
 	num_ind		: uint,
-	black_list	: @mut ~[@gr_low::shade::Program]
+	black_list	: RefCell<~[@gr_low::shade::Program]>,
 }
 
 impl Mesh	{
@@ -46,7 +47,7 @@ impl Mesh	{
 }
 
 
-pub fn create_quad( ct : &mut gr_low::context::Context )-> Mesh	{
+pub fn create_quad( ct: &mut gr_low::context::Context )-> Mesh	{
 	let vdata = [0i8,0i8,1i8,0i8,0i8,1i8,1i8,1i8];
 	let count = 2u;
 	let mut mesh = ct.create_mesh( ~"quad", "3s", vdata.len()/count, 0u );
@@ -57,7 +58,7 @@ pub fn create_quad( ct : &mut gr_low::context::Context )-> Mesh	{
 
 
 impl gr_low::context::Context	{
-	pub fn create_mesh( &self, name : ~str, poly : &str, nv : uint, ni : uint )-> Mesh	{
+	pub fn create_mesh( &self, name: ~str, poly: &str, nv: uint, ni: uint )-> Mesh	{
 		let ptype = match poly	{
 			"1"	=> gl::POINTS,
 			"2"	=> gl::LINES,
@@ -68,12 +69,14 @@ impl gr_low::context::Context	{
 			_	=> fail!("Unknown poly type: {:s}", poly)
 		};
 		let ats = HashMap::new();
-		Mesh{ name:name, attribs:ats, index:None, poly_type:ptype, num_vert:nv, num_ind:ni, black_list:@mut ~[] }
+		Mesh{ name:name, attribs:ats, index:None, poly_type:ptype, num_vert:nv, num_ind:ni,
+			black_list: RefCell::new(~[]) }
 	}
 
-	pub fn disable_mesh_attribs( &self, va : @mut gr_low::buf::VertexArray, clean_mask : uint )	{
-		assert!( self.vertex_array.is_active(va) );
-		let varray = &mut va.data;
+	pub fn disable_mesh_attribs( &self, vap: &gr_low::buf::VertexArrayPtr, clean_mask: uint )	{
+		assert!( self.vertex_array.is_active(vap) );
+		let mut va = vap.borrow().borrow_mut();
+		let varray = &mut va.get().data;
 		for i in range(0,varray.len())	{
 			if clean_mask&(1<<i)!=0u && varray[i].enabled	{
 				gl::DisableVertexAttribArray( i as gl::types::GLuint );
@@ -82,10 +85,11 @@ impl gr_low::context::Context	{
 		}
 	}
 
-	pub fn bind_mesh_attrib( &mut self, va : @mut gr_low::buf::VertexArray, loc : uint, at : &gr_low::buf::Attribute, is_int : bool )	{
-		assert!( self.vertex_array.is_active(va) );
+	pub fn bind_mesh_attrib( &mut self, vap: &gr_low::buf::VertexArrayPtr, loc: uint, at: &gr_low::buf::Attribute, is_int: bool )	{
+		assert!( self.vertex_array.is_active(vap) );
 		self.bind_buffer( at.buffer );
-		let varray = &mut va.data;
+		let mut va = vap.borrow().borrow_mut();
+		let varray = &mut va.get().data;
 		let vdata = &mut varray[loc];
 		// update vertex info
 		let need_bind = match vdata.attrib	{
@@ -115,46 +119,51 @@ impl gr_low::context::Context	{
 		}
 	}
 
-	pub fn draw_mesh( &mut self, inp : gr_mid::call::Input, prog : @gr_low::shade::Program, data : &gr_low::shade::DataMap )-> bool	{
-		assert!( *inp.va.handle as int != 0 );
+	pub fn draw_mesh( &mut self, inp: &gr_mid::call::Input, prog: @gr_low::shade::Program, data: &gr_low::shade::DataMap )-> bool	{
+		assert!({ let gr_low::buf::ArrayHandle(h) = inp.va.borrow().borrow().get().handle; h != 0 });
 		// check black list
-		if inp.mesh.black_list.iter().find( |&p| managed::ptr_eq(*p,prog) ).is_some()	{
+		let mut black = inp.mesh.black_list.borrow_mut();
+		if black.get().iter().find( |&p| managed::ptr_eq(*p,prog) ).is_some()	{
 			return false;
 		}
 		// bind program
+		let gr_low::shade::ProgramHandle(phan) = prog.handle;
 		if !self.bind_program( prog, data )	{
-			inp.mesh.black_list.push( prog );
-			print!( "Unable to activate program {}{}\n", '#', *prog.handle );
+			black.get().push( prog );
+			print!( "Unable to activate program {}{}\n", '#', phan );
 			return false;
 		}
 		// bind attributes
-		self.bind_vertex_array( inp.va );
-		let mut va_clean_mask = inp.va.get_mask();
+		self.bind_vertex_array( inp.va.clone() );
+		let mut va_clean_mask = {
+			let va = inp.va.borrow().borrow();
+			va.get().get_mask()
+		};
 		for (name,pat) in prog.attribs.iter()	{
 			match inp.mesh.attribs.find(name)	{
 				Some(sat) => {
 					if !sat.compatible(pat)	{
-						inp.mesh.black_list.push( prog );
+						black.get().push( prog );
 						print!( "Mesh attibute '{}' is incompatible with program {}{}\n",
-							*name, '#', *prog.handle );
+							*name, '#', phan );
 						return false;
 					}
 					va_clean_mask &= !(1<<pat.loc);
-					self.bind_mesh_attrib( inp.va, pat.loc, sat, pat.is_integer() );
+					self.bind_mesh_attrib( &inp.va, pat.loc, sat, pat.is_integer() );
 				},
 				None => {
-					inp.mesh.black_list.push( prog );
+					black.get().push( prog );
 					print!( "Mesh '{}' doesn't contain required attribute '{}', needed for program {}{}\n",
-						inp.mesh.name, *name, '#', *prog.handle );
+						inp.mesh.name, *name, '#', phan );
 					return false;
 				}
 			}
 		}
-		self.disable_mesh_attribs( inp.va, va_clean_mask );
+		self.disable_mesh_attribs( &inp.va, va_clean_mask );
 		// call draw
 		match inp.mesh.index	{
 			Some(el) =>	{
-				self.bind_element_buffer( inp.va, el.buffer );
+				self.bind_element_buffer( &inp.va, el.buffer );
 				assert!( inp.range.start + inp.range.num <= inp.mesh.num_ind );
 				unsafe{
 					gl::DrawElements( inp.mesh.poly_type, inp.range.num as gl::types::GLsizei,

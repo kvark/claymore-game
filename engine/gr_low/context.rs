@@ -16,7 +16,7 @@ pub struct Capabilities	{
 	max_color_attachments : uint,
 }
 
-fn read_cap( what : gl::types::GLenum )-> uint	{
+fn read_cap( what: gl::types::GLenum )-> uint	{
 	let mut value = 0 as gl::types::GLint;
 	unsafe	{
 		gl::GetIntegerv( what, ptr::to_mut_unsafe_ptr(&mut value) );
@@ -93,7 +93,7 @@ pub struct Context	{
 	texture				: texture::Binding,
 	// defaults
 	default_rast		: rast::State,
-	default_frame_buffer: @mut frame::Buffer,
+	default_frame_buffer: frame::BufferPtr,
 }
 
 
@@ -149,7 +149,7 @@ impl Context	{
 		let rb = self.render_buffer.default;
 		(rb.width, rb.height)
 	}
-	pub fn check( &self, where : &str )	{
+	pub fn check( &self, where: &str )	{
 		let code = gl::GetError();
 		if code == 0	{return}
 		let message = match code	{
@@ -162,7 +162,7 @@ impl Context	{
 		};
 		fail!("{:s}: GL error 0x{:x} ({:s})", where, code as uint, message)
 	}
-	pub fn set_clear_color( &mut self, c : &rast::Color )	{
+	pub fn set_clear_color( &mut self, c: &rast::Color )	{
 		if self.clear_data.color != *c	{
 			self.clear_data.color = *c;
 			gl::ClearColor(
@@ -170,13 +170,13 @@ impl Context	{
 				c.b as gl::types::GLfloat, c.a as gl::types::GLfloat );
 		}
 	}
-	pub fn set_clear_depth( &mut self, d : f32 )	{
+	pub fn set_clear_depth( &mut self, d: f32 )	{
 		if self.clear_data.depth != d	{
 			self.clear_data.depth = d;
 			gl::ClearDepth( d as gl::types::GLdouble );
 		}
 	}
-	pub fn set_clear_stencil( &mut self, s : u32 )	{
+	pub fn set_clear_stencil( &mut self, s: u32 )	{
 		if self.clear_data.stencil != s	{
 			self.clear_data.stencil = s;
 			gl::ClearStencil( s as gl::types::GLint );

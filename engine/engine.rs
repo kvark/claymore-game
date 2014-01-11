@@ -4,7 +4,6 @@
 #[license = "MIT"];
 
 #[feature(managed_boxes)];
-#[feature(globs)];
 
 
 extern mod extra;

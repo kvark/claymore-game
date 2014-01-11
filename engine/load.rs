@@ -3,8 +3,7 @@ extern mod cgmath;
 extern mod stb_image;
 
 use std;
-use std::str;
-use std::io;
+use std::{io,str};
 use std::io::{Reader,Seek};
 use extra;
 
@@ -42,11 +41,11 @@ pub struct Reader	{
 	priv chunks		: ~[Chunk],
 }
 
-pub fn enter_dummy( _rd : &mut Reader )-> Chunk	{
+pub fn enter_dummy( _rd: &mut Reader )-> Chunk	{
 	fail!( ~"unexpected chunk read" )
 }
 
-pub fn enter_chunk( rd : &mut Reader )-> Chunk	{
+pub fn enter_chunk( rd: &mut Reader )-> Chunk	{
 	let mut name_bin = rd.get_bytes(8u);
 	name_bin.retain( |&b| {b != 0u8} );
 	let size = rd.get_uint(4u);
@@ -59,7 +58,7 @@ pub fn enter_chunk( rd : &mut Reader )-> Chunk	{
 
 
 impl Reader	{
-	pub fn create_ext( path : &str, fun : 'static |&mut Reader|->Chunk )-> Reader	{
+	pub fn create_ext( path: &str, fun: 'static |&mut Reader|->Chunk )-> Reader	{
 		let p = std::path::Path::new( path );
 		match io::File::open( &p )	{
 			Some(bin)	=> Reader{
@@ -72,18 +71,18 @@ impl Reader	{
 		}
 	}
 
-	pub fn create_std( path : &str )-> Reader	{
+	pub fn create_std( path: &str )-> Reader	{
 		Reader::create_ext( path, enter_chunk )
 	}
 
-	pub fn create( path : &str )-> Reader	{
+	pub fn create( path: &str )-> Reader	{
 		Reader::create_ext( path, enter_dummy )
 	}
 
-	pub fn get_bytes( &mut self, num : uint )-> ~[u8]	{
+	pub fn get_bytes( &mut self, num: uint )-> ~[u8]	{
 		self.bin.read_bytes(num)
 	}
-	pub fn get_uint( &mut self, size : uint )-> uint	{
+	pub fn get_uint( &mut self, size: uint )-> uint	{
 		let bytes = self.get_bytes(size);
 		bytes.rev_iter().fold( 0u, |u,&t|	{(u<<8u) + t as uint} )
 	}
@@ -97,7 +96,7 @@ impl Reader	{
 		str::from_utf8_owned( self.bin.read_bytes(size) )
 	}
 
-	pub fn get_floats( &mut self, num : uint )-> ~[f32]	{
+	pub fn get_floats( &mut self, num: uint )-> ~[f32]	{
 		let data = self.bin.read_bytes( num * 4u );
 		let mut vals : ~[f32];
 		unsafe	{
@@ -148,7 +147,7 @@ pub fn get_time()-> f64 {
 	(tm.sec as f64) + 0.000000001 * (tm.nsec as f64)
 }											//
 
-pub fn load_text( path : &str )-> ~str	{
+pub fn load_text( path: &str )-> ~str	{
 	let p = std::path::Path::new( path );
 	match io::File::open( &p )	{
 		Some(ref mut rd)	=> std::str::from_utf8_owned( rd.read_to_end() ),
@@ -156,12 +155,12 @@ pub fn load_text( path : &str )-> ~str	{
 	}
 }
 
-pub fn read_space( br : &mut Reader )-> space::Space	{
+pub fn read_space( br: &mut Reader )-> space::Space	{
 	let d = br.get_floats(8u);
 	space::make( d[3], Quat::new(d[7],d[4],d[5],d[6]), Vec3::new(d[0],d[1],d[2]) )
 }
 
-pub fn load_program( ct : &context::Context, path : &str, lg : &journal::Log )-> @shade::Program	{
+pub fn load_program( ct: &context::Context, path: &str, lg: &journal::Log )-> @shade::Program	{
 	lg.add(format!( "Loading program: {:s}", path ));
 	let sv = ct.create_shader( 'v', load_text( path + ".glslv" ));
 	let sf = ct.create_shader( 'f', load_text( path + ".glslf" ));
@@ -172,8 +171,8 @@ pub fn load_program( ct : &context::Context, path : &str, lg : &journal::Log )->
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - //
 //		Texture											//
 
-fn create_texture_2D<T>( ct : &mut context::Context, image : &stb_image::image::Image<T>, mipmap : bool,
-	int_format : gl::types::GLenum, pix_type : gl::types::GLenum )-> @texture::Texture	{
+fn create_texture_2D<T>( ct: &mut context::Context, image: &stb_image::image::Image<T>, mipmap: bool,
+	int_format: gl::types::GLenum, pix_type: gl::types::GLenum )-> @texture::Texture	{
 	//assert (image.width | image.height) & 3u == 0u;
 	let format = match image.depth	{
 		4u	=> gl::RGBA,
@@ -189,7 +188,7 @@ fn create_texture_2D<T>( ct : &mut context::Context, image : &stb_image::image::
 	t
 }
 
-pub fn load_texture_2D_image( ct : &mut context::Context, result : &stb_image::image::LoadResult, mipmap : bool, name : &str )-> @texture::Texture	{
+pub fn load_texture_2D_image( ct: &mut context::Context, result: &stb_image::image::LoadResult, mipmap: bool, name: &str )-> @texture::Texture	{
 	match result	{
 		&stb_image::image::ImageU8(ref img)		=>
 			create_texture_2D( ct, img, mipmap, gl::RGBA, gl::UNSIGNED_BYTE ),
@@ -200,7 +199,7 @@ pub fn load_texture_2D_image( ct : &mut context::Context, result : &stb_image::i
 	}
 }
 
-pub fn load_texture_2D( ct : &mut context::Context, path : &str, mipmap : bool )-> @texture::Texture	{
+pub fn load_texture_2D( ct: &mut context::Context, path: &str, mipmap: bool )-> @texture::Texture	{
 	let result = stb_image::image::load( path.to_owned() );
 	load_texture_2D_image( ct, &result, mipmap, path )
 }
@@ -212,14 +211,14 @@ pub struct TextureFuture	{
 }
 
 impl TextureFuture	{
-	pub fn new_2D( path : ~str, mipmap : bool )-> TextureFuture	{
+	pub fn new_2D( path: ~str, mipmap: bool )-> TextureFuture	{
 		TextureFuture	{
 			name	: path.clone(),
 			image	: do extra::future::Future::spawn{ stb_image::image::load(path.clone()) },
 			mipmap	: mipmap,
 		}
 	}
-	pub fn get( &mut self, ct : &mut context::Context )-> @texture::Texture	{
+	pub fn get( &mut self, ct: &mut context::Context )-> @texture::Texture	{
 		let result = self.image.get_ref();
 		load_texture_2D_image( ct, result, self.mipmap, self.name )
 	}
@@ -229,7 +228,7 @@ impl TextureFuture	{
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - //
 //		Mesh											//
 
-pub fn read_mesh( br : &mut Reader, context : &mut context::Context, lg : &journal::Log )-> mesh::Mesh	{
+pub fn read_mesh( br: &mut Reader, context: &mut context::Context, lg: &journal::Log )-> mesh::Mesh	{
 	lg.add(format!( "Loading mesh from {:s}", br.path ));
 	let signature = br.enter();
 	if signature != ~"k3mesh"	{
@@ -285,24 +284,24 @@ pub fn load_mesh( path : &str, ct : &mut context::Context, lg : &journal::Log )-
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - //
 //		Armature										//
 
-pub fn read_key_position( br : &mut Reader )-> Vec3<f32>	{
+pub fn read_key_position( br: &mut Reader )-> Vec3<f32>	{
 	let v = br.get_floats(3u);
 	Vec3::new(v[0],v[1],v[2])
 }
-pub fn read_key_orientation_quat( br : &mut Reader )-> Quat<f32>	{
+pub fn read_key_orientation_quat( br: &mut Reader )-> Quat<f32>	{
 	let v = br.get_floats(4u);
 	Quat::new(v[0],v[1],v[2],v[3])
 }
-pub fn read_key_orientation_euler( br : &mut Reader )-> Quat<f32>	{
+pub fn read_key_orientation_euler( br: &mut Reader )-> Quat<f32>	{
 	let v = br.get_floats(3u);
 	Quat::from_euler( angle::rad(v[0]), angle::rad(v[1]), angle::rad(v[2]) )
 }
-pub fn read_key_scale3( br : &mut Reader )-> f32	{
+pub fn read_key_scale3( br: &mut Reader )-> f32	{
 	let v = br.get_floats(3u);
 	(v[0]+v[1]+v[2]) * (1f32/3f32)
 }
 
-pub fn read_curve<T : Clone + Send + space::Interpolate>( br : &mut Reader, fkey : |&mut Reader|->T )-> ~anim::Curve<T>	{
+pub fn read_curve<T : Clone + Send + space::Interpolate>( br: &mut Reader, fkey: |&mut Reader|->T )-> ~anim::Curve<T>	{
 	let num = br.get_uint(2u);
 	let _extrapolate = br.get_uint(1u)!=0u;
 	let bezier = br.get_uint(1u)!=0u;
@@ -324,7 +323,7 @@ pub fn read_curve<T : Clone + Send + space::Interpolate>( br : &mut Reader, fkey
 }
 
 
-pub fn read_action( br : &mut Reader, bones : &[space::Bone], lg : &journal::Log )-> space::ArmatureRecord	{
+pub fn read_action( br: &mut Reader, bones: &[space::Bone], lg: &journal::Log )-> space::ArmatureRecord	{
 	lg.add(format!( "Loading anim from {:s}", br.path ));
 	assert!( br.enter() == ~"action" );
 	let act_name = br.get_string();
@@ -341,7 +340,7 @@ pub fn read_action( br : &mut Reader, bones : &[space::Bone], lg : &journal::Log
 		if split.len() == 3u	{
 			assert!( split[0] == ~"pose.bones[" );
 			let mut bid = 0u;	//FIXME: vec::position, when Rust allows
-			while bones[bid].node.name != split[1]	{
+			while {let bn = bones[bid].node.borrow().borrow(); bn.get().name != split[1]}	{
 				bid += 1;
 				assert!( bid < bones.len(), format!("Bone '{:s}' not found", split[1]) );
 			}
@@ -381,7 +380,7 @@ pub fn read_action( br : &mut Reader, bones : &[space::Bone], lg : &journal::Log
 	}
 }
 
-pub fn get_armature_shader( dual_quat : bool )-> (~str,uint)	{
+pub fn get_armature_shader( dual_quat: bool )-> (~str,uint)	{
 	let shader = load_text( if dual_quat
 		{~"data/code/mod/arm_dualquat.glslv"} else
 		{~"data/code/mod/arm.glslv"} );
@@ -394,7 +393,7 @@ pub fn get_armature_shader( dual_quat : bool )-> (~str,uint)	{
 	(shader,max)
 }
 
-pub fn read_armature( br : &mut Reader, root : @mut space::Node, dual_quat : bool, lg : &journal::Log )-> space::Armature	{
+pub fn read_armature( br: &mut Reader, root: space::NodePtr, dual_quat: bool, lg: &journal::Log )-> space::Armature	{
 	let signature = br.enter();
 	if signature != ~"k3arm"	{
 		fail!("Invalid armature signature '{:s}': {:s}", signature, br.path)
@@ -406,14 +405,17 @@ pub fn read_armature( br : &mut Reader, root : @mut space::Node, dual_quat : boo
 	while bones.len()<num_bones	{
 		let name = br.get_string();
 		let pid = br.get_uint(1u);
-		let parent = Some(if pid==0u {root}	else {bones[pid-1u].node});
+		let parent = Some(if pid==0u {root.clone()}	else {bones[pid-1u].node.clone()});
 		let space = read_space(br);
-		let bind_inv = space.invert().expect(format!(
-			"Uninvertable bind pose detected at bone {:u} of armature {:s}",
-			bones.len(), root.name ));
+		let bind_inv = space.invert().expect({
+			let r = root.borrow().borrow();
+			format!("Uninvertable bind pose detected at bone {:u} of armature {:s}",
+				bones.len(), r.get().name )
+			});
 		let bind_pose_inv = if pid==0u {bind_inv} else {bind_inv.concat( &bones[pid-1u].bind_pose_inv )};
+		let node = space::Node{ name:name, space:space, parent:parent, actions:~[] };
 		bones.push(space::Bone{
-			node			: @mut space::Node{ name:name, space:space, parent:parent, actions:~[] },
+			node			: node.to_ptr(),
 			bind_space		: space,
 			bind_pose_inv	: bind_pose_inv,
 			transform		: Transform::identity(),
@@ -440,7 +442,7 @@ pub fn read_armature( br : &mut Reader, root : @mut space::Node, dual_quat : boo
 	}
 }
 
-pub fn load_armature( path : &str, root : @mut space::Node, lg : &journal::Log )-> space::Armature	{
+pub fn load_armature( path: &str, root: space::NodePtr, lg: &journal::Log )-> space::Armature	{
 	let mut rd = Reader::create_std( path );
 	read_armature( &mut rd, root, false, lg )
 }

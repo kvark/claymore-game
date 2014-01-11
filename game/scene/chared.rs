@@ -6,9 +6,9 @@ use std;
 use glfw;
 use cgmath::angle;
 use cgmath::angle::ToRad;
-use cgmath::quaternion::*;
+use cgmath::quaternion::{Quat};
 use cgmath::transform::Transform;
-use cgmath::vector::*;
+use cgmath::vector::{EuclideanVector,Vector,Vec3,Vec4};
 use engine::anim;
 use engine::anim::{Act,Player};
 use engine::{gr_low,gr_mid};
@@ -28,7 +28,7 @@ struct Envir	{
 }
 
 struct CamControl	{
-	node		: @mut engine::space::Node,
+	node		: engine::space::NodePtr,
 	origin		: Vec3<f32>,
 	speed_rot	: f32,
 	speed_zoom	: f32,
@@ -45,19 +45,21 @@ impl CamControl	{
 			let angle = angle::deg( dt as f32 * self.speed_rot );
 			let qr = Quat::from_axis_angle( &axis, angle.to_rad() );
 			let sq = engine::space::make( 1.0, qr, Vec3::zero() );
-			self.node.space = sq.concat( &self.node.space );
+			let mut sn = self.node.borrow().borrow_mut();
+			sn.get().space = sq.concat( &sn.get().space );
 		}
 	}
 
 	pub fn on_scroll( &mut self, scroll : f32 )	{
-		let v_origin = self.origin.sub_v( &self.node.space.disp );
+		let mut sn = self.node.borrow().borrow_mut();
+		let v_origin = self.origin.sub_v( &sn.get().space.disp );
 		let dist_min = 20f32;
 		let dist_max = 200f32;
 		let dist = v_origin.length();
-		let dist_raw = dist - scroll * self.speed_zoom;
+		let dist_raw : f32 = dist - scroll * self.speed_zoom;
 		let dist_diff = std::num::clamp( dist_raw, dist_min, dist_max ) - dist;
-		let p = (self.node.space.disp).sub_v( &v_origin.mul_s(dist_diff/dist) );
-		self.node.space.disp = p;
+		let p = (sn.get().space.disp).sub_v( &v_origin.mul_s(dist_diff/dist) );
+		sn.get().space.disp = p;
 	}
 }
 
@@ -73,7 +75,7 @@ pub struct Scene	{
 	gr_hair	: scene::common::EntityGroup,
 	gr_other: scene::common::EntityGroup,
 	details	: scene::common::EntityGroup,
-	skel	: @mut engine::space::Armature,
+	skel	: engine::space::ArmaturePtr,
 	cam		: @scene::common::Camera,
 	control	: CamControl,
 	lights	: ~[@scene::common::Light],
@@ -91,7 +93,7 @@ pub struct Scene	{
 	hud_screen	: hud::Screen,
 	hud_context	: hud::Context,
 	hud_debug	: @gr_low::shade::Program,
-	edit_label	: @mut hud::EditLabel,
+	edit_label	: hud::EditLabelPtr,
 	mouse_point	: (int,int),
 	input_queue	: ~str,
 	hud_active	: ActiveHud,
@@ -104,7 +106,7 @@ impl Scene	{
 	}
 
 	pub fn loose_focus( &mut self )	{
-		self.edit_label.active = false;
+		self.edit_label.borrow().borrow_mut().get().active = false;
 		self.hud_active = AhInactive;
 	}
 
@@ -134,7 +136,7 @@ impl Scene	{
 					});
 					self.control.in_rotation = !found_any;
 					if found_name	{
-						self.edit_label.active = true;
+						self.edit_label.borrow().borrow_mut().get().active = true;
 						self.hud_active = AhEditName;
 					}
 				}else	{
@@ -154,13 +156,14 @@ impl Scene	{
 				}
 				if true	{	// update animation
 					let t = tv - self.start;
-					let r = self.skel.actions[0];
+					let mut skel = self.skel.borrow().borrow_mut();
+					let r = skel.get().actions[0];
 					let nloops = (t / r.duration) as uint;
 					let t2 = t - r.duration * (nloops as anim::float);
-					self.skel.set_record( r, t2 );
-					//self.skel.fill_data( self.girl.mut_data() );
+					skel.get().set_record( r, t2 );
+					//skel.get().fill_data( self.girl.mut_data() );
 				}
-				self.edit_label.update( state.time_view );
+				self.edit_label.borrow().with_mut( |el| el.update(state.time_view) );
 				self.control.update( state );
 			},
 			_	=> ()
@@ -180,13 +183,13 @@ impl Scene	{
 		if el.environment	{
 			let vpi = self.cam.get_inverse_matrix( aspect );
 			//self.cam.fill_data( &mut self.envir.data );
-			self.envir.data.insert( ~"u_ViewProjInverse",
+			self.envir.data.set( ~"u_ViewProjInverse",
 				gr_low::shade::UniMatrix(false,vpi) );
 		}
 		let c1 = if el.environment	{
 			let e = &self.envir;
 			gr_mid::call::CallDraw(
-				e.input, output.clone(), e.rast, e.prog, e.data.clone() )
+				e.input.clone(), output.clone(), e.rast, e.prog, e.data.clone() )
 		}else	{
 			gr_mid::call::CallEmpty
 		};
@@ -198,13 +201,13 @@ impl Scene	{
 			let par_ts = gr_low::shade::UniFloatVec( target_size );
 			let char_groups = ~[&mut self.gr_main, &mut self.gr_cape, &mut self.gr_hair, &mut self.gr_other];
 			for group in char_groups.move_iter()	{
-				for ent in group.mut_iter()	{
+				for ent in group.get_mut().mut_iter()	{
 					ent.update_world();
 					{
 						let gd = &mut ent.data;
 						self.shadow.light.fill_data( gd, 1f32, 200f32 );
-						gd.insert( ~"t_Shadow", self.shadow.par_shadow.clone() );
-						gd.insert( ~"u_TargetSize",	par_ts.clone() );
+						gd.set( ~"t_Shadow", self.shadow.par_shadow.clone() );
+						gd.set( ~"u_TargetSize",	par_ts.clone() );
 						self.cam.fill_data( gd, aspect );
 						//self.skel.fill_data( gd );
 					}
@@ -216,7 +219,7 @@ impl Scene	{
 			if el.character	{
 				let char_shadow_groups = [&self.gr_main,&self.gr_cape,&self.gr_hair];
 				for group in char_shadow_groups.iter()	{
-					for ent in group.iter()	{
+					for ent in group.get().iter()	{
 						queue.push( self.shadow.tech_solid.process( ent,
 							self.shadow.output.clone(), self.shadow.rast,
 							&mut self.cache, gc, lg ));
@@ -233,15 +236,15 @@ impl Scene	{
 			Some(ref lbuf)	=>	{
 				queue.push( self.depth.call_clear.clone() );
 				let char_groups = ~[&mut self.gr_main,&mut self.gr_cape,&mut self.gr_hair];
-				for group in char_groups.move_iter()	{
-					for ent in group.mut_iter()	{
+				for group in char_groups.move_iter()	{			
+					for ent in group.get_mut().mut_iter()	{
 						queue.push( self.depth.tech_solid.process( ent,
 							self.depth.output.clone(), self.depth.rast,
 							&mut self.cache, gc, lg ));
 						lbuf.fill_data( &mut ent.data );
 					}
 				}
-				for ent in self.gr_other.mut_iter()	{
+				for ent in self.gr_other.get_mut().mut_iter()	{
 					lbuf.fill_data( &mut ent.data );
 				}
 				queue.push( lbuf.update_depth( self.depth.texture ));
@@ -253,18 +256,18 @@ impl Scene	{
 			None	=> self.technique,
 		};
 		if el.character	{
-			for ent in self.gr_main.iter()	{
+			for ent in self.gr_main.get().iter()	{
 				queue.push( tech.process( ent, output.clone(), self.rast_solid, &mut self.cache, gc, lg ) );
 			}
-			for ent in self.gr_cape.iter()	{
+			for ent in self.gr_cape.get().iter()	{
 				queue.push( tech.process( ent, output.clone(), self.rast_cloak, &mut self.cache, gc, lg ) );	
 			}
-			for ent in self.gr_hair.iter()	{
+			for ent in self.gr_hair.get().iter()	{
 				queue.push( tech.process( ent, output.clone(), self.rast_alpha, &mut self.cache, gc, lg ) );
 			}
 		}
 		if el.shadow	{
-			for ent in self.gr_other.iter()	{
+			for ent in self.gr_other.get().iter()	{
 				queue.push( tech.process( ent, output.clone(), self.rast_solid, &mut self.cache, gc, lg ) );
 			}
 		}
@@ -272,7 +275,7 @@ impl Scene	{
 			if !self.input_queue.is_empty()	{
 				match self.hud_active	{
 					AhEditName	=> {
-						self.edit_label.change( self.input_queue, gc, lg );
+						self.edit_label.borrow().with_mut( |el| el.change(self.input_queue, gc, lg) );
 						self.hud_screen.root.update( lg );
 					},
 					_	=> ()
@@ -287,7 +290,7 @@ impl Scene	{
 			rast.prime.poly_mode = gr_low::rast::map_polygon_fill(2);
 			let mut data = gr_low::shade::DataMap::new();
 			let vc = Vec4::new(1f32,0f32,0f32,1f32);
-			data.insert( ~"u_Color", gr_low::shade::UniFloatVec(vc) );
+			data.set( ~"u_Color", gr_low::shade::UniFloatVec(vc) );
 			self.hud_screen.root.trace(x,y,	|frame,depth| {
 				if depth==0u && frame.element.get_size()!=(0,0)	{
 					let call = frame.draw_debug( &self.hud_context,
@@ -302,7 +305,7 @@ impl Scene	{
 				rast.prime.poly_mode = gr_low::rast::map_polygon_fill(2);
 				let mut data = gr_low::shade::DataMap::new();
 				let vc = Vec4::new(1f32,0f32,0f32,1f32);
-				data.insert( ~"u_Color", gr_low::shade::UniFloatVec(vc) );
+				data.set( ~"u_Color", gr_low::shade::UniFloatVec(vc) );
 				self.hud_screen.root.draw_debug_all( &self.hud_context,
 					self.hud_debug, &mut data, &rast )
 			});
@@ -318,12 +321,12 @@ pub fn create( el : &main::Elements, gc : &mut gr_low::context::Context, fcon : 
 	let mut scene = if true	{ //new method
 		let iscene = gen_scene::chared::main::load();
 		let icustom = gen_scene::chared::custom::load();
-		scene::load::parse( "data/scene/claymore-2a", &iscene, icustom, gc, Some(vao), lg )
+		scene::load::parse( "data/scene/claymore-2a", &iscene, icustom, gc, Some(vao.clone()), lg )
 	}else	{
-		scene::load_json::load_scene( "data/scene/claymore-2a", gc, Some(vao), lg )
+		scene::load_json::load_scene( "data/scene/claymore-2a", gc, Some(vao.clone()), lg )
 	};
 	let detail_info = scene::load_json::load_config::<~[scene::load_json::EntityInfo]>( "data/details.json" );
-	let mut details = scene::load_json::parse_group( &mut scene.context, detail_info, gc, Some(vao), lg );
+	let mut details = scene::load_json::parse_group( &mut scene.context, detail_info, gc, Some(vao.clone()), lg );
 	// techniques & rast states
 	let tech = @gr_mid::draw::load_technique( "data/code/tech/forward/spot-shadow" );
 	let mut rast = gc.default_rast;
@@ -341,7 +344,7 @@ pub fn create( el : &main::Elements, gc : &mut gr_low::context::Context, fcon : 
 	group.swap_entity( &"boots", &mut details );
 	let cape = group.divide( &"polySurface172" );
 	let hair = group.divide( &"Hair_Geo2" );
-	lg.add(format!( "Group size: {:u}", group.len() ));
+	lg.add(format!( "Group size: {:u}", group.get().len() ));
 	let envir = {
 		let mesh = @gr_mid::mesh::create_quad( gc );
 		let mut data = gr_low::shade::DataMap::new();
@@ -349,17 +352,17 @@ pub fn create( el : &main::Elements, gc : &mut gr_low::context::Context, fcon : 
 		let use_spherical = false;
 		let prog = if use_spherical	{
 			let tex = *scene.context.textures.get( &~"data/texture/Topanga_Forest_B_3k.hdr" );
-			data.insert( ~"t_Environment",	gr_low::shade::UniTexture(0,tex,Some(samp)) );
+			data.set( ~"t_Environment",	gr_low::shade::UniTexture(0,tex,Some(samp)) );
 			engine::load::load_program( gc, "data/code-game/envir", lg )
 		}else	{
 			let tex = engine::load::load_texture_2D( gc, "data/texture/bg2.jpg", true );
-			data.insert( ~"t_Image",		gr_low::shade::UniTexture(0,tex,Some(samp)) );
+			data.set( ~"t_Image",		gr_low::shade::UniTexture(0,tex,Some(samp)) );
 			engine::load::load_program( gc, "data/code-game/copy", lg )
 		};
 		let rast = gc.default_rast;
 		//rast.set_depth( ~"<=", false );
 		Envir{
-			input	: gr_mid::call::Input::new( vao, mesh ),
+			input	: gr_mid::call::Input::new( vao.clone(), mesh ),
 			prog	: prog,
 			data	: data,
 			rast	: rast,
@@ -381,7 +384,7 @@ pub fn create( el : &main::Elements, gc : &mut gr_low::context::Context, fcon : 
 			size	: gc.get_screen_size(),
 		}
 	};
-	let edit_label = @mut hud::EditLabel::obtain( &mut hud_screen, ~"id.name.text" );
+	let edit_label = hud::EditLabel::obtain( &mut hud_screen, ~"id.name.text" );
 	let hdebug = engine::load::load_program( gc, "data/code/hud/debug", lg );
 	//arm.set_record( arm.actions[0], 0f );
 	let depth = render::depth::Data::create( gc );
@@ -398,7 +401,7 @@ pub fn create( el : &main::Elements, gc : &mut gr_low::context::Context, fcon : 
 		cam.proj.fovy.to_str(),
 		cam.proj.near,
 		cam.proj.far ));
-	lg.add( ~"\tWorld :" + cam.node.world_space().to_str() );
+	lg.add( ~"\tWorld :" + cam.node.borrow().with(|c| c.world_space().to_str()) );
 	let control = CamControl{
 		node	: cam.node,
 		origin	: Vec3::new(0f32,0f32,75f32),

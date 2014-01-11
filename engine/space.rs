@@ -1,13 +1,12 @@
 extern mod cgmath;
 
 use std;
-use std::managed;
 
 use cgmath::angle;
-use cgmath::matrix::*;
-use cgmath::quaternion::*;
-use cgmath::transform::*;
-use cgmath::vector::*;
+use cgmath::matrix::{Matrix,Mat4};
+use cgmath::quaternion::{Quat};
+use cgmath::transform::{Transform,Decomposed};
+use cgmath::vector::{Vector,Vec3,Vec4};
 use gr_low::shade;
 use gr_mid::draw;
 
@@ -25,10 +24,10 @@ pub type Euler = Vec3<angle::Rad<f32>>;
 pub type Space = Decomposed<Scale,Vector,Quaternion>;
 
 
-pub fn make(scale: Scale, rot: Quaternion, disp: Vector)-> Space	{
+pub fn make( scale: Scale, rot: Quaternion, disp: Vector )-> Space	{
 	Decomposed{ scale: scale, rot: rot, disp: disp }
 }
-pub fn get_params(sp: &Space)-> (Vec4<f32>,Vec4<f32>)	{
+pub fn get_params( sp: &Space )-> (Vec4<f32>,Vec4<f32>)	{
 	(sp.disp.extend( sp.scale ),
 	sp.rot.v.extend( sp.rot.s ))
 }
@@ -42,26 +41,26 @@ pub trait Interpolate	{
 }
 
 impl Interpolate for Vector	{
-	fn interpolate( &self, other : &Vector, t : f32 )-> Vector	{
+	fn interpolate( &self, other: &Vector, t: f32 )-> Vector	{
 		self.mul_s(1.0-t).add_v( &other.mul_s(t) )
 	}
 }
 
 impl Interpolate for Quaternion	{
 	//FIXME: use slerp
-	fn interpolate( &self, other : &Quaternion, t : f32 )-> Quaternion	{
+	fn interpolate( &self, other: &Quaternion, t: f32 )-> Quaternion	{
 		self.mul_s(1.0-t).add_q( &other.mul_s(t) )
 	}
 }
 
 impl Interpolate for Scale	{
-	fn interpolate( &self, other : &Scale, t : f32 )-> Scale	{
+	fn interpolate( &self, other: &Scale, t: f32 )-> Scale	{
 		self*(1.0-t) + (*other)*t
 	}
 }
 
 impl Interpolate for Space	{
-	fn interpolate( &self, other : &Space, t : f32 )-> Space	{
+	fn interpolate( &self, other: &Space, t: f32 )-> Space	{
 		Decomposed{
 			scale	: self.scale.interpolate( &other.scale, t ),
 			rot		: self.rot.interpolate( &other.rot, t ),
@@ -83,15 +82,17 @@ enum NodeCurve	{
 
 type NodeRecord = anim::Record<NodeCurve>;
 
+pub type NodePtr = std::gc::Gc<std::cell::RefCell<Node>>;
+
 pub struct Node	{
 	name	: ~str,
 	space	: Space,
-	parent	: Option<@mut Node>,
+	parent	: Option<NodePtr>,
 	actions	: ~[@NodeRecord],
 }
 
 impl Node	{
-	pub fn new( name : ~str )-> Node	{
+	pub fn new( name: ~str )-> Node	{
 		Node	{
 			name	: name,
 			space	: Transform::identity(),
@@ -99,28 +100,40 @@ impl Node	{
 			actions	: ~[],
 		}
 	}
+	
+	pub fn to_ptr( self )-> NodePtr	{
+		std::gc::Gc::new(std::cell::RefCell::new( self ))
+	}
+	
 	pub fn world_space( &self ) -> Space	{
 		match self.parent	{
-			Some(p)	=> p.world_space().concat( &self.space ),
-			None	=> self.space
+			Some(ref par)	=>	{
+				let p = par.borrow().borrow();
+				p.get().world_space().concat( &self.space )
+			},
+			None		=> self.space
 		}
 	}
-	pub fn is_under( &self, name : &str )-> bool	{
+	
+	pub fn is_under( &self, name: &str )-> bool	{
 		std::str::eq_slice(name,self.name) || match self.parent	{
-			Some(p)	=> p.is_under(name),
+			Some(ref par)	=>	{
+				let p = par.borrow().borrow();
+				p.get().is_under(name)
+			},
 			None	=> false,
 		}
 	}
 }
 
 impl anim::Player<NodeCurve> for Node	{
-	fn find_record( &self, name : &str )-> Option<@NodeRecord>	{
+	fn find_record( &self, name: &str )-> Option<@NodeRecord>	{
 		match self.actions.iter().find(|r| std::str::eq_slice(r.name,name))	{
 			Some(rec)	=> Some(*rec),
 			None		=> None,
 		}
 	}
-	fn set_record( &mut self, a : &NodeRecord, time : anim::float )	{
+	fn set_record( &mut self, a: &NodeRecord, time: anim::float )	{
 		for chan in a.curves.iter()	{
 			match chan	{
 				&NCuPos(ref c)		=> self.space.disp	= c.sample(time),
@@ -135,7 +148,7 @@ impl anim::Player<NodeCurve> for Node	{
 //		Armature										//
 
 pub struct Bone	{
-	node			: @mut Node,
+	node			: NodePtr,
 	bind_space		: Space,
 	bind_pose_inv	: Space,
 	transform		: Space,
@@ -144,7 +157,7 @@ pub struct Bone	{
 
 impl Bone	{
 	pub fn reset( &mut self )	{
-		self.node.space = self.bind_space;
+		self.node.borrow().borrow_mut().get().space = self.bind_space;
 		self.transform = Transform::identity();
 	}
 }
@@ -159,18 +172,23 @@ pub type ArmatureRecord = anim::Record<ArmatureCurve>;
 
 
 pub struct Armature	{
-	root	: @mut Node,
+	root	: NodePtr,
 	bones	: ~[Bone],
 	code	: ~str,
 	actions	: ~[@ArmatureRecord],
 	max_bones	: uint,
 }
 
+pub type ArmaturePtr = std::gc::Gc<std::cell::RefCell<Armature>>;
+
 impl Armature	{
-	pub fn change_root( &mut self, root : @mut Node )	{
+	pub fn to_ptr( self )-> ArmaturePtr	{
+		std::gc::Gc::new(std::cell::RefCell::new( self ))
+	}
+	pub fn change_root( &mut self, root: NodePtr )	{
 		for bone in self.bones.iter()	{
 			if bone.parent_id.is_none()	{
-				bone.node.parent = Some(root);
+				bone.node.borrow().borrow_mut().get().parent = Some( root.clone() );
 			}
 		}
 		self.root = root;
@@ -183,59 +201,54 @@ impl draw::Mod for Armature	{
 	fn get_name<'a>( &'a self )-> &'a str	{ armature_name }
 	fn get_code<'a>( &'a self )-> &'a str	{ self.code.as_slice() }
 	//TODO: use float arrays
-	fn fill_data( &self, data : &mut shade::DataMap )	{
+	fn fill_data( &self, data: &mut shade::DataMap )	{
 		assert!( self.bones.len() < self.max_bones );
 		let id = Transform::identity();
 		let mut pos : ~[Vec4<f32>] = std::vec::with_capacity( self.max_bones );
 		let mut rot : ~[Vec4<f32>] = std::vec::with_capacity( self.max_bones );
-		let parent_inv = self.root.world_space().invert().expect(format!(
-			"Uninvertable armature {:s} root space detected", self.root.name ));
+		let root = self.root.borrow().borrow();
+		let parent_inv = root.get().world_space().invert().expect(format!(
+			"Uninvertable armature {:s} root space detected", root.get().name ));
 		while pos.len() < self.max_bones	{
 			let space = if pos.len()>0u && pos.len()<self.bones.len()	{
 					let b = &self.bones[pos.len()-1u];
-					parent_inv.concat( &b.node.world_space() ).concat( &b.bind_pose_inv )
+					let bnode = b.node.borrow().borrow();
+					let bw = bnode.get().world_space();
+					parent_inv.concat( &bw ).concat( &b.bind_pose_inv )
 				}else {id};
 			let (p0,p1) = get_params( &space );
 			pos.push( p0 );
 			rot.push( p1 );
 		}
-		data.insert( ~"bone_pos[0]", shade::UniFloatVecArray(pos) );
-		data.insert( ~"bone_rot[0]", shade::UniFloatVecArray(rot) );
-	}
-}
-
-
-pub fn is_same_node( a: Option<@Node>, b : Option<@Node> )-> bool	{
-	match (a,b)	{
-		(Some(na),Some(nb))	=> managed::ptr_eq(na,nb),
-		(None,None)	=> true,
-		(_,_)		=> false,
+		data.set( ~"bone_pos[0]", shade::UniFloatVecArray(pos) );
+		data.set( ~"bone_rot[0]", shade::UniFloatVecArray(rot) );
 	}
 }
 
 impl anim::Player<ArmatureCurve> for Armature	{
-	fn find_record( &self, name : &str )-> Option<@ArmatureRecord>	{
+	fn find_record( &self, name: &str )-> Option<@ArmatureRecord>	{
 		match self.actions.iter().find(|r| std::str::eq_slice(r.name,name))	{
 			Some(rec)	=> Some(*rec),
 			None		=> None,
 		}
 	}
-	fn set_record( &mut self, a : &ArmatureRecord, time : anim::float )	{
+	fn set_record( &mut self, a: &ArmatureRecord, time: anim::float )	{
 		for chan in a.curves.iter()	{
 			match chan	{
 				&ACuPos(bi,ref c)		=> {
 					let b = &self.bones[bi];	let v = c.sample(time);
-					b.node.space.disp	= b.bind_space.transform_as_point( &v );
+					b.node.borrow().borrow_mut().get().space.disp	= b.bind_space.transform_as_point( &v );
 				},
 				&ACuRotQuat(bi,ref c)	=> {
 					let b = &self.bones[bi];	let q = c.sample(time);
-					b.node.space.rot	= b.bind_space.rot.mul_q( &q );
+					b.node.borrow().borrow_mut().get().space.rot	= b.bind_space.rot.mul_q( &q );
 				},
 				&ACuScale(bi,ref c)		=> {
 					let b = &self.bones[bi];	let s = c.sample(time);
-					b.node.space.scale	= b.bind_space.scale * s;
+					b.node.borrow().borrow_mut().get().space.scale	= b.bind_space.scale * s;
 				},
 			}
 		}
 	}
 }
+

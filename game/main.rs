@@ -56,7 +56,7 @@ struct Game	{
 	debug_menu	: hud::debug::Menu<Logic>,
 }
 
-local_data_key!(game_singleton : @mut Game)
+local_data_key!(game_singleton : Game)
 
 
 #[deriving(Decodable)]
@@ -77,7 +77,7 @@ impl Game	{
 		let acon = engine::audio::Context::create( "" );
 		if false	{
 			let buf = @engine::audio::load_wav( &acon, "data/sound/stereol.wav", &journal.load );
-			let src = @mut acon.create_source();
+			let mut src = acon.create_source();
 			src.bind(buf);
 		}
 		//src.play();
@@ -105,8 +105,10 @@ impl Game	{
 		}
 	}
 
-	pub fn get()-> @mut Game	{
-		std::local_data::get( game_singleton, |opt| *opt.expect("Your game is dead") )
+	pub fn input( win: &glfw::Window, event: input::Event )	{
+		std::local_data::get_mut( game_singleton, |opt|	{
+			opt.unwrap().on_input( win, event );
+		})
 	}
 
 	pub fn on_input( &mut self, win : &glfw::Window, event : input::Event )	{
@@ -175,49 +177,49 @@ impl glfw::ErrorCallback for ErrorCb	{
 struct WinIconifyCb;
 impl glfw::WindowIconifyCallback for WinIconifyCb {
     fn call(&self, win: &glfw::Window, iconified: bool) {
-        Game::get().on_input( win, input::EvFocus(!iconified) );
+        Game::input( win, input::EvFocus(!iconified) );
     }
 }
 
 struct WinFocusCb;
 impl glfw::WindowFocusCallback for WinFocusCb {
     fn call(&self, win: &glfw::Window, activated: bool) {
-        Game::get().on_input( win, input::EvFocus(activated) );
+        Game::input( win, input::EvFocus(activated) );
     }
 }
 
 struct CharCb;
 impl glfw::CharCallback for CharCb {
     fn call(&self, win: &glfw::Window, character: char) {
-        Game::get().on_input( win, input::EvCharacter( character ));
+        Game::input( win, input::EvCharacter( character ));
     }
 }
 
 struct KeyCb;
 impl glfw::KeyCallback for KeyCb {
     fn call(&self, win: &glfw::Window, key: glfw::Key, _scancode: std::libc::c_int, action: glfw::Action, _mods: glfw::Modifiers) {
-   	 Game::get().on_input( win, input::EvKeyboard( key, action == glfw::Press ));
+   	 Game::input( win, input::EvKeyboard( key, action == glfw::Press ));
     }
 }
 
 struct CursorPosCb;
 impl glfw::CursorPosCallback for CursorPosCb {
     fn call(&self, win: &glfw::Window, xpos: f64, ypos: f64) {
-        Game::get().on_input( win, input::EvMouseMove( xpos as f32, ypos as f32 ));
+        Game::input( win, input::EvMouseMove( xpos as f32, ypos as f32 ));
     }
 }
 
 struct MouseButtonCb;
 impl glfw::MouseButtonCallback for MouseButtonCb {
     fn call(&self, win: &glfw::Window, button: glfw::MouseButton, action: glfw::Action, _mods: glfw::Modifiers) {
-        Game::get().on_input( win, input::EvMouseClick( button as uint, action == glfw::Press ));
+        Game::input( win, input::EvMouseClick( button as uint, action == glfw::Press ));
     }
 }
 
 struct ScrollCb;
 impl glfw::ScrollCallback for ScrollCb {
     fn call(&self, win: &glfw::Window, x: f64, y: f64) {
-        Game::get().on_input( win, input::EvScroll( x as f32, y as f32 ));
+        Game::input( win, input::EvScroll( x as f32, y as f32 ));
     }
 }
 
@@ -268,8 +270,9 @@ pub fn main()	{
 
 		//window.set_input_mode( glfw::CURSOR_MODE, glfw::CURSOR_CAPTURED as int );
 		window.make_context_current();
-		let game = @mut Game::create( &config.elements, cw.width, cw.height, cw.samples, journal );
-		std::local_data::set( game_singleton, game );
+		std::local_data::set( game_singleton, Game::create(
+			&config.elements, cw.width, cw.height, cw.samples, journal
+			));
 
 		// init callbacks
 		window.set_iconify_callback( ~WinIconifyCb );
@@ -287,10 +290,15 @@ pub fn main()	{
 				break;
 			}
 			//TODO: update on a higher frequency than render
-			game.on_input( &window, input::EvRender( game.frames ));
-			game.update();
-			// render
-			if !game.render( &config.elements )	{
+			let ok = std::local_data::get_mut( game_singleton, |opt|	{
+				let g = opt.unwrap();
+				g.on_input( &window, input::EvRender( g.frames ));
+				g.update();
+				// render
+				g.render( &config.elements )
+			});
+			
+			if !ok	{
 				break;
 			}
 			window.swap_buffers();

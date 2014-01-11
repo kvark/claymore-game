@@ -25,13 +25,13 @@ impl PlaneMap	{
 		}
 	}
 
-	pub fn new_simple( name : ~str, col : frame::Target )-> PlaneMap	{
+	pub fn new_simple( name: ~str, col: frame::Target )-> PlaneMap	{
 		let mut pm = PlaneMap::new_empty();
 		pm.colors.insert( name, col );
 		pm
 	}
 
-	pub fn new_main( gc : &context::Context, name : ~str )-> PlaneMap	{
+	pub fn new_main( gc: &context::Context, name: ~str )-> PlaneMap	{
 		let tg = frame::TarSurface( gc.render_buffer.default );
 		let mut pm = PlaneMap::new_empty();
 		pm.stencil = tg;
@@ -64,13 +64,13 @@ impl PlaneMap	{
 		frame::Rect::new( size[0], size[1] )
 	}
 
-	pub fn check( &self, rast : &rast::State )	{
+	pub fn check( &self, rast: &rast::State )	{
 		assert!( !rast.stencil.test	|| self.stencil	!= frame::TarEmpty );
 		assert!( !rast.depth.test	|| self.depth	!= frame::TarEmpty );
 		assert!( !rast.blend.on		|| !self.colors.is_empty() );
 	}
 
-	pub fn log( &self, lg : &journal::Log )	{
+	pub fn log( &self, lg: &journal::Log )	{
 		if self.stencil != frame::TarEmpty	{
 			lg.add(format!( "\t\tstencil\t= {:s}", self.stencil.to_str() ));
 		}
@@ -93,36 +93,36 @@ pub struct ClearData	{
 
 #[deriving(Clone)]
 pub struct Input	{
-	va		: @mut buf::VertexArray,
+	va		: buf::VertexArrayPtr,
 	mesh	: @mesh::Mesh,
 	range	: mesh::Range,
 }
 
 impl Input	{
-	pub fn new( va : @mut buf::VertexArray, m : @mesh::Mesh )-> Input	{
+	pub fn new( va: buf::VertexArrayPtr, m: @mesh::Mesh )-> Input	{
 		Input	{
 			va		: va,
 			mesh	: m,
 			range	: m.get_range(),
 		}
 	}
-	pub fn log( &self, lg : &journal::Log )	{
-		lg.add(format!( "\tMesh '{:s}' at VAO={:i} with range [{:u}:{:u}]",
-			self.mesh.name, *self.va.handle as int,
-			self.range.start, self.range.start+self.range.num ));
+	pub fn log( &self, lg: &journal::Log )	{
+		let buf::ArrayHandle(han) = self.va.borrow().borrow().get().handle;
+		lg.add(format!( "\tMesh '{:s}' at VAO={} with range [{:u}:{:u}]",
+			self.mesh.name, han, self.range.start, self.range.start+self.range.num ));
 	}
 }
 
 
 #[deriving(Clone)]
 pub struct Output	{
-	fb		: @mut frame::Buffer,
+	fb		: frame::BufferPtr,
 	pmap	: PlaneMap,
 	area	: frame::Rect,
 }
 
 impl Output	{
-	pub fn new( fb : @mut frame::Buffer, pmap : PlaneMap )-> Output	{
+	pub fn new( fb: frame::BufferPtr, pmap: PlaneMap )-> Output	{
 		let area = pmap.get_area();
 		Output	{
 			fb	: fb,
@@ -136,8 +136,9 @@ impl Output	{
 			area: self.area,
 		}
 	}
-	pub fn log( &self, kind : &str, lg : &journal::Log )	{
-		lg.add(format!( "\t{:s} FBO={:i} with area {:s}", kind, *self.fb.handle as int, self.area.to_str() ));
+	pub fn log( &self, kind: &str, lg: &journal::Log )	{
+		let frame::BufferHandle(han) = self.fb.borrow().borrow().get().handle;
+		lg.add(format!( "\t{:s} FBO={} with area {:s}", kind, han, self.area.to_str() ));
 		self.pmap.log( lg );
 	}
 }
@@ -153,7 +154,7 @@ pub enum Call	{
 }
 
 impl Call	{
-	pub fn log( &self, lg : &journal::Log )	{
+	pub fn log( &self, lg: &journal::Log )	{
 		match self	{
 			&CallEmpty	=> lg.add("Call empty"),
 			&CallClear(ref cd, ref out, ref _mask)	=>	{
@@ -183,7 +184,8 @@ impl Call	{
 				lg.add("Call draw");
 				inp.log( lg );
 				out.log( "Output", lg );
-				lg.add(format!( "\tProgram={:i}", *prog.handle as int ));
+				let shade::ProgramHandle(han) = prog.handle;
+				lg.add(format!( "\tProgram={}", han ));
 				data.log( lg );
 			},
 			&CallTransfrom()	=>	{
@@ -192,7 +194,7 @@ impl Call	{
 		}
 	}
 
-	pub fn execute( &self, gc : &mut context::Context )	{
+	pub fn execute( &self, gc: &mut context::Context )	{
 		match self	{
 			&CallEmpty => {},
 			&CallClear(ref cdata, ref out, ref mask)	=> {
@@ -200,8 +202,12 @@ impl Call	{
 				for (_,&target) in out.pmap.colors.iter()	{
 					colors.push( target );
 				}
-				let has_color = colors.len()!=0 && (*out.fb.handle==0 || colors[0]!=frame::TarEmpty);
-				gc.bind_frame_buffer( out.fb, true, out.pmap.stencil, out.pmap.depth, colors );
+				let is_main_fb =	{
+					let fb = out.fb.borrow().borrow();
+					fb.get().handle == frame::BufferHandle(0)
+				};
+				let has_color = colors.len()!=0 && (is_main_fb || colors[0]!=frame::TarEmpty);
+				gc.bind_frame_buffer( out.fb.clone(), true, out.pmap.stencil, out.pmap.depth, colors );
 				gc.rast.scissor.activate( &out.gen_scissor(), 0 );
 				gc.rast.mask.activate( mask, 0 );
 				let mut flags = 0 as gl::types::GLenum;
@@ -216,7 +222,7 @@ impl Call	{
 				}
 				match cdata.depth	{
 					Some(d) => 	{
-						assert!( *out.fb.handle==0 || out.pmap.depth!=frame::TarEmpty );
+						assert!( is_main_fb || out.pmap.depth!=frame::TarEmpty );
 						flags |= gl::DEPTH_BUFFER_BIT;
 						gc.set_clear_depth( d );
 					},
@@ -224,7 +230,7 @@ impl Call	{
 				}
 				match cdata.stencil	{
 					Some(s)	=>	{
-						assert!( *out.fb.handle==0 || out.pmap.stencil!=frame::TarEmpty );
+						assert!( is_main_fb || out.pmap.stencil!=frame::TarEmpty );
 						flags |= gl::STENCIL_BUFFER_BIT;
 						gc.set_clear_stencil( s );
 					},
@@ -233,11 +239,11 @@ impl Call	{
 				gl::Clear( flags );
 			},
 			&CallBlit(ref src, ref dst)	=>	{
-				assert!( *src.fb.handle != *dst.fb.handle );
+				assert!( !src.fb.ptr_eq( &dst.fb ) );
 				// bind frame buffers
-				gc.bind_frame_buffer( src.fb, false, src.pmap.stencil, src.pmap.depth,
+				gc.bind_frame_buffer( src.fb.clone(), false, src.pmap.stencil, src.pmap.depth,
 					src.pmap.colors.iter().map(|(_,&v)| v).collect() );
-				gc.bind_frame_buffer( dst.fb, true, dst.pmap.stencil, dst.pmap.depth,
+				gc.bind_frame_buffer( dst.fb.clone(), true, dst.pmap.stencil, dst.pmap.depth,
 					dst.pmap.colors.iter().map(|(_,&v)| v).collect() );
 				// set state
 				gc.rast.scissor.activate( &dst.gen_scissor(), 0 );
@@ -255,8 +261,8 @@ impl Call	{
 					only_color = false;
 				}
 				// prepare
-				let sizeA = src.fb.check_size();
-				let sizeB = dst.fb.check_size();
+				let sizeA = { let sfb = src.fb.borrow().borrow(); sfb.get().check_size() };
+				let sizeB = { let dfb = dst.fb.borrow().borrow(); dfb.get().check_size() };
 				assert!( sizeA[3] == sizeB[3] || (sizeA[3]*sizeB[3]==0 && only_color) );
 				let filter = if (only_color && sizeA[3]==0) {gl::LINEAR} else {gl::NEAREST};
 				// call blit
@@ -273,14 +279,14 @@ impl Call	{
 					assert!( loc < attaches.len() && attaches[loc] == frame::TarEmpty );
 					attaches[loc] = *target;
 				}
-				gc.bind_frame_buffer( out.fb, true, out.pmap.stencil, out.pmap.depth, attaches );
+				gc.bind_frame_buffer( out.fb.clone(), true, out.pmap.stencil, out.pmap.depth, attaches );
 				// check & activate raster
 				let mut r2 = *rast;
 				r2.scissor = out.gen_scissor();
 				gc.rast.activate( &r2, inp.mesh.get_poly_size() );
 				//assert_eq!( out.area, *gc.rast.view );
 				// draw
-				gc.draw_mesh( *inp, prog, data );
+				gc.draw_mesh( inp, prog, data );
 			},
 			_	=> fail!(~"Unsupported call!")
 		}
@@ -289,7 +295,7 @@ impl Call	{
 
 
 impl context::Context	{
-	pub fn flush( &mut self, queue	: &[Call], lg : &journal::Log )	{
+	pub fn flush( &mut self, queue: &[Call], lg: &journal::Log )	{
 		self.call_count += queue.len();
 		for call in queue.iter()	{
 			if lg.enable	{

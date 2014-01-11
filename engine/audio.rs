@@ -3,7 +3,7 @@ extern mod openal;
 use std;
 use std::ptr;
 
-use openal::*;
+use openal::{al,alc};
 
 use journal;
 use load;
@@ -33,8 +33,9 @@ pub struct Buffer	{
 
 impl Drop for BufferHandle	{
 	fn drop( &mut self )	{
+		let &BufferHandle(ref h) = self;
 		unsafe{
-			al::ffi::alDeleteBuffers( 1, ptr::to_unsafe_ptr(&**self) );
+			al::ffi::alDeleteBuffers( 1, ptr::to_unsafe_ptr(h) );
 		}
 	}
 }
@@ -47,31 +48,36 @@ pub struct Source	{
 
 impl Drop for SourceHandle	{
 	fn drop( &mut self )	{
+		let &SourceHandle(ref h) = self;
 		unsafe{
-			al::ffi::alDeleteSources( 1, ptr::to_unsafe_ptr(&**self) );
+			al::ffi::alDeleteSources( 1, ptr::to_unsafe_ptr(h) );
 		}
 	}
 }
 
 impl Source	{
-	pub fn bind( &mut self, buf : @Buffer )	{
+	pub fn bind( &mut self, buf: @Buffer )	{
 		self.buffer = Some(buf);
+		let SourceHandle(sh) = self.handle;
+		let BufferHandle(bh) = buf.handle;
 		unsafe{
-			al::ffi::alSourcei( *self.handle, al::ffi::BUFFER, *buf.handle as al::types::ALint )
+			al::ffi::alSourcei( sh, al::ffi::BUFFER, bh as al::types::ALint )
 		}
 	}
 
 	pub fn unbind( &mut self )	{
 		self.buffer = None;
+		let SourceHandle(sh) = self.handle;
 		unsafe{
-			al::ffi::alSourcei( *self.handle, al::ffi::BUFFER, 0 )
+			al::ffi::alSourcei( sh, al::ffi::BUFFER, 0 )
 		}
 	}
 
 	pub fn play( &self )	{
 		assert!( self.buffer.is_some() );
+		let SourceHandle(sh) = self.handle;
 		unsafe{
-			al::ffi::alSourcePlay( *self.handle );
+			al::ffi::alSourcePlay( sh );
 		}
 	}
 }
@@ -85,7 +91,7 @@ pub struct Listener	{
 //- - - - - - - - - -
 // IMPLEMENTATIONS	//
 
-pub fn find_format( channels : uint, bits : uint )-> al::types::ALenum	{
+pub fn find_format( channels: uint, bits: uint )-> al::types::ALenum	{
 	match (channels,bits)	{
 		(1,8)	=> al::ffi::FORMAT_MONO8,
 		(1,16)	=> al::ffi::FORMAT_MONO16,
@@ -96,7 +102,7 @@ pub fn find_format( channels : uint, bits : uint )-> al::types::ALenum	{
 }
 
 impl Context	{
-	pub fn create( dev_name : &str )-> Context	{
+	pub fn create( dev_name: &str )-> Context	{
 		let dev = alc::Device::open( dev_name ).
 			expect(format!( "Audio device {:s} is not found", dev_name ));
 		let ctx = dev.create_context( &[] ).
@@ -115,7 +121,7 @@ impl Context	{
 		}
 	}
 	
-	pub fn check_extension( &self, name : &str )-> bool	{
+	pub fn check_extension( &self, name: &str )-> bool	{
 		let mut yes = false;
 		name.with_c_str( |text|	{
 			yes = unsafe{al::ffi::alIsExtensionPresent(text)} != 0
@@ -123,7 +129,7 @@ impl Context	{
 		yes
 	}
 
-	pub fn create_buffer<T>( &self, channels : uint, bits : uint, byte_rate : uint, 
+	pub fn create_buffer<T>( &self, channels: uint, bits: uint, byte_rate: uint, 
 		sample_rate : uint, data : ~[T] )-> Buffer	{
 		let mut hid : al::types::ALuint = 0;
 		let size = data.len() * std::mem::size_of::<T>();
@@ -152,7 +158,7 @@ impl Context	{
 }
 
 
-pub fn read_wave_chunk( rd : &mut load::Reader )-> load::Chunk	{
+pub fn read_wave_chunk( rd: &mut load::Reader )-> load::Chunk	{
 	let name = std::str::from_utf8_owned( rd.get_bytes(4) );
 	let size = rd.get_uint(4);
 	//lg.add( ~"\tEntering " + name );
@@ -163,7 +169,7 @@ pub fn read_wave_chunk( rd : &mut load::Reader )-> load::Chunk	{
 	}
 }
 
-pub fn load_wav( at : &Context, path : &str, lg : &journal::Log )-> Buffer	{
+pub fn load_wav( at: &Context, path: &str, lg: &journal::Log )-> Buffer	{
 	lg.add( "Loading " + path );
 	let mut rd = load::Reader::create_ext( path, read_wave_chunk );
 	assert!( rd.enter() == ~"RIFF" );
@@ -197,3 +203,4 @@ pub fn load_wav( at : &Context, path : &str, lg : &journal::Log )-> Buffer	{
 	rd.leave();	//riff
 	at.create_buffer( channels, bits_per_sample, byte_rate, sample_rate, data )
 }
+

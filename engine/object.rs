@@ -7,7 +7,7 @@ use space;
 
 
 pub struct Entity	{
-	node	: @mut space::Node,
+	node	: space::NodePtr,
 	//body	: @node::Body,
 	input	: gr_mid::call::Input,
 	data	: gr_low::shade::DataMap,
@@ -17,18 +17,19 @@ pub struct Entity	{
 
 impl Entity	{
 	pub fn update_world( &mut self )	{
-		let world = self.node.world_space().to_mat4();
-		self.data.insert( ~"u_World", gr_low::shade::UniMatrix(false,world) );
+		let n = self.node.borrow().borrow(); 
+		let world = n.get().world_space().to_mat4();
+		self.data.set( ~"u_World", gr_low::shade::UniMatrix(false,world) );
 	}
 }
 
 impl gr_mid::draw::Technique	{
-	pub fn process( &self, e : &Entity, output : gr_mid::call::Output, rast : gr_low::rast::State,
-			cache : &mut gr_mid::draw::Cache, ct : &gr_low::context::Context,
-			lg : &journal::Log )-> gr_mid::call::Call	{
+	pub fn process( &self, e: &Entity, output: gr_mid::call::Output, rast: gr_low::rast::State,
+			cache: &mut gr_mid::draw::Cache, ct: &gr_low::context::Context,
+			lg: &journal::Log )-> gr_mid::call::Call	{
 		let op = self.get_program( e.material, e.modifier, cache, ct, lg );
 		match op	{
-			Some(p)	=> gr_mid::call::CallDraw( e.input, output, rast, p, e.data.clone() ),
+			Some(p)	=> gr_mid::call::CallDraw( e.input.clone(), output, rast, p, e.data.clone() ),
 			None => gr_mid::call::CallEmpty
 		}
 	}

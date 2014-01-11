@@ -4,7 +4,6 @@
 #[license = "MIT"];
 
 #[feature(managed_boxes)];
-#[feature(globs)];
 
 
 extern mod gen_hud;
@@ -24,6 +23,7 @@ pub mod battle	{
 	pub mod grid;
 	pub mod main;
 	pub mod think;
+	pub mod unit;
 }
 
 pub mod hud	{

@@ -17,7 +17,7 @@ trait FontError	{
 }
 
 impl FontError for freetype::FT_Error	{
-	fn check( &self, s : &str )	{
+	fn check( &self, s: &str )	{
 		if (*self as int)!=0	{
 			fail!("Freetype {:s} failed with code {:i}", s, *self as int)
 		}
@@ -71,8 +71,9 @@ pub struct Font	{
 
 impl Drop for FaceHandle	{
 	fn drop( &mut self )	{
+		let &FaceHandle(h) = self;
 		unsafe{
-			freetype::FT_Done_Face( **self )
+			freetype::FT_Done_Face(h)
 		}.check( "Done_Face" );
 	}
 }
@@ -84,7 +85,7 @@ impl Font	{
 		self.cache.clear();
 	}
 	//TODO: enable when supported by FreeType
-	pub fn load_glyph( &self, c : char )-> &self/Glyph	{
+	pub fn load_glyph( &self, c: char )-> &self/Glyph	{
 		match copy self.cache.find(c)	{
 			Some(g) => &g,
 			None =>	{
@@ -106,22 +107,24 @@ impl Font	{
 		}
 	}*/
 
-	pub fn set_char_size( &self, xs : f32, ys : f32, xdpi : uint, ydpi : uint )	{
+	pub fn set_char_size( &self, xs: f32, ys: f32, xdpi: uint, ydpi: uint )	{
+		let FaceHandle(fh) = self.face;
 		unsafe{
-			freetype::FT_Set_Char_Size( *self.face,
+			freetype::FT_Set_Char_Size( fh,
 				(64.0*xs) as freetype::FT_F26Dot6, (64.0*ys) as freetype::FT_F26Dot6,
 				xdpi as freetype::FT_UInt, ydpi as freetype::FT_UInt )
 		}.check( "Set_Char_Size" );
 	}
 
-	pub fn set_pixel_size( &self, xpix : uint, ypix : uint )	{
+	pub fn set_pixel_size( &self, xpix: uint, ypix: uint )	{
+		let FaceHandle(fh) = self.face;
 		unsafe{
-			freetype::FT_Set_Pixel_Sizes( *self.face,
+			freetype::FT_Set_Pixel_Sizes( fh,
 				xpix as freetype::FT_UInt, ypix as freetype::FT_UInt )
 		}.check( "Set_Pixel_Sizes" );
 	}
 
-	fn draw( &self, bm : &freetype::FT_Bitmap, target : &mut [u8], offset : uint, pitch : uint )	{
+	fn draw( &self, bm: &freetype::FT_Bitmap, target: &mut [u8], offset: uint, pitch: uint )	{
 		let height = bm.rows as uint;
 		for y in range(0u,height)	{
 			unsafe	{
@@ -132,7 +135,7 @@ impl Font	{
 		}
 	}
 
-	pub fn bake( &self, gr : &mut context::Context, s : &str, max_size : (uint,uint), lg : &journal::Log )-> @texture::Texture	{
+	pub fn bake( &self, gr: &mut context::Context, s: &str, max_size: (uint,uint), lg: &journal::Log )-> @texture::Texture	{
 		lg.add(format!( "Font baking text: {:s}", s ));
 		if s.is_empty()	{
 			let tex = gr.create_texture( "2D", 1u, 1u, 1u, 0u );
@@ -143,7 +146,8 @@ impl Font	{
 		}
 		struct Target	{ c:char, x:int, y:int }
 		let (limit_x,limit_y) = max_size;
-		let face  = unsafe { &**self.face };
+		let FaceHandle(fh) = self.face;
+		let face = unsafe{&*fh};
 		let line_gap = (self.line_offset as int) + (face.height as int);
 		let mut position = 0;	// in font units
 		let mut baseline = face.ascender as int;
@@ -170,14 +174,14 @@ impl Font	{
 					start_word = pos_array.len();
 				}
 				let index = unsafe{
-					freetype::FT_Get_Char_Index( *self.face, c as freetype::FT_ULong )
+					freetype::FT_Get_Char_Index( fh, c as freetype::FT_ULong )
 				};
 				unsafe{
-					freetype::FT_Load_Glyph( *self.face, index, freetype::FT_LOAD_DEFAULT as freetype::FT_Int32 )
+					freetype::FT_Load_Glyph( fh, index, freetype::FT_LOAD_DEFAULT as freetype::FT_Int32 )
 				}.check( "Load_Glyph" );
 				position += unsafe{
 					let delta = freetype::struct_FT_Vector_{ x:0, y:0 };
-					freetype::FT_Get_Kerning( *self.face, prev_index, index,
+					freetype::FT_Get_Kerning( fh, prev_index, index,
 						freetype::FT_KERNING_DEFAULT, ptr::to_unsafe_ptr(&delta) ).
 						check( "Get_Kerning" );
 					//lg.add(format!( "\tKerning {:i}-{:i} is {:i}",
@@ -186,7 +190,7 @@ impl Font	{
 				};
 				prev_index = index;
 				let glyph = unsafe { &*(face.glyph as freetype::FT_GlyphSlot) };
-				assert!( *self.face as uint == glyph.face as uint );
+				assert!( fh as uint == glyph.face as uint );
 				let cx = position + glyph.metrics.horiBearingX as int;
 				let cy = baseline - glyph.metrics.horiBearingY as int;
 				pos_array.push( Target{ c:c, x:cx, y:cy });
@@ -231,7 +235,7 @@ impl Font	{
 		let mut image = vec::from_elem( width*height, 0u8 );
 		for slice in pos_array.iter()	{
 			unsafe{
-				freetype::FT_Load_Char( *self.face,
+				freetype::FT_Load_Char( fh,
 					slice.c as freetype::FT_ULong, freetype::FT_LOAD_DEFAULT as freetype::FT_Int32 )
 			}.check( "Load_Char" );
 			unsafe{
@@ -259,8 +263,8 @@ impl Font	{
 
 
 impl Context	{
-	pub fn load( &self, path : &str, index : uint, size : [uint,..2], kern : [int,..2],
-			lg : &journal::Log )-> Font	{
+	pub fn load( &self, path: &str, index: uint, size: [uint,..2], kern: [int,..2],
+			lg: &journal::Log )-> Font	{
 		let mut face : freetype::FT_Face = ptr::null();
 		lg.add(format!( "Loading font: {:s} with size {:u}x{:u}", path, size[0], size[1] ));
 		path.with_c_str( |text|	{

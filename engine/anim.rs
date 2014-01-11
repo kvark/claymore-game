@@ -21,7 +21,7 @@ impl Timer	{
 			active		: true,
 		}
 	}
-	pub fn update( &mut self, delta : float )	{
+	pub fn update( &mut self, delta: float )	{
 		if self.active	{
 			assert!( delta >= 0.0 );
 			let d = std::num::min( delta, self.max_delta );
@@ -51,7 +51,7 @@ pub struct KeyBezier<T>	{
 }
 
 impl<T:Clone + Interpolate> Curve<T> for ~[KeySimple<T>]	{
-	fn sample( &self, time : float )-> T	{
+	fn sample( &self, time: float )-> T	{
 		let mut i = self.len();
 		while i>0u && self[i-1].t>time	{ i-=1;	}
 		if i==self.len()	{
@@ -69,7 +69,7 @@ impl<T:Clone + Interpolate> Curve<T> for ~[KeySimple<T>]	{
 }
 
 impl<T:Interpolate> Curve<T> for ~[KeyBezier<T>]	{
-	fn sample( &self, time : float )-> T	{
+	fn sample( &self, time: float )-> T	{
 		let mut i = self.len();
 		while i>0u && self[i-1].t>time	{ i-=1;	}
 		if i==self.len()	{
@@ -107,6 +107,8 @@ pub trait Player<C>	{
 	fn set_record( &mut self, &Record<C>, float );
 }
 
+pub type PlayerPtr<C> = std::rc::Rc<std::cell::RefCell< ~Player<C> >>;	//FIXME
+
 pub trait Act	{
 	fn update( &mut self, float )-> bool;
 }
@@ -116,7 +118,7 @@ pub struct Wait	{
 }
 
 impl Wait	{
-	pub fn new( end_time : float )-> Wait	{
+	pub fn new( end_time: float )-> Wait	{
 		Wait{
 			end : end_time	
 		} 
@@ -124,23 +126,27 @@ impl Wait	{
 }
 
 impl Act for Wait	{
-	fn update( &mut self, time : float )-> bool	{
+	fn update( &mut self, time: float )-> bool	{
 		time < self.end
 	}
 }
 
 
 pub struct Action<C>	{
-	player	: @mut Player<C>,
+	player	: PlayerPtr<C>,
 	record	: @Record<C>,
 	start	: float,
 }
 
 impl<C> Action<C>	{
-	pub fn new( p : @mut Player<C>, name : ~str, time : float )-> Option<Action<C>>	{
-		match p.find_record(name)	{
+	pub fn new( player : PlayerPtr<C>, name: ~str, time: float )-> Option<Action<C>>	{
+		let rec_opt =	{
+			let p = player.borrow().borrow();
+			p.get().find_record(name)
+		};
+		match rec_opt	{
 			Some(r)	=> Some(Action	{
-				player	: p,
+				player	: player,
 				record	: r,
 				start	: time,
 			}),
@@ -150,10 +156,11 @@ impl<C> Action<C>	{
 }
 
 impl<C> Act for Action<C>	{
-	fn update( &mut self, time : float )-> bool	{
+	fn update( &mut self, time: float )-> bool	{
 		let t = time - self.start;
 		if t>=0.0 && t<=self.record.duration	{
-			self.player.set_record( self.record, t );
+			let mut p = self.player.borrow().borrow_mut();
+			p.get().set_record( self.record, t );
 			true
 		}else	{false}
 	}

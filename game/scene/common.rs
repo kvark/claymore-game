@@ -3,12 +3,12 @@ extern mod engine;
 extern mod cgmath;
 extern mod std;
 
-use std::{managed,num};
+use std::num;
 use std::hashmap::HashMap;
 
 use cgmath::{angle,projection};
-use cgmath::vector::*;
-use cgmath::matrix::*;
+use cgmath::vector::{Vector,Vec2,Vec3,Vec4};
+use cgmath::matrix::{Matrix,Mat4,ToMat4};
 use cgmath::transform::Transform;
 
 use engine::{gr_low,gr_mid,space};
@@ -17,8 +17,7 @@ use engine::{gr_low,gr_mid,space};
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -//
 //	Camera
 
-pub type NodeRef = @mut engine::space::Node;
-
+pub type NodeRef = engine::space::NodePtr;
 pub type Projector = projection::PerspectiveFov<f32,angle::Rad<f32>>;
 
 pub struct Camera	{
@@ -35,37 +34,40 @@ impl Camera	{
 	}
 	pub fn get_matrix( &self, aspect : f32 )-> Mat4<f32>	{
 		let proj = self.get_proj_matrix( aspect );
-		let winv = self.node.world_space().invert().expect(format!(
-			"Unable to invert camera's world space: {:s}",
-			self.node.name ));
+		let winv = self.node.borrow().with(|n|	{
+			n.world_space().invert().expect(format!(
+				"Unable to invert camera's world space: {:s}",
+				n.name ))
+			});
 		proj.mul_m( &winv.to_mat4() )
 	}
 	pub fn get_inverse_matrix( &self, aspect : f32 )-> Mat4<f32>	{
 		let proj = self.get_proj_matrix( aspect );
+		let n = self.node.borrow().borrow();
 		let pinv = proj.invert().expect(format!(
 			"Unable to invert camera's projection matrix: {:s}",
-			self.node.name ));
-		self.node.world_space().to_mat4().mul_m( &pinv )
+			n.get().name ));
+		n.get().world_space().to_mat4().mul_m( &pinv )
 	}
 	pub fn get_view_vector( &self )-> Vec3<f32>	{
 		let v = Vec3::new( 0f32,0f32,-1f32 );
-		self.node.world_space().rot.mul_v( &v )
+		self.node.borrow().with( |n| n.world_space().rot.mul_v(&v) )
 	}
 	pub fn get_up_vector( &self )-> Vec3<f32>	{
 		let v = Vec3::new( 0f32,1f32,0f32 );
-		self.node.world_space().rot.mul_v( &v )
+		self.node.borrow().with( |n| n.world_space().rot.mul_v(&v) )
 	}
 	pub fn get_side_vector( &self )-> Vec3<f32>	{
 		let v = Vec3::new( 1f32,0f32,0f32 );
-		self.node.world_space().rot.mul_v( &v )
+		self.node.borrow().with( |n| n.world_space().rot.mul_v(&v) )
 	}
 	pub fn fill_data( &self, data : &mut gr_low::shade::DataMap, aspect : f32 )	{
-		let sw = self.node.world_space();
+		let sw = self.node.borrow().with( |n| n.world_space() );
 		let pm = self.get_matrix( aspect );
 		let (p0,p1) = space::get_params( &sw );
-		data.insert( ~"u_ViewProj",		gr_low::shade::UniMatrix(false,pm) );
-		data.insert( ~"u_CameraPos",	gr_low::shade::UniFloatVec(p0) );
-		data.insert( ~"u_CameraRot",	gr_low::shade::UniFloatVec(p1) );
+		data.set( ~"u_ViewProj",	gr_low::shade::UniMatrix(false,pm) );
+		data.set( ~"u_CameraPos",	gr_low::shade::UniFloatVec(p0) );
+		data.set( ~"u_CameraRot",	gr_low::shade::UniFloatVec(p1) );
 	}
 }
 
@@ -133,7 +135,8 @@ impl Light	{
 	}
 
 	pub fn fill_data( &self, data : &mut gr_low::shade::DataMap, near : f32, far : f32 )	{
-		let sw = self.node.world_space();
+		let sn = self.node.borrow().borrow();
+		let sw = sn.get().world_space();
 		let mut pos = sw.disp.extend( 1.0 );
 		let col = Vec4::new( self.color.r, self.color.g, self.color.b, self.color.a );
 		let range = Vec4::new( near, far, 0f32, 1f32/(far-near) );
@@ -145,20 +148,20 @@ impl Light	{
 		match self.get_proj_blend(near,far)	{
 			Some(ref pair)	=>	{
 				let &(mp,blend) = pair;
-				let winv = self.node.world_space().invert().expect(format!(
+				let winv = sw.invert().expect(format!(
 					"Unable to invert light's world space: {:s}",
-					self.node.name ));
+					sn.get().name ));
 				let ml = mp.mul_m( &winv.to_mat4() );
-				data.insert( ~"u_LightProj",	gr_low::shade::UniMatrix(false,ml) );
-				data.insert( ~"u_LightBlend",	gr_low::shade::UniFloat(blend) );
+				data.set( ~"u_LightProj",	gr_low::shade::UniMatrix(false,ml) );
+				data.set( ~"u_LightBlend",	gr_low::shade::UniFloat(blend) );
 			},
 			None	=> ()
 		}
-		data.insert( ~"u_LightPos",			gr_low::shade::UniFloatVec(pos) );
-		data.insert( ~"u_LightColor",		gr_low::shade::UniFloatVec(col) );
+		data.set( ~"u_LightPos",		gr_low::shade::UniFloatVec(pos) );
+		data.set( ~"u_LightColor",		gr_low::shade::UniFloatVec(col) );
 		let vat = self.get_attenuation();
-		data.insert( ~"u_LightAttenuation",	gr_low::shade::UniFloatVec(vat) );
-		data.insert( ~"u_LightRange",		gr_low::shade::UniFloatVec(range) );
+		data.set( ~"u_LightAttenuation",	gr_low::shade::UniFloatVec(vat) );
+		data.set( ~"u_LightRange",		gr_low::shade::UniFloatVec(range) );
 	}
 }
 
@@ -171,36 +174,53 @@ impl EntityGroup	{
 	pub fn divide( &mut self, name : &str )-> EntityGroup	{
 		let mut i = 0u;
 		let mut rez = EntityGroup(~[]);
-		while i<self.len()	{
-			if self[i].node.is_under(name)	{
-				rez.push( self.swap_remove(i) );
+		while i<self.get().len()	{
+			if self.get()[i].node.borrow().with(|n| n.is_under(name))	{
+				rez.get_mut().push( self.get_mut().swap_remove(i) );
 			}else	{
 				i += 1u;
 			}
 		}
 		rez	
 	}
-
-	pub fn get_mut<'a,T>( &'a mut self, name : &str )-> Option<&'a mut engine::object::Entity>	{
-		self.mut_iter().find(|ent|	{ std::str::eq_slice(ent.node.name,name) })
+	
+	pub fn get<'a>( &'a self )-> &'a ~[engine::object::Entity]    {
+    	let &EntityGroup(ref list) = self;
+		list
+	}
+	
+	pub fn get_mut<'a>( &'a mut self )-> &'a mut ~[engine::object::Entity]    {
+    	let &EntityGroup(ref mut list) = self;
+		list
+	}
+	
+	pub fn find_mut<'a,T>( &'a mut self, name : &str )-> Option<&'a mut engine::object::Entity>	{
+		self.get_mut().mut_iter().find(|ent|	{
+			ent.node.borrow().with( |n| std::str::eq_slice(n.name,name) )
+		})
 	}
 
 	pub fn change_detail( &mut self, detail : engine::object::Entity )-> Option<engine::object::Entity>	{
-		let opt_pos = self.iter().position(|ent|	{managed::mut_ptr_eq(ent.node,detail.node)});
-		self.push( detail );
-		opt_pos.map(|pos| { self.swap_remove(pos) })
+		let opt_pos = self.get().iter().position(|ent| ent.node.ptr_eq( &detail.node ));
+		self.get_mut().push( detail );
+		opt_pos.map(|pos| { self.get_mut().swap_remove(pos) })
 	}
 
 	pub fn swap_entity( &mut self, name : &str, other : &mut EntityGroup )	{
-		let opt_pos = other.iter().position(|ent|	{ std::str::eq_slice(ent.node.name,name) });
-		let e1 = other.swap_remove( opt_pos.expect(format!( "Remote entity not found: {:s}", name )) );
+		let opt_pos = other.get().iter().position(|ent|	{
+			ent.node.borrow().with( |n| std::str::eq_slice(n.name,name) )
+		});
+		let e1 = other.get_mut().swap_remove(
+			opt_pos.expect(format!( "Remote entity not found: {:s}", name ))
+		);
 		let e2 = self.change_detail( e1 ).expect(format!( "Local entity not found: {:s}", name ));
-		other.push(e2);
+		other.get_mut().push(e2);
 	}
 
 	pub fn exclude( &mut self, name : &str )-> Option<engine::object::Entity>	{
-		self.iter().position(|ent|	{ std::str::eq_slice(ent.node.name,name) }).
-			map(|pos| { self.swap_remove(pos) })
+		self.get().iter().position(|ent|	{
+			ent.node.borrow().with( |n| std::str::eq_slice(n.name,name) )
+		}).map(|pos| { self.get_mut().swap_remove(pos) })
 	}
 }
 
@@ -213,7 +233,7 @@ pub struct SceneContext	{
 	textures	: Dict<@gr_low::texture::Texture>,
 	nodes		: Dict<NodeRef>,
 	meshes		: Dict<@gr_mid::mesh::Mesh>,
-	armatures	: Dict<@mut engine::space::Armature>,
+	armatures	: Dict<engine::space::ArmaturePtr>,
 	actions		: Dict<@engine::space::ArmatureRecord>,
 }
 
@@ -298,9 +318,9 @@ impl SceneContext	{
 			let dual_quat = rd.get_bool();
 			let root = match self.nodes.find( &node_name )	{
 				Some(n)	=> *n,
-				None	=> @mut engine::space::Node::new( node_name )
+				None	=> engine::space::Node::new( node_name ).to_ptr(),
 			};
-			let arm = @mut engine::load::read_armature( &mut rd, root, dual_quat, lg );
+			let arm = engine::load::read_armature( &mut rd, root, dual_quat, lg ).to_ptr();
 			self.armatures.insert( name, arm );
 			rd.leave();
 		}

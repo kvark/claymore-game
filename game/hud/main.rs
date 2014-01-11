@@ -194,12 +194,12 @@ impl Context	{
 					let t = *self.cache_images.find( path ).
 						expect(format!( "Image '{:s}' is not loaded", *path ));
 					let mut data = shade::DataMap::new();
-					data.insert( ~"t_Image",		shade::UniTexture(
+					data.set( ~"t_Image",		shade::UniTexture(
 						0, t, Some(self.sampler_image) ));
 					let rect = Rect{ x:off[0], y:off[1], w:t.width, h:t.height };
 					let vc = Vec4::new( 0f32, 0f32, 1f32, 1f32 );
-					data.insert( ~"u_Center",		shade::UniFloatVec(vc) );
-					data.insert( ~"u_Transform",	self.transform(&rect,screen_size) );
+					data.set( ~"u_Center",		shade::UniFloatVec(vc) );
+					data.set( ~"u_Transform",	self.transform(&rect,screen_size) );
 					calls.push( self.make_call( self.program_image, data, out, None ));
 					[t.width,t.height]
 				},
@@ -209,11 +209,11 @@ impl Context	{
 					let t = *fc.cache.find( &text.value ).
 						expect(format!( "Text '{:s}' is not loaded", text.value ));
 					let mut data = shade::DataMap::new();
-					data.insert( ~"t_Text",	shade::UniTexture(
+					data.set( ~"t_Text",	shade::UniTexture(
 						0, t, Some(self.sampler_text) ));
-					data.insert( ~"u_Color", Context::get_color_param(text.color) );
+					data.set( ~"u_Color",	Context::get_color_param(text.color) );
 					let dr = Rect{ x:off[0], y:off[1], w:t.width, h:t.height };
-					data.insert( ~"u_Transform", self.transform(&dr,screen_size) );
+					data.set( ~"u_Transform", self.transform(&dr,screen_size) );
 					// return
 					calls.push( self.make_call( self.program_text, data, out, None ));
 					[t.width,t.height]
@@ -240,15 +240,15 @@ impl Context	{
 			gen::AlignVer	=> {abox.h = off[1] - area.y},
 		}
 		let mut data = shade::DataMap::new();
-		data.insert( ~"u_Transform",self.transform(&abox,screen_size) );
+		data.set( ~"u_Transform",self.transform(&abox,screen_size) );
 		let c0 = match bx.ground	{
 			gen::GroundNone	=> call::CallEmpty,
 			gen::GroundSolid( color )	=> {
-				data.insert( ~"u_Color", 	Context::get_color_param(color) );
+				data.set( ~"u_Color", 	Context::get_color_param(color) );
 				self.make_call( self.program_solid, data, out, None )
 			},
 			gen::GroundFrame( color, size )	=> {
-				data.insert( ~"u_Color", 	Context::get_color_param(color) );
+				data.set( ~"u_Color", 	Context::get_color_param(color) );
 				let mut rast = self.rast.clone();
 				rast.prime.poly_mode = rast::map_poly_mode(2);
 				rast.prime.line_width = size as f32;

@@ -1,7 +1,7 @@
 extern mod gl;
 
 use std;
-use std::{managed,ptr};
+use std::{cell,managed,ptr,rc};
 
 use gr_low;
 
@@ -22,7 +22,8 @@ pub struct Object	{
 
 impl Drop for ObjectHandle	{
 	fn drop( &mut self )	{
-		unsafe{ gl::DeleteBuffers( 1, ptr::to_unsafe_ptr(&**self) ); }
+		let ObjectHandle(ref mut h) = *self;
+		unsafe{ gl::DeleteBuffers( 1, ptr::to_unsafe_ptr(h) ); }
 	}
 }
 
@@ -34,46 +35,46 @@ pub struct Binding	{
 
 impl gr_low::context::ProxyState for Binding	{
 	fn sync_back( &mut self )-> bool	{
-		let query =
-			if *self.target == gl::ARRAY_BUFFER	{
-				gl::ARRAY_BUFFER_BINDING
-			}else
-			if *self.target == gl::ELEMENT_ARRAY_BUFFER	{
-				gl::ELEMENT_ARRAY_BUFFER_BINDING
-			}else	{
-				fail!( format!("Unknown binding to query: {:i}",*self.target as int) );
-			};
+		let Target(t) = self.target;
+		let query = match t	{
+			gl::ARRAY_BUFFER			=> gl::ARRAY_BUFFER_BINDING,
+			gl::ELEMENT_ARRAY_BUFFER	=> gl::ELEMENT_ARRAY_BUFFER_BINDING,
+			_	=> fail!("Unknown binding to query: {}", t)
+		};
 		let mut hid = 0 as gl::types::GLint;
 		unsafe{ gl::GetIntegerv( query, ptr::to_mut_unsafe_ptr(&mut hid) ); }
 		hid == match self.active	{
-			Some(o)	=> *o.handle as gl::types::GLint,
+			Some(o)	=> { let ObjectHandle(h) = o.handle; h as gl::types::GLint },
 			None	=> 0
 		}
 	}
 }
 
 impl Binding	{
-	pub fn new( value : gl::types::GLenum )-> Binding	{
+	pub fn new( value: gl::types::GLenum )-> Binding	{
 		Binding{
 			target : Target(value), active : None
 		}
 	}
 
-	fn bind( &mut self, ob : @Object )	{
+	fn bind( &mut self, ob: @Object )	{
 		let need_bind = match self.active	{
 			Some(o)	=> !managed::ptr_eq(o,ob),
 			None	=> true
 		};
 		if need_bind	{
 			self.active = Some(ob);
-			gl::BindBuffer( *self.target, *ob.handle );
+			let Target(t) = self.target;
+			let ObjectHandle(h) = ob.handle;
+			gl::BindBuffer( t, h );
 		}
 	}
 
 	fn unbind( &mut self )	{
 		if self.active.is_some()	{
 			self.active = None;
-			gl::BindBuffer( *self.target, 0 );
+			let Target(t) = self.target;
+			gl::BindBuffer( t, 0 );
 		}
 	}
 }
@@ -93,7 +94,7 @@ pub struct Attribute	{
 }
 
 impl Attribute	{
-	pub fn new( format : &str, buffer : @Object, stride : uint, offset : uint )-> (Attribute,uint)	{
+	pub fn new( format: &str, buffer: @Object, stride: uint, offset: uint )-> (Attribute,uint)	{
 		assert!( (format.len()==3u && ['.','!'].contains(&format.char_at(2))) ||
 			format.len()==2u || (format.len()==4u && format.slice(2,4)==".!") );
 		let count = (format[0] - "0"[0]) as uint;
@@ -120,11 +121,11 @@ impl Attribute	{
 		}, count * el_size)
 	}
 
-	pub fn new_index( format : &str, buffer : @Object )-> (Attribute,uint)	{
+	pub fn new_index( format: &str, buffer: @Object )-> (Attribute,uint)	{
 		Attribute::new( format, buffer, 0u, 0u )
 	}
 
-	pub fn compatible( &self, at : &gr_low::shade::Attribute )-> bool	{
+	pub fn compatible( &self, at: &gr_low::shade::Attribute )-> bool	{
 		//io::println(format!( "Checking compatibility: kind=0x%x, count={:u}, storage=0x%x",
 		//	self.kind as uint, self.count, at.storage as uint ));
 		let (count,unit) = at.decompose();
@@ -154,8 +155,9 @@ pub struct VertexArray	{
 
 impl Drop for ArrayHandle	{
 	fn drop( &mut self )	{
-		if **self != 0	{
-			unsafe{ gl::DeleteVertexArrays( 1, ptr::to_unsafe_ptr(&**self) ); }
+		let ArrayHandle(ref mut h) = *self;
+		if *h != 0	{
+			unsafe{ gl::DeleteVertexArrays( 1, ptr::to_unsafe_ptr(h) ); }
 		}
 	}
 }
@@ -179,10 +181,11 @@ impl VertexArray	{
 	}
 }
 
+pub type VertexArrayPtr = rc::Rc<cell::RefCell<VertexArray>>;
 
 pub struct VaBinding	{
-	priv active	: @mut VertexArray,
-	default		: @mut VertexArray,
+	priv active	: VertexArrayPtr,
+	default		: VertexArrayPtr,
 }
 
 impl VaBinding	{
@@ -190,21 +193,20 @@ impl VaBinding	{
 		std::vec::from_fn(MAX_VERTEX_ATTRIBS, |_i|	{
 			VertexData{ enabled: false, attrib: None }
 		})
-
 	}
 
-	pub fn is_active( &self, va : @mut VertexArray )-> bool	{
-		managed::mut_ptr_eq(self.active, va)
+	pub fn is_active( &self, va: &VertexArrayPtr )-> bool	{
+		std::borrow::ref_eq( self.active.borrow(), va.borrow() )	//TODO: ptr_eq
 	}
 
 	pub fn new()-> VaBinding	{
-		let def = @mut VertexArray{
+		let def = rc::Rc::new( cell::RefCell::new( VertexArray{
 			handle	: ArrayHandle(0),
 			data	: VaBinding::make_data(),
 			element	: None,
-		};
+		}));
 		VaBinding{
-			active	: def,
+			active	: def.clone(),
 			default	: def,
 		}
 	}
@@ -212,25 +214,30 @@ impl VaBinding	{
 
 
 impl gr_low::context::Context	{
-	pub fn create_vertex_array( &self )-> @mut VertexArray	{
+	pub fn create_vertex_array( &self )-> VertexArrayPtr	{
 		let mut hid = 0 as gl::types::GLuint;
 		unsafe{ gl::GenVertexArrays( 1, ptr::to_mut_unsafe_ptr(&mut hid) ); }
-		@mut VertexArray{
+		rc::Rc::new(cell::RefCell::new( VertexArray{
 			handle	: ArrayHandle(hid),
 			data	: VaBinding::make_data(),
 			element	: None
-		}
+		}))
 	}
 
-	pub fn bind_vertex_array( &mut self, va : @mut VertexArray )	{
-		if !self.vertex_array.is_active( va )	{
-			self.vertex_array.active = va;
-			self.element_buffer.active = va.element;
-			gl::BindVertexArray( *va.handle );
+	pub fn bind_vertex_array( &mut self, vap: VertexArrayPtr )	{
+		if !self.vertex_array.is_active( &vap )	{
+			{
+				let va = vap.borrow().borrow();
+				self.element_buffer.active = va.get().element;
+				let ArrayHandle(h) = va.get().handle;
+				gl::BindVertexArray( h );
+			}
+			self.vertex_array.active = vap;
 		}
 	}
 	pub fn unbind_vertex_array( &mut self )	{
-		self.bind_vertex_array( self.vertex_array.default );
+		let vap = self.vertex_array.default.clone();
+		self.bind_vertex_array( vap );
 	}
 
 	pub fn create_buffer( &self )-> @Object	{
@@ -239,47 +246,49 @@ impl gr_low::context::Context	{
 		@Object{ handle:ObjectHandle(hid) }
 	}
 
-	pub fn bind_element_buffer( &mut self, va : @mut VertexArray, obj : @Object  )	{
-		assert!( self.vertex_array.is_active(va) );
-		va.element = Some(obj);
+	pub fn bind_element_buffer( &mut self, vap: &VertexArrayPtr, obj: @Object  )	{
+		assert!( self.vertex_array.is_active( vap ) );
+		vap.borrow().borrow_mut().get().element = Some(obj);
 		self.element_buffer.bind( obj );
 	}
-	pub fn bind_buffer( &mut self, obj : @Object )	{
+	pub fn bind_buffer( &mut self, obj: @Object )	{
 		self.array_buffer.bind( obj );
 	}
 	pub fn unbind_buffer( &mut self )	{
 		self.array_buffer.unbind();
 	}
 
-	pub fn allocate_buffer( &mut self, obj : @Object, size : uint, dynamic : bool )	{
+	pub fn allocate_buffer( &mut self, obj: @Object, size: uint, dynamic: bool )	{
 		self.bind_buffer( obj );
 		let usage = if dynamic {gl::DYNAMIC_DRAW} else {gl::STATIC_DRAW};
-		unsafe{ gl::BufferData( *self.array_buffer.target, size as gl::types::GLsizeiptr, ptr::null(), usage ); }
+		let Target(t) = self.array_buffer.target;
+		unsafe{ gl::BufferData( t, size as gl::types::GLsizeiptr, ptr::null(), usage ); }
 	}
 
-	pub fn load_buffer<T>( &mut self, obj : @Object, data : &[T], dynamic : bool )	{
+	pub fn load_buffer<T>( &mut self, obj: @Object, data: &[T], dynamic: bool )	{
 		self.bind_buffer( obj );
 		let usage = if dynamic {gl::DYNAMIC_DRAW} else {gl::STATIC_DRAW};
 		let size = (data.len() * std::mem::size_of::<T>()) as gl::types::GLsizeiptr;
+		let Target(t) = self.array_buffer.target;
 		unsafe{
 			let raw = data.as_ptr() as *gl::types::GLvoid;
-			gl::BufferData( *self.array_buffer.target, size, raw, usage );
+			gl::BufferData( t, size, raw, usage );
 		}
 	}
 
-	pub fn create_buffer_sized( &mut self, size : uint )-> @Object	{
+	pub fn create_buffer_sized( &mut self, size: uint )-> @Object	{
 		let obj = self.create_buffer();
 		self.allocate_buffer( obj, size, true );
 		obj
 	}
 
-	pub fn create_buffer_loaded<T>( &mut self, data : &[T] )-> @Object	{
+	pub fn create_buffer_loaded<T>( &mut self, data: &[T] )-> @Object	{
 		let obj = self.create_buffer();
 		self.load_buffer( obj, data, false );
 		obj
 	}
 
-	pub fn create_attribute<T:gr_low::context::GLType>( &mut self, vdata : &[T], count : uint, norm : bool )-> Attribute	{
+	pub fn create_attribute<T:gr_low::context::GLType>( &mut self, vdata: &[T], count: uint, norm: bool )-> Attribute	{
 		Attribute{
 			kind: vdata[0].to_gl_type(),
 			count: count,

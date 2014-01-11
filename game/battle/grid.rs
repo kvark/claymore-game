@@ -48,12 +48,12 @@ impl Grid	{
 		let cells = std::vec::from_elem( segments*segments, CELL_EMPTY );
 		let tex = ct.create_texture( "2D", segments, segments, 0u, 0u );
 		let s_opt = Some( gr_low::texture::Sampler::new(1u,0) );
-		data.insert( ~"t_Grid",		gr_low::shade::UniTexture(0,tex,s_opt) );
+		data.set( ~"t_Grid",	gr_low::shade::UniTexture(0,tex,s_opt) );
 		let par_scale = vector::Vec4::new( 10f32, 10f32, 0.1f32, 0f32 );
-		data.insert( ~"u_ScaleZ",	gr_low::shade::UniFloatVec(par_scale) );
+		data.set( ~"u_ScaleZ",	gr_low::shade::UniFloatVec(par_scale) );
 		let oo_seg = 1f32 / (segments as f32);
 		let par_size = vector::Vec4::new( oo_seg, oo_seg, 0f32, 0f32 );
-		data.insert( ~"u_Size",		gr_low::shade::UniFloatVec(par_size) );
+		data.set( ~"u_Size",	gr_low::shade::UniFloatVec(par_size) );
 		Grid{
 			nseg	: segments,
 			cells	: cells,
@@ -89,7 +89,7 @@ impl Grid	{
 pub trait DrawableGrid	{
 	fn init( &mut self, tb : &mut gr_low::texture::Binding );
 	fn upload( &mut self, tb : &mut gr_low::texture::Binding );
-	fn draw( &self, output : gr_mid::call::Output, vao : @mut gr_low::buf::VertexArray )-> gr_mid::call::Call;
+	fn draw( &self, output : gr_mid::call::Output, vao : gr_low::buf::VertexArrayPtr )-> gr_mid::call::Call;
 }
 
 impl DrawableGrid for Grid	{
@@ -109,7 +109,7 @@ impl DrawableGrid for Grid	{
 		let r = gr_low::frame::Rect::new( self.nseg, self.nseg );
 		tb.load_sub_2D(	self.texture, 0u, &r, fm_pix, component, self.cells );
 	}
-	fn draw( &self, output : gr_mid::call::Output, vao : @mut gr_low::buf::VertexArray )-> gr_mid::call::Call	{
+	fn draw( &self, output : gr_mid::call::Output, vao : gr_low::buf::VertexArrayPtr )-> gr_mid::call::Call	{
 		gr_mid::call::CallDraw(
 			gr_mid::call::Input::new( vao, self.mesh ),
 			output,
@@ -196,7 +196,9 @@ impl GeometryGrid for Grid	{
 	}
 	fn ray_cast( &self, cam : &scene::Camera, aspect : f32, np : &[f32,..2] )-> Location	{
 		let ndc = point::Point3::new( np[0]*2f32-1f32, 1f32-np[1]*2f32, 0f32 );
-		let origin = Point::from_vec( &cam.node.world_space().disp );
+		let origin = cam.node.borrow().with( |n|	{
+			point::Point::from_vec(&n.world_space().disp)
+			});
 		let cit = transform::AffineMatrix3{ mat:cam.get_inverse_matrix(aspect) };
 		let ray = cit.transform_point( &ndc ).sub_p( &origin );
 		let k = (self.v_scale.z - origin.z) / ray.z;

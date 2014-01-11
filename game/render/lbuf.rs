@@ -1,11 +1,11 @@
 extern mod engine;
 extern mod cgmath;
 
+use std::cell::RefCell;
 use cgmath::matrix::ToMat4;
 use cgmath::vector::Vec4;
 
 use engine::{gr_low,gr_mid};
-
 use scene = scene::common;
 
 
@@ -32,13 +32,13 @@ impl LightVolume	{
 pub struct Context	{
 	tech_bake	: @gr_mid::draw::Technique,
 	tech_apply	: @gr_mid::draw::Technique,
-	fbo			: @mut gr_low::frame::Buffer,
-	vao			: @mut gr_low::buf::VertexArray,
+	fbo			: gr_low::frame::BufferPtr,
+	vao			: gr_low::buf::VertexArrayPtr,
 	ta_direction: @gr_low::texture::Texture,
 	ta_color	: @gr_low::texture::Texture,
 	t_depth		: @gr_low::texture::Texture,
-	fbo_alt		: @mut gr_low::frame::Buffer,
-	cache		: @mut gr_mid::draw::Cache,
+	fbo_alt		: gr_low::frame::BufferPtr,
+	cache		: RefCell<gr_mid::draw::Cache>,
 }
 
 impl Context	{
@@ -66,7 +66,7 @@ impl Context	{
 			ta_color	: ta_col,
 			t_depth		: depth,
 			fbo_alt		: gc.create_frame_buffer(),
-			cache		: @mut gr_mid::draw::make_cache(),
+			cache		: RefCell::new( gr_mid::draw::make_cache() ),
 		}
 	}
 
@@ -105,13 +105,13 @@ impl Context	{
 		{	// fill data
 			let aspect = (wid as f32) / (het as f32);
 			let sampler = Some( gr_low::texture::Sampler::new(2u,0) );
-			data.insert( ~"t_Depth", gr_low::shade::UniTexture(0,self.t_depth,sampler) );
+			data.set( ~"t_Depth", gr_low::shade::UniTexture(0,self.t_depth,sampler) );
 			let target_size = Vec4::new( wid as f32, het as f32,
 				1f32/(wid as f32), 1f32/(het as f32) );
-			data.insert( ~"u_TargetSize",		gr_low::shade::UniFloatVec(target_size) );
+			data.set( ~"u_TargetSize",		gr_low::shade::UniFloatVec(target_size) );
 			let vpi = cam.get_inverse_matrix( aspect );
 			cam.fill_data( &mut data, aspect );
-			data.insert( ~"u_ViewProjInverse",	gr_low::shade::UniMatrix(false,vpi) );
+			data.set( ~"u_ViewProjInverse",	gr_low::shade::UniMatrix(false,vpi) );
 		}
 		let cdata = gr_mid::call::ClearData	{
 			color	: Some( gr_low::rast::Color::new(0x00000001u) ),
@@ -122,16 +122,18 @@ impl Context	{
 		let mut queue = lights.iter().map( |lit|	{
 			let (mesh,mat) = vol.query( lit.kind );
 			lit.fill_data( &mut data, 1f32, 30f32 );
-			let mw = lit.node.world_space().to_mat4();
-			data.insert( ~"u_World",	gr_low::shade::UniMatrix(false,mw) );
+			let mw = lit.node.borrow().with( |n| n.world_space().to_mat4() );
+			data.set( ~"u_World",	gr_low::shade::UniMatrix(false,mw) );
 			let e = engine::object::Entity	{
 				node	: lit.node,
-				input	: gr_mid::call::Input::new( self.vao, mesh ),
+				input	: gr_mid::call::Input::new( self.vao.clone(), mesh ),
 				data	: data.clone(),
 				modifier: @() as @gr_mid::draw::Mod,
 				material: mat,
 			};
-			self.tech_bake.process( &e, output.clone(), rast, self.cache, gc, lg )
+			self.cache.with_mut(|cache|	{
+				self.tech_bake.process( &e, output.clone(), rast, cache, gc, lg )
+			})
 		}).to_owned_vec();
 		//todo: functional style in Rust-0.6
 		queue.insert( 0u, clear );
@@ -140,7 +142,7 @@ impl Context	{
 
 	pub fn fill_data( &self, data : &mut gr_low::shade::DataMap )	{
 		let sampler = Some( gr_low::texture::Sampler::new( 2u, 0 ) );
-		data.insert( ~"t_LbufDir", gr_low::shade::UniTexture( 0, self.ta_direction,	sampler ));
-		data.insert( ~"t_LbufCol", gr_low::shade::UniTexture( 0, self.ta_color,		sampler ));
+		data.set( ~"t_LbufDir", gr_low::shade::UniTexture( 0, self.ta_direction,	sampler ));
+		data.set( ~"t_LbufCol", gr_low::shade::UniTexture( 0, self.ta_color,		sampler ));
 	}
 }

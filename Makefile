@@ -34,7 +34,7 @@ grab-scene: asset/claymore/claymore-2a.rs asset/battle/battle-test.rs
 game: build/claymore
 
 build/claymore:	lib/engine.dummy lib/codata-scene.dummy lib/codata-hud.dummy lib/glfw.dummy game/*.rs game/battle/*.rs game/hud/*.rs game/render/*.rs game/scene/*.rs 
-	${RUST} game/claymore.rs -L lib --out-dir build
+	${RUST} game/claymore.rs --link-args="-lglfw" -L lib --out-dir build
 
 engine: lib/engine.dummy
 
@@ -78,8 +78,8 @@ lib/cgmath.dummy: ../cgmath-rs/src/cgmath/*.rs
 	(cd ../cgmath-rs && rustpkg build cgmath && cp -Ru build/*/cgmath/lib* ../${DIR}/lib)
 	touch $@
 	
-lib/glfw.dummy: ../glfw-rs/src/glfw/*.rs
-	(cd ../glfw-rs && rustpkg build glfw && cp -Ru build/*/glfw/lib* ../${DIR}/lib/)
+lib/glfw.dummy: ../glfw-rs/src/*.rs
+	(cd ../glfw-rs/build && cmake .. && make && cp -Ru lib/lib* ../../${DIR}/lib/)
 	touch $@
 
 lib/gl.dummy: ../gl-rs/src/gen/*.r? ../gl-rs/src/gl/*.r?

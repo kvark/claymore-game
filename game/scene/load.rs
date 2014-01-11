@@ -28,7 +28,7 @@ fn parse_shader_data( imat : &gen::Material, tex_cache : &HashMap<~str,@gr_low::
 			&gen::DataVector(v)	=> ( gr_low::shade::UniFloatVec(vector::Vec4::new(v[0],v[1],v[2],v[3])) ),
 			&gen::DataColor(v)	=> ( gr_low::shade::UniFloatVec(color2vec(v)) ),
 		};
-		out.insert( "u_" + *name, uni );
+		out.set( "u_" + *name, uni );
 	}
 	let phong_texture = ~"Main";
 	for (i,ti) in imat.textures.iter().enumerate()	{
@@ -40,9 +40,9 @@ fn parse_shader_data( imat : &gen::Material, tex_cache : &HashMap<~str,@gr_low::
 			name = phong_texture.clone(); //that's what the shader expects
 			lg.add(format!( "\t\t(w) forcing texture '{:s}' name to {:s}", ti.name, phong_texture ));
 		}
-		out.insert( ~"t_" + name, gr_low::shade::UniTexture(0,tex,s_opt) );
+		out.set( ~"t_" + name, gr_low::shade::UniTexture(0,tex,s_opt) );
 		let u_transform = vector::Vec4::new( ti.scale[0], ti.scale[1], ti.offset[0], ti.offset[1] );
-		out.insert( format!("u_Tex{:u}Transform",i), gr_low::shade::UniFloatVec(u_transform) );
+		out.set( format!("u_Tex{:u}Transform",i), gr_low::shade::UniFloatVec(u_transform) );
 	}
 	out
 }
@@ -112,8 +112,8 @@ fn parse_space( s : &gen::Space )-> space::Space	{
 		vector::Vec3::new( s.pos[0], s.pos[1], s.pos[2] ))
 }
 
-fn parse_bones( bin : &[gen::Bone], par_id : Option<uint>, par_node : @mut engine::space::Node,
-		bot : &mut ~[engine::space::Bone] )	{
+fn parse_bones( bin : &[gen::Bone], par_id : Option<uint>, par_node : space::NodePtr,
+		bot : &mut ~[space::Bone] )	{
 	for ibone in bin.iter()	{
 		let space = parse_space( &ibone.space );
 		let bind_inv = space.invert().expect("Failed to invert bone space");
@@ -121,12 +121,12 @@ fn parse_bones( bin : &[gen::Bone], par_id : Option<uint>, par_node : @mut engin
 			Some(pid)	=> bind_inv.concat( &bot[pid].bind_pose_inv ),
 			None		=> bind_inv,
 		};
-		let node = @mut space::Node{
+		let node = space::Node{
 			name	: ibone.name.clone(),
 			space	: space,
 			parent	: Some(par_node),
 			actions	:~[],
-		};
+		}.to_ptr();
 		let cid = Some( bot.len() );
 		bot.push(space::Bone{
 			node			: node,
@@ -139,24 +139,24 @@ fn parse_bones( bin : &[gen::Bone], par_id : Option<uint>, par_node : @mut engin
 	}
 }
 
-fn parse_child( child : &gen::NodeChild, parent : @mut space::Node, scene : &mut common::Scene,
+fn parse_child( child : &gen::NodeChild, parent : space::NodePtr, scene : &mut common::Scene,
 		get_input : |~str|->gr_mid::call::Input, lg : &engine::journal::Log )	{
 	match child	{
 		&gen::ChildNode(ref inode)	=>	{
-			let n = @mut space::Node	{
+			let n = space::Node	{
 				name	: inode.name.clone(),
 				space	: parse_space( &inode.space ),
 				parent	: Some(parent),
 				actions	: ~[],
-			};
-			scene.context.nodes.insert( n.name.clone(), n );
+			}.to_ptr();
+			scene.context.nodes.insert( n.borrow().with(|n| n.name.clone()), n );
 			for child in inode.children.iter()	{
 				parse_child( child, n, scene, |s| get_input(s), lg );
 			}
 		},
 		&gen::ChildArmature(ref iarm)	=>	{
 			let (shader,max) = engine::load::get_armature_shader( iarm.dual_quat );
-			let a = @mut space::Armature{
+			let mut a = space::Armature{
 				root	: parent,
 				bones	: ~[],
 				code	: shader,
@@ -168,7 +168,7 @@ fn parse_child( child : &gen::NodeChild, parent : @mut space::Node, scene : &mut
 				let act = scene.context.query_action( iaction, &mut a.bones, lg );
 				a.actions.push( act );
 			}
-			scene.context.armatures.insert( iarm.name.clone(), a );
+			scene.context.armatures.insert( iarm.name.clone(), a.to_ptr() );
 		},
 		&gen::ChildEntity(ref ient)	=>	{
 			let mut input = get_input( ient.mesh.clone() );
@@ -177,11 +177,12 @@ fn parse_child( child : &gen::NodeChild, parent : @mut space::Node, scene : &mut
 			let skel = if ient.armature.is_empty()	{
 				@()	as @gr_mid::draw::Mod
 			}else	{
-				*scene.context.armatures.find( &ient.armature ).
-					expect( ~"Armature not found: " + ient.armature )
+				//*scene.context.armatures.find( &ient.armature ).
+				//	expect( ~"Armature not found: " + ient.armature )
+				@()	//FIXME
 					as @gr_mid::draw::Mod
 			};
-			scene.entities.push( engine::object::Entity{
+			scene.entities.get_mut().push( engine::object::Entity{
 				node	: parent,
 				//body	: @node::Body,
 				input	: input,
@@ -224,7 +225,7 @@ fn parse_child( child : &gen::NodeChild, parent : @mut space::Node, scene : &mut
 
 
 pub fn parse( path : &str, iscene : &gen::Scene, custom : &[gen::Material], gc : &mut gr_low::context::Context,
-		opt_vao : Option<@mut gr_low::buf::VertexArray>, lg : &engine::journal::Log )-> common::Scene	{
+		opt_vao : Option<gr_low::buf::VertexArrayPtr>, lg : &engine::journal::Log )-> common::Scene	{
 	lg.add( ~"Loading scene: " + path );
 	let c0 = engine::load::get_time();
 	let mut scene = common::Scene	{
@@ -241,13 +242,13 @@ pub fn parse( path : &str, iscene : &gen::Scene, custom : &[gen::Material], gc :
 	// nodes and stuff
 	let get_input = |mesh_name : ~str|	{
 		let vao = match opt_vao	{
-			Some(va)	=> va,
-			None		=> gc.create_vertex_array(),
+			Some(ref va)	=> va.clone(),
+			None			=> gc.create_vertex_array(),
 		};
 		let mesh = scene.context.query_mesh( &mesh_name, gc, lg );
 		gr_mid::call::Input::new( vao, mesh )
 	};
-	let root = @mut engine::space::Node::new( ~"root" );
+	let root = space::Node::new( ~"root" ).to_ptr();
 	for child in iscene.nodes.iter()	{
 		parse_child( child, root, &mut scene, |s| get_input(s), lg );
 	}
@@ -255,10 +256,13 @@ pub fn parse( path : &str, iscene : &gen::Scene, custom : &[gen::Material], gc :
 	lg.add(format!( "\t[p] Objects: {:f} sec", c2-c1 ));
 	// armatures-1
 	for (_,arm) in scene.context.armatures.iter()	{
-		let name = &arm.root.name;
-		let root = *scene.context.nodes.find( name ).
-			expect( ~"Unable to find armature root " + *name );
-		arm.change_root( root );
+		arm.borrow().with_mut(|a|	{
+			let root = a.root.borrow().with(|n|	{
+				*scene.context.nodes.find( &n.name ).
+					expect( ~"Unable to find armature root " + n.name )
+				});
+			a.change_root( root );
+		});
 	}
 	let c3 = engine::load::get_time();
 	lg.add(format!( "\t[p] Total: {:f} sec", c3-c0 ));

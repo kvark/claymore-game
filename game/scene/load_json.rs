@@ -5,8 +5,8 @@ use extra::json;
 use extra::serialize::{Decoder,Decodable};
 
 use cgmath::{angle,projection};
-use cgmath::quaternion::*;
-use cgmath::vector::*;
+use cgmath::quaternion::{Quat};
+use cgmath::vector::{Vec2,Vec3,Vec4};
 
 use engine;
 use engine::{gr_low,gr_mid};
@@ -46,8 +46,7 @@ impl SpaceInfo	{
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -//
 //	Node
 
-pub type NodeRef = @mut engine::space::Node;
-pub type NodeMap = HashMap<~str,NodeRef>;
+pub type NodeMap = HashMap<~str,engine::space::NodePtr>;
 
 #[deriving(Decodable)]
 struct NodeInfo	{
@@ -56,14 +55,14 @@ struct NodeInfo	{
 	children	: ~[NodeInfo],
 }
 
-pub fn make_nodes( infos : &~[NodeInfo], par : Option<NodeRef>, map : &mut NodeMap )	{
+pub fn make_nodes( infos : &~[NodeInfo], par : Option<engine::space::NodePtr>, map : &mut NodeMap )	{
 	for inode in infos.iter()	{
-		let node = @mut engine::space::Node{
+		let node = engine::space::Node{
 			name	: inode.name.clone(),
 			space	: inode.space.spawn(),
 			parent	: par,
 			actions	: ~[],	//TODO
-		};
+		}.to_ptr();
 		map.insert( inode.name.clone(), node );
 		make_nodes( &inode.children, Some(node), map );
 	}
@@ -151,16 +150,16 @@ type TextureCache = HashMap<~str,@gr_low::texture::Texture>;
 impl MaterialInfo	{
 	fn fill_data( &self, data : &mut gr_low::shade::DataMap, cache : &TextureCache )	{
 		for par in self.data.iter()	{
-			data.insert( ~"u_"+par.name, par.value.clone() );
+			data.set( ~"u_"+par.name, par.value.clone() );
 		}
 		for (i,tinfo) in self.textures.iter().enumerate()	{
 			let tex = *cache.get( &tinfo.path );
 			let s_opt = Some(gr_low::texture::Sampler::new( tinfo.filter, tinfo.wrap ));
-			data.insert( ~"t_"+tinfo.name, gr_low::shade::UniTexture(0,tex,s_opt) );
+			data.set( ~"t_"+tinfo.name, gr_low::shade::UniTexture(0,tex,s_opt) );
 			let (sx,sy,_) = tinfo.scale;
 			let (ox,oy,_) = tinfo.offset;
 			let u_transform = Vec4::new(sx,sy,ox,oy);
-			data.insert( format!("u_Tex{:u}Transform",i), gr_low::shade::UniFloatVec(u_transform) );
+			data.set( format!("u_Tex{:u}Transform",i), gr_low::shade::UniFloatVec(u_transform) );
 		}
 	}
 }
@@ -217,7 +216,7 @@ pub struct LightInfo	{
 pub fn parse_group( context : &mut common::SceneContext,
 		info_array	: &[EntityInfo],
 		gc			: &mut gr_low::context::Context,
-		opt_vao		: Option<@mut gr_low::buf::VertexArray>,
+		opt_vao		: Option<gr_low::buf::VertexArrayPtr>,
 		lg			: &engine::journal::Log
 		)-> common::EntityGroup	{
 	let mut group = common::EntityGroup(~[]);
@@ -237,11 +236,13 @@ pub fn parse_group( context : &mut common::SceneContext,
 		let skel = if ient.armature.is_empty()	{
 			@()	as @gr_mid::draw::Mod
 		}else	{
-			*context.armatures.get(&ient.armature)	as @gr_mid::draw::Mod
+			//*context.armatures.get(&ient.armature)
+			@()	//FIXME
+				as @gr_mid::draw::Mod
 		};
 		let vao = match opt_vao	{
-			Some(v) => v,
-			None	=> gc.create_vertex_array(),
+			Some(ref v)	=> v.clone(),
+			None		=> gc.create_vertex_array(),
 		};
 		let mesh = context.query_mesh( &ient.mesh, gc, lg );
 		let (r_min,r_max) = ient.range;
@@ -257,7 +258,7 @@ pub fn parse_group( context : &mut common::SceneContext,
 			modifier: skel,
 			material: mat,
 		};
-		group.push(ent);
+		group.get_mut().push(ent);
 	}
 	group
 }
@@ -274,7 +275,7 @@ pub struct SceneInfo	{
 
 
 pub fn load_scene( path : &str, gc : &mut gr_low::context::Context,
-		opt_vao : Option<@mut gr_low::buf::VertexArray>, lg : &engine::journal::Log )-> common::Scene	{
+		opt_vao : Option<gr_low::buf::VertexArrayPtr>, lg : &engine::journal::Log )-> common::Scene	{
 	lg.add( "Loading scene: " + path );
 	let c0 = engine::load::get_time();
 	let scene = load_config::<SceneInfo>( path + ".json" );
@@ -322,7 +323,7 @@ pub fn load_scene( path : &str, gc : &mut gr_low::context::Context,
 	let c2 = engine::load::get_time();
 	lg.add(format!( "\t[p] Materials: {:f}", c2-c1 ));	
 	// nodes
-	let mut map_node : HashMap<~str,@mut engine::space::Node> = HashMap::new();
+	let mut map_node : HashMap<~str,engine::space::NodePtr> = HashMap::new();
 	make_nodes( &scene.nodes, None, &mut map_node );
 	let c3 = engine::load::get_time();
 	lg.add(format!( "\t[p] Nodes: {:f}", c3-c2 ));
@@ -347,12 +348,12 @@ pub fn load_scene( path : &str, gc : &mut gr_low::context::Context,
 	let mut map_camera : HashMap<~str,@common::Camera> = HashMap::new();
 	for icam in scene.cameras.iter()	{
 		let root = *context.nodes.get( &icam.node );
-		map_camera.insert( root.name.clone(),
-			@common::Camera{ node:root,
-				proj:icam.proj.spawn(),
-				ear:engine::audio::Listener{ volume:0.0 },
-			}
-		);
+		let name = root.borrow().with( |r| r.name.clone() );
+		map_camera.insert( name, @common::Camera{
+			node	: root,
+			proj	: icam.proj.spawn(),
+			ear		: engine::audio::Listener{ volume:0.0 },
+		});
 	}
 	// lights
 	let mut map_light : HashMap<~str,@common::Light> = HashMap::new();
@@ -371,7 +372,8 @@ pub fn load_scene( path : &str, gc : &mut gr_low::context::Context,
 			_	=> fail!( ~"Unknown light type: " + ilight.kind ),
 		};
 		let (a1,a2) = ilight.attenu;
-		map_light.insert( root.name.clone(), @common::Light{
+		let name = root.borrow().with( |r| r.name.clone() );
+		map_light.insert( name, @common::Light{
 			node	: root,
 			color	: col,
 			attenu	: [1f32/ilight.energy as f32,a1 as f32,a2 as f32],

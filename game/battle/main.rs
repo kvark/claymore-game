@@ -8,9 +8,9 @@ use glfw;
 use cgmath::{angle,projection};
 use cgmath::angle::ToRad;
 use cgmath::matrix::ToMat4;
-use cgmath::point::*;
-use cgmath::quaternion::*;
-use cgmath::vector::*;
+use cgmath::point::{Point2};
+use cgmath::quaternion::{Quat};
+use cgmath::vector::{Vec3,Vec4};
 use engine::{anim,gr_low,gr_mid};
 use engine::anim::Player;
 use engine::gr_mid::draw::Mod;
@@ -20,37 +20,45 @@ use input;
 use hud = hud::main;
 use debug = hud::debug;
 use scene;
-use battle::{field,grid,think};
-use battle::field::Member;
+use battle::{field,grid,think,unit};
 use battle::grid::{DrawableGrid,TopologyGrid,GeometryGrid};
 
 
 pub trait Prop	{
-	fn get_root( &self )-> @mut engine::space::Node;
+	fn get_root( &self )-> engine::space::NodePtr;
+	fn get_elevation( &self )-> f32;
 }
 
-pub trait Member : field::Member + Prop	{
-	fn get_key( &self )-> field::MemberKey;
+pub trait Member : unit::Unit + Prop	{}
+
+impl Prop for unit::Standard	{
+	fn get_root( &self )-> engine::space::NodePtr	{
+		self.skeleton.borrow().borrow().get().root
+	}
+	fn get_elevation( &self )-> f32	{
+		self.elevation
+	}
 }
+
+impl Member for unit::Standard	{}
+
 
 pub struct CharBundle<M,B>	{
-	brain	: ~B,
-	member	: @mut M,
-	motion	: ~think::Motion,
+	brain		: ~B,
+	member		: M,
+	member_key	: field::MemberKey,
+	motion		: ~think::Motion,
 	last_update	: anim::float,
 }
 
-impl<M: Member, B: think::Brain<M>> CharBundle<M,B>	{
+impl<M: Member + 'static, B: think::Brain<M>> CharBundle<M,B>	{
 	pub fn update( &mut self, time: anim::float, field: &mut field::Field, grid: &grid::Grid, lg: &engine::journal::Log )	{
 		let delta = time - self.last_update;
 		self.last_update = time;
-		let new = match	{
-				let mem : &mut M = self.member;
-				self.motion.update( mem as &mut Member, delta, field, grid )
-			}{
+		let new = match	self.motion.update( &mut self.member, delta, field, grid )	{
 			think::StatusDone	=> true,
 			think::StatusCanInterrupt	=>
-				if self.brain.check( self.member, field, grid )	{
+				if self.brain.check( &self.member, field, grid )	{
 					self.motion.stop();
 					lg.add(format!( "{:s}: interrupts", self.member.get_name() ));
 					true
@@ -58,7 +66,7 @@ impl<M: Member, B: think::Brain<M>> CharBundle<M,B>	{
 			think::StatusBusy	=> false,
 		};
 		if new	{
-			self.motion = self.brain.decide( self.member, field, grid );
+			self.motion = self.brain.decide( &self.member, field, grid );
 			lg.add(format!( "{:s}: new motion {:s}", self.member.get_name(), self.motion.get_name() ));
 		}
 	}
@@ -66,57 +74,23 @@ impl<M: Member, B: think::Brain<M>> CharBundle<M,B>	{
 	pub fn is_waiting( &self )-> bool	{
 		std::str::eq_slice( self.motion.get_name(), &"Idle" )
 	}
-}
-
-
-pub struct Character	{
-	// info
-	name		: ~str,
-	key			: field::MemberKey,
-	team		: field::Team,
-	body		: field::Limb,
-	// stats
-	move_speed	: f32,
-	// view
-	entity		: engine::object::Entity,
-	skeleton	: @mut engine::space::Armature,
-	record		: @engine::space::ArmatureRecord,
-	// state
-	location	: grid::Location,
-	orientation	: grid::Orientation,
-	elevation	: f32,
-}
-
-impl Prop for Character	{
-	fn get_root( &self )-> @mut engine::space::Node	{
-		self.skeleton.root
+	
+	pub fn spawn( &mut self, team: field::Team, d: grid::Location, field: &mut field::Field, grid: &grid::Grid )	{
+		let link = field::Link	{
+			name		: self.member.get_name().to_owned(),
+			team		: team,
+			location	: d,
+			orientation	: 0,
+		};
+		let sp = grid.compute_space( d, 0, self.member.get_elevation() );
+		let root = self.member.get_root();
+		root.borrow().with_mut(|n| {n.space = sp;} );
+		self.member_key = field.add_member( link, &self.member, grid as &TopologyGrid );
 	}
 }
 
-impl Member for Character	{
-	fn get_key( &self )-> field::MemberKey	{ self.key }
-}
 
-impl field::Member for Character	{
-	fn get_name<'a>( &'a self )-> &'a str	{self.name.as_slice()}
-	fn get_limbs<'a>( &'a self )-> &'a [field::MemberLimb]	{&[ (self.location,self.body.clone()) ]}
-	fn get_team( &self )-> field::Team	{self.team}
-	fn move( &mut self, d: grid::Location, r: grid::Orientation )	{
-		self.location = d;
-		self.orientation = r;
-	}
-	fn receive_damage( &mut self, damage : field::Health, _limb_key : field::LimbKey )-> field::DamageResult	{
-		if self.body.health > damage	{
-			self.body.health -= damage;
-			field::DamageSome
-		}else	{
-			self.body.health = 0;
-			field::DamageKill
-		}
-	}
-}
-
-impl Character	{
+impl unit::Standard	{
 	pub fn update_view( &mut self, _time : anim::float )	{
 		/*	FIXME
 		let mut moment  = time - self.start_time;
@@ -127,91 +101,7 @@ impl Character	{
 		}
 		self.skeleton.set_record( self.record, moment );
 		*/
-		self.skeleton.fill_data( &mut self.entity.data );
-	}
-
-	fn recompute_space( &self, grid : &grid::Grid )-> engine::space::Space	{
-		grid.compute_space( self.location, self.orientation, self.elevation )
-	}
-
-	pub fn spawn( @mut self, d : grid::Location, field : &mut field::Field, grid : &grid::Grid )	{
-		self.move(d,0);
-		self.key = field.add_member( self as @mut field::Member, grid as &TopologyGrid );
-		self.skeleton.root.space = self.recompute_space( grid );
-	}
-}
-
-
-struct Boss	{
-	// info
-	name		: ~str,
-	key			: field::MemberKey,
-	team		: field::Team,
-	body		: field::Limb,
-	// stats
-	move_speed	: f32,
-	turn_speed	: f32,
-	// view
-	entity		: engine::object::Entity,
-	skeleton	: @mut engine::space::Armature,
-	record		: @engine::space::ArmatureRecord,
-	// state
-	location	: grid::Location,
-	orientation: grid::Orientation,
-	elevation	: f32,
-}
-
-impl Prop for Boss	{
-	fn get_root( &self )-> @mut engine::space::Node	{
-		self.skeleton.root
-	}
-}
-
-impl Member for Boss	{
-	fn get_key( &self )-> field::MemberKey	{ self.key }
-}
-
-impl field::Member for Boss	{
-	fn get_name<'a>( &'a self )-> &'a str	{self.name.as_slice()}
-	fn get_limbs<'a>( &'a self )-> &'a [field::MemberLimb]	{&[ (self.location,self.body.clone()) ]}
-	fn get_team( &self )-> field::Team	{self.team}
-	fn move( &mut self, d: grid::Location, r: grid::Orientation )	{
-		self.location = d;
-		self.orientation = r;
-	}
-	fn receive_damage( &mut self, damage : field::Health, _limb_key : field::LimbKey )-> field::DamageResult	{
-		if self.body.health > damage	{
-			self.body.health -= damage;
-			field::DamageSome
-		}else	{
-			self.body.health = 0;
-			field::DamageKill
-		}
-	}
-}
-
-impl Boss	{
-	pub fn update_view( &mut self, _time : anim::float )	{
-		/*	FIXME
-		let mut moment  = time - self.start_time;
-		if moment>self.record.duration	{
-			//self.record = self.skeleton.find_record(~"ArmatureAction").expect(~"character Idle not found");
-			self.start_time = time;
-			moment = 0.0;
-		}
-		self.skeleton.set_record( self.record, moment );
-		*/
-		self.skeleton.fill_data( &mut self.entity.data );
-	}
-
-	fn recompute_space( &self, grid : &grid::Grid )-> engine::space::Space	{
-		grid.compute_space( self.location, self.orientation, self.elevation )
-	}
-
-	pub fn spawn( @mut self, d : grid::Location, field : &mut field::Field, grid : &grid::Grid )	{
-		self.move(d,0);
-		self.key = field.add_member( self as @mut field::Member, grid as &TopologyGrid );
-		self.skeleton.root.space = self.recompute_space( grid );
+		self.skeleton.borrow().with(|s| s.fill_data( &mut self.entity.data ));
 	}
 }
 
@@ -230,7 +120,7 @@ impl View	{
 		if dir!=0 && time > self.start_time + 0.5	{
 			let l = self.points.len() as int;
 			self.destination = (((self.destination as int) + dir + l) % l) as uint;
-			self.source = Some( self.cam.node.space );
+			self.source = Some( self.cam.node.borrow().borrow().get().space );
 			self.start_time = time;
 			true
 		}else	{false}
@@ -241,7 +131,7 @@ impl View	{
 			Some(source)	=>	{
 				let moment = (time - self.start_time) / self.trans_duration;
 				let dst = self.points[ self.destination ];
-				self.cam.node.space = if moment >= 1.0	{
+				self.cam.node.borrow().borrow_mut().get().space = if moment >= 1.0	{
 						self.source = None;
 						dst
 					}else	{
@@ -259,8 +149,8 @@ pub struct Scene	{
 	land	: engine::object::Entity,
 	grid	: grid::Grid,
 	field	: field::Field,
-	hero	: CharBundle<Character,think::Player<Character>>,
-	boss	: CharBundle<Boss,think::Monster<Boss>>,
+	hero	: CharBundle<unit::Standard,think::Player<unit::Standard>>,
+	boss	: CharBundle<unit::Standard,think::Monster<unit::Standard>>,
 	cache	: gr_mid::draw::Cache,
 	hud		: gen_hud::common::Screen,
 	field_revision	: uint,
@@ -273,9 +163,9 @@ impl Scene	{
 		self.grid.clear();
 		self.field.clear();
 		// hero
-		self.hero.member.spawn( Point2::new(7,2), &mut self.field, &self.grid );
+		self.hero.spawn( 0, Point2::new(7,2), &mut self.field, &self.grid );
 		// boss
-		self.boss.member.spawn( Point2::new(5,5), &mut self.field, &self.grid );
+		self.boss.spawn( 1, Point2::new(5,5), &mut self.field, &self.grid );
 	}
 
 	fn update_matrices( &mut self, aspect : f32 )	{
@@ -284,9 +174,9 @@ impl Scene	{
 		for ent in all_ents.move_iter()	{
 			let d = &mut ent.data;
 			self.view.cam.fill_data( d, aspect );
-			d.insert( ~"u_LightPos",	gr_low::shade::UniFloatVec(light_pos) );
-			let world = ent.node.world_space().to_mat4();
-			d.insert( ~"u_World",		gr_low::shade::UniMatrix(false,world) );
+			d.set( ~"u_LightPos",	gr_low::shade::UniFloatVec(light_pos) );
+			let world = ent.node.borrow().with( |n| n.world_space().to_mat4() );
+			d.set( ~"u_World",		gr_low::shade::UniMatrix(false,world) );
 		}
 	}
 
@@ -313,7 +203,9 @@ impl Scene	{
 						self.hero.brain.move( pos );
 					},
 					&field::CellPart(mk,_) =>	{
-						if pos!=self.hero.member.location && mk == self.hero.member.key	{
+						let hero_key = self.hero.member_key;
+						let hero_loc = self.field.get_member(hero_key).location;
+						if pos!=hero_loc && mk==hero_key	{
 							self.hero.brain.move( pos );
 						}else	{}	//attack
 					},
@@ -380,7 +272,7 @@ impl Scene	{
 		let c_land = tech.process( &self.land,				output.clone(), rast, &mut self.cache, gc, lg );
 		let c_hero = tech.process( &self.hero.member.entity,output.clone(), rast, &mut self.cache, gc, lg );
 		let c_boss = tech.process( &self.boss.member.entity,output.clone(), rast, &mut self.cache, gc, lg );
-		let c_grid = self.grid.draw( output.clone(), self.land.input.va );
+		let c_grid = self.grid.draw( output.clone(), self.land.input.va.clone() );
 		gc.flush( [c0,c_land,c_hero,c_boss,c_grid], lg );
 		lg.add("=== HUD ===");
 		let hud_calls = hc.draw_all( &self.hud, output );
@@ -418,12 +310,12 @@ pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon 
 				Quat::new( 0.802f32, 0.447f32, 0.198f32, 0.343f32 ),
 				Vec3::new( 10f32, -10f32, 5f32 )
 			);
-			let cam_node = @mut engine::space::Node{
+			let cam_node = engine::space::Node{
 				name	: ~"cam",
 				space	: cam_space,
 				parent	: None,
 				actions	: ~[],
-			};
+			}.to_ptr();
 			scene::common::Camera{
 				node	: cam_node,
 				proj	: projection::PerspectiveFov{
@@ -439,7 +331,7 @@ pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon 
 			let axis = Vec3::new( 0f32, 0f32, 1f32 );
 			let angle = angle::deg( (i as f32) * 180f32 / 4f32 );
 			let q = Quat::from_axis_angle( &axis, angle.to_rad() );
-			let cs = cam.node.space;
+			let cs = cam.node.borrow().borrow().get().space;
 			engine::space::make( cs.scale,
 				q.mul_q( &cs.rot ),
 				q.mul_v( &cs.disp ))
@@ -462,24 +354,24 @@ pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon 
 	let hero = {
 		let ent = scene.entities.exclude( &"Player" ).expect("No player found");
 		let skel = *scene.context.armatures.get( &~"Armature" );
-		let mem = Character{
+		let rec = skel.borrow().with(|s| s.find_record("ArmatureBossAction")).
+			expect("Hero has to have Idle");
+		let mem = unit::Standard{
 			name	: ~"Clare",
-			key		: 0,
-			team	: 0,
-			body	: field::Limb{ key: (field::LimbBody,0), health: 100, node: ent.node },
+			body	: unit::Limb{ health: 100, node: ent.node },
 			move_speed	: 5.0,
+			turn_speed	: 5.0,
 			entity		: ent,
 			skeleton	: skel,
-			record		: skel.find_record("ArmatureBossAction").expect("Hero has to have Idle"),
-			location	: Point2::new(0i,0i),
-			orientation	: 0,
+			record		: rec,
 			elevation	: 1.5,
 		};
-		let brain : ~think::Player<Character> = ~think::Player::new();
+		let brain : ~think::Player<unit::Standard> = ~think::Player::new();
 		CharBundle	{
-			brain	: brain,
-			member	: @mut mem,
-			motion	: ~think::motion::Idle as ~think::Motion,
+			brain		: brain,
+			member		: mem,
+			member_key	: 0,
+			motion		: ~think::motion::Idle as ~think::Motion,
 			last_update	: 0.0,
 		}
 	};
@@ -487,25 +379,24 @@ pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon 
 	let boss = {
 		let ent = scene.entities.exclude( &"Boss" ).expect("No player found");
 		let skel = *scene.context.armatures.get( &~"ArmatureBoss" );
-		let mem = Boss{
+		let rec = skel.borrow().with(|s| s.find_record("ArmatureBossAction")).
+			expect("Boss has to have Idle");
+		let mem = unit::Standard{
 			name	: ~"Boss",
-			key		: 0,
-			team	: 1,
-			body	: field::Limb{ key: (field::LimbBody,0), health: 300, node: ent.node },
+			body	: unit::Limb{ health: 300, node: ent.node },
 			move_speed	: 1.0,
 			turn_speed	: 1.0,
 			entity		: ent,
 			skeleton	: skel,
-			record		: skel.find_record("ArmatureBossAction").expect("Boss has to have Idle"),
-			location	: Point2::new(0i,0i),
-			orientation	: 0,
+			record		: rec,
 			elevation	: 1.5,
 		};
-		let brain : ~think::Monster<Boss> = ~think::Monster::new();
+		let brain : ~think::Monster<unit::Standard> = ~think::Monster::new();
 		CharBundle	{
-			brain	: brain,
-			member	: @mut mem,
-			motion	: ~think::motion::Idle as ~think::Motion,
+			brain		: brain,
+			member		: mem,
+			member_key	: 0,
+			motion		: ~think::motion::Idle as ~think::Motion,
 			last_update	: 0.0,
 		}
 	};

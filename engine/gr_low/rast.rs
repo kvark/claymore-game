@@ -11,7 +11,7 @@ pub struct Color	{
 }
 
 impl Color	{
-	pub fn new( hex : uint )-> Color	{
+	pub fn new( hex: uint )-> Color	{
 		let k = 1f32/255f32;
 		Color{
 			r	: (((hex>>24)&0xFF) as f32) * k,
@@ -21,7 +21,7 @@ impl Color	{
 		}
 	}
 	
-	pub fn from_array3( a : &[f32] )-> Color	{
+	pub fn from_array3( a: &[f32] )-> Color	{
 		Color{
 			r	: a[0],
 			g	: a[1],
@@ -38,7 +38,7 @@ pub trait Stage	{
 }
 
 
-fn set_state( state : gl::types::GLenum, on : bool )	{
+fn set_state( state: gl::types::GLenum, on: bool )	{
 	if on	{
 		gl::Enable( state );
 	}else	{
@@ -46,31 +46,30 @@ fn set_state( state : gl::types::GLenum, on : bool )	{
 	}
 }
 
-fn ask_state( state : gl::types::GLenum )-> bool	{
+fn ask_state( state: gl::types::GLenum )-> bool	{
 	gl::IsEnabled( state ) == gl::TRUE
 }
 
 
-#[deriving(Clone)]
+#[deriving(Clone,Eq)]
 pub struct Viewport( frame::Rect );
 
 impl Stage for Viewport	{
-	fn activate( &mut self, new : &Viewport, _poly : uint )	{
-		if **self == **new 	{return}
-		**self = **new;
-		gl::Viewport( new.x as gl::types::GLint, new.y as gl::types::GLint,
-			new.w as gl::types::GLsizei, new.h as gl::types::GLsizei );
+	fn activate( &mut self, new: &Viewport, _poly: uint )	{
+		if *self == *new 	{return}
+		let &Viewport(ref rect) = new;
+		*self = Viewport(*rect);
+		gl::Viewport( rect.x as gl::types::GLint, rect.y as gl::types::GLint,
+			rect.w as gl::types::GLsizei, rect.h as gl::types::GLsizei );
 	}
 	fn verify( &self )	{
 		let mut v = vec::from_elem( 4, 0 as gl::types::GLint );
 		unsafe	{
 			gl::GetIntegerv( gl::VIEWPORT, v.as_mut_ptr() );
 		}
-		assert!(
-			self.x == v[0] as uint &&
-			self.y == v[1] as uint &&
-			self.w == v[2] as uint &&
-			self.h == v[3] as uint );
+		let rect = frame::Rect{ x:v[0] as uint, y:v[1] as uint,
+			w:v[2] as uint, h:v[3] as uint };
+		assert_eq!( *self, Viewport(rect) );
 	}
 }
 
@@ -95,7 +94,7 @@ impl Primitive	{
 	}
 }
 
-pub fn map_poly_mode( dim : uint )-> gl::types::GLenum	{
+pub fn map_poly_mode( dim: uint )-> gl::types::GLenum	{
 	match dim	{
 		1	=> gl::POINT,
 		2	=> gl::LINE,
@@ -105,7 +104,7 @@ pub fn map_poly_mode( dim : uint )-> gl::types::GLenum	{
 }
 
 impl Stage for Primitive	{
-	fn activate( &mut self, new : &Primitive, poly : uint )	{
+	fn activate( &mut self, new: &Primitive, poly: uint )	{
 		if poly == 3u	{
 			if self.poly_mode != new.poly_mode	{
 				self.poly_mode = new.poly_mode;
@@ -161,7 +160,7 @@ pub struct Offset	{
 }
 
 impl Stage for Offset	{
-	fn activate( &mut self, new : &Offset, poly : uint )	{
+	fn activate( &mut self, new: &Offset, poly: uint )	{
 		if poly == 3u && self.on_fill != new.on_fill 	{
 			self.on_fill = new.on_fill;
 			set_state( gl::POLYGON_OFFSET_FILL, new.on_fill )
@@ -207,7 +206,7 @@ pub struct Scissor	{
 }
 
 impl Stage for Scissor	{
-	fn activate( &mut self, new : &Scissor, _poly : uint )	{
+	fn activate( &mut self, new: &Scissor, _poly: uint )	{
 		if self.test != new.test	{
 			self.test = new.test;
 			set_state( gl::SCISSOR_TEST, new.test );
@@ -241,7 +240,7 @@ pub struct Multisample	{
 }
 
 impl Stage for Multisample	{
-	fn activate( &mut self, new : &Multisample, _poly : uint )	{
+	fn activate( &mut self, new: &Multisample, _poly: uint )	{
 		if self.on != new.on	{
 			self.on = new.on;
 			set_state( gl::MULTISAMPLE, new.on );
@@ -296,7 +295,7 @@ impl StencilSide	{
 		}
 	}
 
-	pub fn activate( &mut self, new : &StencilSide, side : gl::types::GLenum )	{
+	pub fn activate( &mut self, new: &StencilSide, side: gl::types::GLenum )	{
 		if self.function!=new.function || self.ref_value!=new.ref_value || self.read_mask!=new.read_mask	{
 			self.function = new.function;
 			self.ref_value = new.ref_value;
@@ -321,7 +320,7 @@ pub struct Stencil	{
 }
 
 impl Stage for Stencil	{
-	fn activate( &mut self, new : &Stencil, _poly : uint )	{
+	fn activate( &mut self, new: &Stencil, _poly: uint )	{
 		if self.test != new.test	{
 			self.test = new.test;
 			set_state( gl::STENCIL_TEST, new.test );
@@ -377,7 +376,7 @@ pub struct Depth	{
 }
 
 impl Stage for Depth	{
-	fn activate( &mut self, new : &Depth, _poly : uint )	{
+	fn activate( &mut self, new: &Depth, _poly: uint )	{
 		if self.test != new.test	{
 			self.test = new.test;
 			set_state( gl::DEPTH_TEST, new.test );
@@ -420,7 +419,7 @@ impl BlendChannel	{
 		BlendChannel{ equation:gl::FUNC_ADD, source:gl::ONE, destination:gl::ZERO }
 	}
 
-	pub fn verify( &self, we : gl::types::GLenum, ws : gl::types::GLenum, wd : gl::types::GLenum )	{
+	pub fn verify( &self, we: gl::types::GLenum, ws: gl::types::GLenum, wd: gl::types::GLenum )	{
 		let mut v = vec::from_elem( 3, 0 as gl::types::GLint );
 		unsafe	{
 			gl::GetIntegerv( we, ptr::to_mut_unsafe_ptr(&mut v[0]) );
@@ -443,7 +442,7 @@ pub struct Blend	{
 }
 
 impl Stage for Blend	{
-	fn activate( &mut self, new : &Blend, _poly : uint )	{
+	fn activate( &mut self, new: &Blend, _poly: uint )	{
 		if self.on != new.on	{
 			self.on = new.on;
 			set_state( gl::BLEND, new.on );
@@ -508,7 +507,7 @@ pub struct Mask	{
 }
 
 impl Stage for Mask	{
-	fn activate( &mut self, new : &Mask, _poly : uint )	{
+	fn activate( &mut self, new: &Mask, _poly: uint )	{
 		if self.stencil_front != new.stencil_front || self.stencil_back != new.stencil_back	{
 			self.stencil_front = new.stencil_front;
 			self.stencil_back = new.stencil_back;
@@ -568,7 +567,7 @@ pub struct State	{
 
 impl Stage for State	{
 	//FIXME
-	fn activate( &mut self, new : &State, p0 : uint )	{
+	fn activate( &mut self, new: &State, p0: uint )	{
 		self.view	.activate( &new.view,		p0 );
 		self.prime	.activate( &new.prime,		p0 );
 		let p1 = if p0==3u	{
@@ -597,11 +596,11 @@ impl Stage for State	{
 }
 
 
-pub fn map_polygon_fill( dim : int )-> gl::types::GLenum	{
+pub fn map_polygon_fill( dim: int )-> gl::types::GLenum	{
 	[gl::POINT,gl::LINE,gl::FILL][dim-1]
 }
 
-pub fn map_comparison( s : &str )-> gl::types::GLenum	{
+pub fn map_comparison( s: &str )-> gl::types::GLenum	{
 	match s	{
 		"!"		=> gl::NEVER,
 		"*"		=> gl::ALWAYS,
@@ -615,7 +614,7 @@ pub fn map_comparison( s : &str )-> gl::types::GLenum	{
 	}
 }
 
-pub fn map_operation( c : char )-> gl::types::GLenum	{
+pub fn map_operation( c: char )-> gl::types::GLenum	{
 	match c	{
 		'.'	=> gl::KEEP,
 		'0'	=> gl::ZERO,
@@ -629,7 +628,7 @@ pub fn map_operation( c : char )-> gl::types::GLenum	{
 	}
 }
 
-pub fn map_equation( s : &str )-> gl::types::GLenum	{
+pub fn map_equation( s: &str )-> gl::types::GLenum	{
 	match s	{
 		"s+d"	=> gl::FUNC_ADD,
 		"s-d"	=> gl::FUNC_SUBTRACT,
@@ -640,7 +639,7 @@ pub fn map_equation( s : &str )-> gl::types::GLenum	{
 	}
 }
 
-pub fn map_factor( s : &str )-> gl::types::GLenum	{
+pub fn map_factor( s: &str )-> gl::types::GLenum	{
 	match s	{
 		"0"		=> gl::ZERO,
 		"1"		=> gl::ONE,
@@ -663,14 +662,14 @@ pub fn map_factor( s : &str )-> gl::types::GLenum	{
 
 
 impl State	{
-	pub fn set_offset( &mut self, value : f32 )	{
+	pub fn set_offset( &mut self, value: f32 )	{
 		self.offset.on_fill	= true;
 		self.offset.on_line	= true;
 		self.offset.on_point= true;
 		self.offset.factor	= value;
 		self.offset.units	= value;
 	}
-	pub fn set_stencil( &mut self, fun : &str, cf : char, cdf : char, cp : char, mask : int )	{
+	pub fn set_stencil( &mut self, fun: &str, cf: char, cdf: char, cp: char, mask: int )	{
 		self.stencil.test = true;
 		self.stencil.front.function			= map_comparison(fun);
 		self.stencil.front.op_fail			= map_operation(cf);
@@ -680,12 +679,12 @@ impl State	{
 		self.mask.stencil_front = mask;
 		self.mask.stencil_back = mask;
 	}
-	pub fn set_depth( &mut self, fun : &str, mask : bool )	{
+	pub fn set_depth( &mut self, fun: &str, mask: bool )	{
 		self.depth.test = true;
 		self.depth.fun = map_comparison(fun);
 		self.mask.depth = mask;
 	}
-	pub fn set_blend( &mut self, eq : &str, src : &str, dst : &str )	{
+	pub fn set_blend( &mut self, eq: &str, src: &str, dst: &str )	{
 		self.blend.on = true;
 		self.blend.color.equation	= map_equation(eq);
 		self.blend.color.source		= map_factor(src);
@@ -697,7 +696,7 @@ impl State	{
 
 // Creates a default GL context rasterizer state
 // make sure to verify that it matches GL specification
-pub fn make_default( wid : uint, het : uint )-> State	{
+pub fn make_default( wid: uint, het: uint )-> State	{
 	State{
 		view : Viewport( frame::Rect::new(wid,het) ),
 		prime : Primitive{
