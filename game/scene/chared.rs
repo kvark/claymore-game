@@ -22,7 +22,7 @@ use scene;
 
 struct Envir	{
 	input	: gr_mid::call::Input,
-	prog	: @gr_low::shade::Program,
+	prog	: gr_low::shade::ProgramPtr,
 	data	: gr_low::shade::DataMap,
 	rast	: gr_low::rast::State,
 }
@@ -92,7 +92,7 @@ pub struct Scene	{
 	start	: anim::float,
 	hud_screen	: hud::Screen,
 	hud_context	: hud::Context,
-	hud_debug	: @gr_low::shade::Program,
+	hud_debug	: gr_low::shade::ProgramPtr,
 	edit_label	: hud::EditLabelPtr,
 	mouse_point	: (int,int),
 	input_queue	: ~str,
@@ -189,7 +189,7 @@ impl Scene	{
 		let c1 = if el.environment	{
 			let e = &self.envir;
 			gr_mid::call::CallDraw(
-				e.input.clone(), output.clone(), e.rast, e.prog, e.data.clone() )
+				e.input.clone(), output.clone(), e.rast, e.prog.clone(), e.data.clone() )
 		}else	{
 			gr_mid::call::CallEmpty
 		};
@@ -294,7 +294,7 @@ impl Scene	{
 			self.hud_screen.root.trace(x,y,	|frame,depth| {
 				if depth==0u && frame.element.get_size()!=(0,0)	{
 					let call = frame.draw_debug( &self.hud_context,
-							self.hud_debug, &mut data, &rast );
+						&self.hud_debug, &mut data, &rast );
 					queue.push(call);
 				}
 			});
@@ -307,7 +307,7 @@ impl Scene	{
 				let vc = Vec4::new(1f32,0f32,0f32,1f32);
 				data.set( ~"u_Color", gr_low::shade::UniFloatVec(vc) );
 				self.hud_screen.root.draw_debug_all( &self.hud_context,
-					self.hud_debug, &mut data, &rast )
+					&self.hud_debug, &mut data, &rast )
 			});
 		}
 		gc.flush( queue, lg );

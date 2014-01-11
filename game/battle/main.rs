@@ -91,7 +91,7 @@ impl<M: Member + 'static, B: think::Brain<M>> CharBundle<M,B>	{
 
 
 impl unit::Standard	{
-	pub fn update_view( &mut self, _time : anim::float )	{
+	pub fn update_view( &mut self, _time: anim::float )	{
 		/*	FIXME
 		let mut moment  = time - self.start_time;
 		if moment>self.record.duration	{
@@ -116,7 +116,7 @@ pub struct View	{
 }
 
 impl View	{
-	pub fn move( &mut self, dir : int, time : anim::float )-> bool	{
+	pub fn move( &mut self, dir: int, time: anim::float )-> bool	{
 		if dir!=0 && time > self.start_time + 0.5	{
 			let l = self.points.len() as int;
 			self.destination = (((self.destination as int) + dir + l) % l) as uint;
@@ -126,7 +126,7 @@ impl View	{
 		}else	{false}
 	}
 
-	pub fn update( &mut self, time : anim::float )	{
+	pub fn update( &mut self, time: anim::float )	{
 		match self.source	{
 			Some(source)	=>	{
 				let moment = (time - self.start_time) / self.trans_duration;
@@ -158,7 +158,7 @@ pub struct Scene	{
 }
 
 impl Scene	{
-	pub fn reset( &mut self, _time : anim::float )	{
+	pub fn reset( &mut self, _time: anim::float )	{
 		// common
 		self.grid.clear();
 		self.field.clear();
@@ -168,7 +168,7 @@ impl Scene	{
 		self.boss.spawn( 1, Point2::new(5,5), &mut self.field, &self.grid );
 	}
 
-	fn update_matrices( &mut self, aspect : f32 )	{
+	fn update_matrices( &mut self, aspect: f32 )	{
 		let light_pos	= Vec4::new( 4f32, 1f32, 6f32, 1f32 );
 		let all_ents = ~[&mut self.land, &mut self.hero.member.entity, &mut self.boss.member.entity];
 		for ent in all_ents.move_iter()	{
@@ -180,12 +180,12 @@ impl Scene	{
 		}
 	}
 
-	fn ray_cast( &self, state : &input::State )-> grid::Location	{
+	fn ray_cast( &self, state: &input::State )-> grid::Location	{
 		let m = [state.mouse[0] as f32, state.mouse[1] as f32];
 		self.grid.ray_cast( &self.view.cam, state.aspect as f32, &m )
 	}
 
-	pub fn on_input( &mut self, event : &input::Event, state : &input::State )	{
+	pub fn on_input( &mut self, event: &input::Event, state: &input::State )	{
 		let hero_command = self.hero.is_waiting();
 		match event	{
 			&input::EvKeyboard(key,press) if press	=> {
@@ -234,13 +234,14 @@ impl Scene	{
 		}
 	}
 	
-	pub fn update( &mut self, time : anim::float, lg : &engine::journal::Log )	{
+	pub fn update( &mut self, time: anim::float, lg: &engine::journal::Log )	{
+		lg.add(format!( "Frame at {}", time  ));
 		self.hero.update( time, &mut self.field, &self.grid, lg );
 		self.boss.update( time, &mut self.field, &self.grid, lg );
 	}
 
-	pub fn render( &mut self, output : &gr_mid::call::Output, tech : &gr_mid::draw::Technique,
-			gc : &mut gr_low::context::Context, hc : &hud::Context, lg : &engine::journal::Log )	{
+	pub fn render( &mut self, output: &gr_mid::call::Output, tech: &gr_mid::draw::Technique,
+			gc: &mut gr_low::context::Context, hc: &hud::Context, lg: &engine::journal::Log )	{
 		// update grid
 		if self.field_revision != self.field.get_revision()	{
 			self.grid.clear();
@@ -269,17 +270,17 @@ impl Scene	{
 		let mut rast = gc.default_rast;
 		rast.set_depth( "<=", true );
 		rast.prime.cull = true;
-		let c_land = tech.process( &self.land,				output.clone(), rast, &mut self.cache, gc, lg );
-		let c_hero = tech.process( &self.hero.member.entity,output.clone(), rast, &mut self.cache, gc, lg );
-		let c_boss = tech.process( &self.boss.member.entity,output.clone(), rast, &mut self.cache, gc, lg );
+		let c_land = tech.process( &self.land,					output.clone(), rast, &mut self.cache, gc, lg );
+		let c_hero = tech.process( &self.hero.member.entity,	output.clone(), rast, &mut self.cache, gc, lg );
+		let c_boss = tech.process( &self.boss.member.entity,	output.clone(), rast, &mut self.cache, gc, lg );
 		let c_grid = self.grid.draw( output.clone(), self.land.input.va.clone() );
-		gc.flush( [c0,c_land,c_hero,c_boss,c_grid], lg );
+		gc.flush( ~[c0,c_land,c_hero,c_boss,c_grid], lg );
 		lg.add("=== HUD ===");
 		let hud_calls = hc.draw_all( &self.hud, output );
 		gc.flush( hud_calls, lg );
 	}
 	
-	pub fn debug_move( &self, _rot : bool, _x : int, _y : int )	{
+	pub fn debug_move( &self, _rot: bool, _x: int, _y: int )	{
 		//empty
 	}
 
@@ -301,7 +302,8 @@ impl Scene	{
 }
 
 
-pub fn create( gc : &mut gr_low::context::Context, hc : &mut hud::Context, fcon : &gr_mid::font::Context, lg : &engine::journal::Log )-> Scene	{
+pub fn create( gc: &mut gr_low::context::Context, hc: &mut hud::Context,
+		fcon: &gr_mid::font::Context, lg: &engine::journal::Log )-> Scene	{
 	// create view
 	let view = 	{
 		// create camera

@@ -149,7 +149,7 @@ pub enum Call	{
 	CallEmpty,
 	CallClear( ClearData, Output, rast::Mask ),
 	CallBlit( Output, Output ),
-	CallDraw( Input, Output, rast::State, @shade::Program, shade::DataMap ),
+	CallDraw( Input, Output, rast::State, shade::ProgramPtr, shade::DataMap ),
 	CallTransfrom(),	//TODO
 }
 
@@ -180,11 +180,13 @@ impl Call	{
 				src.log( "Src", lg );
 				dst.log( "Dst", lg );
 			},
-			&CallDraw(ref inp, ref out, ref _rast, prog, ref data )	=>	{
+			&CallDraw(ref inp, ref out, ref _rast, ref prog, ref data )	=>	{
 				lg.add("Call draw");
 				inp.log( lg );
 				out.log( "Output", lg );
-				let shade::ProgramHandle(han) = prog.handle;
+				let han = prog.borrow().with(|p|	{
+					let shade::ProgramHandle(h) = p.handle; h
+				});
 				lg.add(format!( "\tProgram={}", han ));
 				data.log( lg );
 			},
@@ -194,10 +196,10 @@ impl Call	{
 		}
 	}
 
-	pub fn execute( &self, gc: &mut context::Context )	{
+	pub fn execute( self, gc: &mut context::Context )	{
 		match self	{
-			&CallEmpty => {},
-			&CallClear(ref cdata, ref out, ref mask)	=> {
+			CallEmpty => {},
+			CallClear(cdata, out, mask)	=> {
 				let mut colors : ~[frame::Target] = ~[];
 				for (_,&target) in out.pmap.colors.iter()	{
 					colors.push( target );
@@ -209,7 +211,7 @@ impl Call	{
 				let has_color = colors.len()!=0 && (is_main_fb || colors[0]!=frame::TarEmpty);
 				gc.bind_frame_buffer( out.fb.clone(), true, out.pmap.stencil, out.pmap.depth, colors );
 				gc.rast.scissor.activate( &out.gen_scissor(), 0 );
-				gc.rast.mask.activate( mask, 0 );
+				gc.rast.mask.activate( &mask, 0 );
 				let mut flags = 0 as gl::types::GLenum;
 				//FIXME: cache this
 				match cdata.color	{
@@ -238,7 +240,7 @@ impl Call	{
 				}
 				gl::Clear( flags );
 			},
-			&CallBlit(ref src, ref dst)	=>	{
+			CallBlit(src, dst)	=>	{
 				assert!( !src.fb.ptr_eq( &dst.fb ) );
 				// bind frame buffers
 				gc.bind_frame_buffer( src.fb.clone(), false, src.pmap.stencil, src.pmap.depth,
@@ -271,22 +273,21 @@ impl Call	{
 					0, 0, sizeB[0] as gl::types::GLint, sizeB[1] as gl::types::GLint,
 					flags, filter );
 			},
-			&CallDraw(ref inp, ref out, ref rast, prog, ref data)	=> {
+			CallDraw(inp, out, mut rast, prog, data)	=> {
 				// bind FBO
 				let mut attaches = std::vec::from_elem( out.pmap.colors.len(), frame::TarEmpty );
 				for (name,target) in out.pmap.colors.iter()	{
-					let loc = prog.find_output( name );
+					let loc = prog.borrow().with(|p| p.find_output( name ));
 					assert!( loc < attaches.len() && attaches[loc] == frame::TarEmpty );
 					attaches[loc] = *target;
 				}
 				gc.bind_frame_buffer( out.fb.clone(), true, out.pmap.stencil, out.pmap.depth, attaches );
 				// check & activate raster
-				let mut r2 = *rast;
-				r2.scissor = out.gen_scissor();
-				gc.rast.activate( &r2, inp.mesh.get_poly_size() );
+				rast.scissor = out.gen_scissor();
+				gc.rast.activate( &rast, inp.mesh.get_poly_size() );
 				//assert_eq!( out.area, *gc.rast.view );
 				// draw
-				gc.draw_mesh( inp, prog, data );
+				gc.draw_mesh( &inp, prog, &data );
 			},
 			_	=> fail!(~"Unsupported call!")
 		}
@@ -295,9 +296,9 @@ impl Call	{
 
 
 impl context::Context	{
-	pub fn flush( &mut self, queue: &[Call], lg: &journal::Log )	{
+	pub fn flush( &mut self, queue: ~[Call], lg: &journal::Log )	{
 		self.call_count += queue.len();
-		for call in queue.iter()	{
+		for call in queue.move_iter()	{
 			if lg.enable	{
 				call.log( lg );
 			}

@@ -147,6 +147,7 @@ impl Font	{
 		struct Target	{ c:char, x:int, y:int }
 		let (limit_x,limit_y) = max_size;
 		let FaceHandle(fh) = self.face;
+		lg.add(format!( "\t->handle: {}", fh ));
 		let face = unsafe{&*fh};
 		let line_gap = (self.line_offset as int) + (face.height as int);
 		let mut position = 0;	// in font units

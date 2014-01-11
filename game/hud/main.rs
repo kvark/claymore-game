@@ -13,7 +13,7 @@ use gen = gen_hud::common;
 
 
 
-pub fn get<T>( children : &[gen::Child], path : &str, fun : |&str,&gen::Element|->T )-> T	{
+pub fn get<T>( children: &[gen::Child], path: &str, fun: |&str,&gen::Element|->T )-> T	{
 	let slash = path.find('/');
 	let name = match slash	{
 		Some(p)	=> path.slice_to(p),
@@ -36,7 +36,7 @@ pub fn get<T>( children : &[gen::Child], path : &str, fun : |&str,&gen::Element|
 	fail!("Hud child not found: {:s}", name)
 }
 
-pub fn modify( children : &mut ~[gen::Child], path : &str, fun : |&str,&mut gen::Element| )	{
+pub fn modify( children: &mut ~[gen::Child], path: &str, fun: |&str,&mut gen::Element| )	{
 	let slash = path.find('/');
 	let name = match slash	{
 		Some(p)	=> path.slice_to(p),
@@ -71,9 +71,9 @@ struct FontCache	{
 pub struct Context	{
 	input	: call::Input,
 	rast	: rast::State,
-	program_solid	: @shade::Program,
-	program_image	: @shade::Program,
-	program_text	: @shade::Program,
+	program_solid	: shade::ProgramPtr,
+	program_image	: shade::ProgramPtr,
+	program_text	: shade::ProgramPtr,
 	sampler_image	: texture::Sampler,
 	sampler_text	: texture::Sampler,
 	cache_images	: HashMap<gen::Path,@texture::Texture>,
@@ -81,7 +81,7 @@ pub struct Context	{
 }
 
 impl Context	{
-	pub fn create( gc : &mut engine::gr_low::context::Context, lg : &engine::journal::Log )-> Context	{
+	pub fn create( gc: &mut engine::gr_low::context::Context, lg: &engine::journal::Log )-> Context	{
 		let mut hud_rast = gc.default_rast;
 		hud_rast.set_blend( "s+d", "Sa", "1-Sa" );
 		let vao = gc.create_vertex_array();
@@ -99,7 +99,7 @@ impl Context	{
 		}
 	}
 
-	pub fn preload_font<'a>( &'a mut self, font : &gen::Font, fcon : &font::Context, lg : &engine::journal::Log )-> &'a mut FontCache	{
+	pub fn preload_font<'a>( &'a mut self, font: &gen::Font, fcon: &font::Context, lg: &engine::journal::Log )-> &'a mut FontCache	{
 		self.cache_fonts.find_or_insert_with( font.clone(), |f|	{
 			let path = ~"data/font/" + f.path;
 			FontCache	{
@@ -109,8 +109,8 @@ impl Context	{
 		})
 	}
 
-	pub fn preload( &mut self, children : &[gen::Child], gcon : &mut engine::gr_low::context::Context,
-			fcon : &font::Context, lg : &engine::journal::Log )	{
+	pub fn preload( &mut self, children: &[gen::Child], gcon: &mut engine::gr_low::context::Context,
+			fcon: &font::Context, lg: &engine::journal::Log )	{
 		for &gen::Child(_,ref elem) in children.iter()	{
 			match elem	{
 				&gen::ElBox(_, _, ref bx)	=> self.preload( bx.children, gcon, fcon, lg ),
@@ -132,16 +132,16 @@ impl Context	{
 		}
 	}
 
-	fn make_call( &self, prog : @shade::Program, data : shade::DataMap,
-			output : &call::Output, rast_override : Option<rast::State> )-> call::Call	{
+	fn make_call( &self, prog: &shade::ProgramPtr, data: shade::DataMap,
+			output: &call::Output, rast_override: Option<rast::State> )-> call::Call	{
 		let rast = match rast_override	{
 			Some(r)	=> r,
 			None	=> self.rast,
 		};
-		call::CallDraw( self.input.clone(), output.clone(), rast, prog, data )
+		call::CallDraw( self.input.clone(), output.clone(), rast, prog.clone(), data )
 	}
 
-	fn transform( &self, r : &Rect, screen_size : &gen::Vector )-> shade::Uniform	{
+	fn transform( &self, r: &Rect, screen_size: &gen::Vector )-> shade::Uniform	{
 		let dx = 2f32 / (screen_size[0] as f32);
 		let dy = 2f32 / (screen_size[1] as f32);
 		let vt = Vec4::new(
@@ -154,7 +154,7 @@ impl Context	{
 		shade::UniFloatVec(vt)
 	}
 
-	pub fn get_size( &self, elem : &gen::Element )-> gen::Vector	{
+	pub fn get_size( &self, elem: &gen::Element )-> gen::Vector	{
 		match elem	{
 			&gen::ElImage(ref path)	=>	{
 				let t = self.cache_images.get( path );
@@ -170,7 +170,7 @@ impl Context	{
 		}
 	}
 
-	pub fn draw_all( &self, screen : &gen::Screen, out : &call::Output )-> ~[call::Call]	{
+	pub fn draw_all( &self, screen: &gen::Screen, out: &call::Output )-> ~[call::Call]	{
 		let size = [out.area.w, out.area.h];
 		self.draw( &screen.root, out.area, out, &size )
 	}
@@ -184,8 +184,8 @@ impl Context	{
 			))
 	}
 
-	pub fn draw( &self, bx : &gen::Box, area : Rect, out : &call::Output,
-			screen_size : &gen::Vector )-> ~[call::Call]	{
+	pub fn draw( &self, bx: &gen::Box, area: Rect, out: &call::Output,
+			screen_size: &gen::Vector )-> ~[call::Call]	{
 		let mut off : gen::Vector = [area.x,area.y];
 		let mut calls : ~[call::Call] = ~[];
 		for &gen::Child(_,ref element) in bx.children.iter()	{
@@ -200,7 +200,7 @@ impl Context	{
 					let vc = Vec4::new( 0f32, 0f32, 1f32, 1f32 );
 					data.set( ~"u_Center",		shade::UniFloatVec(vc) );
 					data.set( ~"u_Transform",	self.transform(&rect,screen_size) );
-					calls.push( self.make_call( self.program_image, data, out, None ));
+					calls.push( self.make_call( &self.program_image, data, out, None ));
 					[t.width,t.height]
 				},
 				&gen::ElText(ref text)	=>	{
@@ -215,7 +215,7 @@ impl Context	{
 					let dr = Rect{ x:off[0], y:off[1], w:t.width, h:t.height };
 					data.set( ~"u_Transform", self.transform(&dr,screen_size) );
 					// return
-					calls.push( self.make_call( self.program_text, data, out, None ));
+					calls.push( self.make_call( &self.program_text, data, out, None ));
 					[t.width,t.height]
 				},
 				&gen::ElSpace(space)	=> space,
@@ -245,14 +245,14 @@ impl Context	{
 			gen::GroundNone	=> call::CallEmpty,
 			gen::GroundSolid( color )	=> {
 				data.set( ~"u_Color", 	Context::get_color_param(color) );
-				self.make_call( self.program_solid, data, out, None )
+				self.make_call( &self.program_solid, data, out, None )
 			},
 			gen::GroundFrame( color, size )	=> {
 				data.set( ~"u_Color", 	Context::get_color_param(color) );
 				let mut rast = self.rast.clone();
 				rast.prime.poly_mode = rast::map_poly_mode(2);
 				rast.prime.line_width = size as f32;
-				self.make_call( self.program_solid, data, out, Some(rast) )
+				self.make_call( &self.program_solid, data, out, Some(rast) )
 			},
 			gen::GroundImage( ref _path, ref _center )	=> {
 				call::CallEmpty	//TODO

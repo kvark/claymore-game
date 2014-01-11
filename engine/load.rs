@@ -160,7 +160,7 @@ pub fn read_space( br: &mut Reader )-> space::Space	{
 	space::make( d[3], Quat::new(d[7],d[4],d[5],d[6]), Vec3::new(d[0],d[1],d[2]) )
 }
 
-pub fn load_program( ct: &context::Context, path: &str, lg: &journal::Log )-> @shade::Program	{
+pub fn load_program( ct: &context::Context, path: &str, lg: &journal::Log )-> shade::ProgramPtr	{
 	lg.add(format!( "Loading program: {:s}", path ));
 	let sv = ct.create_shader( 'v', load_text( path + ".glslv" ));
 	let sf = ct.create_shader( 'f', load_text( path + ".glslf" ));

@@ -34,7 +34,7 @@ pub mod motion	{
 	pub struct Idle();
 	impl think::Motion for Idle	{
 		fn get_name<'a>( &'a self )-> &'a str	{ "Idle" }
-		fn update( &mut self, _m : &mut main::Member, _delta : anim::float, _field: &mut field::Field, _grid : &grid::Grid )-> think::MotionStatus	{
+		fn update( &mut self, _m: &mut main::Member, _delta: anim::float, _field: &mut field::Field, _grid: &grid::Grid )-> think::MotionStatus	{
 			think::StatusCanInterrupt
 		}
 		fn stop( &mut self )	{}
@@ -51,7 +51,8 @@ pub mod motion	{
 	impl think::Motion for Move	{
 		fn get_name<'a>( &'a self )-> &'a str	{ "Move" }
 		
-		fn update( &mut self, m: &mut main::Member, full_delta : anim::float, field: &mut field::Field, grid : &grid::Grid )-> think::MotionStatus	{
+		fn update( &mut self, m: &mut main::Member, full_delta: anim::float, field: &mut field::Field, grid: &grid::Grid )-> think::MotionStatus	{
+			println!("Move start");
 			let mut delta = full_delta as f32;
 			let root = m.get_root();
 			let mut pos = root.borrow().with(|n| Point::from_vec( &n.space.disp ));
@@ -89,7 +90,11 @@ pub mod motion	{
 				}
 			}else {false};
 			
+			print!("Move in");
+			
 			root.borrow().with_mut( |n| {n.space.disp = pos.to_vec();} );
+			
+			print!("Move end");
 			
 			if done || self.destinations.is_empty()	{
 				think::StatusDone
@@ -109,7 +114,7 @@ pub mod motion	{
 	}
 	impl think::Motion for Attack	{
 		fn get_name<'a>( &'a self )-> &'a str	{ "Attack" }
-		fn update( &mut self, _m: &mut main::Member, _delta: anim::float, field: &mut field::Field, grid : &grid::Grid )-> think::MotionStatus	{
+		fn update( &mut self, _m: &mut main::Member, _delta: anim::float, field: &mut field::Field, grid: &grid::Grid )-> think::MotionStatus	{
 			let id = (grid as &grid::TopologyGrid).get_index( self.destination ).expect("Invalid attack target");
 			field.deal_damage( id, None, self.damage );
 			think::StatusDone

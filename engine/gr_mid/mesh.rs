@@ -1,6 +1,6 @@
 extern mod gl;
 
-use std::managed;
+use std::{borrow};
 use std::cell::RefCell;
 use std::hashmap::HashMap;
 
@@ -22,7 +22,7 @@ pub struct Mesh	{
 	poly_type	: gl::types::GLuint,
 	num_vert	: uint,
 	num_ind		: uint,
-	black_list	: RefCell<~[@gr_low::shade::Program]>,
+	black_list	: RefCell<~[gr_low::shade::ProgramPtr]>,
 }
 
 impl Mesh	{
@@ -119,31 +119,36 @@ impl gr_low::context::Context	{
 		}
 	}
 
-	pub fn draw_mesh( &mut self, inp: &gr_mid::call::Input, prog: @gr_low::shade::Program, data: &gr_low::shade::DataMap )-> bool	{
-		assert!({ let gr_low::buf::ArrayHandle(h) = inp.va.borrow().borrow().get().handle; h != 0 });
+	pub fn draw_mesh( &mut self, inp: &gr_mid::call::Input, prog: gr_low::shade::ProgramPtr, data: &gr_low::shade::DataMap )-> bool	{
+		println!("1");
+		assert!(inp.va.borrow().with( |va| {let gr_low::buf::ArrayHandle(h) = va.handle; h != 0} ));
 		// check black list
 		let mut black = inp.mesh.black_list.borrow_mut();
-		if black.get().iter().find( |&p| managed::ptr_eq(*p,prog) ).is_some()	{
+		if black.get().iter().find( |p| borrow::ref_eq(p.borrow(),prog.borrow()) ).is_some()	{
 			return false;
 		}
+		println!("2");
 		// bind program
-		let gr_low::shade::ProgramHandle(phan) = prog.handle;
-		if !self.bind_program( prog, data )	{
-			black.get().push( prog );
+		let phan = prog.borrow().with(|p|	{
+			let gr_low::shade::ProgramHandle(h) = p.handle; h
+		});
+		if !self.bind_program( &prog, data )	{
+			black.get().push( prog.clone() );
 			print!( "Unable to activate program {}{}\n", '#', phan );
 			return false;
 		}
+		println!("2.1");
 		// bind attributes
 		self.bind_vertex_array( inp.va.clone() );
-		let mut va_clean_mask = {
-			let va = inp.va.borrow().borrow();
-			va.get().get_mask()
-		};
-		for (name,pat) in prog.attribs.iter()	{
+		println!("2.2");
+		let mut va_clean_mask = inp.va.borrow().with(|v| v.get_mask());
+		println!("3");
+		let pborrow = prog.borrow().borrow();
+		for (name,pat) in pborrow.get().attribs.iter()	{
 			match inp.mesh.attribs.find(name)	{
 				Some(sat) => {
 					if !sat.compatible(pat)	{
-						black.get().push( prog );
+						black.get().push( prog.clone() );
 						print!( "Mesh attibute '{}' is incompatible with program {}{}\n",
 							*name, '#', phan );
 						return false;
@@ -152,13 +157,14 @@ impl gr_low::context::Context	{
 					self.bind_mesh_attrib( &inp.va, pat.loc, sat, pat.is_integer() );
 				},
 				None => {
-					black.get().push( prog );
+					black.get().push( prog.clone() );
 					print!( "Mesh '{}' doesn't contain required attribute '{}', needed for program {}{}\n",
 						inp.mesh.name, *name, '#', phan );
 					return false;
 				}
 			}
 		}
+		println!("4");
 		self.disable_mesh_attribs( &inp.va, va_clean_mask );
 		// call draw
 		match inp.mesh.index	{
@@ -176,6 +182,7 @@ impl gr_low::context::Context	{
 					inp.range.num as gl::types::GLsizei );
 			}
 		}
+		println!("5");
 		true
 	}
 }

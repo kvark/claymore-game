@@ -49,7 +49,7 @@ impl to_bytes::IterBytes for CacheEntry	{
 }
 
 
-pub type Cache = HashMap< u64, Option<@shade::Program> >;
+pub type Cache = HashMap< u64, Option<shade::ProgramPtr> >;
 pub fn make_cache()-> Cache	{
 	HashMap::new()
 }
@@ -93,7 +93,7 @@ impl Technique	{
 		].connect("\n")
 	}
 	
-	pub fn link( &self, mat: &Material, modifier: @Mod, ct: &context::Context, lg: &journal::Log )-> Option<@shade::Program>	{
+	pub fn link( &self, mat: &Material, modifier: @Mod, ct: &context::Context, lg: &journal::Log )-> Option<shade::ProgramPtr>	{
 		if !self.meta_vertex.iter().all(|m|	{ mat.meta_vertex.contains(m) 	})
 		|| !self.meta_fragment.iter().all(|m|	{ mat.meta_fragment.contains(m)	})	{
 			lg.add(format!( "Material '{:s}' rejected by '{:s}'", mat.name, self.name ));
@@ -117,16 +117,16 @@ impl Technique	{
 		Some( ct.create_program(shaders,lg) )
 	}
 
-	pub fn get_program( &self, mat: @Material, modifier: @Mod, cache: &mut Cache, ct: &context::Context, lg: &journal::Log )-> Option<@shade::Program>	{
+	pub fn get_program( &self, mat: @Material, modifier: @Mod, cache: &mut Cache, ct: &context::Context, lg: &journal::Log )-> Option<shade::ProgramPtr>	{
 		let hash = CacheEntry{ material:mat, modifier:modifier,
 			technique:~[self.code_vertex.clone(), self.code_fragment.clone()]	//FIXME
 		}.hash();
 		match cache.find(&hash)	{
-			Some(p)	=> return *p,
+			Some(p)	=> return p.clone(),
 			_	=> ()
 		}
 		let p = self.link( mat, modifier, ct, lg );
-		cache.insert( hash, p );
+		cache.insert( hash, p.clone() );
 		p
 	}
 }

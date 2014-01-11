@@ -34,7 +34,7 @@ pub struct Alignment(Anchor,Relation,Anchor);
 pub type Point = (int,int);
 
 
-fn parse_anchor( s : &str )-> Anchor	{
+fn parse_anchor( s: &str )-> Anchor	{
 	match s	{
 		"left-top"	=> ALeftTop,
 		"mid-top"	=> AMidTop,
@@ -49,7 +49,7 @@ fn parse_anchor( s : &str )-> Anchor	{
 	}
 }
 
-fn parse_relation( s : &str )-> Relation	{
+fn parse_relation( s: &str )-> Relation	{
 	match s	{
 		"parent"	=> RelParent,
 		"head"		=> RelHead,
@@ -58,7 +58,7 @@ fn parse_relation( s : &str )-> Relation	{
 	} 
 }
 
-fn parse_alignment( expression : &str )-> Alignment	{
+fn parse_alignment( expression: &str )-> Alignment	{
 	let s = expression.split( |c:char| {c=='=' || c=='.'} ).map( |w| w.to_owned() ).to_owned_vec();
 	assert!( s.len() == 3u );
 	Alignment(parse_anchor(s[0]), parse_relation(s[1]), parse_anchor(s[2]))
@@ -90,7 +90,7 @@ impl Rect	{
 		let (sx,sy) = self.size;
 		(bx+sx,by+sy)
 	}
-	pub fn get_point( &self, anchor : Anchor, m : &Margin )-> Point	{
+	pub fn get_point( &self, anchor: Anchor, m: &Margin )-> Point	{
 		let (bx,by) = self.base;
 		let (sx,sy) = self.size;
 		match anchor	{
@@ -116,16 +116,16 @@ pub struct Context	{
 }
 
 impl Context	{
-	pub fn call( &self, prog : @gr_low::shade::Program, data : gr_low::shade::DataMap,
-		rast_override : Option<&gr_low::rast::State> )-> call::Call	{
+	pub fn call( &self, prog: &gr_low::shade::ProgramPtr, data: gr_low::shade::DataMap,
+		rast_override: Option<&gr_low::rast::State> )-> call::Call	{
 		let rast = match rast_override	{
 			Some(ro)	=> *ro,
 			None		=> self.rast,
 		};
-		call::CallDraw( self.input.clone(), self.output.clone(), rast, prog, data )
+		call::CallDraw( self.input.clone(), self.output.clone(), rast, prog.clone(), data )
 	}
 
-	pub fn transform( &self, r : &Rect )-> gr_low::shade::Uniform	{
+	pub fn transform( &self, r: &Rect )-> gr_low::shade::Uniform	{
 		let (tx,ty) = self.size;
 		let (bx,by) = r.base;
 		let (sx,sy) = r.size;
@@ -148,7 +148,7 @@ pub trait Element	{
 
 impl Element for ()	{
 	fn get_size( &self )-> Point	{(0,0)}
-	fn draw( &self, _hc : &Context, _r : &Rect )-> call::Call	{
+	fn draw( &self, _hc: &Context, _r: &Rect )-> call::Call	{
 		call::CallEmpty
 	}
 }
@@ -166,7 +166,7 @@ pub struct Frame	{
 }
 
 impl Frame	{
-	pub fn get_size( &self, content : Point )-> Point	{
+	pub fn get_size( &self, content: Point )-> Point	{
 		let m = &self.margin;
 		let (sx,sy) = self.min_size;
 		let (ex,ey) = content;
@@ -184,7 +184,7 @@ impl Frame	{
 		self.area
 	}
 
-	fn update_size( &mut self, lg : &engine::journal::Log )-> Point	{
+	fn update_size( &mut self, lg: &engine::journal::Log )-> Point	{
 		let (ex,ey) = self.element.get_size();
 		let (cx,cy) = self.get_size((ex,ey));
 		if self.children.is_empty()	{
@@ -233,7 +233,7 @@ impl Frame	{
 		self.area.size
 	}
 
-	fn update_base( &mut self, lg : &engine::journal::Log )	{
+	fn update_base( &mut self, lg: &engine::journal::Log )	{
 		let no_margin = Margin{side:0,bot:0,top:0};
 		for i in range(0,self.children.len())	{
 			let Alignment(destination,relation,source) = self.children[i].alignment;
@@ -257,14 +257,14 @@ impl Frame	{
 		}
 	}
 
-	pub fn update( &mut self, lg : &engine::journal::Log )	{
+	pub fn update( &mut self, lg: &engine::journal::Log )	{
 		lg.add( ~"Updating HUD: " + self.name );
 		self.update_size( lg );
 		assert!( self.area.size == self.min_size );
 		self.update_base( lg );
 	}
 
-	pub fn trace( &self, x : int, y : int, fun : |&Frame,uint| )-> uint	{
+	pub fn trace( &self, x: int, y: int, fun: |&Frame,uint| )-> uint	{
 		for child in self.children.iter()	{
 			let (bx,by) = child.area.base;
 			let (sx,sy) = child.area.size;
@@ -278,7 +278,7 @@ impl Frame	{
 		0u
 	}
 
-	pub fn with_frame_mut<T>( &mut self, name :&~str, fun : |&mut Frame|->T )-> Option<T>	{
+	pub fn with_frame_mut<T>( &mut self, name: &~str, fun: |&mut Frame|->T )-> Option<T>	{
 		if self.name == *name	{
 			return Some( fun(self) )
 		}
@@ -291,12 +291,12 @@ impl Frame	{
 		None
 	}
 
-	pub fn populate( &mut self, name : &~str, elem : @Element )-> bool	{
+	pub fn populate( &mut self, name: &~str, elem: @Element )-> bool	{
 		let res = self.with_frame_mut( name, |fr| fr.element=elem );
 		res.is_some()
 	}
 
-	pub fn draw_all( &self, hc : &Context )-> ~[call::Call]	{
+	pub fn draw_all( &self, hc: &Context )-> ~[call::Call]	{
 		let c0 = self.element.draw( hc, &self.get_draw_rect() );
 		let mut queue = ~[c0];
 		for child in self.children.iter()	{
@@ -305,14 +305,14 @@ impl Frame	{
 		queue
 	}
 
-	pub fn draw_debug( &self, hc : &Context, prog : @gr_low::shade::Program,
-		data : &mut gr_low::shade::DataMap, rast : &gr_low::rast::State )-> call::Call	{
+	pub fn draw_debug( &self, hc: &Context, prog: &gr_low::shade::ProgramPtr,
+			data: &mut gr_low::shade::DataMap, rast: &gr_low::rast::State )-> call::Call	{
 		data.set( ~"u_Transform", hc.transform(&self.area) );
 		hc.call( prog, data.clone(), Some(rast) )
 	}
 
-	pub fn draw_debug_all( &self, hc : &Context, prog : @gr_low::shade::Program,
-		data : &mut gr_low::shade::DataMap, rast : &gr_low::rast::State )-> ~[call::Call]	{
+	pub fn draw_debug_all( &self, hc: &Context, prog: &gr_low::shade::ProgramPtr,
+			data: &mut gr_low::shade::DataMap, rast: &gr_low::rast::State )-> ~[call::Call]	{
 		let c0 = self.draw_debug(hc,prog,data,rast);
 		let mut queue = ~[c0];
 		for child in self.children.iter()	{
@@ -332,7 +332,7 @@ pub struct FrameInfo	{
 	children: ~[FrameInfo],
 }
 
-pub fn convert_frames( fi_array : &[FrameInfo] )-> ~[Frame]	{
+pub fn convert_frames( fi_array: &[FrameInfo] )-> ~[Frame]	{
 	fi_array.iter().map( |fi|	{
 		let (mx,mb,mt) = fi.margin;
 		Frame{
@@ -359,7 +359,7 @@ struct ImageInfo	{
 pub struct Image	{
 	texture	: RefCell<@gr_low::texture::Texture>,
 	sampler	: gr_low::texture::Sampler,
-	program	: @gr_low::shade::Program,
+	program	: gr_low::shade::ProgramPtr,
 	center	: (f32,f32),
 }
 
@@ -369,7 +369,7 @@ impl Element for Image	{
 	fn get_size( &self )-> Point	{
 		self.texture.with(|t| (t.width as int, t.height as int))
 	}
-	fn draw( &self, hc : &Context, rect : &Rect )-> call::Call	{
+	fn draw( &self, hc: &Context, rect: &Rect )-> call::Call	{
 		// fill shader data
 		let mut data = gr_low::shade::DataMap::new();
 		data.set( ~"t_Image",	gr_low::shade::UniTexture(
@@ -383,7 +383,7 @@ impl Element for Image	{
 		data.set( ~"u_Center",		gr_low::shade::UniFloatVec(vc) );
 		data.set( ~"u_Transform",	hc.transform(rect) );
 		// return
-		hc.call( self.program, data, None )
+		hc.call( &self.program, data, None )
 	}
 }
 
@@ -402,7 +402,7 @@ struct LabelInfo	{
 pub struct Label	{
 	texture	: RefCell<@gr_low::texture::Texture>,
 	content	: RefCell<~str>,
-	program	: @gr_low::shade::Program,
+	program	: gr_low::shade::ProgramPtr,
 	color	: gr_low::rast::Color,
 	font	: @font::Font,
 }
@@ -413,7 +413,7 @@ impl Element for Label	{
 	fn get_size( &self )-> Point	{
 		self.texture.with(|t| (t.width as int, t.height as int))
 	}
-	fn draw( &self, hc : &Context, rect : &Rect )-> call::Call	{
+	fn draw( &self, hc: &Context, rect: &Rect )-> call::Call	{
 		// fill shader data
 		let mut data = gr_low::shade::DataMap::new();
 		let sm = gr_low::texture::Sampler::new(1u,0);
@@ -423,7 +423,7 @@ impl Element for Label	{
 		let dr = Rect{ base:rect.base, size:self.get_size() };
 		data.set( ~"u_Transform", hc.transform(&dr) );
 		// return
-		hc.call( self.program, data, None )
+		hc.call( &self.program, data, None )
 	}
 }
 
@@ -444,8 +444,8 @@ pub struct Screen    {
 }
 
 
-pub fn load_screen( path : &str, ct : &mut gr_low::context::Context,
-		ft : &font::Context, lg : &engine::journal::Log )-> Screen	{
+pub fn load_screen( path: &str, ct: &mut gr_low::context::Context,
+		ft: &font::Context, lg: &engine::journal::Log )-> Screen	{
 	lg.add( ~"Loading HUD screen: " + path );
 	let iscreen = scene::load_json::load_config::<ScreenInfo>( path );
 	let (wid,het) = ct.get_screen_size();
@@ -475,7 +475,7 @@ pub fn load_screen( path : &str, ct : &mut gr_low::context::Context,
 		let image = @Image	{
 			texture	: RefCell::new(texture),
 			sampler	: gr_low::texture::Sampler::new(1u,0),
-			program	: prog_image,
+			program	: prog_image.clone(),
 			center	: iimage.center,
 		};
 		map_image.insert( iimage.frame.clone(), image );
@@ -504,7 +504,7 @@ pub fn load_screen( path : &str, ct : &mut gr_low::context::Context,
 		let label = @Label{
 			texture	: RefCell::new( texture ),
 			content	: RefCell::new( ilabel.text.clone() ),
-			program	: prog_label,
+			program	: prog_label.clone(),
 			color	: gr_low::rast::Color::new( ilabel.color ),
 			font	: font,
 		};
@@ -535,7 +535,7 @@ impl<T:Element> Element for Blink<T>	{
 	fn get_size( &self )-> Point	{
 		self.element.get_size()
 	}
-	fn draw( &self, ct : &Context, r : &Rect )-> call::Call	{
+	fn draw( &self, ct: &Context, r: &Rect )-> call::Call	{
 		if self.visible.get()	{
 			self.element.draw(ct,r)
 		}else	{
@@ -574,7 +574,7 @@ impl EditLabel	{
 		}))
 	}
 
-	pub fn change( &self, input : &str, ct: &mut gr_low::context::Context, lg: &engine::journal::Log )	{
+	pub fn change( &self, input: &str, ct: &mut gr_low::context::Context, lg: &engine::journal::Log )	{
 		let st = &self.text;
 		let mut text = st.content.get();
 		for key in input.chars()	{
@@ -593,7 +593,7 @@ impl EditLabel	{
 }
 
 impl engine::anim::Act for EditLabel	{
-	fn update( &mut self, time : engine::anim::float )-> bool	{
+	fn update( &mut self, time: engine::anim::float )-> bool	{
 		let time_ms = (time * 1000.0) as uint;
 		self.cursor.visible.set( self.active && (time_ms % 1000u < 500u) );
 		true

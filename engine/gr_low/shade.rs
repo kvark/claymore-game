@@ -3,7 +3,7 @@ extern mod cgmath;
 
 use std;
 use std::hashmap::HashMap;
-use std::{cell,managed,ptr,vec};
+use std::{borrow,cell,ptr,rc,vec};
 
 use cgmath::array::Array;
 use cgmath::vector::Vec4;
@@ -21,7 +21,7 @@ pub struct ProgramHandle( gl::types::GLuint );
 
 
 pub struct Binding	{
-	priv active		: Option<@Program>,
+	priv active		: Option<ProgramPtr>,
 }
 
 impl context::ProxyState for Binding	{
@@ -29,8 +29,8 @@ impl context::ProxyState for Binding	{
 		let mut hid = 0 as gl::types::GLint;
 		unsafe{ gl::GetIntegerv( gl::CURRENT_PROGRAM, ptr::to_mut_unsafe_ptr(&mut hid) ); }
 		hid == match self.active	{
-			Some(p)	=> {let ProgramHandle(ph) = p.handle; ph as gl::types::GLint},
-			None	=> 0,
+			Some(ref pp)	=> pp.borrow().with(|p| {let ProgramHandle(ph) = p.handle; ph as gl::types::GLint}),
+			None			=> 0,
 		}
 	}
 }
@@ -53,8 +53,6 @@ pub enum Uniform	{
 	UniMatrix(bool,Mat4<f32>),
 	UniTexture(uint,@texture::Texture,Option<texture::Sampler>),
 }
-
-pub type UniformPtr = cell::RefCell<Uniform>;
 
 impl std::cmp::Eq for Uniform	{
 	fn eq( &self, v : &Uniform )-> bool	{
@@ -158,16 +156,15 @@ struct Parameter	{
 	loc		: Location,
 	size	: uint,
 	desc	: ParamDescriptor,
-	value	: UniformPtr,
+	value	: Uniform,
 }
 
 impl Parameter	{
-	fn read( &self, handle: &ProgramHandle )-> bool	{
+	fn read( &mut self, handle: &ProgramHandle )-> bool	{
 		let &ProgramHandle(h) = handle;
 		let Location(loc) = self.loc;
 		assert!( loc>=0 && self.size==1u );
-		let mut sv = self.value.borrow_mut();
-		*sv.get() = match self.desc.raw	{
+		self.value = match self.desc.raw	{
 			gl::FLOAT	=> {
 				let mut v = 0f32;
 				unsafe{ gl::GetUniformfv( h, loc, ptr::to_mut_unsafe_ptr(&mut v) ); }
@@ -200,19 +197,18 @@ impl Parameter	{
 
 	fn write( &self )	{
 		let Location(loc) = self.loc;
-		let sv = self.value.borrow();
-		match sv.get()	{
-			&Uninitialized	=> fail!("Uninitialized parameter at location {:i}", loc as int),
-			&UniFloat(v)	=> gl::Uniform1f( loc, v as gl::types::GLfloat ),
-			&UniInt(v)		=> gl::Uniform1i( loc, v as gl::types::GLint ),
-			&UniFloatVec(ref v)		=> unsafe{ gl::Uniform4fv( loc, 1, ptr::to_unsafe_ptr(&v.x) )},
-			&UniIntVec(ref v)		=> unsafe{ gl::Uniform4iv( loc, 1, ptr::to_unsafe_ptr(&v.x) )},
-			&UniFloatVecArray(ref v)		=> unsafe{
+		match self.value	{
+			Uninitialized	=> fail!("Uninitialized parameter at location {:i}", loc as int),
+			UniFloat(v)		=> gl::Uniform1f( loc, v as gl::types::GLfloat ),
+			UniInt(v)		=> gl::Uniform1i( loc, v as gl::types::GLint ),
+			UniFloatVec(ref v)		=> unsafe{ gl::Uniform4fv( loc, 1, ptr::to_unsafe_ptr(&v.x) )},
+			UniIntVec(ref v)		=> unsafe{ gl::Uniform4iv( loc, 1, ptr::to_unsafe_ptr(&v.x) )},
+			UniFloatVecArray(ref v)		=> unsafe{
 				gl::Uniform4fv( loc, self.size as gl::types::GLint,
 					v.as_ptr() as *gl::types::GLfloat )},
-			&UniMatrix(b, ref v)			=> unsafe{
+			UniMatrix(b, ref v)			=> unsafe{
 				gl::UniformMatrix4fv( loc, 1, b as gl::types::GLboolean, ptr::to_unsafe_ptr(&v.x.x) )},
-			&UniTexture(u,_tex,_sm)		=>	{
+			UniTexture(u,_tex,_sm)		=>	{
 				//TODO: check 'tex' against the ParamDescriptor
 				gl::Uniform1i( loc, u as gl::types::GLint )},
 		}
@@ -285,6 +281,7 @@ pub struct Program	{
 	priv outputs	: cell::RefCell<~[~str]>,	//FIXME
 }
 
+pub type ProgramPtr = rc::Rc<cell::RefCell<Program>>;
 
 impl Drop for ProgramHandle	{
 	fn drop( &mut self )	{
@@ -294,12 +291,11 @@ impl Drop for ProgramHandle	{
 }
 
 impl Program	{
-	pub fn read_parameter( &self, name: ~str )-> Uniform	{
-		match self.params.find(&name)	{
+	pub fn read_parameter( &mut self, name: ~str )-> Uniform	{
+		match self.params.find_mut(&name)	{
 			Some(par) =>	{
 				par.read( &self.handle );
-				let pv = par.value.borrow();
-				pv.get().clone()
+				par.value.clone()
 			},
 			None => Uninitialized
 		}
@@ -400,7 +396,7 @@ fn query_parameters( handle: &ProgramHandle, lg: &journal::Log )-> ParaMap	{
 		};
 		lg.add(format!( "\t\t[{:i}-{:i}]\t= '{:s}',\tformat {:i}", loc as int, ((loc + size) as int) -1, name, storage as int ));
 		let p = Parameter{ loc: Location(loc), size: size as uint,
-			desc: ParamDescriptor::new(storage), value: cell::RefCell::new(Uninitialized) };
+			desc: ParamDescriptor::new(storage), value: Uninitialized };
 		//p.read( h );	// no need to read them here, takes too long
 		rez.insert( name, p );
 	}
@@ -467,7 +463,7 @@ impl context::Context	{
 		}
 	}
 	
-	pub fn create_program( &self, shaders: &[@Object], lg: &journal::Log )-> @Program	{
+	pub fn create_program( &self, shaders: &[@Object], lg: &journal::Log )-> ProgramPtr	{
 		let h = gl::CreateProgram();
 		for s in shaders.iter() {
 			let ObjectHandle(ho) = s.handle;
@@ -494,30 +490,34 @@ impl context::Context	{
 		let handle = ProgramHandle(h);
 		let attribs	= query_attributes( &handle, lg );
 		let params	= query_parameters( &handle, lg );
-		@Program{ handle:handle,
+		rc::Rc::new(cell::RefCell::new(Program{ handle:handle,
 			alive:ok, info:message,
 			attribs	:attribs,
 			params	:params,
 			outputs :cell::RefCell::new(~[]),
-		}
+		}))
 	}
 
 	//FIXME: accept Map trait once HashMap<~str> are supported
-	pub fn bind_program( &mut self, p: @Program, data: &DataMap )->bool	{
+	pub fn bind_program( &mut self, p: &ProgramPtr, data: &DataMap )->bool	{
 		let need_bind = match self.shader.active	{
-			Some(prog)	=> !managed::ptr_eq(p,prog),
-			None		=> true
+			Some(ref pa)	=>	!borrow::ref_eq( pa.borrow(), p.borrow() ),
+			None	=> true,
 		};
+		let handle = p.borrow().with(|s|	{
+			let ProgramHandle(h) = s.handle; h
+		});
 		if need_bind	{
-			self.shader.active = Some(p);
-			let ProgramHandle(h) = p.handle;
-			gl::UseProgram( h );
+			self.shader.active = Some(p.clone());
+			gl::UseProgram( handle );
 		}
 		let mut tex_unit = 0;
-		for (name,par) in p.params.iter()	{
+		let mut pmut = p.borrow().borrow_mut();
+		for (name,par) in pmut.get().params.mut_iter()	{
 			let &DataMap(ref data_map) = data;
 			match data_map.find(name)	{
 				Some(&UniTexture(_,t,s_opt))	=> {
+					println!("ST");
 					let texture::Target(target) = t.target;
 					check_sampler( target, par.desc.raw );
 					self.texture.bind_to( tex_unit, t );
@@ -525,36 +525,32 @@ impl context::Context	{
 						Some(ref s) => self.texture.bind_sampler( t, s ),
 						None	=> ()
 					}
-					let old_unit = match par.value.borrow().get()	{
-						&UniTexture(unit,_,_)	=> unit,
-						&UniInt(val)			=> val as uint,
+					let old_unit = match par.value	{
+						UniTexture(unit,_,_)	=> unit,
+						UniInt(val)				=> val as uint,
 						_						=> !tex_unit,
 					};
-					let mut pv = par.value.borrow_mut();
-					*pv.get() = UniTexture( tex_unit, t, s_opt );
+					par.value = UniTexture( tex_unit, t, s_opt );
 					if old_unit != tex_unit	{
 						par.write();
 					}
 					tex_unit += 1;
 				},
 				Some(value)	=>	{
-					let mut pv = par.value.borrow_mut();
-					if *pv.get() != *value	{
+					if &par.value != value	{
 						//io::println(format!( "Uploading value '{:s}'", *name ));
-						*pv.get() = value.clone();
+						par.value = value.clone();
 						par.write();
 					}
 				},
 				None	=>	{
-					let pv = par.value.borrow();
-					let msg = match pv.get()	{
-						&Uninitialized	=> ~"not inialized",
+					let msg = match par.value	{
+						Uninitialized	=> ~"not inialized",
 						_				=> ~"missing",
 					};
-					let ProgramHandle(h) = p.handle;
 					let Location(loc) = par.loc;
 					fail!("Program {} parameter is {:s}: name={:s}, loc={}",
-						h, msg, *name, loc)
+						handle, msg, *name, loc)
 				}
 			}
 		}

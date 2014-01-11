@@ -2,6 +2,7 @@
 #[crate_type = "bin"];
 #[comment = "Claymore game"];
 #[license = "MIT"];
+#[link_args = "-lglfw"];
 
 #[feature(managed_boxes)];
 

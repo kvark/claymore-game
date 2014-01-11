@@ -26,7 +26,7 @@ pub struct Grid	{
 	priv nseg		: uint,
 	priv cells		: ~[Texel],
 	priv mesh		: @gr_mid::mesh::Mesh,
-	priv program	: @gr_low::shade::Program,
+	priv program	: gr_low::shade::ProgramPtr,
 	priv data		: gr_low::shade::DataMap,
 	priv rast		: gr_low::rast::State,
 	priv texture	: @gr_low::texture::Texture,
@@ -39,7 +39,7 @@ pub static CELL_ACTIVE	: Texel	= 0x2040E040;
 
 
 impl Grid	{
-	pub fn create( ct : &mut gr_low::context::Context, segments : uint, lg : &engine::journal::Log )-> Grid	{
+	pub fn create( ct: &mut gr_low::context::Context, segments: uint, lg: &engine::journal::Log )-> Grid	{
 		let mut data = gr_low::shade::DataMap::new();
 		let mut rast = ct.default_rast;
 		rast.prime.cull = true;
@@ -70,7 +70,7 @@ impl Grid	{
 		self.cells.len()
 	}
 
-	pub fn update( &mut self, cam : &scene::Camera, aspect : f32 )	{
+	pub fn update( &mut self, cam: &scene::Camera, aspect: f32 )	{
 		cam.fill_data( &mut self.data, aspect );
 	}
 
@@ -87,13 +87,13 @@ impl Grid	{
 
 
 pub trait DrawableGrid	{
-	fn init( &mut self, tb : &mut gr_low::texture::Binding );
-	fn upload( &mut self, tb : &mut gr_low::texture::Binding );
-	fn draw( &self, output : gr_mid::call::Output, vao : gr_low::buf::VertexArrayPtr )-> gr_mid::call::Call;
+	fn init( &mut self, &mut gr_low::texture::Binding );
+	fn upload( &mut self, &mut gr_low::texture::Binding );
+	fn draw( &self, gr_mid::call::Output, gr_low::buf::VertexArrayPtr )-> gr_mid::call::Call;
 }
 
 impl DrawableGrid for Grid	{
-	fn init( &mut self, tb : &mut gr_low::texture::Binding )	{
+	fn init( &mut self, tb: &mut gr_low::texture::Binding )	{
 		// init storage
 		tb.bind( self.texture );
 		let fm_int = gr_low::texture::map_int_format( "rgba8" );
@@ -102,18 +102,18 @@ impl DrawableGrid for Grid	{
 		self.upload(tb);
 		// set up texture
 	}
-	fn upload( &mut self, tb : &mut gr_low::texture::Binding )	{
+	fn upload( &mut self, tb: &mut gr_low::texture::Binding )	{
 		tb.bind( self.texture );
 		let fm_pix = gr_low::texture::map_pix_format( "rgba" );
 		let component = 0u8.to_gl_type();
 		let r = gr_low::frame::Rect::new( self.nseg, self.nseg );
 		tb.load_sub_2D(	self.texture, 0u, &r, fm_pix, component, self.cells );
 	}
-	fn draw( &self, output : gr_mid::call::Output, vao : gr_low::buf::VertexArrayPtr )-> gr_mid::call::Call	{
+	fn draw( &self, output: gr_mid::call::Output, vao: gr_low::buf::VertexArrayPtr )-> gr_mid::call::Call	{
 		gr_mid::call::CallDraw(
 			gr_mid::call::Input::new( vao, self.mesh ),
 			output,
-			self.rast, self.program, self.data.clone() )
+			self.rast, self.program.clone(), self.data.clone() )
 	}
 }
 
@@ -173,7 +173,7 @@ impl GeometryGrid for Grid	{
 		 	2f32*self.v_scale.y / (self.nseg as f32)
 		 	)
 	}
-	fn get_cell_center( &self, pos : Location )-> point::Point3<f32>	{
+	fn get_cell_center( &self, pos: Location )-> point::Point3<f32>	{
 		let unit = self.get_cell_size();
 		let half = (self.nseg as f32) * 0.5f32;
 		point::Point3::new(
@@ -181,20 +181,20 @@ impl GeometryGrid for Grid	{
 			((pos.y as f32)+0.5f32-half)*unit.y,
 			self.v_scale.z )
 	}
-	fn compute_space( &self, pos : Location, orient : Orientation, elevation : f32 )-> space::Space	{
+	fn compute_space( &self, pos: Location, orient: Orientation, elevation: f32 )-> space::Space	{
 		let mut center = self.get_cell_center( pos );
 		center.z = elevation;
 		let angle = angle::deg( (orient as f32) * 90f32 );
 		let rot = Quat::from_axis_angle( &vector::Vec3::unit_z(), angle.to_rad() );
 		space::make( 1.0, rot, center.to_vec() )
 	}
-	fn point_cast( &self, point : &point::Point3<f32> )-> Location	{
+	fn point_cast( &self, point: &point::Point3<f32> )-> Location	{
 		let unit = self.get_cell_size();
 		let x = (point.x + self.v_scale.x) / unit.x;
 		let y = (point.y + self.v_scale.y) / unit.y;
 		point::Point2::new( x as int, y as int )
 	}
-	fn ray_cast( &self, cam : &scene::Camera, aspect : f32, np : &[f32,..2] )-> Location	{
+	fn ray_cast( &self, cam: &scene::Camera, aspect: f32, np: &[f32,..2] )-> Location	{
 		let ndc = point::Point3::new( np[0]*2f32-1f32, 1f32-np[1]*2f32, 0f32 );
 		let origin = cam.node.borrow().with( |n|	{
 			point::Point::from_vec(&n.world_space().disp)
