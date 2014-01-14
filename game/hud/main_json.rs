@@ -357,7 +357,7 @@ struct ImageInfo	{
 }
 
 pub struct Image	{
-	texture	: RefCell<@gr_low::texture::Texture>,
+	texture	: RefCell<gr_low::texture::TexturePtr>,
 	sampler	: gr_low::texture::Sampler,
 	program	: gr_low::shade::ProgramPtr,
 	center	: (f32,f32),
@@ -367,7 +367,7 @@ pub type ImagePtr = @Image;
 
 impl Element for Image	{
 	fn get_size( &self )-> Point	{
-		self.texture.with(|t| (t.width as int, t.height as int))
+		self.texture.with(|t| (t.borrow().width as int, t.borrow().height as int))
 	}
 	fn draw( &self, hc: &Context, rect: &Rect )-> call::Call	{
 		// fill shader data
@@ -377,8 +377,8 @@ impl Element for Image	{
 		let (cx,cy) = self.center;
 		let (sx,sy) = rect.size;
 		let vc = self.texture.with(|t| Vec4::new( cx, cy,
-			(sx as f32)/(t.width as f32),
-			(sy as f32)/(t.height as f32)
+			(sx as f32)/(t.borrow().width as f32),
+			(sy as f32)/(t.borrow().height as f32)
 			));
 		data.set( ~"u_Center",		gr_low::shade::UniFloatVec(vc) );
 		data.set( ~"u_Transform",	hc.transform(rect) );
@@ -400,7 +400,7 @@ struct LabelInfo	{
 }
 
 pub struct Label	{
-	texture	: RefCell<@gr_low::texture::Texture>,
+	texture	: RefCell<gr_low::texture::TexturePtr>,
 	content	: RefCell<~str>,
 	program	: gr_low::shade::ProgramPtr,
 	color	: gr_low::rast::Color,
@@ -411,7 +411,7 @@ pub type LabelPtr = @Label;
 
 impl Element for Label	{
 	fn get_size( &self )-> Point	{
-		self.texture.with(|t| (t.width as int, t.height as int))
+		self.texture.with(|t| (t.borrow().width as int, t.borrow().height as int))
 	}
 	fn draw( &self, hc: &Context, rect: &Rect )-> call::Call	{
 		// fill shader data
@@ -439,7 +439,7 @@ pub struct Screen    {
 	root	: Frame,
 	images	: HashMap<~str,ImagePtr>,
 	labels	: HashMap<~str,LabelPtr>,
-	textures: HashMap<~str,@gr_low::texture::Texture>,
+	textures: HashMap<~str,gr_low::texture::TexturePtr>,
 	fonts	: HashMap<FontInfo,@font::Font>,
 }
 
@@ -459,18 +459,18 @@ pub fn load_screen( path: &str, ct: &mut gr_low::context::Context,
 		margin		: Margin{side:0,bot:0,top:0},
 		children	: convert_frames( iscreen.frames ),
 	};
-	let mut map_texture	: HashMap<~str,@gr_low::texture::Texture> = HashMap::new();
+	let mut map_texture	: HashMap<~str,gr_low::texture::TexturePtr> = HashMap::new();
 	lg.add(format!( "\tParsing {:u} images", iscreen.images.len() ));
 	let mut map_image : HashMap<~str,ImagePtr> = HashMap::new();
 	let prog_image = engine::load::load_program( ct, "data/code/hud/image", lg );
 	for iimage in iscreen.images.iter()	{
 		let path = ~"data/texture/hud/" + iimage.path;
 		let (texture,new) = match map_texture.find(&path)	{
-			Some(t)	=> (*t,false),
+			Some(t)	=> (t.clone(),false),
 			None	=> (engine::load::load_texture_2D( ct, path, false ), true),
 		};
 		if new	{
-			map_texture.insert(path,texture);
+			map_texture.insert(path, texture.clone());
 		}
 		let image = @Image	{
 			texture	: RefCell::new(texture),

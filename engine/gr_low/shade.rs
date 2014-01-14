@@ -51,7 +51,7 @@ pub enum Uniform	{
 	UniIntVec(Vec4<i32>),
 	UniFloatVecArray(~[Vec4<f32>]),
 	UniMatrix(bool,Mat4<f32>),
-	UniTexture(uint,@texture::Texture,Option<texture::Sampler>),
+	UniTexture(uint,texture::TexturePtr,Option<texture::Sampler>),
 }
 
 impl std::cmp::Eq for Uniform	{
@@ -208,7 +208,7 @@ impl Parameter	{
 					v.as_ptr() as *gl::types::GLfloat )},
 			UniMatrix(b, ref v)			=> unsafe{
 				gl::UniformMatrix4fv( loc, 1, b as gl::types::GLboolean, ptr::to_unsafe_ptr(&v.x.x) )},
-			UniTexture(u,_tex,_sm)		=>	{
+			UniTexture(u,_,_)		=>	{
 				//TODO: check 'tex' against the ParamDescriptor
 				gl::Uniform1i( loc, u as gl::types::GLint )},
 		}
@@ -242,12 +242,12 @@ impl DataMap	{
 					v.x, v.y, v.z, v.w),
 				&UniFloatVecArray(ref _v)		=> ~"float4[]",
 				&UniMatrix(b, ref _v)			=> format!("mat4(), transpose={:b}", b),
-				&UniTexture(u, ref t, ref os)	=>	{
+				&UniTexture(u, ref pt, ref os)	=>	{
 					let smp = match os	{
 						&Some(ref s) => ~"\n\t\t\t" + s.to_str(),
 						&None => ~""
 					};
-					format!("slot[{:u}]: {:s}{:s}", u, t.to_str(), smp)
+					format!("slot[{:u}]: {:s}{:s}", u, pt.borrow().to_str(), smp)
 				},
 			};
 			lg.add(format!( "\t\t{:s}\t= {:s}", *name, sv ));
@@ -278,7 +278,7 @@ pub struct Program	{
 	info	: ~str,
 	attribs	: AttriMap,
 	params	: ParaMap,
-	priv outputs	: cell::RefCell<~[~str]>,	//FIXME
+	priv outputs	: ~[~str],
 }
 
 pub type ProgramPtr = rc::Rc<cell::RefCell<Program>>;
@@ -301,9 +301,9 @@ impl Program	{
 		}
 	}
 	
-	pub fn find_output( &self, name: &~str )-> uint	{
-		let mut outs = self.outputs.borrow_mut();
-		match outs.get().position_elem(name)	{
+	// can be non-mut if properly supported by GL
+	pub fn find_output( &mut self, name: &~str )-> uint	{
+		match self.outputs.position_elem(name)	{
 			Some(p)	=> p,
 			None	=>	{
 				/*let mut p = -1 as gl::types::GLint;
@@ -319,8 +319,8 @@ impl Program	{
 				}
 				self.outputs[pu] = *name;
 				pu*/
-				outs.get().push( (*name).clone() );
-				outs.get().len() - 1u
+				self.outputs.push( (*name).clone() );
+				self.outputs.len() - 1u
 			}
 		}
 	}
@@ -490,15 +490,15 @@ impl context::Context	{
 		let handle = ProgramHandle(h);
 		let attribs	= query_attributes( &handle, lg );
 		let params	= query_parameters( &handle, lg );
-		rc::Rc::new(cell::RefCell::new(Program{ handle:handle,
+		rc::Rc::new(cell::RefCell::new(Program{
+			handle	:handle,
 			alive:ok, info:message,
 			attribs	:attribs,
 			params	:params,
-			outputs :cell::RefCell::new(~[]),
+			outputs :~[],
 		}))
 	}
 
-	//FIXME: accept Map trait once HashMap<~str> are supported
 	pub fn bind_program( &mut self, p: &ProgramPtr, data: &DataMap )->bool	{
 		let need_bind = match self.shader.active	{
 			Some(ref pa)	=>	!borrow::ref_eq( pa.borrow(), p.borrow() ),
@@ -516,21 +516,21 @@ impl context::Context	{
 		for (name,par) in pmut.get().params.mut_iter()	{
 			let &DataMap(ref data_map) = data;
 			match data_map.find(name)	{
-				Some(&UniTexture(_,t,s_opt))	=> {
+				Some(&UniTexture(_,ref pt, s_opt))	=> {
 					println!("ST");
-					let texture::Target(target) = t.target;
+					let texture::Target(target) = pt.borrow().target;
 					check_sampler( target, par.desc.raw );
-					self.texture.bind_to( tex_unit, t );
+					self.texture.bind_to( tex_unit, pt );
 					match s_opt	{
-						Some(ref s) => self.texture.bind_sampler( t, s ),
-						None	=> ()
+						Some(ref s)	=> self.texture.bind_sampler( pt, s ),
+						None		=> ()
 					}
 					let old_unit = match par.value	{
 						UniTexture(unit,_,_)	=> unit,
 						UniInt(val)				=> val as uint,
 						_						=> !tex_unit,
 					};
-					par.value = UniTexture( tex_unit, t, s_opt );
+					par.value = UniTexture( tex_unit, pt.clone(), s_opt );
 					if old_unit != tex_unit	{
 						par.write();
 					}

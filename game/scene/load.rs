@@ -10,8 +10,8 @@ use scene::common;
 use gen = gen_scene::common;
 
 
-fn parse_shader_data( imat : &gen::Material, tex_cache : &HashMap<~str,@gr_low::texture::Texture>,
-		lg : &engine::journal::Log )-> gr_low::shade::DataMap	{
+fn parse_shader_data( imat: &gen::Material, tex_cache: &HashMap<~str,gr_low::texture::TexturePtr>,
+		lg: &engine::journal::Log )-> gr_low::shade::DataMap	{
 	let mut out = gr_low::shade::DataMap::new();
 	let color2vec = |v : [f32, ..3]| -> vector::Vec4<f32>	{
 		let kf = 1f32 / 255f32;
@@ -33,7 +33,7 @@ fn parse_shader_data( imat : &gen::Material, tex_cache : &HashMap<~str,@gr_low::
 	let phong_texture = ~"Main";
 	for (i,ti) in imat.textures.iter().enumerate()	{
 		//print(format!( "\tLooking for texture {:s}\n", ti.path ));
-		let tex = *tex_cache.get( &ti.path );
+		let tex = tex_cache.get( &ti.path ).clone();
 		let s_opt = Some(gr_low::texture::Sampler::new( ti.filter, ti.wrap ));
 		let mut name = ti.name.clone();
 		if name != phong_texture && i==0 && imat.shader == ~"phong"	{
@@ -48,8 +48,8 @@ fn parse_shader_data( imat : &gen::Material, tex_cache : &HashMap<~str,@gr_low::
 }
 
 
-fn parse_materials( materials : &[gen::Material], prefix : &str, ctx : &mut common::SceneContext,
-		gc : &mut gr_low::context::Context, lg : &engine::journal::Log)	{
+fn parse_materials( materials: &[gen::Material], prefix: &str, ctx: &mut common::SceneContext,
+		gc: &mut gr_low::context::Context, lg: &engine::journal::Log)	{
 	let flat_mat = ~"flat";
 	let mut future_textures : HashMap<~str,engine::load::TextureFuture> = HashMap::new();
 	let async = true;
@@ -70,7 +70,7 @@ fn parse_materials( materials : &[gen::Material], prefix : &str, ctx : &mut comm
 			if !ctx.textures.contains_key( &itex.path )	{
 				let path = ~"data/texture/" + itex.path;
 				let tex_add = match ctx.textures.find(&path)	{
-					Some(t) => Some(*t),
+					Some(t) => Some(t.clone()),
 					None if !async	=>	{
 						let t = engine::load::load_texture_2D( gc, path, true );
 						Some(t)
@@ -106,14 +106,14 @@ fn parse_materials( materials : &[gen::Material], prefix : &str, ctx : &mut comm
 	}
 }
 
-fn parse_space( s : &gen::Space )-> space::Space	{
+fn parse_space( s: &gen::Space )-> space::Space	{
 	space::make( s.scale,
 		quaternion::Quat::new( s.rot[3], s.rot[0], s.rot[1], s.rot[2] ),
 		vector::Vec3::new( s.pos[0], s.pos[1], s.pos[2] ))
 }
 
-fn parse_bones( bin : &[gen::Bone], par_id : Option<uint>, par_node : space::NodePtr,
-		bot : &mut ~[space::Bone] )	{
+fn parse_bones( bin: &[gen::Bone], par_id: Option<uint>, par_node: space::NodePtr,
+		bot: &mut ~[space::Bone] )	{
 	for ibone in bin.iter()	{
 		let space = parse_space( &ibone.space );
 		let bind_inv = space.invert().expect("Failed to invert bone space");
@@ -139,8 +139,8 @@ fn parse_bones( bin : &[gen::Bone], par_id : Option<uint>, par_node : space::Nod
 	}
 }
 
-fn parse_child( child : &gen::NodeChild, parent : space::NodePtr, scene : &mut common::Scene,
-		get_input : |~str|->gr_mid::call::Input, lg : &engine::journal::Log )	{
+fn parse_child( child: &gen::NodeChild, parent: space::NodePtr, scene: &mut common::Scene,
+		get_input: |~str|->gr_mid::call::Input, lg: &engine::journal::Log )	{
 	match child	{
 		&gen::ChildNode(ref inode)	=>	{
 			let n = space::Node	{
@@ -224,8 +224,8 @@ fn parse_child( child : &gen::NodeChild, parent : space::NodePtr, scene : &mut c
 }
 
 
-pub fn parse( path : &str, iscene : &gen::Scene, custom : &[gen::Material], gc : &mut gr_low::context::Context,
-		opt_vao : Option<gr_low::buf::VertexArrayPtr>, lg : &engine::journal::Log )-> common::Scene	{
+pub fn parse( path: &str, iscene: &gen::Scene, custom: &[gen::Material], gc: &mut gr_low::context::Context,
+		opt_vao: Option<gr_low::buf::VertexArrayPtr>, lg: &engine::journal::Log )-> common::Scene	{
 	lg.add( ~"Loading scene: " + path );
 	let c0 = engine::load::get_time();
 	let mut scene = common::Scene	{

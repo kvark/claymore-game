@@ -146,14 +146,14 @@ struct MaterialInfo	{
 	textures: ~[TextureInfo],
 }
 
-type TextureCache = HashMap<~str,@gr_low::texture::Texture>;
+type TextureCache = HashMap<~str,gr_low::texture::TexturePtr>;
 impl MaterialInfo	{
 	fn fill_data( &self, data : &mut gr_low::shade::DataMap, cache : &TextureCache )	{
 		for par in self.data.iter()	{
 			data.set( ~"u_"+par.name, par.value.clone() );
 		}
 		for (i,tinfo) in self.textures.iter().enumerate()	{
-			let tex = *cache.get( &tinfo.path );
+			let tex = cache.get( &tinfo.path ).clone();
 			let s_opt = Some(gr_low::texture::Sampler::new( tinfo.filter, tinfo.wrap ));
 			data.set( ~"t_"+tinfo.name, gr_low::shade::UniTexture(0,tex,s_opt) );
 			let (sx,sy,_) = tinfo.scale;
@@ -283,7 +283,7 @@ pub fn load_scene( path : &str, gc : &mut gr_low::context::Context,
 	let c1 = engine::load::get_time();
 	lg.add(format!( "\t[p] Parse config: {:f}", c1-c0 ));
 	// materials
-	let mut tex_cache		: HashMap<~str,@gr_low::texture::Texture>	= HashMap::new();
+	let mut tex_cache		: HashMap<~str,gr_low::texture::TexturePtr>	= HashMap::new();
 	let mut map_material	: HashMap<~str,@gr_mid::draw::Material>	= HashMap::new();
 	let mut map_data		: HashMap<~str,gr_low::shade::DataMap>	= HashMap::new();
 	for imat in scene.materials.iter()	{
@@ -296,7 +296,7 @@ pub fn load_scene( path : &str, gc : &mut gr_low::context::Context,
 			if !tex_cache.contains_key( &itex.path )	{
 				let path = ~"data/texture/" + itex.path;
 				let tex = match tex_cache.find(&path)	{
-					Some(t) => *t,
+					Some(t) => t.clone(),
 					None	=> engine::load::load_texture_2D( gc, path, true ),
 				};
 				tex_cache.insert( itex.path.clone(), tex );

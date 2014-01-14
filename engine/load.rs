@@ -172,23 +172,22 @@ pub fn load_program( ct: &context::Context, path: &str, lg: &journal::Log )-> sh
 //		Texture											//
 
 fn create_texture_2D<T>( ct: &mut context::Context, image: &stb_image::image::Image<T>, mipmap: bool,
-	int_format: gl::types::GLenum, pix_type: gl::types::GLenum )-> @texture::Texture	{
+	int_format: gl::types::GLenum, pix_type: gl::types::GLenum )-> texture::TexturePtr	{
 	//assert (image.width | image.height) & 3u == 0u;
 	let format = match image.depth	{
 		4u	=> gl::RGBA,
 		3u	=> gl::RGB,
 		_	=> fail!("Unknown image depth: {:u}", image.depth)
 	};
-	let t = ct.create_texture( "2D", image.width, image.height, 0, 0 );
-	ct.texture.bind( t );
-	ct.texture.load_2D( t, 0, int_format as gl::types::GLint,	format, pix_type, image.data );
+	let pt = ct.create_texture( "2D", image.width, image.height, 0, 0 );
+	ct.texture.load_2D( &pt, 0, int_format as gl::types::GLint,	format, pix_type, image.data );
 	if mipmap	{
-		ct.texture.generate_levels( t );
+		ct.texture.generate_levels( &pt );
 	}
-	t
+	pt
 }
 
-pub fn load_texture_2D_image( ct: &mut context::Context, result: &stb_image::image::LoadResult, mipmap: bool, name: &str )-> @texture::Texture	{
+pub fn load_texture_2D_image( ct: &mut context::Context, result: &stb_image::image::LoadResult, mipmap: bool, name: &str )-> texture::TexturePtr	{
 	match result	{
 		&stb_image::image::ImageU8(ref img)		=>
 			create_texture_2D( ct, img, mipmap, gl::RGBA, gl::UNSIGNED_BYTE ),
@@ -199,7 +198,7 @@ pub fn load_texture_2D_image( ct: &mut context::Context, result: &stb_image::ima
 	}
 }
 
-pub fn load_texture_2D( ct: &mut context::Context, path: &str, mipmap: bool )-> @texture::Texture	{
+pub fn load_texture_2D( ct: &mut context::Context, path: &str, mipmap: bool )-> texture::TexturePtr	{
 	let result = stb_image::image::load( path.to_owned() );
 	load_texture_2D_image( ct, &result, mipmap, path )
 }
@@ -218,7 +217,7 @@ impl TextureFuture	{
 			mipmap	: mipmap,
 		}
 	}
-	pub fn get( &mut self, ct: &mut context::Context )-> @texture::Texture	{
+	pub fn get( &mut self, ct: &mut context::Context )-> texture::TexturePtr	{
 		let result = self.image.get_ref();
 		load_texture_2D_image( ct, result, self.mipmap, self.name )
 	}

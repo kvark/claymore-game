@@ -3,7 +3,7 @@ extern mod gl;
 use std;
 use std::cmp::Eq;
 use std::hashmap::HashMap;
-use std::{cell,managed,ptr};
+use std::{borrow,cell,ptr,rc};
 use std::to_str::ToStr;
 
 use gr_low::{context,frame};
@@ -103,6 +103,8 @@ pub struct Texture	{
 	priv sampler	: SamplerPtr,
 }
 
+pub type TexturePtr = rc::Rc<Texture>;
+
 impl context::ProxyState for Texture	{
 	fn sync_back( &mut self )->bool	{
 		//FIXME
@@ -182,7 +184,7 @@ pub struct Slot	{
 
 pub struct Binding	{
 	unit	: uint,
-	active	: HashMap<Slot,@Texture>,
+	active	: HashMap<Slot,TexturePtr>,
 }
 
 impl context::ProxyState for Binding	{
@@ -205,7 +207,7 @@ impl context::ProxyState for Binding	{
 			};
 			self.switch( slot.unit );
 			unsafe{ gl::GetIntegerv( query, ptr::to_mut_unsafe_ptr(&mut id) )};
-			if tex.handle != Handle(id as gl::types::GLuint)	{
+			if tex.borrow().handle != Handle(id as gl::types::GLuint)	{
 				was_ok = false;
 				self.active.remove( slot );
 			}
@@ -223,13 +225,13 @@ impl Binding	{
 		}
 	}
 
-	pub fn bind( &mut self, t: @Texture )	{
-		let slot = Slot{ unit:self.unit, target:t.target };
-		if !self.active.contains_key(&slot) || !managed::ptr_eq(*self.active.get(&slot),t)	{
-			self.active.insert( slot, t );
-			let Target(tar) = t.target;
-			let Handle(han) = t.handle;
+	pub fn bind( &mut self, pt: &TexturePtr )	{
+		if !self.is_bound(pt)	{
+			let slot = Slot{ unit:self.unit, target:pt.borrow().target };
+			let Target(tar) = pt.borrow().target;
+			let Handle(han) = pt.borrow().handle;
 			gl::BindTexture( tar, han );
+			self.active.insert( slot, pt.clone() );
 		}
 	}
 	
@@ -240,13 +242,14 @@ impl Binding	{
 		}
 	}
 
-	pub fn bind_to( &mut self, unit: uint, t: @Texture )	{
+	pub fn bind_to( &mut self, unit: uint, pt: &TexturePtr )	{
 		self.switch( unit );
-		self.bind( t );
+		self.bind( pt );
 	}
 
-	pub fn bind_sampler( &mut self, t: @Texture, s: &Sampler )	{
-		self.bind( t );
+	pub fn bind_sampler( &mut self, pt: &TexturePtr, s: &Sampler )	{
+		self.bind( pt );
+		let t = pt.borrow();
 		if t.samples != 0	{fail!(~"Unable to bind a sampler for MSAA texture")}
 		let filter_modes = [gl::TEXTURE_MIN_FILTER,gl::TEXTURE_MAG_FILTER];
 		let Target(tar) = t.target;
@@ -289,33 +292,31 @@ impl Binding	{
 		}
 	}
 
-	pub fn get_bound( &self, target: Target )-> Option<@Texture>	{
+	pub fn get_bound( &self, target: Target )-> Option<TexturePtr>	{
 		let slot = Slot{ unit:self.unit, target:target };
-		match self.active.find( &slot )	{
-			Some(t)	=> Some(*t),
-			None	=> None
-		}
+		self.active.find( &slot ).map(|t| t.clone())
 	}
 
-	pub fn is_bound( &self, t: @Texture )-> bool	{
-		match self.get_bound( t.target )	{
-			Some(tex)	=> managed::ptr_eq( tex, t ),
+	pub fn is_bound( &self, pt: &TexturePtr )-> bool	{
+		match self.get_bound( pt.borrow().target )	{
+			Some(tex)	=> borrow::ref_eq(tex.borrow(), pt.borrow()),
 			None		=> false
 		}
 	}
 
-	pub fn find( &self, t: @Texture )-> Option<uint>	{
-		for (&slot,&tex) in self.active.iter()	{
-			if managed::ptr_eq(t,tex)	{
-				assert!( slot.target == t.target );
+	pub fn find( &self, pt: &TexturePtr )-> Option<uint>	{
+		for (&slot,ref tex) in self.active.iter()	{
+			if borrow::ref_eq(tex.borrow(), pt.borrow())	{
+				assert!( slot.target == pt.borrow().target );
 				return Some(slot.unit)
 			}
 		}
 		None
 	}
 
-	pub fn init( &mut self, t: @Texture, num_levels: uint, int_format: gl::types::GLint, alpha: bool )	{
-		self.bind( t );
+	pub fn init( &mut self, pt: &TexturePtr, num_levels: uint, int_format: gl::types::GLint, alpha: bool )	{
+		self.bind( pt );
+		let t = pt.borrow();
 		assert!( t.samples == 0u && (t.depth == 0u || num_levels == 1u) );
 		let mut level = 0u;
 		while level<num_levels	{
@@ -343,8 +344,9 @@ impl Binding	{
 		gl::GetError();	//debug
 	}
 
-	pub fn init_depth( &mut self, t: @Texture, stencil: bool )	{
-		self.bind( t );
+	pub fn init_depth( &mut self, pt: &TexturePtr, stencil: bool )	{
+		self.bind( pt );
+		let t = pt.borrow();
 		assert!( t.samples == 0u && t.levels.borrow().get().total == 0u );
 		let (wi,hi,di) = ( t.width as gl::types::GLsizei, t.height	as gl::types::GLsizei, t.depth as gl::types::GLsizei );
 		let (ifm,pfm)	= if stencil { (gl::DEPTH24_STENCIL8, gl::DEPTH_STENCIL) }
@@ -365,8 +367,9 @@ impl Binding	{
 	}
 
 	#[cfg(multisample)]
-	pub fn init_multi( &mut self, t: @Texture, int_format: gl::types::GLint, fixed_loc: bool )	{
-		self.bind( t );
+	pub fn init_multi( &mut self, pt: &TexturePtr, int_format: gl::types::GLint, fixed_loc: bool )	{
+		self.bind( pt );
+		let t = pt.borrow();
 		assert!( t.samples != 0u && t.levels.borrow().get().total == 0u );
 		let (wi,hi,di,si) = (
 			t.width as gl::types::GLsizei, t.height	as gl::types::GLsizei,
@@ -384,9 +387,10 @@ impl Binding	{
 		gl::GetError();	//debug
 	}
 
-	pub fn load_2D<T>( &mut self, t: @Texture, level: uint, int_format: gl::types::GLint,
+	pub fn load_2D<T>( &mut self, pt: &TexturePtr, level: uint, int_format: gl::types::GLint,
 			pix_format: gl::types::GLenum, pix_type: gl::types::GLenum, data: &[T])	{
-		self.bind( t );
+		self.bind( pt );
+		let t = pt.borrow();
 		gl::PixelStorei( gl::UNPACK_ALIGNMENT, 1 as gl::types::GLint );
 		assert!( t.width>0 && t.height>0 && t.samples==0u );
 		let mut levs = t.levels.borrow_mut();
@@ -403,9 +407,10 @@ impl Binding	{
 		gl::GetError();	//debug
 	}
 
-	pub fn load_sub_2D<T>( &mut self, t: @Texture, level: uint, r: &frame::Rect,
+	pub fn load_sub_2D<T>( &mut self, pt: &TexturePtr, level: uint, r: &frame::Rect,
 			pix_format: gl::types::GLenum, pix_type: gl::types::GLenum, data: &[T])	{
-		self.bind( t );
+		self.bind( pt );
+		let t = pt.borrow();
 		assert!( t.width>0 && t.height>0 && t.samples==0u );
 		assert!( t.levels.borrow().get().total>level );
 		assert!( r.w*r.h == data.len() );
@@ -422,8 +427,9 @@ impl Binding	{
 		gl::GetError();	//debug
 	}
 
-	pub fn generate_levels( &self, t: @Texture )	{
-		assert!( self.is_bound( t ) );
+	pub fn generate_levels( &self, pt: &TexturePtr )	{
+		assert!( self.is_bound( pt ) );
+		let t = pt.borrow();
 		let mut levs = t.levels.borrow_mut();
 		let Target(tar) = t.target;
 		assert!( t.samples == 0u && levs.get().total > 0u );
@@ -431,9 +437,10 @@ impl Binding	{
 		levs.get().total = t.count_levels();
 	}
 
-	pub fn limit_levels( &self, t: @Texture, base: uint, max: uint )	{
-		assert!( self.is_bound( t ) );
+	pub fn limit_levels( &self, pt: &TexturePtr, base: uint, max: uint )	{
+		assert!( self.is_bound( pt ) );
 		assert!( base <= max );
+		let t = pt.borrow();
 		let mut levs = t.levels.borrow_mut();
 		let Target(tar) = t.target;
 		if levs.get().min != base	{
@@ -454,7 +461,8 @@ pub fn map_target( s: &str )-> Target	{
 		&"Rect"		=> gl::TEXTURE_RECTANGLE,
 		&"2D"		=> gl::TEXTURE_2D,
 		&"2DArray"	=> gl::TEXTURE_2D_ARRAY,
-		//&"2DMS"		=> gl::TEXTURE_2D_MULTISAMPLE,	//TEMP!
+		//#[cfg(multisample)]
+		//&"2DMS"		=> gl::TEXTURE_2D_MULTISAMPLE,
 		&"3D"		=> gl::TEXTURE_3D,
 		_	=> fail!( "Unable to map texture target {:s}", s )
 	})
@@ -462,12 +470,14 @@ pub fn map_target( s: &str )-> Target	{
 
 
 impl context::Context	{
-	pub fn create_texture( &self, st:&str, w:uint, h:uint, d:uint, s:uint )-> @Texture	{
+	pub fn create_texture( &self, st:&str, w:uint, h:uint, d:uint, s:uint )-> TexturePtr	{
 		let mut hid = 0 as gl::types::GLuint;
 		unsafe{ gl::GenTextures( 1, ptr::to_mut_unsafe_ptr(&mut hid) )};
-		@Texture{ handle:Handle(hid), target:map_target(st),
+		rc::Rc::new(Texture{
+			handle:Handle(hid), target:map_target(st),
 			width:w, height:h, depth:d, samples:s,
 			levels	: cell::RefCell::new( LevelInfo{total:0u,min:0u,max:1000u} ),
-			sampler	: cell::RefCell::new( Sampler::new(3u,1) )}
+			sampler	: cell::RefCell::new( Sampler::new(3u,1) )
+		})
 	}
 }

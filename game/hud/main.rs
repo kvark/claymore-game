@@ -64,7 +64,7 @@ pub fn modify( children: &mut ~[gen::Child], path: &str, fun: |&str,&mut gen::El
 
 struct FontCache	{
 	font	: @font::Font,
-	cache	: HashMap<~str,@texture::Texture>,
+	cache	: HashMap<~str,texture::TexturePtr>,
 }
 
 
@@ -76,7 +76,7 @@ pub struct Context	{
 	program_text	: shade::ProgramPtr,
 	sampler_image	: texture::Sampler,
 	sampler_text	: texture::Sampler,
-	cache_images	: HashMap<gen::Path,@texture::Texture>,
+	cache_images	: HashMap<gen::Path,texture::TexturePtr>,
 	cache_fonts		: HashMap<gen::Font,FontCache>,
 }
 
@@ -157,12 +157,12 @@ impl Context	{
 	pub fn get_size( &self, elem: &gen::Element )-> gen::Vector	{
 		match elem	{
 			&gen::ElImage(ref path)	=>	{
-				let t = self.cache_images.get( path );
+				let t = self.cache_images.get( path ).borrow();
 				[t.width,t.height]
 			},
 			&gen::ElText(ref text)	=>	{
 				let fc = self.cache_fonts.get( &text.font );
-				let t = fc.cache.get( &text.value );
+				let t = fc.cache.get( &text.value ).borrow();
 				[t.width,t.height]
 			},
 			&gen::ElSpace(space)	=> space,
@@ -191,32 +191,34 @@ impl Context	{
 		for &gen::Child(_,ref element) in bx.children.iter()	{
 			let size = match element	{
 				&gen::ElImage(ref path)	=>	{
-					let t = *self.cache_images.find( path ).
+					let pt = self.cache_images.find( path ).
 						expect(format!( "Image '{:s}' is not loaded", *path ));
+					let size = [pt.borrow().width, pt.borrow().height];
 					let mut data = shade::DataMap::new();
 					data.set( ~"t_Image",		shade::UniTexture(
-						0, t, Some(self.sampler_image) ));
-					let rect = Rect{ x:off[0], y:off[1], w:t.width, h:t.height };
+						0, pt.clone(), Some(self.sampler_image) ));
+					let rect = Rect{ x:off[0], y:off[1], w:size[0], h:size[1] };
 					let vc = Vec4::new( 0f32, 0f32, 1f32, 1f32 );
 					data.set( ~"u_Center",		shade::UniFloatVec(vc) );
 					data.set( ~"u_Transform",	self.transform(&rect,screen_size) );
 					calls.push( self.make_call( &self.program_image, data, out, None ));
-					[t.width,t.height]
+					size
 				},
 				&gen::ElText(ref text)	=>	{
 					let fc = self.cache_fonts.find( &text.font ).
 						expect(format!( "Font '{:s}' is not loaded", text.font.path ));
-					let t = *fc.cache.find( &text.value ).
+					let pt = fc.cache.find( &text.value ).
 						expect(format!( "Text '{:s}' is not loaded", text.value ));
+					let size = [pt.borrow().width, pt.borrow().height];
 					let mut data = shade::DataMap::new();
 					data.set( ~"t_Text",	shade::UniTexture(
-						0, t, Some(self.sampler_text) ));
+						0, pt.clone(), Some(self.sampler_text) ));
 					data.set( ~"u_Color",	Context::get_color_param(text.color) );
-					let dr = Rect{ x:off[0], y:off[1], w:t.width, h:t.height };
+					let dr = Rect{ x:off[0], y:off[1], w:size[0], h:size[1] };
 					data.set( ~"u_Transform", self.transform(&dr,screen_size) );
 					// return
 					calls.push( self.make_call( &self.program_text, data, out, None ));
-					[t.width,t.height]
+					size
 				},
 				&gen::ElSpace(space)	=> space,
 				&gen::ElBox(ref sx, ref sy, ref subox)	=>	{

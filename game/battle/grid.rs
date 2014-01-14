@@ -29,7 +29,7 @@ pub struct Grid	{
 	priv program	: gr_low::shade::ProgramPtr,
 	priv data		: gr_low::shade::DataMap,
 	priv rast		: gr_low::rast::State,
-	priv texture	: @gr_low::texture::Texture,
+	priv texture	: gr_low::texture::TexturePtr,
 	priv v_scale	: vector::Vec4<f32>,
 }
 
@@ -48,7 +48,7 @@ impl Grid	{
 		let cells = std::vec::from_elem( segments*segments, CELL_EMPTY );
 		let tex = ct.create_texture( "2D", segments, segments, 0u, 0u );
 		let s_opt = Some( gr_low::texture::Sampler::new(1u,0) );
-		data.set( ~"t_Grid",	gr_low::shade::UniTexture(0,tex,s_opt) );
+		data.set( ~"t_Grid",	gr_low::shade::UniTexture(0,tex.clone(),s_opt) );
 		let par_scale = vector::Vec4::new( 10f32, 10f32, 0.1f32, 0f32 );
 		data.set( ~"u_ScaleZ",	gr_low::shade::UniFloatVec(par_scale) );
 		let oo_seg = 1f32 / (segments as f32);
@@ -95,19 +95,19 @@ pub trait DrawableGrid	{
 impl DrawableGrid for Grid	{
 	fn init( &mut self, tb: &mut gr_low::texture::Binding )	{
 		// init storage
-		tb.bind( self.texture );
+		tb.bind( &self.texture );
 		let fm_int = gr_low::texture::map_int_format( "rgba8" );
-		tb.init( self.texture, 1u, fm_int, true );
+		tb.init( &self.texture, 1u, fm_int, true );
 		// load data
 		self.upload(tb);
 		// set up texture
 	}
 	fn upload( &mut self, tb: &mut gr_low::texture::Binding )	{
-		tb.bind( self.texture );
+		tb.bind( &self.texture );
 		let fm_pix = gr_low::texture::map_pix_format( "rgba" );
 		let component = 0u8.to_gl_type();
 		let r = gr_low::frame::Rect::new( self.nseg, self.nseg );
-		tb.load_sub_2D(	self.texture, 0u, &r, fm_pix, component, self.cells );
+		tb.load_sub_2D(	&self.texture, 0u, &r, fm_pix, component, self.cells );
 	}
 	fn draw( &self, output: gr_mid::call::Output, vao: gr_low::buf::VertexArrayPtr )-> gr_mid::call::Call	{
 		gr_mid::call::CallDraw(

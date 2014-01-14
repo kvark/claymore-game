@@ -34,22 +34,22 @@ impl PlaneMap	{
 	pub fn new_main( gc: &context::Context, name: ~str )-> PlaneMap	{
 		let tg = frame::TarSurface( gc.render_buffer.default );
 		let mut pm = PlaneMap::new_empty();
-		pm.stencil = tg;
-		pm.depth = tg;
+		pm.stencil = tg.clone();
+		pm.depth = tg.clone();
 		pm.colors.insert( name, tg );
 		pm
 	}
 
 	fn get_any_target( &self )-> Option<frame::Target>	{
 		if self.stencil != frame::TarEmpty	{
-			Some(self.stencil)
+			Some(self.stencil.clone())
 		}else
 		if self.depth != frame::TarEmpty	{
-			Some(self.depth)
+			Some(self.depth.clone())
 		}else	{
-			for (_,&val) in self.colors.iter()	{
-				if val != frame::TarEmpty	{
-					return Some(val);
+			for (_,ref val) in self.colors.iter()	{
+				if *val != &frame::TarEmpty	{
+					return Some((*val).clone());
 				}
 			}
 			None
@@ -201,15 +201,15 @@ impl Call	{
 			CallEmpty => {},
 			CallClear(cdata, out, mask)	=> {
 				let mut colors : ~[frame::Target] = ~[];
-				for (_,&target) in out.pmap.colors.iter()	{
-					colors.push( target );
+				for (_,ref target) in out.pmap.colors.iter()	{
+					colors.push( (*target).clone() );
 				}
 				let is_main_fb =	{
 					let fb = out.fb.borrow().borrow();
 					fb.get().handle == frame::BufferHandle(0)
 				};
 				let has_color = colors.len()!=0 && (is_main_fb || colors[0]!=frame::TarEmpty);
-				gc.bind_frame_buffer( out.fb.clone(), true, out.pmap.stencil, out.pmap.depth, colors );
+				gc.bind_frame_buffer( &out.fb, true, &out.pmap.stencil, &out.pmap.depth, colors );
 				gc.rast.scissor.activate( &out.gen_scissor(), 0 );
 				gc.rast.mask.activate( &mask, 0 );
 				let mut flags = 0 as gl::types::GLenum;
@@ -243,10 +243,10 @@ impl Call	{
 			CallBlit(src, dst)	=>	{
 				assert!( !src.fb.ptr_eq( &dst.fb ) );
 				// bind frame buffers
-				gc.bind_frame_buffer( src.fb.clone(), false, src.pmap.stencil, src.pmap.depth,
-					src.pmap.colors.iter().map(|(_,&v)| v).collect() );
-				gc.bind_frame_buffer( dst.fb.clone(), true, dst.pmap.stencil, dst.pmap.depth,
-					dst.pmap.colors.iter().map(|(_,&v)| v).collect() );
+				gc.bind_frame_buffer( &src.fb, false, &src.pmap.stencil, &src.pmap.depth,
+					src.pmap.colors.iter().map(|(_,v)| v.clone()).collect() );
+				gc.bind_frame_buffer( &dst.fb, true, &dst.pmap.stencil, &dst.pmap.depth,
+					dst.pmap.colors.iter().map(|(_,v)| v.clone()).collect() );
 				// set state
 				gc.rast.scissor.activate( &dst.gen_scissor(), 0 );
 				let mut flags = 0 as gl::types::GLenum;
@@ -263,8 +263,8 @@ impl Call	{
 					only_color = false;
 				}
 				// prepare
-				let sizeA = { let sfb = src.fb.borrow().borrow(); sfb.get().check_size() };
-				let sizeB = { let dfb = dst.fb.borrow().borrow(); dfb.get().check_size() };
+				let sizeA = src.fb.borrow().with(|f| f.check_size());
+				let sizeB = dst.fb.borrow().with(|f| f.check_size());
 				assert!( sizeA[3] == sizeB[3] || (sizeA[3]*sizeB[3]==0 && only_color) );
 				let filter = if (only_color && sizeA[3]==0) {gl::LINEAR} else {gl::NEAREST};
 				// call blit
@@ -277,11 +277,12 @@ impl Call	{
 				// bind FBO
 				let mut attaches = std::vec::from_elem( out.pmap.colors.len(), frame::TarEmpty );
 				for (name,target) in out.pmap.colors.iter()	{
-					let loc = prog.borrow().with(|p| p.find_output( name ));
+					let pbor = prog.borrow();
+					let loc = pbor.with_mut(|p| p.find_output( name ));
 					assert!( loc < attaches.len() && attaches[loc] == frame::TarEmpty );
-					attaches[loc] = *target;
+					attaches[loc] = target.clone();
 				}
-				gc.bind_frame_buffer( out.fb.clone(), true, out.pmap.stencil, out.pmap.depth, attaches );
+				gc.bind_frame_buffer( &out.fb, true, &out.pmap.stencil, &out.pmap.depth, attaches );
 				// check & activate raster
 				rast.scissor = out.gen_scissor();
 				gc.rast.activate( &rast, inp.mesh.get_poly_size() );
@@ -289,7 +290,7 @@ impl Call	{
 				// draw
 				gc.draw_mesh( &inp, prog, &data );
 			},
-			_	=> fail!(~"Unsupported call!")
+			_	=> fail!("Unsupported call!")
 		}
 	}
 }

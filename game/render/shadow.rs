@@ -18,10 +18,10 @@ pub struct Data	{
 
 pub fn create_data( ct : &mut gr_low::context::Context, light : @scene::Light, size : uint )-> Data	{
 	let shadow = ct.create_texture( "2D", size, size, 0u, 0u );
-	ct.texture.init_depth( shadow, false );
+	ct.texture.init_depth( &shadow, false );
 	let fbo = ct.create_frame_buffer();
 	let mut pmap = gr_mid::call::PlaneMap::new_empty();
-	pmap.depth = gr_low::frame::TarTexture(shadow,0u);
+	pmap.depth = gr_low::frame::TarTexture(shadow.clone(),0u);
 	let mut rast = ct.default_rast;
 	rast.view = gr_low::rast::Viewport( gr_low::frame::Rect::new(size,size) );
 	rast.set_depth( "<", true );

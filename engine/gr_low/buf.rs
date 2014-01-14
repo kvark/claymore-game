@@ -171,13 +171,9 @@ impl gr_low::context::ProxyState for VertexArray	{
 
 impl VertexArray	{
 	pub fn get_mask( &self )-> uint	{
-		let mut m = 0u;
-		for (i,vd) in self.data.iter().enumerate()	{
-			if vd.enabled	{
-				m |= 1<<i;
-			}
-		}
-		m
+		self.data.iter().enumerate().fold(0u,|m,(i,vd)|	{
+			m | if vd.enabled {1<<i} else {0}
+		})
 	}
 }
 
@@ -224,20 +220,19 @@ impl gr_low::context::Context	{
 		}))
 	}
 
-	pub fn bind_vertex_array( &mut self, vap: VertexArrayPtr )	{
-		if !self.vertex_array.is_active( &vap )	{
-			{
-				let va = vap.borrow().borrow();
-				self.element_buffer.active = va.get().element;
-				let ArrayHandle(h) = va.get().handle;
+	pub fn bind_vertex_array( &mut self, vap: &VertexArrayPtr )	{
+		if !self.vertex_array.is_active( vap )	{
+			vap.borrow().with(|va|	{
+				self.element_buffer.active = va.element;
+				let ArrayHandle(h) = va.handle;
 				gl::BindVertexArray( h );
-			}
-			self.vertex_array.active = vap;
+			});
+			self.vertex_array.active = vap.clone();
 		}
 	}
 	pub fn unbind_vertex_array( &mut self )	{
-		let vap = self.vertex_array.default.clone();
-		self.bind_vertex_array( vap );
+		let va = self.vertex_array.default.clone();
+		self.bind_vertex_array( &va );
 	}
 
 	pub fn create_buffer( &self )-> @Object	{

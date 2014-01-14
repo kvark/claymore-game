@@ -123,7 +123,7 @@ impl Technique	{
 		}.hash();
 		match cache.find(&hash)	{
 			Some(p)	=> return p.clone(),
-			_	=> ()
+			None	=> (),
 		}
 		let p = self.link( mat, modifier, ct, lg );
 		cache.insert( hash, p.clone() );

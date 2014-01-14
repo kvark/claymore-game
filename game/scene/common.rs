@@ -230,7 +230,7 @@ pub struct SceneContext	{
 	prefix		: ~str,
 	materials	: Dict<@gr_mid::draw::Material>,
 	mat_data	: Dict<gr_low::shade::DataMap>,
-	textures	: Dict<@gr_low::texture::Texture>,
+	textures	: Dict<gr_low::texture::TexturePtr>,
 	nodes		: Dict<NodeRef>,
 	meshes		: Dict<@gr_mid::mesh::Mesh>,
 	armatures	: Dict<engine::space::ArmaturePtr>,

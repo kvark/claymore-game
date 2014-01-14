@@ -1,7 +1,7 @@
 extern mod gl;
 
 use std;
-use std::{cell,gc,managed,ptr};
+use std::{borrow,cell,gc,managed,ptr};
 use std::to_str::ToStr;
 
 use gr_low::{context,texture};
@@ -43,8 +43,8 @@ impl ToStr for Surface	{
 pub enum Target	{
 	TarEmpty,
 	TarSurface(@Surface),
-	TarTexture(@texture::Texture,uint),
-	TarTextureLayer(@texture::Texture,uint,uint),
+	TarTexture(texture::TexturePtr,uint),
+	TarTextureLayer(texture::TexturePtr,uint,uint),
 }
 
 impl std::cmp::Eq for Target	{
@@ -52,9 +52,10 @@ impl std::cmp::Eq for Target	{
 		match (self,other)	{
 			(&TarEmpty,&TarEmpty)					=> true,
 			(&TarSurface(s1),&TarSurface(s2))		=> { s1.handle == s2.handle },
-			(&TarTexture(t1,l1),&TarTexture(t2,l2))	=> t1.handle == t2.handle && l1==l2,
-			(&TarTextureLayer(t1,r1,l1),&TarTextureLayer(t2,r2,l2))	=>
-				t1.handle == t2.handle && r1==r2 && l1==l2,
+			(&TarTexture(ref t1,l1),&TarTexture(ref t2,l2))	=>
+				borrow::ref_eq(t1.borrow(),t2.borrow()) && l1==l2,
+			(&TarTextureLayer(ref t1,r1,l1),&TarTextureLayer(ref t2,r2,l2))	=>
+				borrow::ref_eq(t1.borrow(),t2.borrow()) && r1==r2 && l1==l2,
 			(_,_) => false
 		}
 	}
@@ -65,8 +66,8 @@ impl ToStr for Target	{
 		match self	{
 			&TarEmpty	=> ~"Empty",
 			&TarSurface(s)	=> s.to_str(),
-			&TarTexture(t,l)	=> format!( "{:s}.lod[{:u}]", t.to_str(), l ),
-			&TarTextureLayer(t,r,l)	=> format!("{:s}.layer[{:u}].lod[{:u}]", t.to_str(), r, l ),
+			&TarTexture(ref t,l)		=> format!( "{:s}.lod[{:u}]", t.borrow().to_str(), l ),
+			&TarTextureLayer(ref t,r,l)	=> format!("{:s}.layer[{:u}].lod[{:u}]", t.borrow().to_str(), r, l ),
 		}
 	}
 }
@@ -77,13 +78,15 @@ impl Target	{
 		match self	{
 			&TarEmpty	=> fail!(~"Empty target has no size"),
 			&TarSurface(sf) => [sf.width, sf.height, 1, sf.samples],
-			&TarTexture(tex,lev) =>	{
-				let (w,h) = tex.get_level_size(lev);
-				[w, h, tex.depth, tex.samples]
+			&TarTexture(ref tex,lev) =>	{
+				let t = tex.borrow();
+				let (w,h) = t.get_level_size(lev);
+				[w, h, t.depth, t.samples]
 			},
-			&TarTextureLayer(tex,_,lev) =>	{
-				let (w,h) = tex.get_level_size(lev);
-				[w, h, 1, tex.samples]
+			&TarTextureLayer(ref tex,_,lev) =>	{
+				let t = tex.borrow();
+				let (w,h) = t.get_level_size(lev);
+				[w, h, 1, t.samples]
 			}
 		}
 	}
@@ -95,18 +98,20 @@ impl Target	{
 				let SurfaceHandle(h) = s.handle;
 				gl::FramebufferRenderbuffer( root, slot, s.target, h );
 			},
-			&TarTexture(tex,lev)	=> {
-				let texture::Handle(h) = tex.handle;
-				let texture::Target(t) = tex.target;
-				assert!( tex.get_num_levels() > lev );
+			&TarTexture(ref tex,lev)	=> {
+				let t = tex.borrow();
+				let texture::Handle(han) = t.handle;
+				let texture::Target(tar) = t.target;
+				assert!( t.get_num_levels() > lev );
 				//gl::FramebufferTexture( root, slot, *tex.handle, lev as gl::types::GLint );
 				// workaround for Linux:
-				assert!( tex.depth == 0 );
-				gl::FramebufferTexture2D( root, slot, t, h, lev as gl::types::GLint );
+				assert!( t.depth == 0 );
+				gl::FramebufferTexture2D( root, slot, tar, han, lev as gl::types::GLint );
 			},
-			&TarTextureLayer(tex,layer,lev) => {
-				let texture::Handle(h) = tex.handle;
-				assert!( tex.depth > layer && tex.get_num_levels() > lev );
+			&TarTextureLayer(ref tex,layer,lev) => {
+				let t = tex.borrow();
+				let texture::Handle(h) = t.handle;
+				assert!( t.depth > layer && t.get_num_levels() > lev );
 				gl::FramebufferTextureLayer( root, slot, h, layer as gl::types::GLint, lev as gl::types::GLint );
 			},
 		}
@@ -204,10 +209,12 @@ impl Drop for BufferHandle	{
 
 impl Buffer	{
 	pub fn each_target( &self, fun: |&Target| )	{
-		let ds = &[self.stencil,self.depth];
-		for &target in ds.iter().chain( self.colors.iter() )	{
-			if target != TarEmpty	{
-				fun(&target);
+		let mut iter = self.colors.iter().
+			chain( Some(&self.stencil).move_iter() ).
+			chain( Some(&self.depth).move_iter() );
+		for target in iter	{
+			if *target != TarEmpty	{
+				fun(target);
 			}
 		}
 	}
@@ -218,8 +225,8 @@ impl Buffer	{
 			handle		:BufferHandle(0),
 			draw_mask	:0x10u,	// invalid one
 			read_id		:None,	// actually, GL_BACK
-			stencil		:ts,
-			depth		:ts,
+			stencil		:ts.clone(),
+			depth		:ts.clone(),
 			colors		:~[ts],
 		}))
 	}
@@ -227,7 +234,7 @@ impl Buffer	{
 	pub fn check_size( &self )-> [uint,..4]	{
 		let mut actual = [0u,0u,0u,0u];
 		
-		self.each_target(|&target|	{
+		self.each_target(|target|	{
 			let current = target.get_size();
 			if current[0]==0u	{
 				actual = current;
@@ -271,18 +278,18 @@ impl Binding	{
 		Binding{ target:target, active:active }
 	}
 
-	fn bind( &mut self, b: BufferPtr )	{
-		if !self.active.ptr_eq(&b)	{
+	fn bind( &mut self, b: &BufferPtr )	{
+		if !self.active.ptr_eq(b)	{
 			let BufferHandle(h) = b.borrow().borrow().get().handle;
 			gl::BindFramebuffer( self.target, h );
-			self.active = b;
+			self.active = b.clone();
 		}
 	}
 
-	fn attach_target( &self, new: Target, old: &mut Target, slot: gl::types::GLenum )-> bool	{
-		if *old != new	{
-			*old = new;
-			new.attach( self.target, slot )
+	fn attach_target( &self, new: &Target, old: &mut Target, slot: gl::types::GLenum )-> bool	{
+		if *old != *new	{
+			*old = new.clone();
+			old.attach( self.target, slot )
 		}else	{true}
 	}
 
@@ -334,11 +341,11 @@ impl context::Context	{
 		}))
 	}
 
-	pub fn bind_frame_buffer( &mut self, fbp: BufferPtr, draw: bool,
-			stencil: Target, depth: Target, colors: ~[Target] )	{
+	pub fn bind_frame_buffer( &mut self, fbp: &BufferPtr, draw: bool,
+			stencil: &Target, depth: &Target, colors: ~[Target] )	{
 		let binding = if draw {&mut self.frame_buffer_draw} else {&mut self.frame_buffer_read};
 		binding.bind( fbp );
-		let is_main_fb = self.default_frame_buffer.ptr_eq( &fbp );
+		let is_main_fb = self.default_frame_buffer.ptr_eq( fbp );
 		let mut fb = fbp.borrow().borrow_mut();
 		// work around main framebuffer
 		if 	is_main_fb{
@@ -368,9 +375,7 @@ impl context::Context	{
 		binding.attach_target( stencil,	&mut fb.get().stencil,	gl::STENCIL_ATTACHMENT );
 		binding.attach_target( depth,	&mut fb.get().depth,	gl::DEPTH_ATTACHMENT );
 		for (i,target) in colors.iter().enumerate()	{
-			let mut val = fb.get().colors[i];	//FIXME
-			binding.attach_target( *target, &mut val, get_color(i) );
-			fb.get().colors[i] = val;
+			binding.attach_target( target, &mut fb.get().colors[i], get_color(i) );
 		}
 		gl::GetError();	//debug
 		let mask = (1u<<colors.len()) - 1u;
@@ -414,8 +419,8 @@ impl context::Context	{
 	}
 
 	pub fn unbind_frame_buffers( &mut self )	{
-		self.frame_buffer_draw.bind( self.default_frame_buffer );
-		self.frame_buffer_read.bind( self.default_frame_buffer );
+		self.frame_buffer_draw.bind( &self.default_frame_buffer );
+		self.frame_buffer_read.bind( &self.default_frame_buffer );
 		gl::DrawBuffer( gl::BACK );
 		gl::ReadBuffer( gl::NONE );
 	}

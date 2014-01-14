@@ -247,7 +247,7 @@ impl Scene	{
 				for ent in self.gr_other.get_mut().mut_iter()	{
 					lbuf.fill_data( &mut ent.data );
 				}
-				queue.push( lbuf.update_depth( self.depth.texture ));
+				queue.push( lbuf.update_depth( &self.depth.texture ));
 				queue.push_all_move( lbuf.bake_layer(
 					0u, self.lights, &self.lvolume, self.cam, gc, lg
 					));
@@ -351,12 +351,12 @@ pub fn create( el : &main::Elements, gc : &mut gr_low::context::Context, fcon : 
 		let samp = gr_low::texture::Sampler::new(3u,1);
 		let use_spherical = false;
 		let prog = if use_spherical	{
-			let tex = *scene.context.textures.get( &~"data/texture/Topanga_Forest_B_3k.hdr" );
-			data.set( ~"t_Environment",	gr_low::shade::UniTexture(0,tex,Some(samp)) );
+			let tex = scene.context.textures.get( &~"data/texture/Topanga_Forest_B_3k.hdr" );
+			data.set( ~"t_Environment",	gr_low::shade::UniTexture(0, tex.clone(), Some(samp)) );
 			engine::load::load_program( gc, "data/code-game/envir", lg )
 		}else	{
 			let tex = engine::load::load_texture_2D( gc, "data/texture/bg2.jpg", true );
-			data.set( ~"t_Image",		gr_low::shade::UniTexture(0,tex,Some(samp)) );
+			data.set( ~"t_Image",		gr_low::shade::UniTexture(0, tex, Some(samp)) );
 			engine::load::load_program( gc, "data/code-game/copy", lg )
 		};
 		let rast = gc.default_rast;
