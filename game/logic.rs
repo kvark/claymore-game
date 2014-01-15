@@ -41,7 +41,7 @@ impl Logic	{
 			hcon : &mut hud::main::Context, log : &journal::Log )-> Logic	{
 		// output
 		let pmap = gr_mid::call::PlaneMap::new_main( gcon, ~"o_Color" );
-		let out = gr_mid::call::Output::new( gcon.default_frame_buffer, pmap );
+		let out = gr_mid::call::Output::new( &gcon.default_frame_buffer, pmap );
 		// create a forward light technique
 		let tech = gr_mid::draw::load_technique( "data/code/tech/forward/light" );
 		Logic	{

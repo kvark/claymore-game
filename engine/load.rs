@@ -255,7 +255,7 @@ pub fn read_mesh( br: &mut Reader, context: &mut context::Context, lg: &journal:
 			if is_fixed_point	{ fm.push_char('.'); }
 			if !is_interpolated	{ fm.push_char('!'); }
 			lg.add(format!( "\t\tname:{:s},\ttype:{:s}", name, fm ));
-			let (at,size) = buf::Attribute::new( fm, buffer, stride, offset );
+			let (at,size) = buf::Attribute::new( fm, &buffer, stride, offset );
 			if stride == 0u	{
 				assert!( at.count == 1u );
 				mesh.index = Some( at );
@@ -268,7 +268,7 @@ pub fn read_mesh( br: &mut Reader, context: &mut context::Context, lg: &journal:
 		assert!( stride==0u || offset == stride );
 		let size = if stride==0u {offset * n_ind} else {stride * n_vert};
 		let data = br.bin.read_bytes( size );
-		context.load_buffer( buffer, data, false );
+		context.load_buffer( &buffer, data, false );
 		num_buffers -= 1u;
 	}
 	br.leave();

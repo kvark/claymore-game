@@ -37,7 +37,7 @@ pub fn create_data( ct : &mut gr_low::context::Context, light : @scene::Light, s
 	let mut samp = gr_low::texture::Sampler::new( 2u, 0 );
 	samp.compare = Some( gr_low::rast::map_comparison("<") );
 	let par = gr_low::shade::UniTexture( 0u, shadow, Some(samp) );
-	let out = gr_mid::call::Output::new( fbo, pmap );
+	let out = gr_mid::call::Output::new( &fbo, pmap );
 	let c0 = gr_mid::call::CallClear( cdata, out.clone(), rast.mask );
 	Data{
 		light		: light,

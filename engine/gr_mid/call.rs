@@ -99,9 +99,9 @@ pub struct Input	{
 }
 
 impl Input	{
-	pub fn new( va: buf::VertexArrayPtr, m: @mesh::Mesh )-> Input	{
+	pub fn new( va: &buf::VertexArrayPtr, m: @mesh::Mesh )-> Input	{
 		Input	{
-			va		: va,
+			va		: va.clone(),
 			mesh	: m,
 			range	: m.get_range(),
 		}
@@ -122,10 +122,10 @@ pub struct Output	{
 }
 
 impl Output	{
-	pub fn new( fb: frame::BufferPtr, pmap: PlaneMap )-> Output	{
+	pub fn new( fb: &frame::BufferPtr, pmap: PlaneMap )-> Output	{
 		let area = pmap.get_area();
 		Output	{
-			fb	: fb,
+			fb	: fb.clone(),
 			pmap: pmap,
 			area: area,
 		}
@@ -241,7 +241,7 @@ impl Call	{
 				gl::Clear( flags );
 			},
 			CallBlit(src, dst)	=>	{
-				assert!( !src.fb.ptr_eq( &dst.fb ) );
+				assert!( !std::borrow::ref_eq(src.fb.borrow(), dst.fb.borrow()) );
 				// bind frame buffers
 				gc.bind_frame_buffer( &src.fb, false, &src.pmap.stencil, &src.pmap.depth,
 					src.pmap.colors.iter().map(|(_,v)| v.clone()).collect() );

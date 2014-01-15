@@ -246,7 +246,7 @@ pub fn parse( path: &str, iscene: &gen::Scene, custom: &[gen::Material], gc: &mu
 			None			=> gc.create_vertex_array(),
 		};
 		let mesh = scene.context.query_mesh( &mesh_name, gc, lg );
-		gr_mid::call::Input::new( vao, mesh )
+		gr_mid::call::Input::new( &vao, mesh )
 	};
 	let root = space::Node::new( ~"root" ).to_ptr();
 	for child in iscene.nodes.iter()	{

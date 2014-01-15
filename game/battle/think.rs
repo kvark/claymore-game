@@ -52,7 +52,6 @@ pub mod motion	{
 		fn get_name<'a>( &'a self )-> &'a str	{ "Move" }
 		
 		fn update( &mut self, m: &mut main::Member, full_delta: anim::float, field: &mut field::Field, grid: &grid::Grid )-> think::MotionStatus	{
-			println!("Move start");
 			let mut delta = full_delta as f32;
 			let root = m.get_root();
 			let mut pos = root.borrow().with(|n| Point::from_vec( &n.space.disp ));
@@ -90,11 +89,7 @@ pub mod motion	{
 				}
 			}else {false};
 			
-			print!("Move in");
-			
 			root.borrow().with_mut( |n| {n.space.disp = pos.to_vec();} );
-			
-			print!("Move end");
 			
 			if done || self.destinations.is_empty()	{
 				think::StatusDone

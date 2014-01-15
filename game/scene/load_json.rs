@@ -246,7 +246,7 @@ pub fn parse_group( context : &mut common::SceneContext,
 		};
 		let mesh = context.query_mesh( &ient.mesh, gc, lg );
 		let (r_min,r_max) = ient.range;
-		let mut inp = gr_mid::call::Input::new( vao, mesh );
+		let mut inp = gr_mid::call::Input::new( &vao, mesh );
 		inp.range = gr_mid::mesh::Range{
 			start	:r_min,
 			num		:r_max-r_min,

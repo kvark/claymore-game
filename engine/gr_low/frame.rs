@@ -1,7 +1,7 @@
 extern mod gl;
 
 use std;
-use std::{borrow,cell,gc,managed,ptr};
+use std::{borrow,cell,managed,ptr,rc};
 use std::to_str::ToStr;
 
 use gr_low::{context,texture};
@@ -198,7 +198,7 @@ pub struct Buffer	{
 	colors			: ~[Target],
 }
 
-pub type BufferPtr = gc::Gc<cell::RefCell<Buffer>>;
+pub type BufferPtr = rc::Rc<cell::RefCell<Buffer>>;
 
 impl Drop for BufferHandle	{
 	fn drop( &mut self )	{
@@ -221,7 +221,7 @@ impl Buffer	{
 
 	pub fn new_default( rb : @Surface )-> BufferPtr	{
 		let ts = TarSurface(rb);
-		gc::Gc::new(cell::RefCell::new( Buffer{
+		rc::Rc::new(cell::RefCell::new( Buffer{
 			handle		:BufferHandle(0),
 			draw_mask	:0x10u,	// invalid one
 			read_id		:None,	// actually, GL_BACK
@@ -279,7 +279,7 @@ impl Binding	{
 	}
 
 	fn bind( &mut self, b: &BufferPtr )	{
-		if !self.active.ptr_eq(b)	{
+		if !borrow::ref_eq(self.active.borrow(), b.borrow())	{
 			let BufferHandle(h) = b.borrow().borrow().get().handle;
 			gl::BindFramebuffer( self.target, h );
 			self.active = b.clone();
@@ -334,7 +334,7 @@ impl context::Context	{
 	pub fn create_frame_buffer( &self )-> BufferPtr	{
 		let mut hid = 0 as gl::types::GLuint;
 		unsafe{ gl::GenFramebuffers( 1, ptr::to_mut_unsafe_ptr(&mut hid) ); }
-		gc::Gc::new(cell::RefCell::new( Buffer{ handle:BufferHandle(hid),
+		rc::Rc::new(cell::RefCell::new( Buffer{ handle:BufferHandle(hid),
 			draw_mask:1u, read_id:Some(0u),
 			stencil:TarEmpty, depth:TarEmpty,
 			colors	: std::vec::from_elem( self.caps.max_color_attachments, TarEmpty ),
@@ -345,7 +345,7 @@ impl context::Context	{
 			stencil: &Target, depth: &Target, colors: ~[Target] )	{
 		let binding = if draw {&mut self.frame_buffer_draw} else {&mut self.frame_buffer_read};
 		binding.bind( fbp );
-		let is_main_fb = self.default_frame_buffer.ptr_eq( fbp );
+		let is_main_fb = borrow::ref_eq( self.default_frame_buffer.borrow(), fbp.borrow() );
 		let mut fb = fbp.borrow().borrow_mut();
 		// work around main framebuffer
 		if 	is_main_fb{

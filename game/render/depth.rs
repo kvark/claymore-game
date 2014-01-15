@@ -20,7 +20,7 @@ impl Data	{
 		let mut rast = gc.default_rast;
 		rast.prime.cull = true;
 		rast.set_depth( "<=", true );
-		let out = gr_mid::call::Output::new( gc.create_frame_buffer(), pmap );
+		let out = gr_mid::call::Output::new( &gc.create_frame_buffer(), pmap );
 		let cdata = gr_mid::call::ClearData{
 			color:None, depth:Some(1.0), stencil:None
 		};

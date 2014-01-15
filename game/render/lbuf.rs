@@ -75,8 +75,8 @@ impl Context	{
 		let mut pm2 = gr_mid::call::PlaneMap::new_empty();
 		pm1.depth = gr_low::frame::TarTexture( depth.clone(), 0 );
 		pm2.depth = gr_low::frame::TarTexture( self.t_depth.clone(), 0 );
-		let src = gr_mid::call::Output::new( self.fbo_alt, pm1 );
-		let dst = gr_mid::call::Output::new( self.fbo, pm2 );
+		let src = gr_mid::call::Output::new( &self.fbo_alt, pm1 );
+		let dst = gr_mid::call::Output::new( &self.fbo, pm2 );
 		gr_mid::call::CallBlit( src, dst )
 	}
 
@@ -100,7 +100,7 @@ impl Context	{
 		//rast.prime.front_cw = true;
 		rast.set_blend( "s+d", "1", "1" );
 		rast.set_depth( "<=", false );
-		let output = gr_mid::call::Output::new( self.fbo, pmap );
+		let output = gr_mid::call::Output::new( &self.fbo, pmap );
 		let mut data = gr_low::shade::DataMap::new();
 		{	// fill data
 			let aspect = (wid as f32) / (het as f32);
@@ -126,7 +126,7 @@ impl Context	{
 			data.set( ~"u_World",	gr_low::shade::UniMatrix(false,mw) );
 			let e = engine::object::Entity	{
 				node	: lit.node,
-				input	: gr_mid::call::Input::new( self.vao.clone(), mesh ),
+				input	: gr_mid::call::Input::new( &self.vao, mesh ),
 				data	: data.clone(),
 				modifier: @() as @gr_mid::draw::Mod,
 				material: mat,

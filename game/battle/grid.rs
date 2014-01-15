@@ -48,7 +48,7 @@ impl Grid	{
 		let cells = std::vec::from_elem( segments*segments, CELL_EMPTY );
 		let tex = ct.create_texture( "2D", segments, segments, 0u, 0u );
 		let s_opt = Some( gr_low::texture::Sampler::new(1u,0) );
-		data.set( ~"t_Grid",	gr_low::shade::UniTexture(0,tex.clone(),s_opt) );
+		data.set( ~"t_Grid",		gr_low::shade::UniTexture(0,tex.clone(),s_opt) );
 		let par_scale = vector::Vec4::new( 10f32, 10f32, 0.1f32, 0f32 );
 		data.set( ~"u_ScaleZ",	gr_low::shade::UniFloatVec(par_scale) );
 		let oo_seg = 1f32 / (segments as f32);
@@ -111,7 +111,7 @@ impl DrawableGrid for Grid	{
 	}
 	fn draw( &self, output: gr_mid::call::Output, vao: gr_low::buf::VertexArrayPtr )-> gr_mid::call::Call	{
 		gr_mid::call::CallDraw(
-			gr_mid::call::Input::new( vao, self.mesh ),
+			gr_mid::call::Input::new( &vao, self.mesh ),
 			output,
 			self.rast, self.program.clone(), self.data.clone() )
 	}

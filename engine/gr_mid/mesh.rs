@@ -87,7 +87,7 @@ impl gr_low::context::Context	{
 
 	pub fn bind_mesh_attrib( &mut self, vap: &gr_low::buf::VertexArrayPtr, loc: uint, at: &gr_low::buf::Attribute, is_int: bool )	{
 		assert!( self.vertex_array.is_active(vap) );
-		self.bind_buffer( at.buffer );
+		self.bind_buffer( &at.buffer );
 		let mut va = vap.borrow().borrow_mut();
 		let varray = &mut va.get().data;
 		let vdata = &mut varray[loc];
@@ -97,7 +97,7 @@ impl gr_low::context::Context	{
 			None				=> true
 		};
 		if need_bind	{
-			vdata.attrib = Some(*at);
+			vdata.attrib = Some(at.clone());
 			let ptr = at.offset as *gl::types::GLvoid;
 			unsafe{
 				if is_int	{
@@ -162,8 +162,8 @@ impl gr_low::context::Context	{
 		self.disable_mesh_attribs( &inp.va, va_clean_mask );
 		// call draw
 		match inp.mesh.index	{
-			Some(el) =>	{
-				self.bind_element_buffer( &inp.va, el.buffer );
+			Some(ref el) =>	{
+				self.bind_element_buffer( &inp.va, &el.buffer );
 				assert!( inp.range.start + inp.range.num <= inp.mesh.num_ind );
 				unsafe{
 					gl::DrawElements( inp.mesh.poly_type, inp.range.num as gl::types::GLsizei,

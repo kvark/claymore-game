@@ -362,7 +362,7 @@ pub fn create( el : &main::Elements, gc : &mut gr_low::context::Context, fcon : 
 		let rast = gc.default_rast;
 		//rast.set_depth( ~"<=", false );
 		Envir{
-			input	: gr_mid::call::Input::new( vao.clone(), mesh ),
+			input	: gr_mid::call::Input::new( &vao, mesh ),
 			prog	: prog,
 			data	: data,
 			rast	: rast,
@@ -376,9 +376,9 @@ pub fn create( el : &main::Elements, gc : &mut gr_low::context::Context, fcon : 
 		hud_rast.set_blend( "s+d", "Sa", "1-Sa" );
 		let quad = @gr_mid::mesh::create_quad(gc);
 		let pmap = gr_mid::call::PlaneMap::new_main( gc, ~"o_Color" );
-		let out = gr_mid::call::Output::new( gc.default_frame_buffer, pmap );
+		let out = gr_mid::call::Output::new( &gc.default_frame_buffer, pmap );
 		hud::Context{
-			input	: gr_mid::call::Input::new( vao, quad ),
+			input	: gr_mid::call::Input::new( &vao, quad ),
 			output	: out,
 			rast	: hud_rast,
 			size	: gc.get_screen_size(),
