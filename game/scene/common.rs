@@ -228,11 +228,11 @@ pub type Dict<T>		= HashMap<~str,T>;
 
 pub struct SceneContext	{
 	prefix		: ~str,
-	materials	: Dict<@gr_mid::draw::Material>,
+	materials	: Dict<gr_mid::draw::MaterialPtr>,
 	mat_data	: Dict<gr_low::shade::DataMap>,
 	textures	: Dict<gr_low::texture::TexturePtr>,
 	nodes		: Dict<NodeRef>,
-	meshes		: Dict<@gr_mid::mesh::Mesh>,
+	meshes		: Dict<gr_mid::mesh::MeshPtr>,
 	armatures	: Dict<engine::space::ArmaturePtr>,
 	actions		: Dict<engine::space::ArmatureRecordPtr>,
 }
@@ -252,30 +252,30 @@ impl SceneContext	{
 	}
 
 	pub fn query_mesh( &mut self, mesh_name : &~str, gc : &mut gr_low::context::Context,
-			lg : &engine::journal::Log )-> @gr_mid::mesh::Mesh	{
+			lg : &engine::journal::Log )-> gr_mid::mesh::MeshPtr	{
 		match self.meshes.find(mesh_name)	{
-			Some(m)	=> return *m,
+			Some(m)	=> return m.clone(),
 			None	=> (),
 		};
 		let split = mesh_name.split('@').map(|w| w.to_owned()).to_owned_vec();
 		let path = format!( "{:s}/{:s}.k3mesh", self.prefix, split[split.len()-1u] );
 		let mut rd = engine::load::Reader::create_std( path );
-		let mut q_mesh = None::<@gr_mid::mesh::Mesh>;
+		let mut q_mesh = None::<gr_mid::mesh::MeshPtr>;
 		if split.len() > 1	{
 			assert!( rd.enter() == ~"*mesh" );
 			while rd.has_more()!=0u	{
-				let mesh = @engine::load::read_mesh( &mut rd, gc, lg );
-				let full_name = format!( "{:s}@{:s}", mesh.name, split[1] );
+				let mesh = engine::load::read_mesh( &mut rd, gc, lg ).to_ptr();
+				let full_name = format!( "{:s}@{:s}", mesh.borrow().name, split[1] );
 				if full_name == *mesh_name	{
-					q_mesh = Some(mesh);
+					q_mesh = Some( mesh.clone() );
 				}
 				self.meshes.insert( full_name, mesh );
 			}
 			rd.leave();
 			q_mesh.expect(format!( "Mesh '{:s}' not found in the collection", *mesh_name ))
 		}else	{
-			let mesh = @engine::load::read_mesh( &mut rd, gc, lg );
-			self.meshes.insert( mesh_name.clone(), mesh );
+			let mesh = engine::load::read_mesh( &mut rd, gc, lg ).to_ptr();
+			self.meshes.insert( mesh_name.clone(), mesh.clone() );
 			mesh
 		}
 	}

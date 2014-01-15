@@ -3,8 +3,6 @@
 #[comment = "Graphics engine for Claymore game"];
 #[license = "MIT"];
 
-#[feature(managed_boxes)];
-
 
 extern mod extra;
 extern mod freetype;

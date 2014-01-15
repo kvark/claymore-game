@@ -1,6 +1,6 @@
 extern mod gl;
 
-use std::{borrow};
+use std::{borrow,rc};
 use std::cell::RefCell;
 use std::hashmap::HashMap;
 
@@ -14,6 +14,7 @@ pub struct Range	{
 	num		: uint,
 }
 
+pub type MeshPtr = rc::Rc<Mesh>;
 
 pub struct Mesh	{
 	name		: ~str,
@@ -26,6 +27,10 @@ pub struct Mesh	{
 }
 
 impl Mesh	{
+	pub fn to_ptr( self )-> MeshPtr	{
+		rc::Rc::new(self)
+	}
+
 	pub fn get_poly_size( &self )-> uint	{
 		match self.poly_type	{
 			gl::POINT	=>1u,
@@ -47,13 +52,13 @@ impl Mesh	{
 }
 
 
-pub fn create_quad( ct: &mut gr_low::context::Context )-> Mesh	{
+pub fn create_quad( ct: &mut gr_low::context::Context )-> MeshPtr	{
 	let vdata = [0i8,0i8,1i8,0i8,0i8,1i8,1i8,1i8];
 	let count = 2u;
 	let mut mesh = ct.create_mesh( ~"quad", "3s", vdata.len()/count, 0u );
 	let vat = ct.create_attribute( vdata, count, false );
 	mesh.attribs.insert( ~"a_Vertex", vat );
-	mesh
+	rc::Rc::new(mesh)
 }
 
 
@@ -122,7 +127,7 @@ impl gr_low::context::Context	{
 	pub fn draw_mesh( &mut self, inp: &gr_mid::call::Input, prog: gr_low::shade::ProgramPtr, data: &gr_low::shade::DataMap )-> bool	{
 		assert!(inp.va.borrow().with( |va| {let gr_low::buf::ArrayHandle(h) = va.handle; h != 0} ));
 		// check black list
-		let mut black = inp.mesh.black_list.borrow_mut();
+		let mut black = inp.mesh.borrow().black_list.borrow_mut();
 		if black.get().iter().find( |p| borrow::ref_eq(p.borrow(),prog.borrow()) ).is_some()	{
 			return false;
 		}
@@ -140,7 +145,7 @@ impl gr_low::context::Context	{
 		let mut va_clean_mask = inp.va.borrow().with(|v| v.get_mask());
 		let pborrow = prog.borrow().borrow();
 		for (name,pat) in pborrow.get().attribs.iter()	{
-			match inp.mesh.attribs.find(name)	{
+			match inp.mesh.borrow().attribs.find(name)	{
 				Some(sat) => {
 					if !sat.compatible(pat)	{
 						black.get().push( prog.clone() );
@@ -154,25 +159,26 @@ impl gr_low::context::Context	{
 				None => {
 					black.get().push( prog.clone() );
 					print!( "Mesh '{}' doesn't contain required attribute '{}', needed for program {}{}\n",
-						inp.mesh.name, *name, '#', phan );
+						inp.mesh.borrow().name, *name, '#', phan );
 					return false;
 				}
 			}
 		}
 		self.disable_mesh_attribs( &inp.va, va_clean_mask );
 		// call draw
-		match inp.mesh.index	{
+		let poly = inp.mesh.borrow().poly_type;
+		match inp.mesh.borrow().index	{
 			Some(ref el) =>	{
 				self.bind_element_buffer( &inp.va, &el.buffer );
-				assert!( inp.range.start + inp.range.num <= inp.mesh.num_ind );
+				assert!( inp.range.start + inp.range.num <= inp.mesh.borrow().num_ind );
 				unsafe{
-					gl::DrawElements( inp.mesh.poly_type, inp.range.num as gl::types::GLsizei,
+					gl::DrawElements( poly, inp.range.num as gl::types::GLsizei,
 						el.kind, inp.range.start as *gl::types::GLvoid );
 				}
 			},
 			None =>	{
-				assert!( inp.range.start + inp.range.num <= inp.mesh.num_vert );
-				gl::DrawArrays( inp.mesh.poly_type, inp.range.start as gl::types::GLint,
+				assert!( inp.range.start + inp.range.num <= inp.mesh.borrow().num_vert );
+				gl::DrawArrays( poly, inp.range.start as gl::types::GLint,
 					inp.range.num as gl::types::GLsizei );
 			}
 		}

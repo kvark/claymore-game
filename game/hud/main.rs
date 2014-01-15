@@ -85,9 +85,9 @@ impl Context	{
 		let mut hud_rast = gc.default_rast;
 		hud_rast.set_blend( "s+d", "Sa", "1-Sa" );
 		let vao = gc.create_vertex_array();
-		let quad = @engine::gr_mid::mesh::create_quad( gc );
+		let quad = engine::gr_mid::mesh::create_quad( gc );
 		Context{
-			input	: call::Input::new( &vao, quad ),
+			input	: call::Input::new( &vao, &quad ),
 			rast	: hud_rast,
 			program_solid	: engine::load::load_program( gc, "data/code/hud/solid",	lg ),
 			program_image	: engine::load::load_program( gc, "data/code/hud/image",	lg ),

@@ -1,6 +1,7 @@
 use std::path;
 use std::hashmap::HashMap;
 use std::io;
+use std::rc::Rc;
 use extra::json;
 use extra::serialize::{Decoder,Decodable};
 
@@ -230,15 +231,15 @@ pub fn parse_group( context : &mut common::SceneContext,
 			None	=> fail!( ~"Material data not found: " + ient.material )
 		};
 		let mat = match context.materials.find( &ient.material )	{
-			Some(m)	=> *m,
+			Some(m)	=> m.clone(),
 			None	=> fail!( ~"Material not found: " + ient.material )
 		};
 		let skel = if ient.armature.is_empty()	{
-			@()	as @gr_mid::draw::Mod
+			~()	as ~gr_mid::draw::Mod
 		}else	{
 			//*context.armatures.get(&ient.armature)
-			@()	//FIXME
-				as @gr_mid::draw::Mod
+			~()	//FIXME
+				as ~gr_mid::draw::Mod
 		};
 		let vao = match opt_vao	{
 			Some(ref v)	=> v.clone(),
@@ -246,7 +247,7 @@ pub fn parse_group( context : &mut common::SceneContext,
 		};
 		let mesh = context.query_mesh( &ient.mesh, gc, lg );
 		let (r_min,r_max) = ient.range;
-		let mut inp = gr_mid::call::Input::new( &vao, mesh );
+		let mut inp = gr_mid::call::Input::new( &vao, &mesh );
 		inp.range = gr_mid::mesh::Range{
 			start	:r_min,
 			num		:r_max-r_min,
@@ -255,7 +256,7 @@ pub fn parse_group( context : &mut common::SceneContext,
 			node	: root,
 			input	: inp,
 			data	: data,
-			modifier: skel,
+			modifier: Rc::new(skel),
 			material: mat,
 		};
 		group.get_mut().push(ent);
@@ -284,10 +285,10 @@ pub fn load_scene( path : &str, gc : &mut gr_low::context::Context,
 	lg.add(format!( "\t[p] Parse config: {:f}", c1-c0 ));
 	// materials
 	let mut tex_cache		: HashMap<~str,gr_low::texture::TexturePtr>	= HashMap::new();
-	let mut map_material	: HashMap<~str,@gr_mid::draw::Material>	= HashMap::new();
-	let mut map_data		: HashMap<~str,gr_low::shade::DataMap>	= HashMap::new();
+	let mut map_material	: HashMap<~str,gr_mid::draw::MaterialPtr>	= HashMap::new();
+	let mut map_data		: HashMap<~str,gr_low::shade::DataMap>		= HashMap::new();
 	for imat in scene.materials.iter()	{
-		let mat = @gr_mid::draw::load_material( "data/code/mat/" + imat.kind );
+		let mat = gr_mid::draw::load_material( "data/code/mat/" + imat.kind ).to_ptr();
 		if !map_material.contains_key( &imat.name )	{
 			lg.add( ~"\tStandard material: " + imat.name );
 			map_material.insert( imat.name.clone(), mat );
@@ -307,7 +308,7 @@ pub fn load_scene( path : &str, gc : &mut gr_low::context::Context,
 		map_data.insert( imat.name.clone(), data );
 	}
 	for imat in mat_config.iter()	{
-		let mat = @gr_mid::draw::load_material( imat.kind.clone() );
+		let mat = gr_mid::draw::load_material( imat.kind.clone() ).to_ptr();
 		map_material.insert( imat.name.clone(), mat );
 		lg.add( ~"\tCustom material: " + imat.name );
 		for itex in imat.textures.iter()	{

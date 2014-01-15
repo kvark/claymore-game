@@ -519,6 +519,46 @@
 	},
 	"buffers":
 	[
+		{
+			"file": "/mnt/code/claymore/claymore-game/game/hud/debug.rs",
+			"settings":
+			{
+				"buffer_size": 5078,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "/mnt/code/claymore/claymore-game/engine/gr_low/context.rs",
+			"settings":
+			{
+				"buffer_size": 5063,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "/mnt/code/claymore/claymore-game/engine/gr_low/rast.rs",
+			"settings":
+			{
+				"buffer_size": 20208,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "/mnt/code/claymore/claymore-game/engine/gr_low/shade.rs",
+			"settings":
+			{
+				"buffer_size": 15917,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "/mnt/code/claymore/claymore-game/engine/gr_low/texture.rs",
+			"settings":
+			{
+				"buffer_size": 13584,
+				"line_ending": "Unix"
+			}
+		}
 	],
 	"build_system": "Packages/Makefile/Make.sublime-build",
 	"command_palette":
@@ -560,11 +600,6 @@
 	},
 	"file_history":
 	[
-		"/mnt/code/claymore/claymore-game/game/hud/debug.rs",
-		"/mnt/code/claymore/claymore-game/engine/gr_low/context.rs",
-		"/mnt/code/claymore/claymore-game/engine/gr_low/rast.rs",
-		"/mnt/code/claymore/claymore-game/engine/gr_low/shade.rs",
-		"/mnt/code/claymore/claymore-game/engine/gr_low/texture.rs",
 		"/mnt/code/claymore/claymore-game/util/engine/gr_low/shade.rs",
 		"/mnt/code/claymore/claymore-game/util/Makefile",
 		"/home/kvark/.config/sublime-text-2/Packages/Makefile/Make.sublime-build",
@@ -579,12 +614,17 @@
 		"/mnt/code/claymore/claymore-game/game/battle/unit.rs",
 		"/mnt/code/claymore/claymore-game/game/scene/chared.rs",
 		"/mnt/code/claymore/claymore-game/game/scene/common.rs",
+		"/mnt/code/claymore/claymore-game/engine/gr_low/context.rs",
 		"/mnt/code/claymore/claymore-game/engine/gr_low/frame.rs",
 		"/mnt/code/claymore/claymore-game/engine/gr_low/buf.rs",
+		"/mnt/code/claymore/claymore-game/engine/gr_low/shade.rs",
+		"/mnt/code/claymore/claymore-game/engine/gr_low/texture.rs",
 		"/mnt/code/claymore/claymore-game/engine/gr_mid/call.rs",
 		"/mnt/code/claymore/claymore-game/.hgignore",
+		"/mnt/code/claymore/claymore-game/game/hud/debug.rs",
 		"/mnt/code/claymore/claymore-game/game/battle/grid.rs",
 		"/mnt/code/claymore/claymore-game/engine/gr_mid/font.rs",
+		"/mnt/code/claymore/claymore-game/engine/gr_low/rast.rs",
 		"/mnt/code/claymore/claymore-game/game/logic.rs",
 		"/mnt/code/claymore/claymore-game/game/battle/int.rs",
 		"/mnt/code/claymore/claymore-game/game/claymore.rs",
@@ -695,7 +735,7 @@
 	},
 	"find_in_files":
 	{
-		"height": 0.0,
+		"height": 90.0,
 		"where_history":
 		[
 			"/mnt/code/claymore/claymore-game/",
@@ -881,8 +921,144 @@
 	"groups":
 	[
 		{
+			"selected": 3,
 			"sheets":
 			[
+				{
+					"buffer": 0,
+					"file": "/mnt/code/claymore/claymore-game/game/hud/debug.rs",
+					"settings":
+					{
+						"buffer_size": 5078,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								652,
+								652
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Rust/Rust.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 315.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 1,
+					"file": "/mnt/code/claymore/claymore-game/engine/gr_low/context.rs",
+					"settings":
+					{
+						"buffer_size": 5063,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								212,
+								212
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Rust/Rust.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 2,
+					"file": "/mnt/code/claymore/claymore-game/engine/gr_low/rast.rs",
+					"settings":
+					{
+						"buffer_size": 20208,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								130,
+								130
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Rust/Rust.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 3,
+					"file": "/mnt/code/claymore/claymore-game/engine/gr_low/shade.rs",
+					"settings":
+					{
+						"buffer_size": 15917,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								158,
+								158
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Rust/Rust.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 4,
+					"file": "/mnt/code/claymore/claymore-game/engine/gr_low/texture.rs",
+					"settings":
+					{
+						"buffer_size": 13584,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								155,
+								155
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Rust/Rust.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				}
 			]
 		}
 	],

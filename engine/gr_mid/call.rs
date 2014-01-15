@@ -94,22 +94,22 @@ pub struct ClearData	{
 #[deriving(Clone)]
 pub struct Input	{
 	va		: buf::VertexArrayPtr,
-	mesh	: @mesh::Mesh,
+	mesh	: mesh::MeshPtr,
 	range	: mesh::Range,
 }
 
 impl Input	{
-	pub fn new( va: &buf::VertexArrayPtr, m: @mesh::Mesh )-> Input	{
+	pub fn new( va: &buf::VertexArrayPtr, m: &mesh::MeshPtr )-> Input	{
 		Input	{
 			va		: va.clone(),
-			mesh	: m,
-			range	: m.get_range(),
+			mesh	: m.clone(),
+			range	: m.borrow().get_range(),
 		}
 	}
 	pub fn log( &self, lg: &journal::Log )	{
 		let buf::ArrayHandle(han) = self.va.borrow().borrow().get().handle;
 		lg.add(format!( "\tMesh '{:s}' at VAO={} with range [{:u}:{:u}]",
-			self.mesh.name, han, self.range.start, self.range.start+self.range.num ));
+			self.mesh.borrow().name, han, self.range.start, self.range.start+self.range.num ));
 	}
 }
 
@@ -285,7 +285,7 @@ impl Call	{
 				gc.bind_frame_buffer( &out.fb, true, &out.pmap.stencil, &out.pmap.depth, attaches );
 				// check & activate raster
 				rast.scissor = out.gen_scissor();
-				gc.rast.activate( &rast, inp.mesh.get_poly_size() );
+				gc.rast.activate( &rast, inp.mesh.borrow().get_poly_size() );
 				//assert_eq!( out.area, *gc.rast.view );
 				// draw
 				gc.draw_mesh( &inp, prog, &data );

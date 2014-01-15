@@ -1,7 +1,7 @@
 extern mod openal;
 
 use std;
-use std::ptr;
+use std::{rc,ptr};
 
 use openal::{al,alc};
 
@@ -26,6 +26,8 @@ impl Drop for Context	{
 }
 
 
+pub type BufferPtr = rc::Rc<Buffer>;
+
 pub struct Buffer	{
 	handle		: BufferHandle,
 	duration	: float,
@@ -43,7 +45,7 @@ impl Drop for BufferHandle	{
 
 pub struct Source	{
 	handle		: SourceHandle,
-	priv buffer	: Option<@Buffer>,
+	priv buffer	: Option<BufferPtr>,
 }
 
 impl Drop for SourceHandle	{
@@ -56,10 +58,10 @@ impl Drop for SourceHandle	{
 }
 
 impl Source	{
-	pub fn bind( &mut self, buf: @Buffer )	{
-		self.buffer = Some(buf);
+	pub fn bind( &mut self, buf: &BufferPtr )	{
+		self.buffer = Some(buf.clone());
 		let SourceHandle(sh) = self.handle;
-		let BufferHandle(bh) = buf.handle;
+		let BufferHandle(bh) = buf.borrow().handle;
 		unsafe{
 			al::ffi::alSourcei( sh, al::ffi::BUFFER, bh as al::types::ALint )
 		}
@@ -130,7 +132,7 @@ impl Context	{
 	}
 
 	pub fn create_buffer<T>( &self, channels: uint, bits: uint, byte_rate: uint, 
-		sample_rate : uint, data : ~[T] )-> Buffer	{
+		sample_rate : uint, data : ~[T] )-> BufferPtr	{
 		let mut hid : al::types::ALuint = 0;
 		let size = data.len() * std::mem::size_of::<T>();
 		unsafe{
@@ -139,10 +141,10 @@ impl Context	{
 				data.as_ptr() as *al::types::ALvoid,
 				size as al::types::ALsizei, sample_rate as al::types::ALsizei );
 		}		
-		Buffer{
+		rc::Rc::new(Buffer{
 			handle	: BufferHandle(hid),
 			duration: (size as float) / (byte_rate as float),
-		}
+		})
 	}
 
 	pub fn create_source( &self )-> Source	{
@@ -169,7 +171,7 @@ pub fn read_wave_chunk( rd: &mut load::Reader )-> load::Chunk	{
 	}
 }
 
-pub fn load_wav( at: &Context, path: &str, lg: &journal::Log )-> Buffer	{
+pub fn load_wav( at: &Context, path: &str, lg: &journal::Log )-> BufferPtr	{
 	lg.add( "Loading " + path );
 	let mut rd = load::Reader::create_ext( path, read_wave_chunk );
 	assert!( rd.enter() == ~"RIFF" );

@@ -1,4 +1,5 @@
 use std::hashmap::HashMap;
+use std::rc::Rc;
 
 use cgmath::{quaternion,vector};
 use cgmath::{angle,projection,transform};
@@ -64,7 +65,7 @@ fn parse_materials( materials: &[gen::Material], prefix: &str, ctx: &mut common:
 			source = flat_mat.clone();
 			lg.add(format!( "\t\t(w) forcing shader to '{:s}' due to no textures", flat_mat ));
 		}
-		let mat = @gr_mid::draw::load_material( prefix + source );
+		let mat = gr_mid::draw::load_material( prefix + source ).to_ptr();
 		ctx.materials.insert( imat.name.clone(), mat );
 		for itex in imat.textures.iter()	{
 			if !ctx.textures.contains_key( &itex.path )	{
@@ -175,12 +176,12 @@ fn parse_child( child: &gen::NodeChild, parent: space::NodePtr, scene: &mut comm
 			input.range.start = ient.range[0];
 			input.range.num = ient.range[1] - ient.range[0];
 			let skel = if ient.armature.is_empty()	{
-				@()	as @gr_mid::draw::Mod
+				~()	as ~gr_mid::draw::Mod
 			}else	{
 				//*scene.context.armatures.find( &ient.armature ).
 				//	expect( ~"Armature not found: " + ient.armature )
-				@()	//FIXME
-					as @gr_mid::draw::Mod
+				~()	//FIXME
+					as ~gr_mid::draw::Mod
 			};
 			scene.entities.get_mut().push( engine::object::Entity{
 				node	: parent,
@@ -189,9 +190,10 @@ fn parse_child( child: &gen::NodeChild, parent: space::NodePtr, scene: &mut comm
 				data	: scene.context.mat_data.find( &ient.material ).
 					expect( ~"Material data not found: " + ient.material ).
 					clone(),
-				modifier: skel,
-				material: *scene.context.materials.find( &ient.material ).
-					expect( ~"Material not found: " + ient.material ),
+				modifier: Rc::new(skel),
+				material: scene.context.materials.find( &ient.material ).
+					expect( ~"Material not found: " + ient.material ).
+					clone(),
 			});
 		},
 		&gen::ChildCamera(ref icam)	=>	{
@@ -246,7 +248,7 @@ pub fn parse( path: &str, iscene: &gen::Scene, custom: &[gen::Material], gc: &mu
 			None			=> gc.create_vertex_array(),
 		};
 		let mesh = scene.context.query_mesh( &mesh_name, gc, lg );
-		gr_mid::call::Input::new( &vao, mesh )
+		gr_mid::call::Input::new( &vao, &mesh )
 	};
 	let root = space::Node::new( ~"root" ).to_ptr();
 	for child in iscene.nodes.iter()	{

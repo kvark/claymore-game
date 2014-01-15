@@ -1,11 +1,13 @@
 use std::hash::Hash;
 use std::hashmap::HashMap;
-use std::to_bytes;
+use std::{rc,to_bytes};
 
 use gr_low::{context,shade};
 use journal;
 use load;
 
+
+pub type ModPtr = rc::Rc<~Mod>;
 
 pub trait Mod	{
 	fn get_name<'a>( &'a self )-> &'a str;
@@ -24,6 +26,7 @@ impl Mod for ()	{
 	fn fill_data( &self, _data: &mut shade::DataMap )	{}
 }
 
+pub type MaterialPtr = rc::Rc<Material>;
 
 pub struct Material	{
 	name			: ~str,
@@ -33,17 +36,23 @@ pub struct Material	{
 	code_fragment	: ~str,
 }
 
+impl Material	{
+	pub fn to_ptr( self )-> MaterialPtr	{
+		rc::Rc::new(self)
+	}
+}
+
 
 struct CacheEntry	{
-	material	: @Material,
-	modifier	: @Mod,
+	material	: MaterialPtr,
+	modifier	: ModPtr,
 	technique	: ~[~str],	//TODO: borrow
 }
 
 impl to_bytes::IterBytes for CacheEntry	{
 	fn iter_bytes( &self, lsb0: bool, f: to_bytes::Cb )-> bool	{
-		self.material.name.iter_bytes( lsb0, |x| f(x) ) &&
-		self.modifier.get_name().iter_bytes( lsb0, |x| f(x) ) &&
+		self.material.borrow().name.iter_bytes( lsb0, |x| f(x) ) &&
+		self.modifier.borrow().get_name().iter_bytes( lsb0, |x| f(x) ) &&
 		self.technique.iter_bytes( lsb0, f )
 	}
 }
@@ -68,7 +77,7 @@ static glsl_header_150 : &'static str = &"#version 150 core";
 impl Technique	{
 	pub fn get_header<'a>( &'a self )-> &'a str	{glsl_header_150}
 	
-	pub fn make_vertex( &self, material: &Material, modifier: @Mod )-> ~str	{
+	pub fn make_vertex( &self, material: &Material, modifier: &Mod )-> ~str	{
 		let smod = format!( "//--- Modifier: {:s} ---//", modifier.get_name() );
 		let smat = format!( "//--- Material: {:s} ---//", material.name );
 		let stek = format!( "//--- Technique: {:s} ---//", self.name );
@@ -93,7 +102,7 @@ impl Technique	{
 		].connect("\n")
 	}
 	
-	pub fn link( &self, mat: &Material, modifier: @Mod, ct: &context::Context, lg: &journal::Log )-> Option<shade::ProgramPtr>	{
+	pub fn link( &self, mat: &Material, modifier: &Mod, ct: &context::Context, lg: &journal::Log )-> Option<shade::ProgramPtr>	{
 		if !self.meta_vertex.iter().all(|m|	{ mat.meta_vertex.contains(m) 	})
 		|| !self.meta_fragment.iter().all(|m|	{ mat.meta_fragment.contains(m)	})	{
 			lg.add(format!( "Material '{:s}' rejected by '{:s}'", mat.name, self.name ));
@@ -117,15 +126,16 @@ impl Technique	{
 		Some( ct.create_program(shaders,lg) )
 	}
 
-	pub fn get_program( &self, mat: @Material, modifier: @Mod, cache: &mut Cache, ct: &context::Context, lg: &journal::Log )-> Option<shade::ProgramPtr>	{
-		let hash = CacheEntry{ material:mat, modifier:modifier,
+	pub fn get_program( &self, mat: &MaterialPtr, modifier: &ModPtr, cache: &mut Cache,
+			ct: &context::Context, lg: &journal::Log )-> Option<shade::ProgramPtr>	{
+		let hash = CacheEntry{ material:mat.clone(), modifier:modifier.clone(),
 			technique:~[self.code_vertex.clone(), self.code_fragment.clone()]	//FIXME
 		}.hash();
 		match cache.find(&hash)	{
 			Some(p)	=> return p.clone(),
 			None	=> (),
 		}
-		let p = self.link( mat, modifier, ct, lg );
+		let p = self.link( mat.borrow(), *modifier.borrow(), ct, lg );
 		cache.insert( hash, p.clone() );
 		p
 	}

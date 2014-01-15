@@ -2,6 +2,7 @@ extern mod engine;
 extern mod cgmath;
 
 use std::cell::RefCell;
+use std::rc::Rc;
 use cgmath::matrix::ToMat4;
 use cgmath::vector::Vec4;
 
@@ -12,19 +13,19 @@ use scene = scene::common;
 static use_array : bool	= false;
 
 pub struct LightVolume	{
-	mesh_point	: @gr_mid::mesh::Mesh,
-	mat_point	: @gr_mid::draw::Material,
+	mesh_point	: gr_mid::mesh::MeshPtr,
+	mat_point	: gr_mid::draw::MaterialPtr,
 }
 
 impl LightVolume	{
 	pub fn create( gc: &mut gr_low::context::Context, lg: &engine::journal::Log )->LightVolume	{
 		LightVolume{
-			mesh_point	: @engine::load::load_mesh( "data/mesh/cube.k3mesh", gc, lg ),
-			mat_point	: @gr_mid::draw::load_material( "data/code/mat/light/point" ),
+			mesh_point	: engine::load::load_mesh( "data/mesh/cube.k3mesh", gc, lg ).to_ptr(),
+			mat_point	: gr_mid::draw::load_material( "data/code/mat/light/point" ).to_ptr(),
 		}
 	}
-	pub fn query( &self, _kind: scene::LightKind )-> (@gr_mid::mesh::Mesh,@gr_mid::draw::Material)	{
-		( self.mesh_point, self.mat_point )
+	pub fn query( &self, _kind: scene::LightKind )-> (gr_mid::mesh::MeshPtr,gr_mid::draw::MaterialPtr)	{
+		( self.mesh_point.clone(), self.mat_point.clone() )
 	}
 }
 
@@ -126,10 +127,10 @@ impl Context	{
 			data.set( ~"u_World",	gr_low::shade::UniMatrix(false,mw) );
 			let e = engine::object::Entity	{
 				node	: lit.node,
-				input	: gr_mid::call::Input::new( &self.vao, mesh ),
+				input	: gr_mid::call::Input::new( &self.vao, &mesh ),
 				data	: data.clone(),
-				modifier: @() as @gr_mid::draw::Mod,
-				material: mat,
+				modifier: Rc::new(~() as ~gr_mid::draw::Mod),
+				material: mat.clone(),
 			};
 			self.cache.with_mut(|cache|	{
 				self.tech_bake.process( &e, output.clone(), rast, cache, gc, lg )

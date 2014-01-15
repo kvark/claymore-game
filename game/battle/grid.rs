@@ -25,7 +25,7 @@ pub type Texel			= u32;
 pub struct Grid	{
 	priv nseg		: uint,
 	priv cells		: ~[Texel],
-	priv mesh		: @gr_mid::mesh::Mesh,
+	priv mesh		: gr_mid::mesh::MeshPtr,
 	priv program	: gr_low::shade::ProgramPtr,
 	priv data		: gr_low::shade::DataMap,
 	priv rast		: gr_low::rast::State,
@@ -57,7 +57,7 @@ impl Grid	{
 		Grid{
 			nseg	: segments,
 			cells	: cells,
-			mesh	: @gr_mid::mesh::create_quad( ct ),
+			mesh	: gr_mid::mesh::create_quad( ct ),
 			program	: engine::load::load_program( ct, "data/code-game/grid", lg ),
 			data	: data,
 			rast	: rast,
@@ -111,7 +111,7 @@ impl DrawableGrid for Grid	{
 	}
 	fn draw( &self, output: gr_mid::call::Output, vao: gr_low::buf::VertexArrayPtr )-> gr_mid::call::Call	{
 		gr_mid::call::CallDraw(
-			gr_mid::call::Input::new( &vao, self.mesh ),
+			gr_mid::call::Input::new( &vao, &self.mesh ),
 			output,
 			self.rast, self.program.clone(), self.data.clone() )
 	}
