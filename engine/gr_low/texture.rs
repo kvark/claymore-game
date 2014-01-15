@@ -24,6 +24,8 @@ impl Drop for Handle	{
 	}
 }
 
+pub type SamplerPtr = cell::RefCell<Sampler>;
+
 //#[deriving(Clone)]	//doesn't work in Rust-0.9
 pub struct Sampler	{
 	filter	: [gl::types::GLint, ..2],
@@ -40,8 +42,6 @@ impl Clone for Sampler {
 		}
 	}
 }
-
-pub type SamplerPtr = cell::RefCell<Sampler>;
 
 impl Sampler	{
 	pub fn new( filter: uint, wrap: int )-> Sampler	{
@@ -84,13 +84,15 @@ impl ToStr for Sampler	{
 }
 
 
+pub type LevelInfoPtr = cell::RefCell<LevelInfo>;
+
 pub struct LevelInfo	{
 	total	: uint,
 	min		: uint,
 	max		: uint,
 }
 
-pub type LevelInfoPtr = cell::RefCell<LevelInfo>;
+pub type TexturePtr = rc::Rc<Texture>;
 
 pub struct Texture	{
 	handle	: Handle,
@@ -103,7 +105,6 @@ pub struct Texture	{
 	priv sampler	: SamplerPtr,
 }
 
-pub type TexturePtr = rc::Rc<Texture>;
 
 impl context::ProxyState for Texture	{
 	fn sync_back( &mut self )->bool	{

@@ -107,8 +107,8 @@ pub fn create( loader: |&str|->Option<extern "system" fn()>,
 	};
 	let rast	= rast::make_default( wid, het );
 	let color	= rast::Color{ r:0.0, g:0.0, b:0.0, a:0.0 };
-	let rbind = frame::RenBinding::new( wid, het ,ns );
-	let def_fb	= frame::Buffer::new_default( rbind.default );
+	let rbind	= frame::RenBinding::new( wid, het ,ns );
+	let def_fb	= frame::Buffer::new_default( rbind.default.clone() );
 	// fill up the context
 	Context{
 		caps				: caps,
@@ -146,7 +146,7 @@ impl ProxyState for Context	{
 
 impl Context	{
 	pub fn get_screen_size( &self )-> (uint,uint)	{
-		let rb = self.render_buffer.default;
+		let rb = self.render_buffer.default.borrow();
 		(rb.width, rb.height)
 	}
 	pub fn check( &self, where: &str )	{

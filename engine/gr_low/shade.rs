@@ -272,6 +272,8 @@ impl Drop for ObjectHandle	{
 }
 
 
+pub type ProgramPtr = rc::Rc<cell::RefCell<Program>>;
+
 pub struct Program	{
 	handle	: ProgramHandle,
 	alive	: bool,
@@ -280,8 +282,6 @@ pub struct Program	{
 	params	: ParaMap,
 	priv outputs	: ~[~str],
 }
-
-pub type ProgramPtr = rc::Rc<cell::RefCell<Program>>;
 
 impl Drop for ProgramHandle	{
 	fn drop( &mut self )	{

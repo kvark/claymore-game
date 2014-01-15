@@ -1,13 +1,14 @@
 extern mod gl;
 
 use std;
-use std::{borrow,cell,managed,ptr,rc};
+use std::{borrow,cell,ptr,rc};
 use std::to_str::ToStr;
 
 use gr_low::{context,texture};
 
 #[deriving(Eq)]
 pub struct SurfaceHandle( gl::types::GLuint );
+pub type SurfacePtr = rc::Rc<Surface>;
 
 pub struct Surface	{
 	handle	: SurfaceHandle,
@@ -42,7 +43,7 @@ impl ToStr for Surface	{
 #[deriving(Clone)]
 pub enum Target	{
 	TarEmpty,
-	TarSurface(@Surface),
+	TarSurface(SurfacePtr),
 	TarTexture(texture::TexturePtr,uint),
 	TarTextureLayer(texture::TexturePtr,uint,uint),
 }
@@ -51,7 +52,8 @@ impl std::cmp::Eq for Target	{
 	fn eq( &self, other: &Target )-> bool	{
 		match (self,other)	{
 			(&TarEmpty,&TarEmpty)					=> true,
-			(&TarSurface(s1),&TarSurface(s2))		=> { s1.handle == s2.handle },
+			(&TarSurface(ref s1),&TarSurface(ref s2))		=>
+				borrow::ref_eq(s1.borrow(),s2.borrow()),
 			(&TarTexture(ref t1,l1),&TarTexture(ref t2,l2))	=>
 				borrow::ref_eq(t1.borrow(),t2.borrow()) && l1==l2,
 			(&TarTextureLayer(ref t1,r1,l1),&TarTextureLayer(ref t2,r2,l2))	=>
@@ -65,7 +67,7 @@ impl ToStr for Target	{
 	fn to_str( &self )-> ~str	{
 		match self	{
 			&TarEmpty	=> ~"Empty",
-			&TarSurface(s)	=> s.to_str(),
+			&TarSurface(ref s)			=> s.borrow().to_str(),
 			&TarTexture(ref t,l)		=> format!( "{:s}.lod[{:u}]", t.borrow().to_str(), l ),
 			&TarTextureLayer(ref t,r,l)	=> format!("{:s}.layer[{:u}].lod[{:u}]", t.borrow().to_str(), r, l ),
 		}
@@ -77,7 +79,10 @@ impl Target	{
 	pub fn get_size( &self )-> [uint,..4]	{
 		match self	{
 			&TarEmpty	=> fail!(~"Empty target has no size"),
-			&TarSurface(sf) => [sf.width, sf.height, 1, sf.samples],
+			&TarSurface(ref sf) =>	{
+				let s = sf.borrow();
+				[s.width, s.height, 1, s.samples]
+			},
 			&TarTexture(ref tex,lev) =>	{
 				let t = tex.borrow();
 				let (w,h) = t.get_level_size(lev);
@@ -94,9 +99,9 @@ impl Target	{
 	fn attach( &self, root: gl::types::GLenum, slot: gl::types::GLenum )-> bool	{
 		match self	{
 			&TarEmpty			=> {},
-			&TarSurface(s)		=> {
-				let SurfaceHandle(h) = s.handle;
-				gl::FramebufferRenderbuffer( root, slot, s.target, h );
+			&TarSurface(ref s)		=> {
+				let SurfaceHandle(h) = s.borrow().handle;
+				gl::FramebufferRenderbuffer( root, slot, s.borrow().target, h );
 			},
 			&TarTexture(ref tex,lev)	=> {
 				let t = tex.borrow();
@@ -122,18 +127,19 @@ impl Target	{
 
 pub struct RenBinding	{
 	target		: gl::types::GLenum,
-	default		: @Surface,
-	priv active	: @Surface,
+	default		: SurfacePtr,
+	priv active	: SurfacePtr,
 }
 
 impl RenBinding	{
 	pub fn new( wid: uint, het: uint, ns: uint )-> RenBinding	{
 		let t = gl::RENDERBUFFER;
-		let s = @Surface{ handle:SurfaceHandle(0),
+		let s = rc::Rc::new(Surface{
+			handle:SurfaceHandle(0),
 			target:t, width:wid, height:het, samples:ns
-		};
+		});
 		RenBinding{
-			target: t, default: s, active: s,
+			target: t, default: s.clone(), active: s,
 		}
 	}
 }
@@ -143,7 +149,7 @@ impl context::ProxyState for RenBinding	{
 		let mut hid = 0 as gl::types::GLint;
 		unsafe{ gl::GetIntegerv( gl::RENDERBUFFER_BINDING, ptr::to_mut_unsafe_ptr(&mut hid) ); }
 		let sf = SurfaceHandle(hid as gl::types::GLuint);
-		if self.active.handle != sf	{
+		if self.active.borrow().handle != sf	{
 			assert!( false, "Active render buffer mismatch" );
 			false
 		}else {true}
@@ -188,6 +194,7 @@ impl ToStr for Rect	{
 
 #[deriving(Eq)]
 pub struct BufferHandle( gl::types::GLuint );
+pub type BufferPtr = rc::Rc<cell::RefCell<Buffer>>;
 
 pub struct Buffer	{
 	handle			: BufferHandle,
@@ -197,8 +204,6 @@ pub struct Buffer	{
 	depth			: Target,
 	colors			: ~[Target],
 }
-
-pub type BufferPtr = rc::Rc<cell::RefCell<Buffer>>;
 
 impl Drop for BufferHandle	{
 	fn drop( &mut self )	{
@@ -219,7 +224,7 @@ impl Buffer	{
 		}
 	}
 
-	pub fn new_default( rb : @Surface )-> BufferPtr	{
+	pub fn new_default( rb: SurfacePtr )-> BufferPtr	{
 		let ts = TarSurface(rb);
 		rc::Rc::new(cell::RefCell::new( Buffer{
 			handle		:BufferHandle(0),
@@ -309,26 +314,28 @@ impl Binding	{
 
 
 impl context::Context	{
-	pub fn create_render_buffer( &self, wid:uint, het:uint, sam:uint )-> @Surface	{
+	pub fn create_render_buffer( &self, wid:uint, het:uint, sam:uint )-> SurfacePtr	{
 		let mut hid = 0 as gl::types::GLuint;
 		unsafe{ gl::GenRenderbuffers( 1, ptr::to_mut_unsafe_ptr(&mut hid) ); }
-		@Surface{ handle:SurfaceHandle(hid),
+		rc::Rc::new(Surface{
+			handle:SurfaceHandle(hid),
 			target:self.render_buffer.target,
 			width:wid, height:het, samples:sam,
-		}
+		})
 	}
 
-	fn bind_render_buffer( &mut self, s: @Surface )	{
+	fn bind_render_buffer( &mut self, s: &SurfacePtr )	{
 		let binding = &mut self.render_buffer;
-		assert!( s.target == binding.target );
-		if !managed::ptr_eq(binding.active,s)	{
-			binding.active = s;
-			let SurfaceHandle(h) = s.handle;
+		assert!( s.borrow().target == binding.target );
+		if !borrow::ref_eq( binding.active.borrow(), s.borrow() )	{
+			binding.active = s.clone();
+			let SurfaceHandle(h) = s.borrow().handle;
 			gl::BindRenderbuffer( binding.target, h );
 		}
 	}
 	pub fn unbind_render_buffers( &mut self )	{
-		self.bind_render_buffer( self.render_buffer.default );
+		let rb = self.render_buffer.default.clone();
+		self.bind_render_buffer( &rb );
 	}
 
 	pub fn create_frame_buffer( &self )-> BufferPtr	{

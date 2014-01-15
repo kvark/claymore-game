@@ -13,14 +13,12 @@ pub struct ObjectHandle( gl::types::GLuint );
 #[deriving(Eq)]
 pub struct ArrayHandle( gl::types::GLuint );
 pub struct Target( gl::types::GLenum );
-
+pub type ObjectPtr = rc::Rc<Object>;
 
 #[deriving(Eq)]
 pub struct Object	{
 	handle		: ObjectHandle,
 }
-
-pub type ObjectPtr = rc::Rc<Object>;
 
 impl Drop for ObjectHandle	{
 	fn drop( &mut self )	{
@@ -152,6 +150,8 @@ struct VertexData	{
 	attrib	: Option<Attribute>,
 }
 
+pub type VertexArrayPtr = rc::Rc<cell::RefCell<VertexArray>>;
+
 pub struct VertexArray	{
 	handle			: ArrayHandle,
 	data			: ~[VertexData],
@@ -182,7 +182,6 @@ impl VertexArray	{
 	}
 }
 
-pub type VertexArrayPtr = rc::Rc<cell::RefCell<VertexArray>>;
 
 pub struct VaBinding	{
 	priv active	: VertexArrayPtr,

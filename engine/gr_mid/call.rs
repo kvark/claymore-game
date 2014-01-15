@@ -32,7 +32,7 @@ impl PlaneMap	{
 	}
 
 	pub fn new_main( gc: &context::Context, name: ~str )-> PlaneMap	{
-		let tg = frame::TarSurface( gc.render_buffer.default );
+		let tg = frame::TarSurface( gc.render_buffer.default.clone() );
 		let mut pm = PlaneMap::new_empty();
 		pm.stencil = tg.clone();
 		pm.depth = tg.clone();
