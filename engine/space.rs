@@ -1,6 +1,7 @@
 extern mod cgmath;
 
 use std;
+use std::{cell,gc};
 
 use cgmath::angle;
 use cgmath::matrix::{Matrix,Mat4};
@@ -80,15 +81,15 @@ enum NodeCurve	{
 	NCuScale(	~anim::Curve<Scale>			),
 }
 
-type NodeRecord = anim::Record<NodeCurve>;
-
-pub type NodePtr = std::gc::Gc<std::cell::RefCell<Node>>;
+pub type NodeRecord		= anim::Record<NodeCurve>;
+pub type NodeRecordPtr	= anim::RecordPtr<NodeCurve>;
+pub type NodePtr = gc::Gc<cell::RefCell<Node>>;
 
 pub struct Node	{
 	name	: ~str,
 	space	: Space,
 	parent	: Option<NodePtr>,
-	actions	: ~[@NodeRecord],
+	actions	: ~[NodeRecordPtr],
 }
 
 impl Node	{
@@ -102,36 +103,28 @@ impl Node	{
 	}
 	
 	pub fn to_ptr( self )-> NodePtr	{
-		std::gc::Gc::new(std::cell::RefCell::new( self ))
+		gc::Gc::new(cell::RefCell::new( self ))
 	}
 	
 	pub fn world_space( &self ) -> Space	{
 		match self.parent	{
-			Some(ref par)	=>	{
-				let p = par.borrow().borrow();
-				p.get().world_space().concat( &self.space )
-			},
-			None		=> self.space
+			Some(ref par)	=> par.borrow().with(|p|
+				p.world_space().concat( &self.space )),
+			None		=> self.space,
 		}
 	}
 	
 	pub fn is_under( &self, name: &str )-> bool	{
 		std::str::eq_slice(name,self.name) || match self.parent	{
-			Some(ref par)	=>	{
-				let p = par.borrow().borrow();
-				p.get().is_under(name)
-			},
+			Some(ref par)	=> par.borrow().with(|p| p.is_under(name)),
 			None	=> false,
 		}
 	}
 }
 
 impl anim::Player<NodeCurve> for Node	{
-	fn find_record( &self, name: &str )-> Option<@NodeRecord>	{
-		match self.actions.iter().find(|r| std::str::eq_slice(r.name,name))	{
-			Some(rec)	=> Some(*rec),
-			None		=> None,
-		}
+	fn find_record( &self, name: &str )-> Option<NodeRecordPtr>	{
+		self.actions.iter().find(|r| std::str::eq_slice(r.borrow().name,name)).map(|r| r.clone())
 	}
 	fn set_record( &mut self, a: &NodeRecord, time: anim::float )	{
 		for chan in a.curves.iter()	{
@@ -157,7 +150,7 @@ pub struct Bone	{
 
 impl Bone	{
 	pub fn reset( &mut self )	{
-		self.node.borrow().borrow_mut().get().space = self.bind_space;
+		self.node.borrow().with_mut(|n| n.space = self.bind_space);
 		self.transform = Transform::identity();
 	}
 }
@@ -168,27 +161,26 @@ pub enum ArmatureCurve	{
 	ACuScale(	uint, ~anim::Curve<Scale>		),
 }
 
-pub type ArmatureRecord = anim::Record<ArmatureCurve>;
-
+pub type ArmatureRecord 	= anim::Record<ArmatureCurve>;
+pub type ArmatureRecordPtr	= anim::RecordPtr<ArmatureCurve>;
+pub type ArmaturePtr = gc::Gc<cell::RefCell<Armature>>;
 
 pub struct Armature	{
 	root	: NodePtr,
 	bones	: ~[Bone],
 	code	: ~str,
-	actions	: ~[@ArmatureRecord],
+	actions	: ~[ArmatureRecordPtr],
 	max_bones	: uint,
 }
 
-pub type ArmaturePtr = std::gc::Gc<std::cell::RefCell<Armature>>;
-
 impl Armature	{
 	pub fn to_ptr( self )-> ArmaturePtr	{
-		std::gc::Gc::new(std::cell::RefCell::new( self ))
+		gc::Gc::new(cell::RefCell::new( self ))
 	}
 	pub fn change_root( &mut self, root: NodePtr )	{
 		for bone in self.bones.iter()	{
 			if bone.parent_id.is_none()	{
-				bone.node.borrow().borrow_mut().get().parent = Some( root.clone() );
+				bone.node.borrow().with_mut(|n| n.parent = Some( root.clone() ));
 			}
 		}
 		self.root = root;
@@ -212,8 +204,7 @@ impl draw::Mod for Armature	{
 		while pos.len() < self.max_bones	{
 			let space = if pos.len()>0u && pos.len()<self.bones.len()	{
 					let b = &self.bones[pos.len()-1u];
-					let bnode = b.node.borrow().borrow();
-					let bw = bnode.get().world_space();
+					let bw = b.node.borrow().with(|n| n.world_space());
 					parent_inv.concat( &bw ).concat( &b.bind_pose_inv )
 				}else {id};
 			let (p0,p1) = get_params( &space );
@@ -226,26 +217,23 @@ impl draw::Mod for Armature	{
 }
 
 impl anim::Player<ArmatureCurve> for Armature	{
-	fn find_record( &self, name: &str )-> Option<@ArmatureRecord>	{
-		match self.actions.iter().find(|r| std::str::eq_slice(r.name,name))	{
-			Some(rec)	=> Some(*rec),
-			None		=> None,
-		}
+	fn find_record( &self, name: &str )-> Option<ArmatureRecordPtr>	{
+		self.actions.iter().find(|r| std::str::eq_slice(r.borrow().name,name)).map(|r| r.clone())
 	}
 	fn set_record( &mut self, a: &ArmatureRecord, time: anim::float )	{
 		for chan in a.curves.iter()	{
 			match chan	{
 				&ACuPos(bi,ref c)		=> {
 					let b = &self.bones[bi];	let v = c.sample(time);
-					b.node.borrow().borrow_mut().get().space.disp	= b.bind_space.transform_as_point( &v );
+					b.node.borrow().with_mut( |n| n.space.disp	= b.bind_space.transform_as_point(&v) );
 				},
 				&ACuRotQuat(bi,ref c)	=> {
 					let b = &self.bones[bi];	let q = c.sample(time);
-					b.node.borrow().borrow_mut().get().space.rot	= b.bind_space.rot.mul_q( &q );
+					b.node.borrow().with_mut( |n| n.space.rot	= b.bind_space.rot.mul_q(&q) );
 				},
 				&ACuScale(bi,ref c)		=> {
 					let b = &self.bones[bi];	let s = c.sample(time);
-					b.node.borrow().borrow_mut().get().space.scale	= b.bind_space.scale * s;
+					b.node.borrow().with_mut( |n| n.space.scale	= b.bind_space.scale * s );
 				},
 			}
 		}

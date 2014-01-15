@@ -234,7 +234,7 @@ pub struct SceneContext	{
 	nodes		: Dict<NodeRef>,
 	meshes		: Dict<@gr_mid::mesh::Mesh>,
 	armatures	: Dict<engine::space::ArmaturePtr>,
-	actions		: Dict<@engine::space::ArmatureRecord>,
+	actions		: Dict<engine::space::ArmatureRecordPtr>,
 }
 
 impl SceneContext	{
@@ -280,30 +280,30 @@ impl SceneContext	{
 		}
 	}
 
-	pub fn query_action( &mut self, act_name : &~str, bones : &mut ~[engine::space::Bone], lg : &engine::journal::Log )-> @engine::space::ArmatureRecord	{
+	pub fn query_action( &mut self, act_name : &~str, bones : &mut ~[engine::space::Bone], lg : &engine::journal::Log )-> engine::space::ArmatureRecordPtr	{
 		match self.actions.find(act_name)	{
-			Some(a)	=> return *a,
+			Some(a)	=> return a.clone(),
 			None	=> (),
 		};
 		let split = act_name.split('@').map(|w| w.to_owned()).to_owned_vec();
 		let path = format!( "{:s}/{:s}.k3act", self.prefix, split[split.len()-1u] );
 		let mut rd = engine::load::Reader::create_std( path );
-		let mut q_act = None::<@engine::space::ArmatureRecord>;
+		let mut q_act = None::<engine::space::ArmatureRecordPtr>;
 		if split.len() > 1	{
 			assert!( rd.enter() == ~"*action" );
 			while rd.has_more()!=0u	{
-				let act = @engine::load::read_action( &mut rd, *bones, lg );
-				let full_name = format!( "{:s}@{:s}", act.name, split[1] );
+				let act = engine::load::read_action( &mut rd, *bones, lg );
+				let full_name = format!( "{:s}@{:s}", act.borrow().name, split[1] );
 				if full_name == *act_name	{
-					q_act = Some(act);
+					q_act = Some( act.clone() );
 				}
 				self.actions.insert( full_name, act );
 			}
 			rd.leave();
 			q_act.expect(format!( "Action '{:s}' not found in the collection", *act_name ))
 		}else	{
-			let act = @engine::load::read_action( &mut rd, *bones, lg );
-			self.actions.insert( act_name.clone(), act );
+			let act = engine::load::read_action( &mut rd, *bones, lg );
+			self.actions.insert( act_name.clone(), act.clone() );
 			act
 		}
 	}

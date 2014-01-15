@@ -322,7 +322,7 @@ pub fn read_curve<T : Clone + Send + space::Interpolate>( br: &mut Reader, fkey:
 }
 
 
-pub fn read_action( br: &mut Reader, bones: &[space::Bone], lg: &journal::Log )-> space::ArmatureRecord	{
+pub fn read_action( br: &mut Reader, bones: &[space::Bone], lg: &journal::Log )-> space::ArmatureRecordPtr	{
 	lg.add(format!( "Loading anim from {:s}", br.path ));
 	assert!( br.enter() == ~"action" );
 	let act_name = br.get_string();
@@ -376,7 +376,7 @@ pub fn read_action( br: &mut Reader, bones: &[space::Bone], lg: &journal::Log )-
 	br.leave();
 	anim::Record{
 		name:act_name, duration:length, curves:curves
-	}
+	}.to_ptr()
 }
 
 pub fn get_armature_shader( dual_quat: bool )-> (~str,uint)	{
@@ -422,9 +422,9 @@ pub fn read_armature( br: &mut Reader, root: space::NodePtr, dual_quat: bool, lg
 		});
 	}
 	// read actions
-	let mut actions : ~[@space::ArmatureRecord] = ~[];
+	let mut actions : ~[space::ArmatureRecordPtr] = ~[];
 	while br.has_more()!=0u	{
-		let rec = @read_action( br, bones, lg );
+		let rec = read_action( br, bones, lg );
 		actions.push(rec);
 	}
 	br.leave();

@@ -1,4 +1,6 @@
 use std;
+use std::{cell,rc};
+
 use space::Interpolate;
 
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - //
@@ -101,13 +103,21 @@ pub struct Record<C>	{
 	curves		: ~[C],
 }
 
+pub type RecordPtr<C> = rc::Rc<Record<C>>;
+
+impl<C> Record<C>	{
+	pub fn to_ptr( self )-> RecordPtr<C>	{
+		rc::Rc::new( self )
+	}
+}
+
 pub trait Player<C>	{
 	//fn record_iter( self )-> std::vec::VecIterator< @Record<C> >;
-	fn find_record( &self, &str )-> Option< @Record<C> >;
+	fn find_record( &self, &str )-> Option< RecordPtr<C> >;
 	fn set_record( &mut self, &Record<C>, float );
 }
 
-pub type PlayerPtr<C> = std::rc::Rc<std::cell::RefCell< ~Player<C> >>;	//FIXME
+pub type PlayerPtr<C> = rc::Rc<cell::RefCell< ~Player<C> >>;	//FIXME
 
 pub trait Act	{
 	fn update( &mut self, float )-> bool;
@@ -134,23 +144,20 @@ impl Act for Wait	{
 
 pub struct Action<C>	{
 	player	: PlayerPtr<C>,
-	record	: @Record<C>,
+	record	: RecordPtr<C>,
 	start	: float,
 }
 
 impl<C> Action<C>	{
-	pub fn new( player : PlayerPtr<C>, name: ~str, time: float )-> Option<Action<C>>	{
-		let rec_opt =	{
-			let p = player.borrow().borrow();
-			p.get().find_record(name)
-		};
+	pub fn new( player: PlayerPtr<C>, name: ~str, time: float )-> Option<Action<C>>	{
+		let rec_opt = player.borrow().with( |p| p.find_record(name) );
 		match rec_opt	{
-			Some(r)	=> Some(Action	{
+			Some(r)	=> Some(Action{
 				player	: player,
 				record	: r,
 				start	: time,
 			}),
-			None => None
+			None	=> None,
 		}
 	}
 }
@@ -158,9 +165,10 @@ impl<C> Action<C>	{
 impl<C> Act for Action<C>	{
 	fn update( &mut self, time: float )-> bool	{
 		let t = time - self.start;
-		if t>=0.0 && t<=self.record.duration	{
-			let mut p = self.player.borrow().borrow_mut();
-			p.get().set_record( self.record, t );
+		if t>=0.0 && t<=self.record.borrow().duration	{
+			self.player.borrow().with_mut(|p|	{
+				p.set_record( self.record.borrow(), t )
+			});
 			true
 		}else	{false}
 	}

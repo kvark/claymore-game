@@ -156,12 +156,14 @@ impl Scene	{
 				}
 				if true	{	// update animation
 					let t = tv - self.start;
-					let mut skel = self.skel.borrow().borrow_mut();
-					let r = skel.get().actions[0];
-					let nloops = (t / r.duration) as uint;
-					let t2 = t - r.duration * (nloops as anim::float);
-					skel.get().set_record( r, t2 );
-					//skel.get().fill_data( self.girl.mut_data() );
+					self.skel.borrow().with_mut(|skel|	{
+						let act = skel.actions[0].clone();
+						let r = act.borrow();
+						let nloops = (t / r.duration) as uint;
+						let t2 = t - r.duration * (nloops as anim::float);
+						skel.set_record( r, t2 );
+						//skel.get().fill_data( self.girl.mut_data() );
+					});
 				}
 				self.edit_label.borrow().with_mut( |el| el.update(state.time_view) );
 				self.control.update( state );
