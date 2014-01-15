@@ -7,7 +7,7 @@ use scene = scene::common;
 
 
 pub struct Data	{
-	light		: @scene::Light,
+	light		: scene::LightPtr,
 	call_clear	: gr_mid::call::Call,
 	tech_solid	: gr_mid::draw::Technique,
 	tech_alpha	: gr_mid::draw::Technique,
@@ -16,7 +16,7 @@ pub struct Data	{
 	par_shadow	: gr_low::shade::Uniform,
 }
 
-pub fn create_data( ct : &mut gr_low::context::Context, light : @scene::Light, size : uint )-> Data	{
+pub fn create_data( ct: &mut gr_low::context::Context, light: scene::LightPtr, size: uint )-> Data	{
 	let shadow = ct.create_texture( "2D", size, size, 0u, 0u );
 	ct.texture.init_depth( &shadow, false );
 	let fbo = ct.create_frame_buffer();

@@ -518,7 +518,6 @@ impl context::Context	{
 			let &DataMap(ref data_map) = data;
 			match data_map.find(name)	{
 				Some(&UniTexture(_,ref pt, s_opt))	=> {
-					println!("ST");
 					let texture::Target(target) = pt.borrow().target;
 					check_sampler( target, par.desc.raw );
 					self.texture.bind_to( tex_unit, pt );

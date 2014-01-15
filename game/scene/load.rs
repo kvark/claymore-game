@@ -125,12 +125,12 @@ fn parse_bones( bin: &[gen::Bone], par_id: Option<uint>, par_node: space::NodePt
 		let node = space::Node{
 			name	: ibone.name.clone(),
 			space	: space,
-			parent	: Some(par_node),
+			parent	: Some( par_node.clone() ),
 			actions	:~[],
 		}.to_ptr();
 		let cid = Some( bot.len() );
 		bot.push(space::Bone{
-			node			: node,
+			node			: node.clone(),
 			bind_space		: space,
 			bind_pose_inv	: bind_pose_inv,
 			transform		: transform::Transform::identity(),
@@ -144,27 +144,27 @@ fn parse_child( child: &gen::NodeChild, parent: space::NodePtr, scene: &mut comm
 		get_input: |~str|->gr_mid::call::Input, lg: &engine::journal::Log )	{
 	match child	{
 		&gen::ChildNode(ref inode)	=>	{
-			let n = space::Node	{
+			let np = space::Node	{
 				name	: inode.name.clone(),
 				space	: parse_space( &inode.space ),
-				parent	: Some(parent),
+				parent	: Some( parent.clone() ),
 				actions	: ~[],
 			}.to_ptr();
-			scene.context.nodes.insert( n.borrow().with(|n| n.name.clone()), n );
+			scene.context.nodes.insert( np.borrow().with(|n| n.name.clone()), np.clone() );
 			for child in inode.children.iter()	{
-				parse_child( child, n, scene, |s| get_input(s), lg );
+				parse_child( child, np.clone(), scene, |s| get_input(s), lg );
 			}
 		},
 		&gen::ChildArmature(ref iarm)	=>	{
 			let (shader,max) = engine::load::get_armature_shader( iarm.dual_quat );
 			let mut a = space::Armature{
-				root	: parent,
+				root	: parent.clone(),
 				bones	: ~[],
 				code	: shader,
 				actions	: ~[],
 				max_bones	: max,
 			};
-			parse_bones( iarm.bones, None, parent, &mut a.bones );
+			parse_bones( iarm.bones, None, parent.clone(), &mut a.bones );
 			for iaction in iarm.actions.iter()	{
 				let act = scene.context.query_action( iaction, &mut a.bones, lg );
 				a.actions.push( act );
@@ -197,7 +197,7 @@ fn parse_child( child: &gen::NodeChild, parent: space::NodePtr, scene: &mut comm
 			});
 		},
 		&gen::ChildCamera(ref icam)	=>	{
-			scene.cameras.insert( icam.name.clone(), @common::Camera{
+			scene.cameras.insert( icam.name.clone(), common::Camera{
 				node	: parent,
 				proj	: projection::PerspectiveFov	{
 					fovy	: angle::rad(icam.fov_y),
@@ -206,10 +206,10 @@ fn parse_child( child: &gen::NodeChild, parent: space::NodePtr, scene: &mut comm
 					far		: icam.range[1],
 				},
 				ear		: engine::audio::Listener{ volume:0.0 },
-			});
+			}.to_ptr() );
 		},
 		&gen::ChildLight(ref ilit)	=>	{
-			scene.lights.insert( ilit.name.clone(), @common::Light{
+			scene.lights.insert( ilit.name.clone(), common::Light{
 				node	: parent,
 				color	: gr_low::rast::Color::from_array3( ilit.color ),
 				attenu	: [1f32 / ilit.energy, ilit.attenuation[0], ilit.attenuation[1]],
@@ -220,7 +220,7 @@ fn parse_child( child: &gen::NodeChild, parent: space::NodePtr, scene: &mut comm
 					gen::KindSpot(spot)	=> common::LiSpot(
 						angle::rad(spot.size), spot.blend ),
 				},
-			});
+			}.to_ptr() );
 		},
 	}
 }
@@ -252,18 +252,19 @@ pub fn parse( path: &str, iscene: &gen::Scene, custom: &[gen::Material], gc: &mu
 	};
 	let root = space::Node::new( ~"root" ).to_ptr();
 	for child in iscene.nodes.iter()	{
-		parse_child( child, root, &mut scene, |s| get_input(s), lg );
+		parse_child( child, root.clone(), &mut scene, |s| get_input(s), lg );
 	}
 	let c2 = engine::load::get_time();
 	lg.add(format!( "\t[p] Objects: {:f} sec", c2-c1 ));
 	// armatures-1
 	for (_,arm) in scene.context.armatures.iter()	{
 		arm.borrow().with_mut(|a|	{
-			let root = a.root.borrow().with(|n|	{
-				*scene.context.nodes.find( &n.name ).
-					expect( ~"Unable to find armature root " + n.name )
+			let aroot = a.root.borrow().with(|n|	{
+				scene.context.nodes.find( &n.name ).
+					expect( ~"Unable to find armature root " + n.name ).
+					clone()
 				});
-			a.change_root( root );
+			a.change_root( aroot );
 		});
 	}
 	let c3 = engine::load::get_time();

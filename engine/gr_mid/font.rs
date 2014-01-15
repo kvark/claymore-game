@@ -1,7 +1,7 @@
 extern mod freetype;
 
 use std;
-use std::{ptr,vec};
+use std::{ptr,rc,vec};
 
 use freetype::freetype;
 
@@ -61,6 +61,7 @@ impl Drop for Glyph	{
 */
 
 struct FaceHandle( freetype::FT_Face );
+pub type FontPtr = rc::Rc<Font>;
 
 pub struct Font	{
 	priv face		: FaceHandle,
@@ -80,6 +81,9 @@ impl Drop for FaceHandle	{
 
 
 impl Font	{
+	pub fn to_ptr( self )-> FontPtr	{
+		rc::Rc::new(self)
+	}
 	/*
 	pub fn clear_cache()	{
 		self.cache.clear();

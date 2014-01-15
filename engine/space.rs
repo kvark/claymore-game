@@ -1,7 +1,7 @@
 extern mod cgmath;
 
 use std;
-use std::{cell,gc};
+use std::{cell,rc};
 
 use cgmath::angle;
 use cgmath::matrix::{Matrix,Mat4};
@@ -83,7 +83,7 @@ enum NodeCurve	{
 
 pub type NodeRecord		= anim::Record<NodeCurve>;
 pub type NodeRecordPtr	= anim::RecordPtr<NodeCurve>;
-pub type NodePtr = gc::Gc<cell::RefCell<Node>>;
+pub type NodePtr = rc::Rc<cell::RefCell<Node>>;
 
 pub struct Node	{
 	name	: ~str,
@@ -103,7 +103,7 @@ impl Node	{
 	}
 	
 	pub fn to_ptr( self )-> NodePtr	{
-		gc::Gc::new(cell::RefCell::new( self ))
+		rc::Rc::new(cell::RefCell::new( self ))
 	}
 	
 	pub fn world_space( &self ) -> Space	{
@@ -163,7 +163,7 @@ pub enum ArmatureCurve	{
 
 pub type ArmatureRecord 	= anim::Record<ArmatureCurve>;
 pub type ArmatureRecordPtr	= anim::RecordPtr<ArmatureCurve>;
-pub type ArmaturePtr = gc::Gc<cell::RefCell<Armature>>;
+pub type ArmaturePtr = rc::Rc<cell::RefCell<Armature>>;
 
 pub struct Armature	{
 	root	: NodePtr,
@@ -175,7 +175,7 @@ pub struct Armature	{
 
 impl Armature	{
 	pub fn to_ptr( self )-> ArmaturePtr	{
-		gc::Gc::new(cell::RefCell::new( self ))
+		rc::Rc::new(cell::RefCell::new( self ))
 	}
 	pub fn change_root( &mut self, root: NodePtr )	{
 		for bone in self.bones.iter()	{

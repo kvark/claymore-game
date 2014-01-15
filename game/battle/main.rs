@@ -33,7 +33,7 @@ pub trait Member : unit::Unit + Prop	{}
 
 impl Prop for unit::Standard	{
 	fn get_root( &self )-> engine::space::NodePtr	{
-		self.skeleton.borrow().borrow().get().root
+		self.skeleton.borrow().with(|s| s.root.clone())
 	}
 	fn get_elevation( &self )-> f32	{
 		self.elevation
@@ -355,12 +355,12 @@ pub fn create( gc: &mut gr_low::context::Context, hc: &mut hud::Context,
 	// load protagonist
 	let hero = {
 		let ent = scene.entities.exclude( &"Player" ).expect("No player found");
-		let skel = *scene.context.armatures.get( &~"Armature" );
+		let skel = scene.context.armatures.get( &~"Armature" ).clone();
 		let rec = skel.borrow().with(|s| s.find_record("ArmatureBossAction")).
 			expect("Hero has to have Idle");
 		let mem = unit::Standard{
 			name	: ~"Clare",
-			body	: unit::Limb{ health: 100, node: ent.node },
+			body	: unit::Limb{ health: 100, node: ent.node.clone() },
 			move_speed	: 5.0,
 			turn_speed	: 5.0,
 			entity		: ent,
@@ -380,12 +380,12 @@ pub fn create( gc: &mut gr_low::context::Context, hc: &mut hud::Context,
 	// load boss
 	let boss = {
 		let ent = scene.entities.exclude( &"Boss" ).expect("No player found");
-		let skel = *scene.context.armatures.get( &~"ArmatureBoss" );
+		let skel = scene.context.armatures.get( &~"ArmatureBoss" ).clone();
 		let rec = skel.borrow().with(|s| s.find_record("ArmatureBossAction")).
 			expect("Boss has to have Idle");
 		let mem = unit::Standard{
 			name	: ~"Boss",
-			body	: unit::Limb{ health: 300, node: ent.node },
+			body	: unit::Limb{ health: 300, node: ent.node.clone() },
 			move_speed	: 1.0,
 			turn_speed	: 1.0,
 			entity		: ent,

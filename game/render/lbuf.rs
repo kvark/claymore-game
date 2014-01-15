@@ -31,8 +31,8 @@ impl LightVolume	{
 
 
 pub struct Context	{
-	tech_bake	: @gr_mid::draw::Technique,
-	tech_apply	: @gr_mid::draw::Technique,
+	tech_bake	: gr_mid::draw::Technique,
+	tech_apply	: gr_mid::draw::Technique,
 	fbo			: gr_low::frame::BufferPtr,
 	vao			: gr_low::buf::VertexArrayPtr,
 	ta_direction: gr_low::texture::TexturePtr,
@@ -56,8 +56,8 @@ impl Context	{
 		gc.texture.init( &ta_col, 1u, gr_low::texture::map_int_format(s_format), true );
 		let depth = gc.create_texture( "2D", wid/div, het/div, 0u, 0u );
 		gc.texture.init_depth( &depth, false );
-		let t_bake	= @gr_mid::draw::load_technique( "data/code/tech/lbuf/bake" );
-		let t_apply	= @gr_mid::draw::load_technique( "data/code/tech/lbuf/apply" );
+		let t_bake	= gr_mid::draw::load_technique( "data/code/tech/lbuf/bake" );
+		let t_apply	= gr_mid::draw::load_technique( "data/code/tech/lbuf/apply" );
 		Context{
 			tech_bake	: t_bake,
 			tech_apply	: t_apply,
@@ -81,7 +81,7 @@ impl Context	{
 		gr_mid::call::CallBlit( src, dst )
 	}
 
-	pub fn bake_layer( &self, layer: uint, lights: &[@scene::Light], vol: &LightVolume, cam: &scene::Camera,
+	pub fn bake_layer( &self, layer: uint, lights: &[scene::LightPtr], vol: &LightVolume, cam: &scene::Camera,
 			gc: &gr_low::context::Context, lg: &engine::journal::Log )-> ~[gr_mid::call::Call]	{
 		let mut pmap = gr_mid::call::PlaneMap::new_empty();
 		pmap.depth = gr_low::frame::TarTexture( self.t_depth.clone(), 0 );
@@ -121,12 +121,12 @@ impl Context	{
 		};
 		let clear = gr_mid::call::CallClear( cdata, output.clone(), rast.mask );
 		let mut queue = lights.iter().map( |lit|	{
-			let (mesh,mat) = vol.query( lit.kind );
-			lit.fill_data( &mut data, 1f32, 30f32 );
-			let mw = lit.node.borrow().with( |n| n.world_space().to_mat4() );
+			let (mesh,mat) = vol.query( lit.borrow().kind );
+			lit.borrow().fill_data( &mut data, 1f32, 30f32 );
+			let mw = lit.borrow().node.borrow().with( |n| n.world_space().to_mat4() );
 			data.set( ~"u_World",	gr_low::shade::UniMatrix(false,mw) );
 			let e = engine::object::Entity	{
-				node	: lit.node,
+				node	: lit.borrow().node.clone(),
 				input	: gr_mid::call::Input::new( &self.vao, &mesh ),
 				data	: data.clone(),
 				modifier: Rc::new(~() as ~gr_mid::draw::Mod),

@@ -61,9 +61,8 @@ pub fn modify( children: &mut ~[gen::Child], path: &str, fun: |&str,&mut gen::El
 	fail!("Hud child not found: {:s}", name)
 }
 
-
 struct FontCache	{
-	font	: @font::Font,
+	font	: font::FontPtr,
 	cache	: HashMap<~str,texture::TexturePtr>,
 }
 
@@ -103,7 +102,7 @@ impl Context	{
 		self.cache_fonts.find_or_insert_with( font.clone(), |f|	{
 			let path = ~"data/font/" + f.path;
 			FontCache	{
-				font	: @fcon.load( path, 0u, f.size, f.kern, lg ),
+				font	: fcon.load( path, 0u, f.size, f.kern, lg ).to_ptr(),
 				cache	: HashMap::new(),
 			}
 		})
@@ -124,7 +123,7 @@ impl Context	{
 					let fc = self.preload_font( &text.font, fcon, lg );
 					fc.cache.find_or_insert_with( text.value.clone(), |s|	{
 						let bound = ( text.bound[0], text.bound[1] );
-						fc.font.bake( gcon, *s, bound, lg )
+						fc.font.borrow().bake( gcon, *s, bound, lg )
 					});
 				},
 				&gen::ElSpace(_)	=> (),

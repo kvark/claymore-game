@@ -76,9 +76,9 @@ impl Game	{
 		// audio test
 		let acon = engine::audio::Context::create( "" );
 		if false	{
-			let buf = @engine::audio::load_wav( &acon, "data/sound/stereol.wav", &journal.load );
+			let buf = engine::audio::load_wav( &acon, "data/sound/stereol.wav", &journal.load );
 			let mut src = acon.create_source();
-			src.bind(buf);
+			src.bind( &buf );
 		}
 		//src.play();
 		// create hud

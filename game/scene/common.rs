@@ -3,7 +3,7 @@ extern mod engine;
 extern mod cgmath;
 extern mod std;
 
-use std::num;
+use std::{borrow,num,rc};
 use std::hashmap::HashMap;
 
 use cgmath::{angle,projection};
@@ -19,6 +19,7 @@ use engine::{gr_low,gr_mid,space};
 
 pub type NodeRef = engine::space::NodePtr;
 pub type Projector = projection::PerspectiveFov<f32,angle::Rad<f32>>;
+pub type CameraPtr = rc::Rc<Camera>;
 
 pub struct Camera	{
 	node	: NodeRef,
@@ -27,6 +28,9 @@ pub struct Camera	{
 }
 
 impl Camera	{
+	pub fn to_ptr( self )-> CameraPtr	{
+		rc::Rc::new(self)
+	}
 	pub fn get_proj_matrix( &self, aspect : f32 )-> Mat4<f32>	{
 		let mut proj = self.proj.clone();
 		proj.aspect = aspect;
@@ -82,6 +86,8 @@ pub enum LightKind	{
 	LiArea(Vec2<f32>,f32),
 }
 
+pub type LightPtr = rc::Rc<Light>;
+
 pub struct Light	{
 	node	: NodeRef,
 	color	: gr_low::rast::Color,
@@ -92,6 +98,9 @@ pub struct Light	{
 }
 
 impl Light	{
+	pub fn to_ptr( self )-> LightPtr	{
+		rc::Rc::new(self)
+	}
 	pub fn get_attenuation( &self )-> Vec4<f32>	{
 		assert!( self.distance>0f32 );
 		let kd = 1f32 / self.distance;
@@ -201,7 +210,7 @@ impl EntityGroup	{
 	}
 
 	pub fn change_detail( &mut self, detail : engine::object::Entity )-> Option<engine::object::Entity>	{
-		let opt_pos = self.get().iter().position(|ent| ent.node.ptr_eq( &detail.node ));
+		let opt_pos = self.get().iter().position(|ent| borrow::ref_eq( ent.node.borrow(), detail.node.borrow() ));
 		self.get_mut().push( detail );
 		opt_pos.map(|pos| { self.get_mut().swap_remove(pos) })
 	}
@@ -317,7 +326,7 @@ impl SceneContext	{
 			let node_name = rd.get_string();
 			let dual_quat = rd.get_bool();
 			let root = match self.nodes.find( &node_name )	{
-				Some(n)	=> *n,
+				Some(n)	=> n.clone(),
 				None	=> engine::space::Node::new( node_name ).to_ptr(),
 			};
 			let arm = engine::load::read_armature( &mut rd, root, dual_quat, lg ).to_ptr();
@@ -331,6 +340,6 @@ impl SceneContext	{
 pub struct Scene	{
 	context		: SceneContext,
 	entities	: EntityGroup,
-	cameras		: Dict<@Camera>,
-	lights		: Dict<@Light>,
+	cameras		: Dict<CameraPtr>,
+	lights		: Dict<LightPtr>,
 }

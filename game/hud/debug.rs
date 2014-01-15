@@ -126,7 +126,7 @@ impl<T> Menu<T>	{
 		for item in self.all_iter()	{
 			fc.cache.find_or_insert_with( item.name.clone(), |s|	{
 				let bound = ( item_bound[0], item_bound[1] );
-				fc.font.bake( gcon, *s, bound, lg )
+				fc.font.borrow().bake( gcon, *s, bound, lg )
 			});
 		}
 	}

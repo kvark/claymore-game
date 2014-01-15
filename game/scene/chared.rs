@@ -76,11 +76,11 @@ pub struct Scene	{
 	gr_other: scene::common::EntityGroup,
 	details	: scene::common::EntityGroup,
 	skel	: engine::space::ArmaturePtr,
-	cam		: @scene::common::Camera,
+	cam		: scene::common::CameraPtr,
 	control	: CamControl,
-	lights	: ~[@scene::common::Light],
+	lights	: ~[scene::common::LightPtr],
 	envir	: Envir,
-	technique	: @gr_mid::draw::Technique,
+	technique	: gr_mid::draw::Technique,
 	cache		: gr_mid::draw::Cache,
 	rast_solid	: gr_low::rast::State,
 	rast_cloak	: gr_low::rast::State,
@@ -183,7 +183,7 @@ impl Scene	{
 		let c0 = gr_mid::call::CallClear( cdata, output.clone(), self.rast_solid.mask );
 		let aspect = output.area.aspect();
 		if el.environment	{
-			let vpi = self.cam.get_inverse_matrix( aspect );
+			let vpi = self.cam.borrow().get_inverse_matrix( aspect );
 			//self.cam.fill_data( &mut self.envir.data );
 			self.envir.data.set( ~"u_ViewProjInverse",
 				gr_low::shade::UniMatrix(false,vpi) );
@@ -207,10 +207,10 @@ impl Scene	{
 					ent.update_world();
 					{
 						let gd = &mut ent.data;
-						self.shadow.light.fill_data( gd, 1f32, 200f32 );
+						self.shadow.light.borrow().fill_data( gd, 1f32, 200f32 );
 						gd.set( ~"t_Shadow", self.shadow.par_shadow.clone() );
 						gd.set( ~"u_TargetSize",	par_ts.clone() );
-						self.cam.fill_data( gd, aspect );
+						self.cam.borrow().fill_data( gd, aspect );
 						//self.skel.fill_data( gd );
 					}
 				}	
@@ -251,11 +251,11 @@ impl Scene	{
 				}
 				queue.push( lbuf.update_depth( &self.depth.texture ));
 				queue.push_all_move( lbuf.bake_layer(
-					0u, self.lights, &self.lvolume, self.cam, gc, lg
+					0u, self.lights, &self.lvolume, self.cam.borrow(), gc, lg
 					));
-				lbuf.tech_apply
+				&lbuf.tech_apply
 			},
-			None	=> self.technique,
+			None	=> &self.technique,
 		};
 		if el.character	{
 			for ent in self.gr_main.get().iter()	{
@@ -330,7 +330,7 @@ pub fn create( el : &main::Elements, gc : &mut gr_low::context::Context, fcon : 
 	let detail_info = scene::load_json::load_config::<~[scene::load_json::EntityInfo]>( "data/details.json" );
 	let mut details = scene::load_json::parse_group( &mut scene.context, detail_info, gc, Some(vao.clone()), lg );
 	// techniques & rast states
-	let tech = @gr_mid::draw::load_technique( "data/code/tech/forward/spot-shadow" );
+	let tech = gr_mid::draw::load_technique( "data/code/tech/forward/spot-shadow" );
 	let mut rast = gc.default_rast;
 	rast.depth.test = true;
 	rast.prime.cull = true;
@@ -341,14 +341,14 @@ pub fn create( el : &main::Elements, gc : &mut gr_low::context::Context, fcon : 
 	rast.set_blend( "s+d", "Sa", "1-Sa" );
 	let r_alpha = rast;
 	// armature
-	let arm = { *scene.context.armatures.get(&~"Armature.002") };
+	let arm = scene.context.armatures.get(&~"Armature.002").clone();
 	let mut group = scene.entities.divide( &"noTrasnform" );
 	group.swap_entity( &"boots", &mut details );
 	let cape = group.divide( &"polySurface172" );
 	let hair = group.divide( &"Hair_Geo2" );
 	lg.add(format!( "Group size: {:u}", group.get().len() ));
 	let envir = {
-		let mesh = @gr_mid::mesh::create_quad( gc );
+		let mesh = gr_mid::mesh::create_quad( gc );
 		let mut data = gr_low::shade::DataMap::new();
 		let samp = gr_low::texture::Sampler::new(3u,1);
 		let use_spherical = false;
@@ -364,7 +364,7 @@ pub fn create( el : &main::Elements, gc : &mut gr_low::context::Context, fcon : 
 		let rast = gc.default_rast;
 		//rast.set_depth( ~"<=", false );
 		Envir{
-			input	: gr_mid::call::Input::new( &vao, mesh ),
+			input	: gr_mid::call::Input::new( &vao, &mesh ),
 			prog	: prog,
 			data	: data,
 			rast	: rast,
@@ -376,11 +376,11 @@ pub fn create( el : &main::Elements, gc : &mut gr_low::context::Context, fcon : 
 	let hc = {
 		let mut hud_rast = gc.default_rast;
 		hud_rast.set_blend( "s+d", "Sa", "1-Sa" );
-		let quad = @gr_mid::mesh::create_quad(gc);
+		let quad = gr_mid::mesh::create_quad(gc);
 		let pmap = gr_mid::call::PlaneMap::new_main( gc, ~"o_Color" );
 		let out = gr_mid::call::Output::new( &gc.default_frame_buffer, pmap );
 		hud::Context{
-			input	: gr_mid::call::Input::new( &vao, quad ),
+			input	: gr_mid::call::Input::new( &vao, &quad ),
 			output	: out,
 			rast	: hud_rast,
 			size	: gc.get_screen_size(),
@@ -394,25 +394,28 @@ pub fn create( el : &main::Elements, gc : &mut gr_low::context::Context, fcon : 
 		Some( render::lbuf::Context::create( gc, 2u, el.lbuffer ))
 	}else	{None};
 	let lvolume = render::lbuf::LightVolume::create( gc, lg );
-	let shadow = render::shadow::create_data( gc, *scene.lights.get(&~"Lamp"), 0x200u );
+	let shadow = render::shadow::create_data( gc, scene.lights.get(&~"Lamp").clone(), 0x200u );
 	// load camera
-	let cam = *scene.cameras.get(&~"Camera");
+	let cam = scene.cameras.get(&~"Camera").clone();
 	//cam.proj = shadow.light.proj;
 	//cam.node = shadow.light.node;
-	lg.add(format!( "Camera fov:{:s}, range:{:f}-{:f}",
-		cam.proj.fovy.to_str(),
-		cam.proj.near,
-		cam.proj.far ));
-	lg.add( ~"\tWorld :" + cam.node.borrow().with(|c| c.world_space().to_str()) );
+	{	//logging
+		let c = cam.borrow();
+		lg.add(format!( "Camera fov:{:s}, range:{:f}-{:f}",
+			c.proj.fovy.to_str(),
+			c.proj.near,
+			c.proj.far ));
+		lg.add( ~"\tWorld :" + c.node.borrow().with(|n| n.world_space().to_str()) );
+	}
 	let control = CamControl{
-		node	: cam.node,
+		node	: cam.borrow().node.clone(),
 		origin	: Vec3::new(0f32,0f32,75f32),
 		speed_rot	: 1.5f32,
 		speed_zoom	: 15f32,
 		last_scroll	: None,
 		in_rotation	: false,
 	};
-	let lights = scene.lights.values().map(|&l| l).to_owned_vec();
+	let lights = scene.lights.values().map(|l| l.clone()).to_owned_vec();
 	Scene	{
 		gr_main	: group,
 		gr_cape	: cape,

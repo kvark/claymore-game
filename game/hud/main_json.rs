@@ -160,7 +160,7 @@ pub struct Frame	{
 	min_size	: Point,
 	area		: Rect,		// in absolute coords
 	alignment	: Alignment,
-	element		: @Element,
+	element		: ~Element,
 	margin		: Margin,
 	children	: ~[Frame],
 }
@@ -291,9 +291,10 @@ impl Frame	{
 		None
 	}
 
-	pub fn populate( &mut self, name: &~str, elem: @Element )-> bool	{
-		let res = self.with_frame_mut( name, |fr| fr.element=elem );
-		res.is_some()
+	pub fn populate( &mut self, _name: &~str, _elem: ~Element )-> bool	{
+		//let res = self.with_frame_mut( name,	|fr| {fr.element=elem} );
+		//res.is_some()	//FIXME
+		false
 	}
 
 	pub fn draw_all( &self, hc: &Context )-> ~[call::Call]	{
@@ -340,7 +341,7 @@ pub fn convert_frames( fi_array: &[FrameInfo] )-> ~[Frame]	{
 			min_size	: fi.size,
 			area		: Rect{base:(0,0),size:fi.size},
 			alignment	: parse_alignment( fi.align ),
-			element		: @() as @Element,
+			element		: ~() as ~Element,
 			margin		: Margin{side:mx,bot:mb,top:mt},
 			children	: convert_frames( fi.children ),
 		}
@@ -363,7 +364,7 @@ pub struct Image	{
 	center	: (f32,f32),
 }
 
-pub type ImagePtr = @Image;
+pub type ImagePtr = ~Image;
 
 impl Element for Image	{
 	fn get_size( &self )-> Point	{
@@ -404,10 +405,10 @@ pub struct Label	{
 	content	: RefCell<~str>,
 	program	: gr_low::shade::ProgramPtr,
 	color	: gr_low::rast::Color,
-	font	: @font::Font,
+	font	: font::FontPtr,
 }
 
-pub type LabelPtr = @Label;
+pub type LabelPtr = ~Label;
 
 impl Element for Label	{
 	fn get_size( &self )-> Point	{
@@ -440,7 +441,7 @@ pub struct Screen    {
 	images	: HashMap<~str,ImagePtr>,
 	labels	: HashMap<~str,LabelPtr>,
 	textures: HashMap<~str,gr_low::texture::TexturePtr>,
-	fonts	: HashMap<FontInfo,@font::Font>,
+	fonts	: HashMap<FontInfo,font::FontPtr>,
 }
 
 
@@ -450,18 +451,18 @@ pub fn load_screen( path: &str, ct: &mut gr_low::context::Context,
 	let iscreen = scene::load_json::load_config::<ScreenInfo>( path );
 	let (wid,het) = ct.get_screen_size();
 	let size = (wid as int,het as int);
-	let mut root = Frame{
+	let root = Frame{
 		name		: ~"root",
 		min_size	: size,
 		area		: Rect{ base:(0,0), size:size },
 		alignment	: Alignment(ACenter,RelParent,ACenter),
-		element		: @() as @Element,
+		element		: ~() as ~Element,
 		margin		: Margin{side:0,bot:0,top:0},
 		children	: convert_frames( iscreen.frames ),
 	};
 	let mut map_texture	: HashMap<~str,gr_low::texture::TexturePtr> = HashMap::new();
 	lg.add(format!( "\tParsing {:u} images", iscreen.images.len() ));
-	let mut map_image : HashMap<~str,ImagePtr> = HashMap::new();
+	let map_image : HashMap<~str,ImagePtr> = HashMap::new();
 	let prog_image = engine::load::load_program( ct, "data/code/hud/image", lg );
 	for iimage in iscreen.images.iter()	{
 		let path = ~"data/texture/hud/" + iimage.path;
@@ -472,46 +473,46 @@ pub fn load_screen( path: &str, ct: &mut gr_low::context::Context,
 		if new	{
 			map_texture.insert(path, texture.clone());
 		}
-		let image = @Image	{
+		let _image = ~Image	{
 			texture	: RefCell::new(texture),
 			sampler	: gr_low::texture::Sampler::new(1u,0),
 			program	: prog_image.clone(),
 			center	: iimage.center,
 		};
-		map_image.insert( iimage.frame.clone(), image );
-		if !root.populate( &iimage.frame, image as @Element )	{
+		//map_image.insert( iimage.frame.clone(), image.clone() );	//FIXME
+		//if !root.populate( &iimage.frame, image as ~Element )	{	//FIXME
 			fail!( ~"\tImage frame not found: " + iimage.frame )
-		}
+		//}
 	}
 	lg.add(format!( "\tParsing {:u} labels", iscreen.labels.len() ));
-	let mut map_font	: HashMap<FontInfo,@font::Font>	= HashMap::new();
-	let mut map_label	: HashMap<~str,LabelPtr>		= HashMap::new();
+	let mut map_font	: HashMap<FontInfo,font::FontPtr>	= HashMap::new();
+	let map_label	: HashMap<~str,LabelPtr>			= HashMap::new();
 	let prog_label = engine::load::load_program( ct, "data/code/hud/text", lg );
 	for ilabel in iscreen.labels.iter()	{
 		let (font,new) = match map_font.find(&ilabel.font)	{
-			Some(f)	=> (*f,false),
+			Some(f)	=> (f.clone(),false),
 			None	=>	{
 				let (fname,fsx,fsy) = ilabel.font.clone();
 				let (kern_x,kern_y) = ilabel.kern;
-				let f = @ft.load( ~"data/font/"+fname, 0u, [fsx,fsy], [kern_x,kern_y], lg );
-				(f,true)
+				let f = ft.load( ~"data/font/"+fname, 0u, [fsx,fsy], [kern_x,kern_y], lg );
+				(f.to_ptr(),true)
 			}
 		};
 		if new	{
-			map_font.insert( ilabel.font.clone(), font );
+			map_font.insert( ilabel.font.clone(), font.clone() );
 		}
-		let texture = font.bake( ct, ilabel.text, ilabel.bound, lg );
-		let label = @Label{
+		let texture = font.borrow().bake( ct, ilabel.text, ilabel.bound, lg );
+		let _label = ~Label{
 			texture	: RefCell::new( texture ),
 			content	: RefCell::new( ilabel.text.clone() ),
 			program	: prog_label.clone(),
 			color	: gr_low::rast::Color::new( ilabel.color ),
 			font	: font,
 		};
-		map_label.insert( ilabel.frame.clone(), label );
-		if !root.populate( &ilabel.frame, label as @Element )	{
+		//map_label.insert( ilabel.frame.clone(), label.clone() );	//FIXME
+		//if !root.populate( &ilabel.frame, label as ~Element )	{	//FIXME
 			fail!( ~"\tText frame not found: " + ilabel.frame )
-		}
+		//}
 	}
 	lg.add("\tDone");
 	Screen{
@@ -525,11 +526,11 @@ pub fn load_screen( path: &str, ct: &mut gr_low::context::Context,
 
 
 pub struct Blink<T>	{
-	element	: @T,
+	element	: ~T,
 	visible	: RefCell<bool>,
 }
 
-pub type BlinkPtr<T> = @Blink<T>;
+pub type BlinkPtr<T> = ~Blink<T>;
 
 impl<T:Element> Element for Blink<T>	{
 	fn get_size( &self )-> Point	{
@@ -558,16 +559,16 @@ pub type KeyInput = ();
 impl EditLabel	{
 	pub fn obtain( screen: &mut Screen, base_name: ~str )-> EditLabelPtr	{
 		let cursor_name = base_name + ".cursor";
-		let blink = @Blink	{
-			element	: *screen.images.get( &cursor_name ),
+		let blink = ~Blink	{
+			element	: screen.images.pop( &cursor_name ).unwrap(),	//FIXME
 			visible	: RefCell::new( false ),
 		};
 		let (sx,sy) = screen.root.with_frame_mut( &cursor_name, |fr| {
-			fr.element = blink as @Element;
+			//fr.element = blink as ~Element;	//FIXME
 			fr.area.size
 		}).expect( ~"Frame not found: " + base_name );
 		std::rc::Rc::new(RefCell::new( EditLabel{
-			text	: *screen.labels.get(&base_name),
+			text	: screen.labels.pop(&base_name).unwrap(),	//FIXME
 			size	: (sx as uint, sy as uint),
 			cursor	: blink,
 			active	: false,
@@ -586,7 +587,7 @@ impl EditLabel	{
 				text.push_char(key);
 			}
 		}
-		let newtex = st.font.bake( ct, text, (1000,100), lg );
+		let newtex = st.font.borrow().bake( ct, text, (1000,100), lg );
 		st.texture.set( newtex );	//self.size
 		st.content.set( text );
 	}

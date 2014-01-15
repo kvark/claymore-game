@@ -4,8 +4,6 @@
 #[license = "MIT"];
 #[link_args = "-lglfw"];
 
-#[feature(managed_boxes)];
-
 
 extern mod gen_hud;
 extern mod gen_scene;

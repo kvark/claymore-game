@@ -56,15 +56,15 @@ struct NodeInfo	{
 	children	: ~[NodeInfo],
 }
 
-pub fn make_nodes( infos : &~[NodeInfo], par : Option<engine::space::NodePtr>, map : &mut NodeMap )	{
+pub fn make_nodes( infos: &~[NodeInfo], par: Option<engine::space::NodePtr>, map: &mut NodeMap )	{
 	for inode in infos.iter()	{
 		let node = engine::space::Node{
 			name	: inode.name.clone(),
 			space	: inode.space.spawn(),
-			parent	: par,
+			parent	: par.clone(),
 			actions	: ~[],	//TODO
 		}.to_ptr();
-		map.insert( inode.name.clone(), node );
+		map.insert( inode.name.clone(), node.clone() );
 		make_nodes( &inode.children, Some(node), map );
 	}
 }
@@ -223,7 +223,7 @@ pub fn parse_group( context : &mut common::SceneContext,
 	let mut group = common::EntityGroup(~[]);
 	for ient in info_array.iter()	{
 		let root = match context.nodes.find( &ient.node )	{
-			Some(n)	=> *n,
+			Some(n)	=> n.clone(),
 			None	=> fail!( ~"Node not found: " + ient.node )
 		};
 		let data = match context.mat_data.find( &ient.material )	{
@@ -346,20 +346,20 @@ pub fn load_scene( path : &str, gc : &mut gr_low::context::Context,
 	// entities
 	let entity_group = parse_group( &mut context, scene.entities, gc, opt_vao, lg );
 	// cameras
-	let mut map_camera : HashMap<~str,@common::Camera> = HashMap::new();
+	let mut map_camera : HashMap<~str,common::CameraPtr> = HashMap::new();
 	for icam in scene.cameras.iter()	{
-		let root = *context.nodes.get( &icam.node );
+		let root = context.nodes.get( &icam.node ).clone();
 		let name = root.borrow().with( |r| r.name.clone() );
-		map_camera.insert( name, @common::Camera{
+		map_camera.insert( name, common::Camera{
 			node	: root,
 			proj	: icam.proj.spawn(),
 			ear		: engine::audio::Listener{ volume:0.0 },
-		});
+		}.to_ptr() );
 	}
 	// lights
-	let mut map_light : HashMap<~str,@common::Light> = HashMap::new();
+	let mut map_light : HashMap<~str,common::LightPtr> = HashMap::new();
 	for ilight in scene.lights.iter()	{
-		let root = *context.nodes.get( &ilight.node );
+		let root = context.nodes.get( &ilight.node ).clone();
 		let (cr,cg,cb) = ilight.color;
 		let col = gr_low::rast::Color{ r:cr, g:cg, b:cb, a:1f32 };
 		let data = match ilight.kind	{
@@ -374,14 +374,14 @@ pub fn load_scene( path : &str, gc : &mut gr_low::context::Context,
 		};
 		let (a1,a2) = ilight.attenu;
 		let name = root.borrow().with( |r| r.name.clone() );
-		map_light.insert( name, @common::Light{
+		map_light.insert( name, common::Light{
 			node	: root,
 			color	: col,
 			attenu	: [1f32/ilight.energy as f32,a1 as f32,a2 as f32],
 			distance: ilight.distance as f32,
 			bounded	: ilight.sphere,
 			kind	: data,
-		});
+		}.to_ptr() );
 	}
 	let c5 = engine::load::get_time();
 	lg.add(format!( "\t[p] Objects: {:f}", c5-c4 ));
