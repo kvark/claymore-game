@@ -256,13 +256,14 @@ impl DataMap	{
 }
 
 
+pub type ObjectPtr = rc::Rc<Object>;
+
 struct Object	{
 	handle	: ObjectHandle,
 	target	: gl::types::GLenum,
 	alive	: bool,
 	info	: ~str,
 }
-
 
 impl Drop for ObjectHandle	{
 	fn drop( &mut self )	{
@@ -428,7 +429,7 @@ pub fn map_shader_type( t: char )-> gl::types::GLenum	{
 
 
 impl context::Context	{
-	pub fn create_shader( &self, t: char, code: &str )-> @Object	{
+	pub fn create_shader( &self, t: char, code: &str )-> ObjectPtr	{
 		assert_eq!( std::mem::size_of::<gl::types::GLchar>(), 1 );
 		let target = map_shader_type(t);
 		let h = gl::CreateShader(target);
@@ -456,17 +457,17 @@ impl context::Context	{
 			print!( "Failed shader code:\n{}\n", code );
 			fail!( ~"\tGLSL " + message )
 		}
-		@Object{
+		rc::Rc::new(Object{
 			handle: ObjectHandle(h),
 			target: target,
 			alive: ok, info: message,
-		}
+		})
 	}
 	
-	pub fn create_program( &self, shaders: &[@Object], lg: &journal::Log )-> ProgramPtr	{
+	pub fn create_program( &self, shaders: &[ObjectPtr], lg: &journal::Log )-> ProgramPtr	{
 		let h = gl::CreateProgram();
 		for s in shaders.iter() {
-			let ObjectHandle(ho) = s.handle;
+			let ObjectHandle(ho) = s.borrow().handle;
 			gl::AttachShader( h, ho );
 		}
 		gl::LinkProgram( h );
