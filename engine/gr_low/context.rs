@@ -79,7 +79,7 @@ impl ProxyState for ClearData	{
 
 pub struct Context	{
 	caps				: Capabilities,
-	rast				: rast::State,
+	rast				: rast::Rast,
 	priv clear_data		: ClearData,
 	call_count			: uint,
 	// bindings
@@ -92,7 +92,7 @@ pub struct Context	{
 	frame_buffer_read	: frame::Binding,
 	texture				: texture::Binding,
 	// defaults
-	default_rast		: rast::State,
+	default_rast		: rast::Rast,
 	default_frame_buffer: frame::BufferPtr,
 }
 

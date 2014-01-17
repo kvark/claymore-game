@@ -6,7 +6,7 @@ pub struct Data	{
 	texture		: gr_low::texture::TexturePtr,
 	tech_solid	: gr_mid::draw::Technique,
 	output		: gr_mid::call::Output,
-	rast		: gr_low::rast::State,
+	rast		: gr_low::rast::Rast,
 	call_clear	: gr_mid::call::Call,
 }
 

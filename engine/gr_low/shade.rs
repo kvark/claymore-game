@@ -309,7 +309,7 @@ impl Program	{
 			None	=>	{
 				/*let mut p = -1 as gl::types::GLint;
 				do std::str::raw::as_c_str(*name) |text|	{
-					//FIXME:doesn't work!
+					//BUG:doesn't work!
 					gl::GetFragDataLocation( *self.handle, text );
 				}
 				assert p >= 0;

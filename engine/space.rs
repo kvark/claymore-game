@@ -48,7 +48,7 @@ impl Interpolate for Vector	{
 }
 
 impl Interpolate for Quaternion	{
-	//FIXME: use slerp
+	//TODO: use slerp
 	fn interpolate( &self, other: &Quaternion, t: f32 )-> Quaternion	{
 		self.mul_s(1.0-t).add_q( &other.mul_s(t) )
 	}

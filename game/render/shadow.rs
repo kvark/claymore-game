@@ -12,7 +12,7 @@ pub struct Data	{
 	tech_solid	: gr_mid::draw::Technique,
 	tech_alpha	: gr_mid::draw::Technique,
 	output		: gr_mid::call::Output,
-	rast		: gr_low::rast::State,
+	rast		: gr_low::rast::Rast,
 	par_shadow	: gr_low::shade::Uniform,
 }
 

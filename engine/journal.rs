@@ -5,7 +5,7 @@ use std::{cell,io,rc};
 pub struct Log	{
 	name		: ~str,
 	enable		: bool,
-	priv wr		: rc::Rc<cell::RefCell<~io::Writer>>,	//FIXME
+	priv wr		: rc::Rc<cell::RefCell<~io::Writer>>,	//TODO: better sharing
 }
 
 pub trait LoggedUnused	{

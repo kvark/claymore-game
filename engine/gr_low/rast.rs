@@ -135,7 +135,7 @@ impl Stage for Primitive	{
 		let mut front	= 0 as gl::types::GLint;
 		let mut cmode	= 0 as gl::types::GLint;
 		let mut lw		= 0 as gl::types::GLfloat;
-		unsafe	{	//FIXME: crashes on that... (OSX 10.8)
+		unsafe	{	//BUG: crashes on that... (OSX 10.8)
 			//gl::GetIntegerv(	gl::POLYGON_MODE,	ptr::to_unsafe_ptr(&mode) );
 			gl::GetIntegerv(gl::FRONT_FACE,		ptr::to_mut_unsafe_ptr(&mut front) );
 			gl::GetIntegerv(gl::CULL_FACE_MODE,	ptr::to_mut_unsafe_ptr(&mut cmode) );
@@ -552,7 +552,7 @@ impl Stage for Mask	{
 
 
 #[deriving(Clone)]
-pub struct State	{
+pub struct Rast	{
 	view	: Viewport,
 	prime	: Primitive,
 	offset	: Offset,
@@ -565,9 +565,8 @@ pub struct State	{
 }
 
 
-impl Stage for State	{
-	//FIXME
-	fn activate( &mut self, new: &State, p0: uint )	{
+impl Stage for Rast	{
+	fn activate( &mut self, new: &Rast, p0: uint )	{
 		self.view	.activate( &new.view,		p0 );
 		self.prime	.activate( &new.prime,		p0 );
 		let p1 = if p0==3u	{
@@ -661,7 +660,7 @@ pub fn map_factor( s: &str )-> gl::types::GLenum	{
 }
 
 
-impl State	{
+impl Rast	{
 	pub fn set_offset( &mut self, value: f32 )	{
 		self.offset.on_fill	= true;
 		self.offset.on_line	= true;
@@ -696,8 +695,8 @@ impl State	{
 
 // Creates a default GL context rasterizer state
 // make sure to verify that it matches GL specification
-pub fn make_default( wid: uint, het: uint )-> State	{
-	State{
+pub fn make_default( wid: uint, het: uint )-> Rast	{
+	Rast{
 		view : Viewport( frame::Rect::new(wid,het) ),
 		prime : Primitive{
 			poly_mode:gl::FILL, front_cw:false, cull:false,

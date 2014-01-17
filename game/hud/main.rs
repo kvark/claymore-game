@@ -69,7 +69,7 @@ struct FontCache	{
 
 pub struct Context	{
 	input	: call::Input,
-	rast	: rast::State,
+	rast	: rast::Rast,
 	program_solid	: shade::ProgramPtr,
 	program_image	: shade::ProgramPtr,
 	program_text	: shade::ProgramPtr,
@@ -132,7 +132,7 @@ impl Context	{
 	}
 
 	fn make_call( &self, prog: &shade::ProgramPtr, data: shade::DataMap,
-			output: &call::Output, rast_override: Option<rast::State> )-> call::Call	{
+			output: &call::Output, rast_override: Option<rast::Rast> )-> call::Call	{
 		let rast = match rast_override	{
 			Some(r)	=> r,
 			None	=> self.rast,

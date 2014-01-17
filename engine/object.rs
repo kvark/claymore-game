@@ -23,7 +23,7 @@ impl Entity	{
 }
 
 impl gr_mid::draw::Technique	{
-	pub fn process( &self, e: &Entity, output: gr_mid::call::Output, rast: gr_low::rast::State,
+	pub fn process( &self, e: &Entity, output: gr_mid::call::Output, rast: gr_low::rast::Rast,
 			cache: &mut gr_mid::draw::Cache, ct: &gr_low::context::Context,
 			lg: &journal::Log )-> gr_mid::call::Call	{
 		let op = self.get_program( &e.material, &e.modifier, cache, ct, lg );

@@ -111,13 +111,13 @@ impl Rect	{
 pub struct Context	{
 	input	: call::Input,
 	output	: call::Output,
-	rast	: gr_low::rast::State,
+	rast	: gr_low::rast::Rast,
 	size	: (uint,uint),
 }
 
 impl Context	{
 	pub fn call( &self, prog: &gr_low::shade::ProgramPtr, data: gr_low::shade::DataMap,
-		rast_override: Option<&gr_low::rast::State> )-> call::Call	{
+		rast_override: Option<&gr_low::rast::Rast> )-> call::Call	{
 		let rast = match rast_override	{
 			Some(ro)	=> *ro,
 			None		=> self.rast,
@@ -307,13 +307,13 @@ impl Frame	{
 	}
 
 	pub fn draw_debug( &self, hc: &Context, prog: &gr_low::shade::ProgramPtr,
-			data: &mut gr_low::shade::DataMap, rast: &gr_low::rast::State )-> call::Call	{
+			data: &mut gr_low::shade::DataMap, rast: &gr_low::rast::Rast )-> call::Call	{
 		data.set( ~"u_Transform", hc.transform(&self.area) );
 		hc.call( prog, data.clone(), Some(rast) )
 	}
 
 	pub fn draw_debug_all( &self, hc: &Context, prog: &gr_low::shade::ProgramPtr,
-			data: &mut gr_low::shade::DataMap, rast: &gr_low::rast::State )-> ~[call::Call]	{
+			data: &mut gr_low::shade::DataMap, rast: &gr_low::rast::Rast )-> ~[call::Call]	{
 		let c0 = self.draw_debug(hc,prog,data,rast);
 		let mut queue = ~[c0];
 		for child in self.children.iter()	{

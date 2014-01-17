@@ -169,7 +169,7 @@ impl Drop for ArrayHandle	{
 
 impl gr_low::context::ProxyState for VertexArray	{
 	fn sync_back( &mut self )->bool	{
-		//FIXME
+		//TODO
 		true
 	}
 }

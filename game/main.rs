@@ -70,7 +70,7 @@ pub struct Elements	{
 }
 
 impl Game	{
-	pub fn create( el : &Elements, wid : uint, het : uint, ns : uint, journal : Journal  )-> Game	{
+	fn create( el : &Elements, wid : uint, het : uint, ns : uint, journal : Journal  )-> Game	{
 		let mut gcon = gr_low::context::create( glfw::get_proc_address, wid, het, ns );
 		assert!( gcon.sync_back() );
 		// audio test
@@ -105,13 +105,13 @@ impl Game	{
 		}
 	}
 
-	pub fn input( win: &glfw::Window, event: input::Event )	{
+	fn input( win: &glfw::Window, event: input::Event )	{
 		std::local_data::get_mut( game_singleton, |opt|	{
 			opt.unwrap().on_input( win, event );
 		})
 	}
 
-	pub fn on_input( &mut self, win : &glfw::Window, event : input::Event )	{
+	fn on_input( &mut self, win : &glfw::Window, event : input::Event )	{
 		self.time.update();
 		self.journal.input.add( event.to_str() );
 		let (px,py) = win.get_cursor_pos();
@@ -127,11 +127,11 @@ impl Game	{
 		self.logic.on_input( &event, &state, &mut self.debug_menu );
 	}
 	
-	pub fn update( &mut self )	{
+	fn update( &mut self )	{
 		self.logic.update( self.time.animate.time, &self.journal.logic );
 	}
 
-	pub fn render( &mut self, el : &Elements )-> bool	{
+	fn render( &mut self, el : &Elements )-> bool	{
 		// scene
 		self.logic.render( el, &mut self.gr_context, &self.hud_context,
 			&self.debug_menu, &self.journal.render );
@@ -142,6 +142,11 @@ impl Game	{
 		self.gr_context.check( "render" );
 		// exit if logging draw calls
 		!self.journal.render.enable
+	}
+
+	fn cleanup( &mut self )	{
+		self.hud_context.cache_images.clear();
+		self.hud_context.cache_fonts.clear();
 	}
 }
 
@@ -302,6 +307,9 @@ pub fn main()	{
 			}
 			window.swap_buffers();
 		}
-		lg.add("Exit");
+
+		let mut game = std::local_data::pop( game_singleton ).expect("Where is the game?");
+		game.journal.main.add("Exit");
+		game.cleanup();
 	}
 }

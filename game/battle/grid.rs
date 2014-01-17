@@ -28,7 +28,7 @@ pub struct Grid	{
 	priv mesh		: gr_mid::mesh::MeshPtr,
 	priv program	: gr_low::shade::ProgramPtr,
 	priv data		: gr_low::shade::DataMap,
-	priv rast		: gr_low::rast::State,
+	priv rast		: gr_low::rast::Rast,
 	priv texture	: gr_low::texture::TexturePtr,
 	priv v_scale	: vector::Vec4<f32>,
 }

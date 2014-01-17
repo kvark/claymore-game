@@ -12,6 +12,7 @@ pub enum Event	{
 	EvMouseClick(uint,bool),
 	EvScroll(f32,f32),
 	EvRender(uint),
+	EvExit,
 }
 
 impl std::to_str::ToStr for Event	{
@@ -25,6 +26,7 @@ impl std::to_str::ToStr for Event	{
 			&EvMouseClick(k,p)	=> format!( "mouse_hit({:c},{:u})", b2c(p), k ),
 			&EvScroll(x,y)		=> format!( "scroll({:f},{:f})", x, y ),
 			&EvRender(id)		=> format!( "render({:u})", id ),
+			&EvExit				=> format!( "exit" ),
 		}
 	}
 }

@@ -24,7 +24,7 @@ struct Envir	{
 	input	: gr_mid::call::Input,
 	prog	: gr_low::shade::ProgramPtr,
 	data	: gr_low::shade::DataMap,
-	rast	: gr_low::rast::State,
+	rast	: gr_low::rast::Rast,
 }
 
 struct CamControl	{
@@ -40,7 +40,7 @@ impl CamControl	{
 	pub fn update( &mut self, state : &input::State )	{
 		// calculate rotation
 		if self.in_rotation	{
-			let dt = 1f32/30f32;	//FIXME
+			let dt = 1f32/30f32;	//TODO
 			let axis = Vec3::new( 0f32, 0f32, if state.mouse[0]>0.5 {1f32} else {-1f32} );
 			let angle = angle::deg( dt as f32 * self.speed_rot );
 			let qr = Quat::from_axis_angle( &axis, angle.to_rad() );
@@ -82,9 +82,9 @@ pub struct Scene	{
 	envir	: Envir,
 	technique	: gr_mid::draw::Technique,
 	cache		: gr_mid::draw::Cache,
-	rast_solid	: gr_low::rast::State,
-	rast_cloak	: gr_low::rast::State,
-	rast_alpha	: gr_low::rast::State,
+	rast_solid	: gr_low::rast::Rast,
+	rast_cloak	: gr_low::rast::Rast,
+	rast_alpha	: gr_low::rast::Rast,
 	depth	: render::depth::Data,
 	lbuf	: Option<render::lbuf::Context>,
 	lvolume	: render::lbuf::LightVolume,

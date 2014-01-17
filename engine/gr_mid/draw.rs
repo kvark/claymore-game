@@ -128,8 +128,9 @@ impl Technique	{
 
 	pub fn get_program( &self, mat: &MaterialPtr, modifier: &ModPtr, cache: &mut Cache,
 			ct: &context::Context, lg: &journal::Log )-> Option<shade::ProgramPtr>	{
+		//TODO: optimize
 		let hash = CacheEntry{ material:mat.clone(), modifier:modifier.clone(),
-			technique:~[self.code_vertex.clone(), self.code_fragment.clone()]	//FIXME
+			technique:~[self.code_vertex.clone(), self.code_fragment.clone()]
 		}.hash();
 		match cache.find(&hash)	{
 			Some(p)	=> return p.clone(),

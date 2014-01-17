@@ -108,7 +108,7 @@ pub struct Texture	{
 
 impl context::ProxyState for Texture	{
 	fn sync_back( &mut self )->bool	{
-		//FIXME
+		//TODO
 		true
 	}
 }

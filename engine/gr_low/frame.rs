@@ -27,7 +27,7 @@ impl Drop for SurfaceHandle	{
 
 impl context::ProxyState for Surface	{
 	fn sync_back( &mut self )-> bool	{
-		//FIXME
+		//TODO
 		true
 	}
 }
@@ -253,7 +253,7 @@ impl Buffer	{
 
 impl context::ProxyState for Buffer	{
 	fn sync_back( &mut self )-> bool	{
-		//FIXME
+		//TODO
 		true
 	}
 }
@@ -358,7 +358,7 @@ impl context::Context	{
 		if 	is_main_fb{
 			let use_color = colors.len()!=0u;
 			let value = if use_color {gl::BACK} else {gl::NONE} ;
-			//FIXME: cache this
+			//TODO: cache this
 			if draw	{
 				let mask = if use_color{1} else {0};
 				if fb.get().draw_mask != mask	{
@@ -422,7 +422,7 @@ impl context::Context	{
 		}
 		// check completeness
 		gl::GetError();
-		binding.check();	//FIXME: debug only
+		binding.check();	//TODO: debug only
 	}
 
 	pub fn unbind_frame_buffers( &mut self )	{

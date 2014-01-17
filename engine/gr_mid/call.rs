@@ -64,7 +64,7 @@ impl PlaneMap	{
 		frame::Rect::new( size[0], size[1] )
 	}
 
-	pub fn check( &self, rast: &rast::State )	{
+	pub fn check( &self, rast: &rast::Rast )	{
 		assert!( !rast.stencil.test	|| self.stencil	!= frame::TarEmpty );
 		assert!( !rast.depth.test	|| self.depth	!= frame::TarEmpty );
 		assert!( !rast.blend.on		|| !self.colors.is_empty() );
@@ -149,7 +149,7 @@ pub enum Call	{
 	CallEmpty,
 	CallClear( ClearData, Output, rast::Mask ),
 	CallBlit( Output, Output ),
-	CallDraw( Input, Output, rast::State, shade::ProgramPtr, shade::DataMap ),
+	CallDraw( Input, Output, rast::Rast, shade::ProgramPtr, shade::DataMap ),
 	CallTransfrom(),	//TODO
 }
 
@@ -213,7 +213,7 @@ impl Call	{
 				gc.rast.scissor.activate( &out.gen_scissor(), 0 );
 				gc.rast.mask.activate( &mask, 0 );
 				let mut flags = 0 as gl::types::GLenum;
-				//FIXME: cache this
+				//TODO: cache this
 				match cdata.color	{
 					Some(c) =>	{
 						assert!( has_color );
