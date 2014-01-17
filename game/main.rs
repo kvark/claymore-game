@@ -44,16 +44,18 @@ impl Time	{
 
 
 struct Game	{
-	gr_context	: gr_low::context::Context,
-	aud_context	: engine::audio::Context,
-	font_context: gr_mid::font::Context,
-	hud_context	: hud::main::Context,
+	// logic
 	journal		: Journal,
 	frames		: uint,
 	call_count	: uint,
 	logic 		: Logic,
 	time 		: Time,
 	debug_menu	: hud::debug::Menu<Logic>,
+	// system (order matters)
+	hud_context	: hud::main::Context,
+	font_context: gr_mid::font::Context,
+	aud_context	: engine::audio::Context,
+	gr_context	: gr_low::context::Context,
 }
 
 local_data_key!(game_singleton : Game)
@@ -93,15 +95,17 @@ impl Game	{
 		// done
 		gcon.check("init");
 		Game{
-			gr_context	: gcon,
-			aud_context	: acon,
-			font_context: fcon,
-			hud_context	: hcon,
+			// logic
 			journal		: journal,
 			frames:0u, call_count:0u,
 			logic		: logic,
 			time		: Time::new(),
 			debug_menu	: menu,
+			// system
+			hud_context	: hcon,
+			font_context: fcon,
+			aud_context	: acon,
+			gr_context	: gcon,
 		}
 	}
 
@@ -142,11 +146,6 @@ impl Game	{
 		self.gr_context.check( "render" );
 		// exit if logging draw calls
 		!self.journal.render.enable
-	}
-
-	fn cleanup( &mut self )	{
-		self.hud_context.cache_images.clear();
-		self.hud_context.cache_fonts.clear();
 	}
 }
 
@@ -308,8 +307,7 @@ pub fn main()	{
 			window.swap_buffers();
 		}
 
-		let mut game = std::local_data::pop( game_singleton ).expect("Where is the game?");
+		let game = std::local_data::pop( game_singleton ).expect("Where is the game?");
 		game.journal.main.add("Exit");
-		game.cleanup();
 	}
 }
