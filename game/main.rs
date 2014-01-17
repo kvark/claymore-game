@@ -297,11 +297,11 @@ pub fn main()	{
 				// render
 				g.render( &config.elements )
 			});
-			
 			if !ok	{
 				break;
 			}
 			window.swap_buffers();
 		}
+		lg.add("Exit");
 	}
 }

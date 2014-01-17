@@ -326,7 +326,6 @@ pub fn read_action( br: &mut Reader, bones: &[space::Bone], lg: &journal::Log )-
 	lg.add(format!( "Loading anim from {:s}", br.path ));
 	assert!( br.enter() == ~"action" );
 	let act_name = br.get_string();
-	//final ani.Record rec = a.records[actName] = new ani.Record();
 	let length = br.get_float() as anim::float;
 	lg.add(format!( "\tName: '{:s}', Length: {:f} sec", act_name, length ));
 	let mut curves : ~[space::ArmatureCurve] = ~[];
@@ -338,28 +337,26 @@ pub fn read_action( br: &mut Reader, bones: &[space::Bone], lg: &journal::Log )-
 		let split = curve_name.split('"').map(|w| {w.to_owned()}).to_owned_vec();
 		if split.len() == 3u	{
 			assert!( split[0] == ~"pose.bones[" );
-			let mut bid = 0u;	//FIXME: vec::position, when Rust allows
-			while {let bn = bones[bid].node.borrow().borrow(); bn.get().name != split[1]}	{
-				bid += 1;
-				assert!( bid < bones.len(), format!("Bone '{:s}' not found", split[1]) );
-			}
-			let arm_curve = match split[2]	{
-				~"].location"	=>	{
+			let bid = bones.iter().position(|b|	{
+				b.node.borrow().with(|n| n.name == split[1])
+			}).expect(format!( "Bone '{:s}' not found", split[1] ));
+			let arm_curve = match split[2].as_slice()	{
+				&"].location"	=>	{
 					assert!( dimension == 3u );
 					let c = read_curve( br, read_key_position );
 					space::ACuPos(bid,c)
 				},
-				~"].rotation_quaternion"	=>	{
+				&"].rotation_quaternion"	=>	{
 					assert!( dimension == 4u );
 					let c = read_curve( br, read_key_orientation_quat );
 					space::ACuRotQuat(bid,c)
 				},
-				~"].rotation_euler"	=>	{
+				&"].rotation_euler"	=>	{
 					assert!( dimension == 3u );
 					let c = read_curve( br, read_key_orientation_euler );
 					space::ACuRotQuat(bid,c)
 				},
-				~"].scale"	=>	{
+				&"].scale"	=>	{
 					assert!( dimension == 3u );
 					let c = read_curve( br, read_key_scale3 );
 					space::ACuScale(bid,c)
@@ -378,6 +375,7 @@ pub fn read_action( br: &mut Reader, bones: &[space::Bone], lg: &journal::Log )-
 		name:act_name, duration:length, curves:curves
 	}.to_ptr()
 }
+
 
 pub fn get_armature_shader( dual_quat: bool )-> (~str,uint)	{
 	let shader = load_text( if dual_quat

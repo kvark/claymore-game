@@ -3,7 +3,7 @@ DIR=${NAME}-game
 CODATA=util/codata
 TRACE=RUST_LOG=rustc=1,::rt::backtrace
 #RUST		?=${TRACE} rustc
-RUST		?=rustc
+RUST		?=rustc -Z debug-info
 #RUST		?=../rust/x86_64-unknown-linux-gnu/stage0/bin/rustc
 #LIBMASK=*.dylib*
 LIBMASK		?=*.so
