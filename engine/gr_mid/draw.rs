@@ -7,8 +7,6 @@ use journal;
 use load;
 
 
-pub type ModPtr = rc::Rc<~Mod>;
-
 pub trait Mod	{
 	fn get_name<'a>( &'a self )-> &'a str;
 	fn get_code<'a>( &'a self )-> &'a str;
@@ -45,14 +43,14 @@ impl Material	{
 
 struct CacheEntry	{
 	material	: MaterialPtr,
-	modifier	: ModPtr,
+	modifier	: ~str,
 	technique	: ~[~str],	//TODO: borrow
 }
 
 impl to_bytes::IterBytes for CacheEntry	{
 	fn iter_bytes( &self, lsb0: bool, f: to_bytes::Cb )-> bool	{
 		self.material.borrow().name.iter_bytes( lsb0, |x| f(x) ) &&
-		self.modifier.borrow().get_name().iter_bytes( lsb0, |x| f(x) ) &&
+		self.modifier.iter_bytes( lsb0, |x| f(x) ) &&
 		self.technique.iter_bytes( lsb0, f )
 	}
 }
@@ -126,17 +124,19 @@ impl Technique	{
 		Some( ct.create_program(shaders,lg) )
 	}
 
-	pub fn get_program( &self, mat: &MaterialPtr, modifier: &ModPtr, cache: &mut Cache,
+	pub fn get_program( &self, mat: &MaterialPtr, modifier: &Mod, cache: &mut Cache,
 			ct: &context::Context, lg: &journal::Log )-> Option<shade::ProgramPtr>	{
 		//TODO: optimize
-		let hash = CacheEntry{ material:mat.clone(), modifier:modifier.clone(),
-			technique:~[self.code_vertex.clone(), self.code_fragment.clone()]
+		let hash = CacheEntry{
+			material	: mat.clone(),
+			modifier	: modifier.get_name().to_owned(),
+			technique	: ~[self.code_vertex.clone(), self.code_fragment.clone()],
 		}.hash();
 		match cache.find(&hash)	{
 			Some(p)	=> return p.clone(),
 			None	=> (),
 		}
-		let p = self.link( mat.borrow(), *modifier.borrow(), ct, lg );
+		let p = self.link( mat.borrow(), modifier, ct, lg );
 		cache.insert( hash, p.clone() );
 		p
 	}

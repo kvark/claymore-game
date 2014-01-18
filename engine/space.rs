@@ -140,6 +140,11 @@ impl anim::Player<NodeCurve> for Node	{
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - //
 //		Armature										//
 
+pub struct ModArm	{
+	code_reg:	rc::Rc<~str>,
+	code_dq:	rc::Rc<~str>
+}
+
 pub struct Bone	{
 	node			: NodePtr,
 	bind_space		: Space,

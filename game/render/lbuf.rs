@@ -2,7 +2,6 @@ extern mod engine;
 extern mod cgmath;
 
 use std::cell::RefCell;
-use std::rc::Rc;
 use cgmath::matrix::ToMat4;
 use cgmath::vector::Vec4;
 
@@ -129,7 +128,7 @@ impl Context	{
 				node	: lit.borrow().node.clone(),
 				input	: gr_mid::call::Input::new( &self.vao, &mesh ),
 				data	: data.clone(),
-				modifier: Rc::new(~() as ~gr_mid::draw::Mod),
+				modifier: ~() as ~gr_mid::draw::Mod,
 				material: mat.clone(),
 			};
 			self.cache.with_mut(|cache|	{

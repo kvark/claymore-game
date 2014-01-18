@@ -1,7 +1,6 @@
 use std::path;
 use std::hashmap::HashMap;
 use std::io;
-use std::rc::Rc;
 use extra::json;
 use extra::serialize::{Decoder,Decodable};
 
@@ -256,7 +255,7 @@ pub fn parse_group( context : &mut common::SceneContext,
 			node	: root,
 			input	: inp,
 			data	: data,
-			modifier: Rc::new(skel),
+			modifier: skel,
 			material: mat,
 		};
 		group.get_mut().push(ent);

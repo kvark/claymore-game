@@ -1,5 +1,4 @@
 use std::hashmap::HashMap;
-use std::rc::Rc;
 
 use cgmath::{quaternion,vector};
 use cgmath::{angle,projection,transform};
@@ -190,7 +189,7 @@ fn parse_child( child: &gen::NodeChild, parent: space::NodePtr, scene: &mut comm
 				data	: scene.context.mat_data.find( &ient.material ).
 					expect( ~"Material data not found: " + ient.material ).
 					clone(),
-				modifier: Rc::new(skel),
+				modifier: skel,
 				material: scene.context.materials.find( &ient.material ).
 					expect( ~"Material not found: " + ient.material ).
 					clone(),
