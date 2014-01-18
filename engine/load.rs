@@ -377,17 +377,14 @@ pub fn read_action( br: &mut Reader, bones: &[space::Bone], lg: &journal::Log )-
 }
 
 
-pub fn get_armature_shader( dual_quat: bool )-> (~str,uint)	{
+pub fn get_armature_shader( dual_quat: bool, max_bones: uint )-> ~str	{
 	let shader = load_text( if dual_quat
 		{~"data/code/mod/arm_dualquat.glslv"} else
 		{~"data/code/mod/arm.glslv"} );
-	let max : uint = {
-		let start	= shader.find_str("MAX_BONES")			.expect("Has to have MAX_BONES");
-		let end		= shader.slice_from(start).find(';')	.expect("Line has to end")		+ start;
-		let npos	= shader.slice(start,end).rfind(' ')	.expect("Space is expected")	+ start;
-		std::from_str::from_str( shader.slice(npos+1,end) )	.expect("Unable to parse int")
-	};
-	(shader,max)
+	let start	= shader.find_str("MAX_BONES")			.expect("Has to have MAX_BONES");
+	let end		= shader.slice_from(start).find(';')	.expect("Line has to end")		+ start;
+	let npos	= shader.slice(start,end).rfind(' ')	.expect("Space is expected")	+ start;
+	str::replace( shader, shader.slice(npos+1,end), max_bones.to_str() )
 }
 
 pub fn read_armature( br: &mut Reader, root: space::NodePtr, dual_quat: bool, lg: &journal::Log )-> space::Armature	{
@@ -427,15 +424,13 @@ pub fn read_armature( br: &mut Reader, root: space::NodePtr, dual_quat: bool, lg
 	}
 	br.leave();
 	// load shader
-	let (shader,max) = get_armature_shader( dual_quat );
-	lg.add(format!( "\tDetected {:u} bones", max ));
+	let shader = get_armature_shader( dual_quat, bones.len() );
 	// finish
 	space::Armature{
 		root	: root,
 		bones	: bones,
 		code	: shader,
 		actions	: actions,
-		max_bones	: max,
 	}
 }
 

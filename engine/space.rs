@@ -175,7 +175,6 @@ pub struct Armature	{
 	bones	: ~[Bone],
 	code	: ~str,
 	actions	: ~[ArmatureRecordPtr],
-	max_bones	: uint,
 }
 
 impl Armature	{
@@ -199,23 +198,17 @@ impl draw::Mod for Armature	{
 	fn get_code<'a>( &'a self )-> &'a str	{ self.code.as_slice() }
 	//TODO: use float arrays
 	fn fill_data( &self, data: &mut shade::DataMap )	{
-		assert!( self.bones.len() < self.max_bones );
-		let id = Transform::identity();
-		let mut pos : ~[Vec4<f32>] = std::vec::with_capacity( self.max_bones );
-		let mut rot : ~[Vec4<f32>] = std::vec::with_capacity( self.max_bones );
 		let root = self.root.borrow().borrow();
 		let parent_inv = root.get().world_space().invert().expect(format!(
 			"Uninvertable armature {:s} root space detected", root.get().name ));
-		while pos.len() < self.max_bones	{
-			let space = if pos.len()>0u && pos.len()<self.bones.len()	{
-					let b = &self.bones[pos.len()-1u];
-					let bw = b.node.borrow().with(|n| n.world_space());
-					parent_inv.concat( &bw ).concat( &b.bind_pose_inv )
-				}else {id};
-			let (p0,p1) = get_params( &space );
-			pos.push( p0 );
-			rot.push( p1 );
-		}
+		let transforms = self.bones.iter().map(|b| {
+			let bw = b.node.borrow().with(|n| n.world_space());
+			parent_inv.concat( &bw ).concat( &b.bind_pose_inv )
+		});
+		let pairs = Some(Transform::identity()).move_iter().
+			chain( transforms ).map( |s| get_params(&s) ).to_owned_vec();
+		let pos = pairs.map(|&(a,_)| a);
+		let rot = pairs.map(|&(_,b)| b);
 		data.set( ~"bone_pos[0]", shade::UniFloatVecArray(pos) );
 		data.set( ~"bone_rot[0]", shade::UniFloatVecArray(rot) );
 	}

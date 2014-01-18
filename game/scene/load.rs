@@ -155,15 +155,15 @@ fn parse_child( child: &gen::NodeChild, parent: space::NodePtr, scene: &mut comm
 			}
 		},
 		&gen::ChildArmature(ref iarm)	=>	{
-			let (shader,max) = engine::load::get_armature_shader( iarm.dual_quat );
+			let mut bones : ~[space::Bone] = ~[];
+			parse_bones( iarm.bones, None, parent.clone(), &mut bones );
+			let shader = engine::load::get_armature_shader( iarm.dual_quat, bones.len() );
 			let mut a = space::Armature{
-				root	: parent.clone(),
-				bones	: ~[],
+				root	: parent,
+				bones	: bones,
 				code	: shader,
 				actions	: ~[],
-				max_bones	: max,
 			};
-			parse_bones( iarm.bones, None, parent.clone(), &mut a.bones );
 			for iaction in iarm.actions.iter()	{
 				let act = scene.context.query_action( iaction, &mut a.bones, lg );
 				a.actions.push( act );
