@@ -31,12 +31,12 @@ impl Camera	{
 	pub fn to_ptr( self )-> CameraPtr	{
 		rc::Rc::new(self)
 	}
-	pub fn get_proj_matrix( &self, aspect : f32 )-> Mat4<f32>	{
+	pub fn get_proj_matrix( &self, aspect: f32 )-> Mat4<f32>	{
 		let mut proj = self.proj.clone();
 		proj.aspect = aspect;
 		proj.to_mat4()
 	}
-	pub fn get_matrix( &self, aspect : f32 )-> Mat4<f32>	{
+	pub fn get_matrix( &self, aspect: f32 )-> Mat4<f32>	{
 		let proj = self.get_proj_matrix( aspect );
 		let winv = self.node.borrow().with(|n|	{
 			n.world_space().invert().expect(format!(
@@ -45,7 +45,7 @@ impl Camera	{
 			});
 		proj.mul_m( &winv.to_mat4() )
 	}
-	pub fn get_inverse_matrix( &self, aspect : f32 )-> Mat4<f32>	{
+	pub fn get_inverse_matrix( &self, aspect: f32 )-> Mat4<f32>	{
 		let proj = self.get_proj_matrix( aspect );
 		let n = self.node.borrow().borrow();
 		let pinv = proj.invert().expect(format!(
@@ -65,7 +65,7 @@ impl Camera	{
 		let v = Vec3::new( 1f32,0f32,0f32 );
 		self.node.borrow().with( |n| n.world_space().rot.mul_v(&v) )
 	}
-	pub fn fill_data( &self, data : &mut gr_low::shade::DataMap, aspect : f32 )	{
+	pub fn fill_data( &self, data: &mut gr_low::shade::DataMap, aspect: f32 )	{
 		let sw = self.node.borrow().with( |n| n.world_space() );
 		let pm = self.get_matrix( aspect );
 		let (p0,p1) = space::get_params( &sw );
@@ -110,7 +110,7 @@ impl Light	{
 			)
 	}
 
-	pub fn get_far_distance( &self, threshold : f32 )-> f32	{
+	pub fn get_far_distance( &self, threshold: f32 )-> f32	{
 		if self.bounded	{
 			return self.distance
 		}
@@ -143,7 +143,7 @@ impl Light	{
 		}
 	}
 
-	pub fn fill_data( &self, data : &mut gr_low::shade::DataMap, near : f32, far : f32 )	{
+	pub fn fill_data( &self, data: &mut gr_low::shade::DataMap, near: f32, far: f32 )	{
 		let sn = self.node.borrow().borrow();
 		let sw = sn.get().world_space();
 		let mut pos = sw.disp.extend( 1.0 );
@@ -180,7 +180,7 @@ impl Light	{
 pub struct EntityGroup( ~[engine::object::Entity] );
 
 impl EntityGroup	{
-	pub fn divide( &mut self, name : &str )-> EntityGroup	{
+	pub fn divide( &mut self, name: &str )-> EntityGroup	{
 		let mut i = 0u;
 		let mut rez = EntityGroup(~[]);
 		while i<self.get().len()	{
@@ -203,19 +203,19 @@ impl EntityGroup	{
 		list
 	}
 	
-	pub fn find_mut<'a,T>( &'a mut self, name : &str )-> Option<&'a mut engine::object::Entity>	{
+	pub fn find_mut<'a,T>( &'a mut self, name: &str )-> Option<&'a mut engine::object::Entity>	{
 		self.get_mut().mut_iter().find(|ent|	{
 			ent.node.borrow().with( |n| std::str::eq_slice(n.name,name) )
 		})
 	}
 
-	pub fn change_detail( &mut self, detail : engine::object::Entity )-> Option<engine::object::Entity>	{
+	pub fn change_detail( &mut self, detail: engine::object::Entity )-> Option<engine::object::Entity>	{
 		let opt_pos = self.get().iter().position(|ent| borrow::ref_eq( ent.node.borrow(), detail.node.borrow() ));
 		self.get_mut().push( detail );
 		opt_pos.map(|pos| { self.get_mut().swap_remove(pos) })
 	}
 
-	pub fn swap_entity( &mut self, name : &str, other : &mut EntityGroup )	{
+	pub fn swap_entity( &mut self, name: &str, other: &mut EntityGroup )	{
 		let opt_pos = other.get().iter().position(|ent|	{
 			ent.node.borrow().with( |n| std::str::eq_slice(n.name,name) )
 		});
@@ -226,7 +226,7 @@ impl EntityGroup	{
 		other.get_mut().push(e2);
 	}
 
-	pub fn exclude( &mut self, name : &str )-> Option<engine::object::Entity>	{
+	pub fn exclude( &mut self, name: &str )-> Option<engine::object::Entity>	{
 		self.get().iter().position(|ent|	{
 			ent.node.borrow().with( |n| std::str::eq_slice(n.name,name) )
 		}).map(|pos| { self.get_mut().swap_remove(pos) })
@@ -247,7 +247,7 @@ pub struct SceneContext	{
 }
 
 impl SceneContext	{
-	pub fn new( prefix : ~str )-> SceneContext	{
+	pub fn new( prefix: ~str )-> SceneContext	{
 		SceneContext	{
 			prefix		: prefix,
 			materials	: HashMap::new(),
@@ -260,8 +260,8 @@ impl SceneContext	{
 		}
 	}
 
-	pub fn query_mesh( &mut self, mesh_name : &~str, gc : &mut gr_low::context::Context,
-			lg : &engine::journal::Log )-> gr_mid::mesh::MeshPtr	{
+	pub fn query_mesh( &mut self, mesh_name: &~str, gc: &mut gr_low::context::Context,
+			lg: &engine::journal::Log )-> gr_mid::mesh::MeshPtr	{
 		match self.meshes.find(mesh_name)	{
 			Some(m)	=> return m.clone(),
 			None	=> (),
@@ -289,7 +289,7 @@ impl SceneContext	{
 		}
 	}
 
-	pub fn query_action( &mut self, act_name : &~str, bones : &mut ~[engine::space::Bone], lg : &engine::journal::Log )-> engine::space::ArmatureRecordPtr	{
+	pub fn query_action( &mut self, act_name: &~str, bones: &[engine::space::Bone], lg: &engine::journal::Log )-> engine::space::ArmatureRecordPtr	{
 		match self.actions.find(act_name)	{
 			Some(a)	=> return a.clone(),
 			None	=> (),
@@ -301,7 +301,7 @@ impl SceneContext	{
 		if split.len() > 1	{
 			assert!( rd.enter() == ~"*action" );
 			while rd.has_more()!=0u	{
-				let act = engine::load::read_action( &mut rd, *bones, lg );
+				let act = engine::load::read_action( &mut rd, bones, lg );
 				let full_name = format!( "{:s}@{:s}", act.borrow().name, split[1] );
 				if full_name == *act_name	{
 					q_act = Some( act.clone() );
@@ -311,13 +311,13 @@ impl SceneContext	{
 			rd.leave();
 			q_act.expect(format!( "Action '{:s}' not found in the collection", *act_name ))
 		}else	{
-			let act = engine::load::read_action( &mut rd, *bones, lg );
+			let act = engine::load::read_action( &mut rd, bones, lg );
 			self.actions.insert( act_name.clone(), act.clone() );
 			act
 		}
 	}
 
-	pub fn read_armatures( &mut self, path : &str, lg : &engine::journal::Log )	{
+	pub fn read_armatures( &mut self, path: &str, lg: &engine::journal::Log )	{
 		let mut rd = engine::load::Reader::create_std( path + ".k3arm" );	
 		assert!( rd.enter() == ~"*arm" );
 		while rd.has_more()!=0u	{
