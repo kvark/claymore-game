@@ -128,7 +128,7 @@ impl Context	{
 				node	: lit.borrow().node.clone(),
 				input	: gr_mid::call::Input::new( &self.vao, &mesh ),
 				data	: data.clone(),
-				modifier: ~() as ~gr_mid::draw::Mod,
+				modifier: ~() as gr_mid::draw::ModPtr,
 				material: mat.clone(),
 			};
 			self.cache.with_mut(|cache|	{

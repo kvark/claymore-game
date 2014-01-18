@@ -8,8 +8,6 @@ use cgmath::matrix::{Matrix,Mat4};
 use cgmath::quaternion::{Quat};
 use cgmath::transform::{Transform,Decomposed};
 use cgmath::vector::{Vector,Vec3,Vec4};
-use gr_low::shade;
-use gr_mid::draw;
 
 use anim;
 
@@ -173,7 +171,6 @@ pub type ArmaturePtr = rc::Rc<cell::RefCell<Armature>>;
 pub struct Armature	{
 	root	: NodePtr,
 	bones	: ~[Bone],
-	code	: ~str,
 	actions	: ~[ArmatureRecordPtr],
 }
 
@@ -188,29 +185,6 @@ impl Armature	{
 			}
 		}
 		self.root = root;
-	}
-}
-
-static armature_name : &'static str = &"Arm";
-
-impl draw::Mod for Armature	{
-	fn get_name<'a>( &'a self )-> &'a str	{ armature_name }
-	fn get_code<'a>( &'a self )-> &'a str	{ self.code.as_slice() }
-	//TODO: use float arrays
-	fn fill_data( &self, data: &mut shade::DataMap )	{
-		let root = self.root.borrow().borrow();
-		let parent_inv = root.get().world_space().invert().expect(format!(
-			"Uninvertable armature {:s} root space detected", root.get().name ));
-		let transforms = self.bones.iter().map(|b| {
-			let bw = b.node.borrow().with(|n| n.world_space());
-			parent_inv.concat( &bw ).concat( &b.bind_pose_inv )
-		});
-		let pairs = Some(Transform::identity()).move_iter().
-			chain( transforms ).map( |s| get_params(&s) ).to_owned_vec();
-		let pos = pairs.map(|&(a,_)| a);
-		let rot = pairs.map(|&(_,b)| b);
-		data.set( ~"bone_pos[0]", shade::UniFloatVecArray(pos) );
-		data.set( ~"bone_rot[0]", shade::UniFloatVecArray(rot) );
 	}
 }
 

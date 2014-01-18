@@ -101,7 +101,7 @@ impl unit::Standard	{
 		}
 		self.skeleton.set_record( self.record, moment );
 		*/
-		self.skeleton.borrow().with(|s| s.fill_data( &mut self.entity.data ));
+		self.entity.update_mod();
 	}
 }
 

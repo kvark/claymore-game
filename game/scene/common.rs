@@ -271,7 +271,7 @@ impl SceneContext	{
 		let mut rd = engine::load::Reader::create_std( path );
 		let mut q_mesh = None::<gr_mid::mesh::MeshPtr>;
 		if split.len() > 1	{
-			assert!( rd.enter() == ~"*mesh" );
+			assert_eq!( rd.enter(), ~"*mesh" );
 			while rd.has_more()!=0u	{
 				let mesh = engine::load::read_mesh( &mut rd, gc, lg ).to_ptr();
 				let full_name = format!( "{:s}@{:s}", mesh.borrow().name, split[1] );
@@ -299,7 +299,7 @@ impl SceneContext	{
 		let mut rd = engine::load::Reader::create_std( path );
 		let mut q_act = None::<engine::space::ArmatureRecordPtr>;
 		if split.len() > 1	{
-			assert!( rd.enter() == ~"*action" );
+			assert_eq!( rd.enter(), ~"*action" );
 			while rd.has_more()!=0u	{
 				let act = engine::load::read_action( &mut rd, bones, lg );
 				let full_name = format!( "{:s}@{:s}", act.borrow().name, split[1] );
@@ -319,17 +319,17 @@ impl SceneContext	{
 
 	pub fn read_armatures( &mut self, path: &str, lg: &engine::journal::Log )	{
 		let mut rd = engine::load::Reader::create_std( path + ".k3arm" );	
-		assert!( rd.enter() == ~"*arm" );
+		assert_eq!( rd.enter(), ~"*arm" );
 		while rd.has_more()!=0u	{
-			assert!( rd.enter() == ~"meta" );
+			assert_eq!( rd.enter(), ~"meta" );
 			let name = rd.get_string();
 			let node_name = rd.get_string();
-			let dual_quat = rd.get_bool();
+			let _dual_quat = rd.get_bool();	//unused, TODO: remove from binary
 			let root = match self.nodes.find( &node_name )	{
 				Some(n)	=> n.clone(),
 				None	=> engine::space::Node::new( node_name ).to_ptr(),
 			};
-			let arm = engine::load::read_armature( &mut rd, root, dual_quat, lg ).to_ptr();
+			let arm = engine::load::read_armature( &mut rd, root, lg ).to_ptr();
 			self.armatures.insert( name, arm );
 			rd.leave();
 		}

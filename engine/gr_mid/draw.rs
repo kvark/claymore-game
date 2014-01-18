@@ -1,17 +1,23 @@
 use std::hash::Hash;
 use std::hashmap::HashMap;
-use std::{rc,to_bytes};
+use std::{rc,str,to_bytes};
 
+use cgmath::transform::Transform;
 use gr_low::{context,shade};
+
 use journal;
 use load;
+use space;
 
+
+pub type ModPtr = ~Mod:'static;
 
 pub trait Mod	{
 	fn get_name<'a>( &'a self )-> &'a str;
 	fn get_code<'a>( &'a self )-> &'a str;
 	fn fill_data( &self, data: &mut shade::DataMap );
 }
+
 
 static empty_name : &'static str = &"Dummy";
 static empty_code : &'static str = &"
@@ -23,6 +29,62 @@ impl Mod for ()	{
 	fn get_code<'a>( &'a self )-> &'a str	{empty_code}
 	fn fill_data( &self, _data: &mut shade::DataMap )	{}
 }
+
+
+static arm_name : &'static str = &"Armature";
+
+pub struct ModArm	{
+	armature	: space::ArmaturePtr,
+	dual_quat	: bool,
+	priv code	: ~str,
+}
+
+impl ModArm	{
+	pub fn load( arm: &space::ArmaturePtr, dual_quat: bool )-> ModArm	{
+		let max_bones = arm.borrow().with( |a| a.bones.len() );
+		let code =	{
+			let shader = load::load_text( if dual_quat
+				{~"data/code/mod/arm_dualquat.glslv"} else
+				{~"data/code/mod/arm.glslv"} );
+			let start	= shader.find_str("MAX_BONES")			.expect("Has to have MAX_BONES");
+			let end		= shader.slice_from(start).find(';')	.expect("Line has to end")		+ start;
+			let npos	= shader.slice(start,end).rfind(' ')	.expect("Space is expected")	+ start;
+			str::replace( shader, shader.slice(npos+1,end), max_bones.to_str() )
+		};
+		ModArm	{
+			armature	: arm.clone(),
+			dual_quat	: dual_quat,
+			code		: code,
+		}
+	}
+}
+
+impl Mod for ModArm	{
+	fn get_name<'a>( &'a self )-> &'a str	{ arm_name }
+	fn get_code<'a>( &'a self )-> &'a str	{ self.code.as_slice() }
+	
+	fn fill_data( &self, data: &mut shade::DataMap )	{
+		let pairs = self.armature.borrow().with(|arm|	{
+			let parent_inv = arm.root.borrow().with(|root|
+				root.world_space().invert().expect(format!(
+					"Uninvertable armature {:s} root space detected",
+					root.name))
+			);
+			let transforms = arm.bones.iter().map(|b| {
+				let bw = b.node.borrow().with(|n| n.world_space());
+				parent_inv.concat( &bw ).concat( &b.bind_pose_inv )
+			});
+			Some(Transform::identity()).move_iter().
+				chain( transforms ).map( |s| space::get_params(&s) ).
+				to_owned_vec()
+		});
+		let pos = pairs.map(|&(a,_)| a);
+		let rot = pairs.map(|&(_,b)| b);
+		data.set( ~"bone_pos[0]", shade::UniFloatVecArray(pos) );
+		data.set( ~"bone_rot[0]", shade::UniFloatVecArray(rot) );
+	}
+}
+
 
 pub type MaterialPtr = rc::Rc<Material>;
 

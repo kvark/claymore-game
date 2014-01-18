@@ -234,11 +234,11 @@ pub fn parse_group( context : &mut common::SceneContext,
 			None	=> fail!( ~"Material not found: " + ient.material )
 		};
 		let skel = if ient.armature.is_empty()	{
-			~()	as ~gr_mid::draw::Mod
+			~()	as gr_mid::draw::ModPtr
 		}else	{
-			//*context.armatures.get(&ient.armature)
-			~()	//FIXME
-				as ~gr_mid::draw::Mod
+			let arm = context.armatures.get( &ient.armature );
+			let dq = false;	//TODO
+			~gr_mid::draw::ModArm::load( arm, dq ) as gr_mid::draw::ModPtr
 		};
 		let vao = match opt_vao	{
 			Some(ref v)	=> v.clone(),

@@ -158,11 +158,9 @@ fn parse_child( child: &gen::NodeChild, parent: space::NodePtr, scene: &mut comm
 			let mut bones : ~[space::Bone] = ~[];
 			parse_bones( iarm.bones, None, parent.clone(), &mut bones );
 			let actions = iarm.actions.map( |ia| scene.context.query_action(ia,bones,lg) );
-			let shader = engine::load::get_armature_shader( iarm.dual_quat, bones.len() );
 			scene.context.armatures.insert( iarm.name.clone(), space::Armature{
 				root	: parent,
 				bones	: bones,
-				code	: shader,
 				actions	: actions,
 			}.to_ptr() );
 		},
@@ -171,12 +169,12 @@ fn parse_child( child: &gen::NodeChild, parent: space::NodePtr, scene: &mut comm
 			input.range.start = ient.range[0];
 			input.range.num = ient.range[1] - ient.range[0];
 			let skel = if ient.armature.is_empty()	{
-				~()	as ~gr_mid::draw::Mod
+				~()	as gr_mid::draw::ModPtr
 			}else	{
-				//*scene.context.armatures.find( &ient.armature ).
-				//	expect( ~"Armature not found: " + ient.armature )
-				~()	//FIXME
-					as ~gr_mid::draw::Mod
+				let arm = scene.context.armatures.find( &ient.armature ).
+					expect( ~"Armature not found: " + ient.armature );
+				let dq = false;	//TODO
+				~gr_mid::draw::ModArm::load( arm, dq ) as gr_mid::draw::ModPtr
 			};
 			scene.entities.get_mut().push( engine::object::Entity{
 				node	: parent,

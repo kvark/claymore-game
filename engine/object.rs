@@ -11,7 +11,7 @@ pub struct Entity	{
 	//body	: @node::Body,
 	input	: gr_mid::call::Input,
 	data	: gr_low::shade::DataMap,
-	modifier: ~gr_mid::draw::Mod,
+	modifier: gr_mid::draw::ModPtr,
 	material: gr_mid::draw::MaterialPtr,
 }
 
@@ -19,6 +19,9 @@ impl Entity	{
 	pub fn update_world( &mut self )	{
 		let world = self.node.borrow().with( |n| n.world_space().to_mat4() );
 		self.data.set( ~"u_World", gr_low::shade::UniMatrix(false,world) );
+	}
+	pub fn update_mod( &mut self )	{
+		self.modifier.fill_data( &mut self.data );
 	}
 }
 
