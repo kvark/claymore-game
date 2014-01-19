@@ -20,7 +20,7 @@ use input;
 use hud = hud::main;
 use debug = hud::debug;
 use scene;
-use battle::{field,grid,think,unit};
+use battle::{field,grid,motion,think,unit};
 use battle::grid::{DrawableGrid,TopologyGrid,GeometryGrid};
 
 
@@ -47,8 +47,9 @@ pub struct CharBundle<M,B>	{
 	brain		: ~B,
 	member		: M,
 	member_key	: field::MemberKey,
-	motion		: ~think::Motion,
+	motion		: think::MotionPtr,
 	last_update	: anim::float,
+	priv available	: bool,
 }
 
 impl<M: Member + 'static, B: think::Brain<M>> CharBundle<M,B>	{
@@ -56,23 +57,24 @@ impl<M: Member + 'static, B: think::Brain<M>> CharBundle<M,B>	{
 		let delta = time - self.last_update;
 		self.last_update = time;
 		let new = match	self.motion.update( &mut self.member, delta, field, grid )	{
-			think::StatusDone	=> true,
+			think::StatusDone	=> 1,
 			think::StatusCanInterrupt	=>
 				if self.brain.check( &self.member, field, grid )	{
 					self.motion.stop();
 					lg.add(format!( "{:s}: interrupts", self.member.get_name() ));
-					true
-				}else {false},
-			think::StatusBusy	=> false,
+					1
+				}else {0},
+			think::StatusBusy	=> -1,
 		};
-		if new	{
+		self.available = new==0;
+		if new>0	{
 			self.motion = self.brain.decide( &self.member, field, grid );
 			lg.add(format!( "{:s}: new motion {:s}", self.member.get_name(), self.motion.get_name() ));
 		}
 	}
 	
 	pub fn is_waiting( &self )-> bool	{
-		std::str::eq_slice( self.motion.get_name(), &"Idle" )
+		self.available
 	}
 	
 	pub fn spawn( &mut self, team: field::Team, d: grid::Location, field: &mut field::Field, grid: &grid::Grid )	{
@@ -373,8 +375,9 @@ pub fn create( gc: &mut gr_low::context::Context, hc: &mut hud::Context,
 			brain		: brain,
 			member		: mem,
 			member_key	: 0,
-			motion		: ~think::motion::Idle as ~think::Motion,
+			motion		: ~motion::Dummy as think::MotionPtr,
 			last_update	: 0.0,
+			available	: false,
 		}
 	};
 	// load boss
@@ -398,8 +401,9 @@ pub fn create( gc: &mut gr_low::context::Context, hc: &mut hud::Context,
 			brain		: brain,
 			member		: mem,
 			member_key	: 0,
-			motion		: ~think::motion::Idle as ~think::Motion,
+			motion		: ~motion::Dummy as think::MotionPtr,
 			last_update	: 0.0,
+			available	: false,
 		}
 	};
 	// create grid

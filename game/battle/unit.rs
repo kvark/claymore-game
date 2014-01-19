@@ -80,7 +80,7 @@ pub struct Standard {
 	// view
 	entity		: engine::object::Entity,
 	skeleton	: engine::space::ArmaturePtr,
-	record		: engine::space::ArmatureRecordPtr,
+	record		: engine::space::ArmatureRecordPtr,	//TODO: use from Motion
 	elevation	: f32,
 }
 

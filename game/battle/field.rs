@@ -12,8 +12,8 @@ pub type MemberKey	= uint;
 pub struct Link   {
 	name	: ~str,
 	team	: Team,
-	location    : grid::Location,
-	orientation : grid::Orientation,
+	location	: grid::Location,
+	orientation	: grid::Orientation,
 }
 
 

@@ -21,6 +21,7 @@ pub mod battle	{
 	pub mod field;
 	pub mod grid;
 	pub mod main;
+	pub mod motion;
 	pub mod think;
 	pub mod unit;
 }

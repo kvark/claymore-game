@@ -112,7 +112,6 @@ impl<C> Record<C>	{
 }
 
 pub trait Player<C>	{
-	//fn record_iter( self )-> std::vec::VecIterator< RecordPtr<C> >;
 	fn find_record( &self, &str )-> Option< RecordPtr<C> >;
 	fn set_record( &mut self, &Record<C>, float );
 }
