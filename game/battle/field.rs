@@ -59,7 +59,7 @@ impl Field	{
 		}
 	}
 
-	pub fn get_member<'a>( &'a self, key: MemberKey ) -> &'a Link	{
+	pub fn get_member<'a>( &'a self, key: MemberKey )-> &'a Link	{
 		&self.members[key].link
 	}
 	
@@ -77,9 +77,12 @@ impl Field	{
 		self.revision += 1;
 	}
 	
-	fn add_member_cells( &mut self, mk: MemberKey, member: &Link, unit: &unit::Unit, grid: &grid::TopologyGrid )	{
+	fn add_member_cells( &mut self, mk: MemberKey, unit: &unit::Unit, grid: &grid::TopologyGrid )	{
 		unit.each_limb( |lk,_limb,offset|	{
-			let pos = grid.offset_position( member.location, member.orientation, offset );
+			let pos =	{
+				let link = self.get_member(mk);
+				grid.offset_position( link.location, link.orientation, offset )
+			};
 			grid.get_index(pos).map(|index|	{
 				match self.cells[index]	{
 					CellEmpty	=> self.cells[index] = CellPart( mk,~[lk] ),
@@ -94,12 +97,12 @@ impl Field	{
 	pub fn add_member<M: unit::Unit + 'static>( &mut self, member: Link, unit: &M, grid: &grid::TopologyGrid )-> MemberKey	{
 		let mk = self.members.len();
 		print!( "Field: added member '{:s}' with key {:?}\n", unit.get_name(), mk );
-		self.add_member_cells( mk, &member, unit, grid );
 		let rec = Member	{
 			link	: member,
 			effects	: ~[],
 		};
 		self.members.insert( mk, rec );
+		self.add_member_cells( mk, unit, grid );
 		mk
 	}
 
@@ -127,9 +130,10 @@ impl Field	{
 		self.members[key].link.team = team_dead;
 	}
 	
-	pub fn update_member<M: unit::Unit + 'static>( &mut self, key: MemberKey, member: &Link, unit: &M, grid: &grid::TopologyGrid )-> bool	{
+	pub fn update_member<M: unit::Unit + 'static>( &mut self, key: MemberKey, unit: &M, grid: &grid::TopologyGrid, mutator: |&mut Link| )-> bool	{
 		self.remove_member_cells( key );
-		self.add_member_cells( key, member, unit, grid );
+		mutator( &mut self.members[key].link );
+		self.add_member_cells( key, unit, grid );
 		true
 	}
 

@@ -1,3 +1,4 @@
+use std::to_str::ToStr;
 use cgmath::point::{Point};
 use cgmath::vector::{EuclideanVector,Vector};
 use engine::{anim,space};
@@ -9,9 +10,14 @@ use battle::think;
 
 pub struct Dummy;
 
-impl think::Motion for Dummy	{
-	fn get_name<'a>( &'a self )-> &'a str	{ "None" }
-	fn update( &mut self, _m: &mut main::Member, _delta: anim::float, _field: &mut field::Field, _grid: &grid::Grid )-> think::MotionStatus	{
+impl ToStr for Dummy	{
+	fn to_str( &self )-> ~str	{
+		~"Dummy"
+	}
+}
+
+impl<M: main::Member> think::Motion<M> for Dummy	{
+	fn update( &mut self, _key: field::MemberKey, _m: &mut M, _delta: anim::float, _field: &mut field::Field, _grid: &grid::Grid )-> think::MotionStatus	{
 		think::StatusCanInterrupt
 	}
 	fn stop( &mut self )	{}
@@ -33,14 +39,19 @@ impl Idle	{
 			last_time	: 0.0,
 		}
 	}
-	pub fn to_ptr( self )-> think::MotionPtr	{
-		~self as think::MotionPtr
+	pub fn to_ptr<M: main::Member>( self )-> think::MotionPtr<M>	{
+		~self as think::MotionPtr<M>
 	}
 }
 
-impl think::Motion for Idle	{
-	fn get_name<'a>( &'a self )-> &'a str	{ "Idle" }
-	fn update( &mut self, _m: &mut main::Member, delta: anim::float, _field: &mut field::Field, _grid: &grid::Grid )-> think::MotionStatus	{
+impl ToStr for Idle	{
+	fn to_str( &self )-> ~str	{
+		~"Idle"
+	}
+}
+
+impl<M: main::Member> think::Motion<M> for Idle	{
+	fn update( &mut self, _key: field::MemberKey, _m: &mut M, delta: anim::float, _field: &mut field::Field, _grid: &grid::Grid )-> think::MotionStatus	{
 		let moment = self.last_time + delta;
 		self.last_time = if moment>self.record.borrow().duration	{0.0} else	{moment};
 		self.armature.borrow().with_mut( |a| a.set_record(self.record.borrow(),moment) );
@@ -52,16 +63,19 @@ impl think::Motion for Idle	{
 
 pub struct Move	{
 	destinations: ~[grid::Location],
-	location	: grid::Location,
 	orientation	: grid::Orientation,
 	elevation	: f32,
 	speed		: f32,
 }
 
-impl think::Motion for Move	{
-	fn get_name<'a>( &'a self )-> &'a str	{ "Move" }
-	
-	fn update( &mut self, m: &mut main::Member, full_delta: anim::float, field: &mut field::Field, grid: &grid::Grid )-> think::MotionStatus	{
+impl ToStr for Move	{
+	fn to_str( &self )-> ~str	{
+		format!( "Move{:s}", self.destinations.to_str() )
+	}
+}
+
+impl<M: main::Member + 'static> think::Motion<M> for Move	{	
+	fn update( &mut self, key: field::MemberKey, m: &mut M, full_delta: anim::float, field: &mut field::Field, grid: &grid::Grid )-> think::MotionStatus	{
 		let mut delta = full_delta as f32;
 		let root = m.get_root();
 		let mut pos = root.borrow().with(|n| Point::from_vec( &n.space.disp ));
@@ -81,16 +95,20 @@ impl think::Motion for Move	{
 				pos.add_v( &move_vector )
 			};
 		}
+		let self_loc = {let link = field.get_member(key); link.location};
 		let dest_loc = (grid as &grid::GeometryGrid).point_cast( &pos );
-		let done : bool = if dest_loc != self.location	{
+		let done : bool = if dest_loc != self_loc	{
 			//print(format!( "Location {:s} -> {:s}\n", self.location.to_str(), dest_loc.to_str() ));
 			match field.get_by_location( dest_loc, grid as &grid::TopologyGrid )	{
 				&field::CellEmpty	=>	{
-					//m.update_link( dest_loc, self.orientation );	//FIXME!!!
-					//field.update_member( key, field.get_member(key), m, grid as &grid::TopologyGrid ); 
+					field.update_member( key, m, grid as &grid::TopologyGrid, |link|	{
+						link.location = dest_loc;
+						link.orientation = self.orientation;
+					});
 					false
 				},
 				&field::CellPart(_,_)	=>	{	//collide
+					//println!( "Collided with {:s} while moving from {:s}", dest_loc.to_str(), self_loc.to_str() );
 					pos = Point::from_vec( &(grid as &grid::GeometryGrid).compute_space(
 						dest_loc, self.orientation, self.elevation ).disp);
 					true
@@ -99,7 +117,7 @@ impl think::Motion for Move	{
 			}
 		}else {false};
 		
-		root.borrow().with_mut( |n| {n.space.disp = pos.to_vec();} );
+		root.borrow().with_mut( |n| {n.space.disp = pos.to_vec()} );
 		
 		if done || self.destinations.is_empty()	{
 			think::StatusDone
@@ -118,9 +136,15 @@ pub struct Attack	{
 	destination	: grid::Location,
 	damage		: unit::Health,
 }
-impl think::Motion for Attack	{
-	fn get_name<'a>( &'a self )-> &'a str	{ "Attack" }
-	fn update( &mut self, _m: &mut main::Member, _delta: anim::float, field: &mut field::Field, grid: &grid::Grid )-> think::MotionStatus	{
+
+impl ToStr for Attack	{
+	fn to_str( &self )-> ~str	{
+		format!( "Attack{:s}", self.destination.to_str() )
+	}
+}
+
+impl<M: main::Member> think::Motion<M> for Attack	{
+	fn update( &mut self, _key: field::MemberKey, _m: &mut M, _delta: anim::float, field: &mut field::Field, grid: &grid::Grid )-> think::MotionStatus	{
 		let id = (grid as &grid::TopologyGrid).get_index( self.destination ).expect("Invalid attack target");
 		field.deal_damage( id, None, self.damage );
 		think::StatusDone

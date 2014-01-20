@@ -46,6 +46,7 @@ impl Grid	{
 		rast.set_depth( "<=", false );
 		rast.set_blend( "s+d", "Sa", "1" );
 		let cells = std::vec::from_elem( segments*segments, CELL_EMPTY );
+		lg.add(format!( "Grid created of size {}x{}", segments, segments ));
 		let tex = ct.create_texture( "2D", segments, segments, 0u, 0u );
 		let s_opt = Some( gr_low::texture::Sampler::new(1u,0) );
 		data.set( ~"t_Grid",		gr_low::shade::UniTexture(0,tex.clone(),s_opt) );
@@ -123,7 +124,13 @@ pub trait TopologyGrid	{
 	fn get_index( &self, Location )-> Option<uint>;
 	fn offset_position( &self, Location, Orientation, Offset )-> Location;
 	fn approximate_orientation( &self, Location, Location )-> Orientation;
-	fn get_neighbors( &self, uint )-> ~[uint];
+	fn get_neighbors( &self, Location )-> ~[Location];
+	
+	fn get_neighbors_indices( &self, index: uint )-> ~[uint]	{
+		self.get_neighbors( self.get_location(index) ).
+			move_iter().filter_map( |loc| self.get_index(loc) ).
+			to_owned_vec()
+	}
 }
 
 impl TopologyGrid for Grid	{
@@ -133,7 +140,9 @@ impl TopologyGrid for Grid	{
 	fn get_index( &self, d: Location )-> Option<uint>	{
 		let ns = self.nseg as int;
 		if d.x>=0 && d.x<ns && d.y>=0 && d.y<ns	{
-			Some((d.x + d.y*ns) as uint)
+			let id = (d.x + d.y*ns) as uint;
+			assert!( id < self.get_index_size() );
+			Some(id)
 		}else	{None}
 	}
 	fn offset_position( &self, d: Location, o: Orientation, f: Offset )-> Location	{
@@ -148,12 +157,9 @@ impl TopologyGrid for Grid	{
 	fn approximate_orientation( &self, _src: Location, _dst: Location )-> Orientation	{
 		0	//TODO
 	}
-	fn get_neighbors( &self, index: uint )-> ~[uint]	{
-		let d = self.get_location( index );
-		range(0,4).filter_map( |o| {
-			let dof = self.offset_position( d, o, vector::Vec2::new(1i,0i) );
-			self.get_index(dof)
-		}).to_owned_vec()
+	fn get_neighbors( &self, d: Location )-> ~[Location]	{
+		range(0,4).map(|o| self.offset_position( d, o, vector::Vec2::new(1i,0i) )).
+			to_owned_vec()
 	}
 }
 

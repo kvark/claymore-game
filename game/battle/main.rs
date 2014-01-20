@@ -47,7 +47,7 @@ pub struct CharBundle<M,B>	{
 	brain		: ~B,
 	member		: M,
 	member_key	: field::MemberKey,
-	motion		: think::MotionPtr,
+	motion		: think::MotionPtr<M>,
 	last_update	: anim::float,
 	priv available	: bool,
 }
@@ -56,10 +56,10 @@ impl<M: Member + 'static, B: think::Brain<M>> CharBundle<M,B>	{
 	pub fn update( &mut self, time: anim::float, field: &mut field::Field, grid: &grid::Grid, lg: &engine::journal::Log )	{
 		let delta = time - self.last_update;
 		self.last_update = time;
-		let new = match	self.motion.update( &mut self.member, delta, field, grid )	{
+		let new = match	self.motion.update( self.member_key, &mut self.member, delta, field, grid )	{
 			think::StatusDone	=> 1,
 			think::StatusCanInterrupt	=>
-				if self.brain.check( &self.member, field, grid )	{
+				if self.brain.check( self.member_key, &self.member, field, grid )	{
 					self.motion.stop();
 					lg.add(format!( "{:s}: interrupts", self.member.get_name() ));
 					1
@@ -68,8 +68,8 @@ impl<M: Member + 'static, B: think::Brain<M>> CharBundle<M,B>	{
 		};
 		self.available = new==0;
 		if new>0	{
-			self.motion = self.brain.decide( &self.member, field, grid );
-			lg.add(format!( "{:s}: new motion {:s}", self.member.get_name(), self.motion.get_name() ));
+			self.motion = self.brain.decide( self.member_key, &self.member, field, grid );
+			lg.add(format!( "{:s}: new motion {:s}", self.member.get_name(), self.motion.to_str() ));
 		}
 	}
 	
@@ -77,16 +77,18 @@ impl<M: Member + 'static, B: think::Brain<M>> CharBundle<M,B>	{
 		self.available
 	}
 	
-	pub fn spawn( &mut self, team: field::Team, d: grid::Location, field: &mut field::Field, grid: &grid::Grid )	{
+	pub fn spawn( &mut self, team: field::Team, d: grid::Location, field: &mut field::Field,
+			grid: &grid::Grid, lg: &engine::journal::Log )	{
 		let link = field::Link	{
 			name		: self.member.get_name().to_owned(),
 			team		: team,
 			location	: d,
 			orientation	: 0,
 		};
+		lg.add(format!( "Spawned {:s} at {:s}", self.member.get_name(), d.to_str() ));
 		let sp = grid.compute_space( d, 0, self.member.get_elevation() );
 		let root = self.member.get_root();
-		root.borrow().with_mut(|n| {n.space = sp;} );
+		root.borrow().with_mut(|n| {n.space = sp} );
 		self.member_key = field.add_member( link, &self.member, grid as &TopologyGrid );
 	}
 }
@@ -160,16 +162,6 @@ pub struct Scene	{
 }
 
 impl Scene	{
-	pub fn reset( &mut self, _time: anim::float )	{
-		// common
-		self.grid.clear();
-		self.field.clear();
-		// hero
-		self.hero.spawn( 0, Point2::new(7,2), &mut self.field, &self.grid );
-		// boss
-		self.boss.spawn( 1, Point2::new(5,5), &mut self.field, &self.grid );
-	}
-
 	fn update_matrices( &mut self, aspect: f32 )	{
 		let light_pos	= Vec4::new( 4f32, 1f32, 6f32, 1f32 );
 		let all_ents = ~[&mut self.land, &mut self.hero.member.entity, &mut self.boss.member.entity];
@@ -236,10 +228,20 @@ impl Scene	{
 		}
 	}
 	
-	pub fn update( &mut self, time: anim::float, lg: &engine::journal::Log )	{
-		lg.add(format!( "Frame at {}", time  ));
-		self.hero.update( time, &mut self.field, &self.grid, lg );
-		self.boss.update( time, &mut self.field, &self.grid, lg );
+	pub fn update( &mut self, reset: bool, time: anim::float, lg: &engine::journal::Log )	{
+		if reset	{
+			// common
+			self.grid.clear();
+			self.field.clear();
+			// hero
+			self.hero.spawn( 0, Point2::new(7,2), &mut self.field, &self.grid, lg );
+			// boss
+			self.boss.spawn( 1, Point2::new(5,5), &mut self.field, &self.grid, lg );
+		}else	{
+			//lg.add(format!( "Frame at {}", time  ));
+			self.hero.update( time, &mut self.field, &self.grid, lg );
+			self.boss.update( time, &mut self.field, &self.grid, lg );
+		}
 	}
 
 	pub fn render( &mut self, output: &gr_mid::call::Output, tech: &gr_mid::draw::Technique,
@@ -292,7 +294,8 @@ impl Scene	{
 			action	: debug::ActionList(~[
 				debug::MenuItem	{
 					name	: ~"battle-reset",
-					action	: do debug::ActionFun |s:&mut Scene| {s.reset(0.0)},
+					//action	: do debug::ActionFun |s:&mut Scene| {s.update(true,0.0)},	//TODO
+					action	: do debug::ActionFun |_| {},
 				},
 				debug::MenuItem	{
 					name	: ~"battle-test",
@@ -375,7 +378,7 @@ pub fn create( gc: &mut gr_low::context::Context, hc: &mut hud::Context,
 			brain		: brain,
 			member		: mem,
 			member_key	: 0,
-			motion		: ~motion::Dummy as think::MotionPtr,
+			motion		: ~motion::Dummy as think::MotionStdPtr,
 			last_update	: 0.0,
 			available	: false,
 		}
@@ -401,7 +404,7 @@ pub fn create( gc: &mut gr_low::context::Context, hc: &mut hud::Context,
 			brain		: brain,
 			member		: mem,
 			member_key	: 0,
-			motion		: ~motion::Dummy as think::MotionPtr,
+			motion		: ~motion::Dummy as think::MotionStdPtr,
 			last_update	: 0.0,
 			available	: false,
 		}

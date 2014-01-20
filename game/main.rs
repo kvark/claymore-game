@@ -88,7 +88,7 @@ impl Game	{
 		let mut hcon = hud::main::Context::create( &mut gcon, &journal.load );
 		// logic
 		let mut logic = Logic::create( el, &mut gcon, &fcon, &mut hcon, &journal.load );
-		logic.reset( 0.0 );
+		logic.update( true, 0.0, &journal.logic );
 		// debug menu
 		let menu : hud::debug::Menu<Logic> = logic.create_debug_menu();
 		menu.preload( &mut gcon, &fcon, &mut hcon, &journal.load );
@@ -132,7 +132,7 @@ impl Game	{
 	}
 	
 	fn update( &mut self )	{
-		self.logic.update( self.time.animate.time, &self.journal.logic );
+		self.logic.update( false, self.time.animate.time, &self.journal.logic );
 	}
 
 	fn render( &mut self, el : &Elements )-> bool	{

@@ -1,6 +1,7 @@
 extern mod cgmath;
 extern mod engine;
 
+use std::to_str::ToStr;
 use engine::anim;
 use battle::{grid,field,main,motion,unit};
 use cgmath::point::Point;
@@ -12,18 +13,18 @@ pub enum MotionStatus	{
 	StatusBusy,
 }
 
-pub type MotionPtr = ~Motion:'static;
+pub type MotionPtr<M> = ~Motion:'static<M>;
+pub type MotionStdPtr = MotionPtr<unit::Standard>;
 
-pub trait Motion	{
-	fn get_name<'a>( &'a self )-> &'a str;	//TODO: ToStr
+pub trait Motion<M: main::Member> : ToStr	{
 	//fn start()	//custom interface
-	fn update( &mut self, &mut main::Member, anim::float, &mut field::Field, &grid::Grid )-> MotionStatus;
+	fn update( &mut self, field::MemberKey, &mut M, anim::float, &mut field::Field, &grid::Grid )-> MotionStatus;
 	fn stop( &mut self );
 }
 
 pub trait Brain<M : unit::Unit>	{
-	fn check( &mut self, &M, &field::Field, &grid::Grid )-> bool;
-	fn decide( &mut self, &M, &field::Field, &grid::Grid )-> MotionPtr;
+	fn check( &mut self, field::MemberKey, &M, &field::Field, &grid::Grid )-> bool;
+	fn decide( &mut self, field::MemberKey, &M, &field::Field, &grid::Grid )-> MotionPtr<M>;
 }
 
 
@@ -60,46 +61,43 @@ impl<M> Player<M>	{
 }
 
 impl Brain<unit::Standard> for Player<unit::Standard>	{
-	fn check( &mut self, _member: &unit::Standard, _field: &field::Field, _grid: &grid::Grid)-> bool	{
+	fn check( &mut self, _mkey: field::MemberKey, _member: &unit::Standard, _field: &field::Field, _grid: &grid::Grid)-> bool	{
 		self.do_cancel
 	}
 	
-	fn decide( &mut self, member: &unit::Standard, field: &field::Field, grid: &grid::Grid )-> MotionPtr	{
+	fn decide( &mut self, mkey: field::MemberKey, member: &unit::Standard, field: &field::Field, grid: &grid::Grid )-> MotionStdPtr	{
 		self.do_cancel = false;
 		if self.do_click	{
 			self.do_click = false;
 			let topo = grid as &grid::TopologyGrid;
-			let m_key : field::MemberKey = 0;
-			let link = field.get_member(m_key);
+			let link = field.get_member(mkey);
 			let loc = link.location;
 			match field.get_by_location( self.target, topo )	{
 				&field::CellEmpty	=> ~motion::Move{
 						destinations: ~[self.target],
-						location	: loc,
 						orientation	: topo.approximate_orientation( loc, self.target ),
 						elevation	: member.elevation,
 						speed		: member.move_speed,
-					} as MotionPtr,
+					} as MotionStdPtr,
 				&field::CellPart(key,_)	=>	{
 					if field.get_member(key).team != link.team	{
 						let my_damage = 1;
 						~motion::Attack{
 							destination	: self.target,
 							damage		: my_damage,
-							} as MotionPtr
-					}else if key == m_key && loc != self.target	{
+							} as MotionStdPtr
+					}else if key == mkey && loc != self.target	{
 						~motion::Move{
 							destinations: ~[self.target],
-							location	: loc,
 							orientation	: topo.approximate_orientation( loc, self.target ),
 							elevation	: member.elevation,
 							speed		: member.move_speed,
-							} as MotionPtr
+							} as MotionStdPtr
 					}else	{
-						~motion::Dummy as MotionPtr
+						~motion::Dummy as MotionStdPtr
 					}
 				},
-				_	=> ~motion::Dummy as MotionPtr,
+				_	=> ~motion::Dummy as MotionStdPtr,
 			}
 		}else	{
 			motion::Idle::new( &member.skeleton, ~"ArmatureBossAction" ).to_ptr()
@@ -108,67 +106,66 @@ impl Brain<unit::Standard> for Player<unit::Standard>	{
 }
 
 pub struct Monster<M>	{
-	target_key	: field::MemberKey,
+	target_key	: Option<field::MemberKey>,
 }
 
 impl<M> Monster<M>	{
 	pub fn new()-> Monster<M>	{
 		Monster{
-			target_key	: 0,
+			target_key	: None,
 		}
 	}
 }
 
 impl<M: main::Member> Brain<M> for Monster<M>	{
-	fn check( &mut self, _member: &M, _field: &field::Field, _grid: &grid::Grid )-> bool	{
-		self.target_key == 0
+	fn check( &mut self, _mkey: field::MemberKey, _member: &M, _field: &field::Field, _grid: &grid::Grid )-> bool	{
+		self.target_key.is_none()
 	}
-	fn decide( &mut self, _member: &M, field: &field::Field, grid: &grid::Grid )-> MotionPtr	{
-		let m_key : field::MemberKey = 0;
-		let link = field.get_member(m_key);
-		let is_valid = field.get_member( self.target_key ).team != link.team;
+	fn decide( &mut self, mkey: field::MemberKey, _member: &M, field: &field::Field, grid: &grid::Grid )-> MotionPtr<M>	{
+		let (self_pos,self_team) =	{
+			let link = field.get_member(mkey);
+			(link.location, link.team)
+		};
+		let is_valid = match self.target_key	{
+			Some(key)	=>	{
+				let team = field.get_member(key).team;
+				team != self_team && team != field::team_dead
+			},
+			None	=> false,
+		};
 		if !is_valid	{
-			self.target_key = 0;
-			field.each_member(|key,_|	{
-				//if self.target_key==0 && m.get_team() != member.get_team()	{
-				//	self.target_key = key;
-				//}
-				if self.target_key==0 && key!=m_key	{
-					self.target_key = key;
+			self.target_key = None;
+			field.each_member(|key,link|	{
+				if self.target_key.is_none() && link.team!=self_team {
+					self.target_key = Some(key);
 				}
 			});
-			print!("Chosen target key: {:?}\n", self.target_key);
+			//print!("Chosen target key: {:?}\n", self.target_key);
 		}
-		if self.target_key == 0	{
-			return ~motion::Dummy as MotionPtr
+		if self.target_key.is_none()	{
+			return ~motion::Dummy as MotionPtr<M>
 		}
-		/*let target_pos = field.with_member( self.target_key, |m|	{
-			let (pos, _) = m.get_limbs()[0];
-			pos
-		}).expect(format!( "Invalid target key: {:?}", self.target_key ));
-		*/
-		let self_pos = link.location;
-		let target_pos = self_pos;
-		let neighbors = [
-			target_pos.add_v( &Vec2::new(1,0) ),
-			target_pos.add_v( &Vec2::new(0,1) ),
-			target_pos.add_v( &Vec2::new(-1,0) ),
-			target_pos.add_v( &Vec2::new(0,-1) ),
-			];
+		let target_pos = {
+			let link = field.get_member( self.target_key.unwrap() );
+			link.location
+		};
+		let neighbors = (grid as &grid::TopologyGrid).get_neighbors( target_pos );
 		let mut min_dist = grid.get_index_size() as int;
 		let mut best_pos = target_pos;
 		let topo = grid as &grid::TopologyGrid;
 		for &new_pos in neighbors.iter()	{
 			let access = match field.get_by_location( new_pos, topo )	{
 				&field::CellEmpty		=> true,
-				&field::CellPart(key,_)	=> key==m_key,
+				&field::CellPart(key,_)	=> key==mkey,
 				_						=> false,
 			};
-			let diff = new_pos.sub_p( &self_pos );
-			let dist = diff.x*diff.x + diff.y*diff.y;
-			if access && dist < min_dist	{
-				best_pos = new_pos;
-				min_dist = dist;
+			if access	{
+				let diff = new_pos.sub_p( &self_pos );
+				let dist = diff.x*diff.x + diff.y*diff.y;
+				if dist < min_dist	{
+					best_pos = new_pos;
+					min_dist = dist;
+				}
 			}
 		}
 		let my_elevation = 1.0f32;
@@ -177,16 +174,15 @@ impl<M: main::Member> Brain<M> for Monster<M>	{
 		if best_pos != target_pos	{
 			~motion::Move{
 				destinations: ~[best_pos],
-				location	: self_pos,
 				orientation	: topo.approximate_orientation( self_pos, best_pos ),
 				elevation	: my_elevation,
 				speed		: my_speed,
-			} as MotionPtr
+			} as MotionPtr<M>
 		}else	{
 			~motion::Attack{
 				destination	: target_pos,
 				damage		: my_damage,
-			} as MotionPtr
+			} as MotionPtr<M>
 		}
 	}
 }
