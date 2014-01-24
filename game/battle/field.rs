@@ -76,6 +76,22 @@ impl Field	{
 		}
 		self.revision += 1;
 	}
+
+	fn check_member( &self, mk: MemberKey, unit: &unit::Unit, grid: &grid::TopologyGrid )	{
+		unit.each_limb( |lk,_limb,offset|	{
+			let pos =	{
+				let link = self.get_member(mk);
+				grid.offset_position( link.location, link.orientation, offset )
+			};
+			grid.get_index(pos).map(|index|	{
+				match self.cells[index]	{
+					CellPart(mkey,ref limbs) if mkey==mk && limbs.contains(&lk)	=> (),
+					_	=> fail!( "Member {} check failed on limb {} at cell {}",
+						unit.get_name(), lk.to_str(), pos.to_str() )
+				};
+			});
+		});
+	}
 	
 	fn add_member_cells( &mut self, mk: MemberKey, unit: &unit::Unit, grid: &grid::TopologyGrid )	{
 		unit.each_limb( |lk,_limb,offset|	{
@@ -84,6 +100,10 @@ impl Field	{
 				grid.offset_position( link.location, link.orientation, offset )
 			};
 			grid.get_index(pos).map(|index|	{
+				if index >= self.cells.len()	{
+					println!("Out-of-bounds detected, index={}, grid.len={}, field.len={}",
+						index, grid.get_index_size(), self.cells.len());
+				}
 				match self.cells[index]	{
 					CellEmpty	=> self.cells[index] = CellPart( mk,~[lk] ),
 					CellPart(mkey,ref mut limbs) if mkey==mk	=> limbs.push(lk),
@@ -116,12 +136,14 @@ impl Field	{
 	}
 	
 	fn remove_member_cells( &mut self, key: MemberKey )	{
-		self.cells.retain(|cell|	{
+		for cell in self.cells.mut_iter()	{
 			match cell	{
-				&CellPart(mk,_) if mk==key	=> false,
-				_	=> true,
+				&CellPart(mk,_) if mk==key	=> {
+					*cell = CellEmpty
+				},
+				_	=> (),
 			}
-		});
+		}
 		self.revision += 1;
 	}
 
@@ -131,6 +153,8 @@ impl Field	{
 	}
 	
 	pub fn update_member<M: unit::Unit + 'static>( &mut self, key: MemberKey, unit: &M, grid: &grid::TopologyGrid, mutator: |&mut Link| )-> bool	{
+		//println!( "Updating position for {}", unit.get_name() );
+		self.check_member( key, unit, grid );
 		self.remove_member_cells( key );
 		mutator( &mut self.members[key].link );
 		self.add_member_cells( key, unit, grid );

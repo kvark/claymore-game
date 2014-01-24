@@ -110,7 +110,7 @@ impl<M: main::Member + 'static> think::Motion<M> for Move	{
 				&field::CellPart(_,_)	=>	{	//collide
 					//println!( "Collided with {:s} while moving from {:s}", dest_loc.to_str(), self_loc.to_str() );
 					pos = Point::from_vec( &(grid as &grid::GeometryGrid).compute_space(
-						dest_loc, self.orientation, self.elevation ).disp);
+						self_loc, self.orientation, self.elevation ).disp);
 					true
 				},
 				_	=> fail!("Unexpected path cell: {:s}", dest_loc.to_str())

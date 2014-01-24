@@ -67,10 +67,6 @@ impl Grid	{
 		}
 	}
 
-	pub fn get_index_size( &self )-> uint	{
-		self.cells.len()
-	}
-
 	pub fn update( &mut self, cam: &scene::Camera, aspect: f32 )	{
 		cam.fill_data( &mut self.data, aspect );
 	}
@@ -120,6 +116,7 @@ impl DrawableGrid for Grid	{
 
 
 pub trait TopologyGrid	{
+	fn get_index_size( &self )-> uint;
 	fn get_location( &self, uint )-> Location;
 	fn get_index( &self, Location )-> Option<uint>;
 	fn offset_position( &self, Location, Orientation, Offset )-> Location;
@@ -134,6 +131,9 @@ pub trait TopologyGrid	{
 }
 
 impl TopologyGrid for Grid	{
+	fn get_index_size( &self )-> uint	{
+		self.cells.len()
+	}
 	fn get_location( &self, index: uint )-> Location	{
 		point::Point2::new( (index % self.nseg) as int, (index / self.nseg) as int )
 	}

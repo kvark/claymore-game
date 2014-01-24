@@ -5,7 +5,6 @@ use std::to_str::ToStr;
 use engine::anim;
 use battle::{grid,field,main,motion,unit};
 use cgmath::point::Point;
-use cgmath::vector::{Vector,Vec2};
 
 pub enum MotionStatus	{
 	StatusDone,
@@ -149,10 +148,10 @@ impl<M: main::Member> Brain<M> for Monster<M>	{
 			let link = field.get_member( self.target_key.unwrap() );
 			link.location
 		};
-		let neighbors = (grid as &grid::TopologyGrid).get_neighbors( target_pos );
-		let mut min_dist = grid.get_index_size() as int;
-		let mut best_pos = target_pos;
 		let topo = grid as &grid::TopologyGrid;
+		let neighbors = topo.get_neighbors( target_pos );
+		let mut min_dist = topo.get_index_size() as int;
+		let mut best_pos = target_pos;
 		for &new_pos in neighbors.iter()	{
 			let access = match field.get_by_location( new_pos, topo )	{
 				&field::CellEmpty		=> true,
