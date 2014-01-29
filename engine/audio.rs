@@ -161,7 +161,7 @@ impl Context	{
 
 
 pub fn read_wave_chunk( rd: &mut load::Reader )-> load::Chunk	{
-	let name = std::str::from_utf8_owned( rd.get_bytes(4) );
+	let name = std::str::from_utf8_owned( rd.get_bytes(4) ).unwrap();
 	let size = rd.get_uint(4);
 	//lg.add( ~"\tEntering " + name );
 	load::Chunk{
@@ -175,7 +175,7 @@ pub fn load_wav( at: &Context, path: &str, lg: &journal::Log )-> BufferPtr	{
 	lg.add( "Loading " + path );
 	let mut rd = load::Reader::create_ext( path, read_wave_chunk );
 	assert!( rd.enter() == ~"RIFF" );
-	let s_format = std::str::from_utf8_owned( rd.get_bytes(4) );
+	let s_format = std::str::from_utf8_owned( rd.get_bytes(4) ).unwrap();
 	assert!( s_format == ~"WAVE" );
 	assert!( rd.enter() == ~"fmt " );
 	let audio_format	= rd.get_uint(2);

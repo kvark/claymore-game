@@ -3,6 +3,15 @@
 	[
 		{
 			"path": "/mnt/code/claymore/claymore-game"
+		},
+		{
+			"path": "/mnt/code/claymore/cgmath-rs"
+		},
+		{
+			"path": "/mnt/code/claymore/rust-stb-image"
+		},
+		{
+			"path": "/mnt/code/claymore/glfw-rs"
 		}
 	]
 }

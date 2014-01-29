@@ -4,6 +4,22 @@
 		"selected_items":
 		[
 			[
+				"tra",
+				"transpose"
+			],
+			[
+				"loo",
+				"look_at"
+			],
+			[
+				"Trans",
+				"transform"
+			],
+			[
+				"Cell",
+				"CellEmpty"
+			],
+			[
 				"get_",
 				"get_name"
 			],
@@ -88,10 +104,6 @@
 				"Transform3"
 			],
 			[
-				"tra",
-				"transform_point"
-			],
-			[
 				"to_",
 				"to_str"
 			],
@@ -134,10 +146,6 @@
 			[
 				"sel",
 				"loc_selected"
-			],
-			[
-				"Cell",
-				"CellEmpty"
 			],
 			[
 				"remove",
@@ -506,48 +514,40 @@
 			[
 				"Font",
 				"FontInfo"
-			],
-			[
-				"glco",
-				"gl"
-			],
-			[
-				"wrap",
-				"wrap_modes"
 			]
 		]
 	},
 	"buffers":
 	[
 		{
-			"file": "game/battle/field.rs",
+			"file": "/mnt/code/claymore/cgmath-rs/xx.rs",
 			"settings":
 			{
-				"buffer_size": 4340,
+				"buffer_size": 988,
 				"line_ending": "Unix"
 			}
 		},
 		{
-			"file": "game/battle/think.rs",
+			"file": "/mnt/code/claymore/cgmath-rs/src/cgmath/transform.rs",
 			"settings":
 			{
-				"buffer_size": 4925,
+				"buffer_size": 6306,
 				"line_ending": "Unix"
 			}
 		},
 		{
-			"file": "game/battle/motion.rs",
+			"file": "/mnt/code/claymore/cgmath-rs/src/cgmath/matrix.rs",
 			"settings":
 			{
-				"buffer_size": 4456,
+				"buffer_size": 27162,
 				"line_ending": "Unix"
 			}
 		},
 		{
-			"file": "game/battle/grid.rs",
+			"file": "/mnt/code/claymore/cgmath-rs/src/test/transform.rs",
 			"settings":
 			{
-				"buffer_size": 7133,
+				"buffer_size": 1514,
 				"line_ending": "Unix"
 			}
 		}
@@ -592,14 +592,23 @@
 	},
 	"file_history":
 	[
+		"/mnt/code/claymore/claymore-game/game/battle/field.rs",
+		"/mnt/code/claymore/claymore-game/game/logic.rs",
 		"/mnt/code/claymore/claymore-game/game/battle/think.rs",
 		"/mnt/code/claymore/claymore-game/game/battle/motion.rs",
+		"/mnt/code/claymore/claymore-game/game/battle/grid.rs",
+		"/mnt/code/claymore/rust-stb-image/Makefile.in",
+		"/mnt/code/claymore/rust-stb-image/image.rs",
+		"/mnt/code/claymore/cgmath-rs/src/cgmath/transform.rs",
+		"/mnt/code/claymore/cgmath-rs/src/cgmath/rotation.rs",
+		"/mnt/code/claymore/cgmath-rs/src/cgmath/matrix.rs",
+		"/mnt/code/claymore/cgmath-rs/src/cgmath/quaternion.rs",
+		"/mnt/code/claymore/cgmath-rs/src/cgmath/point.rs",
+		"/mnt/code/claymore/cgmath-rs/src/test/transform.rs",
 		"/mnt/code/claymore/claymore-game/game/battle/main.rs",
-		"/mnt/code/claymore/claymore-game/game/logic.rs",
 		"/mnt/code/claymore/claymore-game/game/main.rs",
 		"/mnt/code/claymore/claymore-game/game/claymore.rs",
 		"/mnt/code/claymore/claymore-game/game/battle/unit.rs",
-		"/mnt/code/claymore/claymore-game/game/battle/grid.rs",
 		"/mnt/code/claymore/claymore-game/Makefile",
 		"/mnt/code/claymore/claymore-game/.gdbinit",
 		"/mnt/code/claymore/claymore-game/engine/anim.rs",
@@ -636,7 +645,6 @@
 		"/mnt/code/claymore/claymore-game/util/Makefile",
 		"/home/kvark/.config/sublime-text-2/Packages/Makefile/Make.sublime-build",
 		"/home/kvark/.config/sublime-text-2/Packages/Makefile/Makefile.sublime-settings",
-		"/mnt/code/claymore/claymore-game/game/battle/field.rs",
 		"/mnt/code/claymore/claymore-game/.hgignore",
 		"/mnt/code/claymore/claymore-game/game/battle/int.rs",
 		"/mnt/code/algo/Matasano/01-08/task.txt",
@@ -654,8 +662,6 @@
 		"/mnt/code/claymore/test-game/game/hud/debug.rs",
 		"/mnt/code/claymore/test-game/game/battle/main.rs",
 		"/mnt/code/claymore/test-game/game/scene/chared.rs",
-		"/mnt/code/claymore/cgmath-rs/src/cgmath/transform.rs",
-		"/mnt/code/claymore/cgmath-rs/src/cgmath/point.rs",
 		"/mnt/code/claymore/cgmath-rs/src/cgmath/array.rs",
 		"/mnt/code/claymore/cgmath-rs/src/tests/transform.rs",
 		"/mnt/code/claymore/claymore-game/util/blender/io_kri_scene/scene.py",
@@ -664,7 +670,6 @@
 		"/mnt/code/claymore/claymore-game/util/codata/scene/chared/main.rs",
 		"/mnt/code/claymore/claymore-game/util/codata/scene/common.rs",
 		"/mnt/code/claymore/claymore-game/util/sample/demo03-materials.rs",
-		"/mnt/code/claymore/cgmath-rs/src/cgmath/rotation.rs",
 		"/mnt/code/claymore/claymore-game/asset/battle/battle-test.rs",
 		"/mnt/code/claymore/claymore-game/asset/claymore/claymore-2a.rs",
 		"/mnt/code/claymore/claymore-game/asset/cube.rs",
@@ -714,12 +719,7 @@
 		"/Users/kvark/Code/rust/claymore-game/engine/font.rs",
 		"/Users/kvark/Code/rust/claymore-game/engine/shade.rs",
 		"/Users/kvark/Code/rust/claymore-game/data/code/mat/phong.glslv",
-		"/Users/kvark/Code/rust/claymore-game/data/code/tech/forward/spot-shadow.glslf",
-		"/Users/kvark/Code/rust/claymore-game/game/scene.rs",
-		"/Users/kvark/Code/rust/claymore-game/data/details.json",
-		"/Users/kvark/Code/rust/claymore-game/Makefile",
-		"/Users/kvark/Code/rust/claymore-game/data/code-game/char/armor.glslf",
-		"/Users/kvark/Code/rust/claymore-game/data/code-game/char/cloak.glslf"
+		"/Users/kvark/Code/rust/claymore-game/data/code/tech/forward/spot-shadow.glslf"
 	],
 	"find":
 	{
@@ -744,6 +744,16 @@
 		"case_sensitive": true,
 		"find_history":
 		[
+			"from_cols",
+			"look_a",
+			"comp_ad",
+			"comp_add",
+			"ToStr",
+			"trace()",
+			"ToStr",
+			"transmute",
+			"Quat",
+			"Rotation",
 			"MemberKey",
 			"FIXME",
 			"~()",
@@ -861,17 +871,7 @@
 			"on_input",
 			"update",
 			"cw",
-			"render",
-			"output",
-			"aspect",
-			"get_rectangle",
-			"selected",
-			"CELL_EMPTY",
-			"fill_data",
-			"u_ViewProj",
-			"grid::",
-			"Grid",
-			"ToQuat"
+			"render"
 		],
 		"highlight": true,
 		"in_selection": false,
@@ -913,103 +913,105 @@
 	"groups":
 	[
 		{
+			"selected": 2,
 			"sheets":
 			[
 				{
 					"buffer": 0,
-					"file": "game/battle/field.rs",
+					"file": "/mnt/code/claymore/cgmath-rs/xx.rs",
 					"settings":
 					{
-						"buffer_size": 4340,
+						"buffer_size": 988,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								2655,
-								2655
+								619,
+								619
 							]
 						],
 						"settings":
 						{
-							"syntax": "Packages/Rust/Rust.tmLanguage",
-							"translate_tabs_to_spaces": false
+							"syntax": "Packages/Rust/Rust.tmLanguage"
 						},
 						"translation.x": 0.0,
-						"translation.y": 1373.0,
+						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
 					"type": "text"
 				},
 				{
 					"buffer": 1,
-					"file": "game/battle/think.rs",
+					"file": "/mnt/code/claymore/cgmath-rs/src/cgmath/transform.rs",
 					"settings":
 					{
-						"buffer_size": 4925,
+						"buffer_size": 6306,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								4059,
-								4059
+								2648,
+								2648
 							]
 						],
 						"settings":
 						{
 							"syntax": "Packages/Rust/Rust.tmLanguage",
-							"translate_tabs_to_spaces": false
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 2100.0,
+						"translation.y": 1170.0,
 						"zoom_level": 1.0
 					},
 					"type": "text"
 				},
 				{
 					"buffer": 2,
-					"file": "game/battle/motion.rs",
+					"file": "/mnt/code/claymore/cgmath-rs/src/cgmath/matrix.rs",
 					"settings":
 					{
-						"buffer_size": 4456,
+						"buffer_size": 27162,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								3225,
-								3225
+								7584,
+								7584
 							]
 						],
 						"settings":
 						{
 							"syntax": "Packages/Rust/Rust.tmLanguage",
-							"translate_tabs_to_spaces": false
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 990.0,
+						"translation.y": 3402.0,
 						"zoom_level": 1.0
 					},
 					"type": "text"
 				},
 				{
 					"buffer": 3,
-					"file": "game/battle/grid.rs",
+					"file": "/mnt/code/claymore/cgmath-rs/src/test/transform.rs",
 					"settings":
 					{
-						"buffer_size": 7133,
+						"buffer_size": 1514,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								4107,
-								4107
+								1160,
+								1160
 							]
 						],
 						"settings":
@@ -1018,7 +1020,7 @@
 							"translate_tabs_to_spaces": false
 						},
 						"translation.x": 0.0,
-						"translation.y": 1868.0,
+						"translation.y": 180.0,
 						"zoom_level": 1.0
 					},
 					"type": "text"

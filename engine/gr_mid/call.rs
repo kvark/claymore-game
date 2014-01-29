@@ -266,7 +266,7 @@ impl Call	{
 				let sizeA = src.fb.borrow().with(|f| f.check_size());
 				let sizeB = dst.fb.borrow().with(|f| f.check_size());
 				assert!( sizeA[3] == sizeB[3] || (sizeA[3]*sizeB[3]==0 && only_color) );
-				let filter = if (only_color && sizeA[3]==0) {gl::LINEAR} else {gl::NEAREST};
+				let filter = if only_color && sizeA[3]==0 {gl::LINEAR} else {gl::NEAREST};
 				// call blit
 				gl::BlitFramebuffer(
 					0, 0, sizeA[0] as gl::types::GLint, sizeA[1] as gl::types::GLint,

@@ -2,8 +2,6 @@
 #[crate_type = "bin"];
 #[comment = "Claymore game"];
 #[license = "MIT"];
-#[link_args = "-lglfw"];
-
 
 extern mod gen_hud;
 extern mod gen_scene;
@@ -11,6 +9,9 @@ extern mod glfw;
 extern mod cgmath;
 extern mod engine;
 extern mod extra;
+
+#[link(name = "glfw")]
+extern {}
 
 
 pub mod input;

@@ -73,7 +73,7 @@ impl<'a,T> Iterator<&'a MenuItem<T>> for MenuAllIter<'a,T>	{
 	fn next( &mut self )-> Option<&'a MenuItem<T>>	{
 		let list = match self.item.action	{
 			ActionList(ref list) if !list.is_empty()=> list.as_slice(),
-			_	if !self.stack.is_empty()			=> self.stack.pop(),
+			_	if !self.stack.is_empty()			=> self.stack.pop().unwrap(),
 			_	=> return None,
 		};
 		self.item = &'a list[0];
@@ -109,7 +109,7 @@ impl<T> Menu<T>	{
 	pub fn get_selected_item<'a>( &'a self )-> &'a MenuItem<T>	{
 		let (_,ref list) = self.selection_list_iter().last().
 			expect("Debug menu is not active");
-		&'a list[ *self.selection.last() ]
+		&'a list[ *self.selection.last().unwrap() ]
 	}
 
 	pub fn all_iter<'a>( &'a self )-> MenuAllIter<'a,T>	{

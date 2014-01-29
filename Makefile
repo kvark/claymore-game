@@ -1,9 +1,9 @@
-NAME=claymore
-DIR=${NAME}-game
-CODATA=util/codata
-TRACE=RUST_LOG=rustc=1,::rt::backtrace
+NAME		=claymore
+DIR			=${NAME}-game
+CODATA		=util/codata
+TRACE		=RUST_LOG=rustc=1,::rt::backtrace
 #RUST		?=${TRACE} rustc
-RUST		?=rustc -Z debug-info
+RUST		?=rustc
 #RUST		?=../rust/x86_64-unknown-linux-gnu/stage0/bin/rustc
 #LIBMASK=*.dylib*
 LIBMASK		?=*.so
@@ -34,7 +34,7 @@ grab-scene: asset/claymore/claymore-2a.rs asset/battle/battle-test.rs
 game: build/claymore
 
 build/claymore:	lib/engine.dummy lib/codata-scene.dummy lib/codata-hud.dummy lib/glfw.dummy game/*.rs game/battle/*.rs game/hud/*.rs game/render/*.rs game/scene/*.rs 
-	${RUST} game/claymore.rs -L lib --out-dir build
+	${RUST} game/claymore.rs --link-args="`pkg-config --static --libs glfw3`" -L lib --out-dir build
 
 engine: lib/engine.dummy
 
@@ -79,7 +79,7 @@ lib/cgmath.dummy: ../cgmath-rs/src/cgmath/*.rs
 	touch $@
 	
 lib/glfw.dummy: ../glfw-rs/src/*.rs
-	(cd ../glfw-rs/build && cmake .. && make && cp -Ru lib/lib* ../../${DIR}/lib/)
+	(cd ../glfw-rs/build && cmake .. && make lib && cp -Ru lib/lib* ../../${DIR}/lib/)
 	touch $@
 
 lib/gl.dummy: ../gl-rs/src/gen/*.r? ../gl-rs/src/gl/*.r?

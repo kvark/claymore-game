@@ -50,7 +50,7 @@ pub fn enter_chunk( rd: &mut Reader )-> Chunk	{
 	name_bin.retain( |&b| {b != 0u8} );
 	let size = rd.get_uint(4u);
 	Chunk	{
-		name	: str::from_utf8( name_bin ).to_owned(),
+		name	: str::from_utf8( name_bin ).unwrap().to_owned(),
 		size	: size,
 		finish	: rd.position() + size,
 	}
@@ -93,7 +93,7 @@ impl Reader	{
 
 	pub fn get_string( &mut self )-> ~str	{
 		let size = self.bin.read_u8() as uint;
-		str::from_utf8_owned( self.bin.read_bytes(size) )
+		str::from_utf8_owned( self.bin.read_bytes(size) ).unwrap()
 	}
 
 	pub fn get_floats( &mut self, num: uint )-> ~[f32]	{
@@ -125,7 +125,7 @@ impl Reader	{
 	}
 
 	pub fn leave( &mut self )	{
-		let c = self.chunks.pop();
+		let c = self.chunks.pop().unwrap();
 		assert!( self.position() == c.finish );
 	}
 
@@ -150,7 +150,7 @@ pub fn get_time()-> f64 {
 pub fn load_text( path: &str )-> ~str	{
 	let p = std::path::Path::new( path );
 	match io::File::open( &p )	{
-		Some(ref mut rd)	=> std::str::from_utf8_owned( rd.read_to_end() ),
+		Some(ref mut rd)	=> std::str::from_utf8_owned( rd.read_to_end() ).unwrap(),
 		None 	=> fail!("Unable to read {:s}", path)
 	}
 }
